@@ -1,0 +1,45 @@
+{
+  "parse_header" : "STATE DIPOLE",
+  "parse_group" : [
+   {
+     "regex_string" : "^      STATE DIPOLE =[\\s0-9\\.\\-]+E\\*BOHR.*$",
+     "parse_name"   : "DIPOLE X",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "STATE",
+     "parse_tolerance" : 5e-5
+   },
+   {
+     "regex_string" : "^      STATE DIPOLE =[\\s0-9\\.\\-]+E\\*BOHR.*$",
+     "parse_name"   : "DIPOLE Y",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "STATE",
+     "parse_tolerance" : 5e-5
+   },
+   {
+     "regex_string" : "^      STATE DIPOLE =[\\s0-9\\.\\-]+E\\*BOHR.*$",
+     "parse_name"   : "DIPOLE Z",
+     "parse_precision" : 6,
+     "parse_value_index" : 2,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "STATE",
+     "parse_tolerance" : 5e-5
+   },
+   {
+     "regex_string" : "^      STATE DIPOLE =[\\s0-9\\.\\-]+E\\*BOHR.*$",
+     "parse_name"   : "DIPOLE NORM",
+     "parse_precision" : 6,
+     "parse_value_index" : 3,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "STATE",
+     "parse_tolerance" : 5e-5
+   }
+  ]
+}

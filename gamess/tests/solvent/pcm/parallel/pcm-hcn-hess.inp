@@ -1,0 +1,30 @@
+!   HCN in water, closed shell, using a very tightly optimized geometry
+!
+!   seminumerical frequencies look OK,
+!   residual FREQ= 0.11        0.11        0.02        8.10        8.13
+!    genuine FREQ= 892.68      892.91     2431.27     3652.16
+!
+!   This run takes 5 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!
+!   fully numerical ones not so hot, 20 cm-1 shift in the pi mode.
+!   omega:   126.17      125.89        0.70        0.27        0.26  
+!   omega:   877.71      878.03     2431.46     3652.49
+!
+ $contrl scftyp=rhf runtyp=hessian $end
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $pcm    solvnt=water $end
+ $statpt opttol=1d-5 $end
+ $force  method=seminum $end
+x$force  method=fullnum $end
+ $data
+HCN in PCM water
+C1
+H    1.0   0.0000000000   0.0000000000  -1.0454979790
+C    6.0   0.0000000000   0.0000000000   0.0161813254
+N    7.0   0.0000000000   0.0000000000   1.1493166537
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,84 @@
+!  RHF-CISD/DZP force constant matrix for HF dimer
+!  There are 24 AOs, and 6,441 CSFs in the wavefunction.
+!
+!  Duplicate work (but using no frozen cores or virtuals) of 
+!  J.F.Gaw, Y.Yamaguchi, M.A.Vincent, H.F.Schaefer III
+!  J.Am.Chem.Soc. 1984, 106, 3133-3138.
+!
+!  RHF FINAL E=  -200.0431716376 after 12 iters,
+!  CI EIGENvalue=-200.2788618152 after 10 iters. 
+!  CI wavefunction is RHF dominant, C0=0.968748
+!
+!     lit has E(CISD)=-200.27848 with two FZVs used.
+!     lit= 166,     196,     459,     523,    3743,    3773
+!    FREQ= 164.40,  195.44,  458.63,  522.87, 3743.54, 3773.04
+!  INTENS=1.72115, 2.16469, 7.80395, 7.98451, 7.66014, 2.09145
+!  ZERO POINT ENERGY= 12.663054
+!
+!  This run takes 39 seconds on a 2.66 GHz Cloverton (15 Apr 2015)
+!  answers have not changed significantly since December 1999
+!
+ $contrl scftyp=rhf cityp=guga runtyp=hessian $end
+ $system mwords=50 $end
+ $cidrt  group=C1 iexcit=2 nfzc=2 ndoc=8 nval=14 $end
+ $guess  guess=huckel $end
+ $force  nvib=2 $end
+ $data
+HF-HF dimer...original Dunning DZ basis (note unscaled H)
+Cs
+
+H           1.0  -1.9756408449   -.6759505779    .0000000000
+  DH  0 1.0 1.0
+
+F           9.0  -1.3418251855    .0420290284    .0000000000
+  S  6
+    1 9994.79    0.002017
+    2 1506.03    0.015295
+    3  350.269   0.073110
+    4  104.053   0.246420
+    5   34.8432  0.612593
+    6    4.3688  0.242489
+  S  1
+    1   12.2164  1.0
+  S  1
+    1    1.2078  1.0
+  S  1
+    1    0.3634  1.0
+  P  4
+    1   44.3555  0.020868
+    2   10.0820  0.130092
+    3    2.9959  0.396219
+    4    0.9383  0.620368
+  P  1
+    1    0.2733  1.0
+
+H           1.0    .4690658985    .1073172039    .0000000000
+  DH  0 1.0 1.0
+
+F           9.0   1.4216768693   -.0119547740    .0000000000
+  S  6
+    1 9994.79    0.002017
+    2 1506.03    0.015295
+    3  350.269   0.073110
+    4  104.053   0.246420
+    5   34.8432  0.612593
+    6    4.3688  0.242489
+  S  1
+    1   12.2164  1.0
+  S  1
+    1    1.2078  1.0
+  S  1
+    1    0.3634  1.0
+  P  4
+    1   44.3555  0.020868
+    2   10.0820  0.130092
+    3    2.9959  0.396219
+    4    0.9383  0.620368
+  P  1
+    1    0.2733  1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

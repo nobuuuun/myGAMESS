@@ -1,0 +1,54 @@
+!   a very short NVT trajectory with four EFP1 waters, and PBC.
+!
+!  at T=5,
+!    POT  ENERGY      =          -6.57879680 KCAL/MOL
+!    TRANS    KE      =           3.67216552 KCAL/MOL
+!    ROT      KE      =           3.52322790 KCAL/MOL
+!    TOT      KE      =           7.19539342 KCAL/MOL
+!
+!    the 5th time step should have the 1st fragment located at:
+!            CARTESIAN COORDINATES (ANG)
+!   FRAGNAME=H2ORHF  #  1
+!   ZO1            .579123326692   -1.208464467222     .005801112707
+!   ZH2            .767496749746    -.888754644327     .873660281408
+!   ZH3           -.342984016627   -1.069642636249    -.140229708393
+!
+!   This run takes 0 seconds on 2.66 GHz Cloverton (2 Dec 2008)
+!
+!   properties are dubious:
+!   also, note density is small (few particles, big box).
+!    TEMPERATURE      =         301.73676055 K
+!    AVERAGE PRESSURE =              6767.42 PASCAL    before April 2009
+!    PRESSURE(AVERAGE)=             139.8013 BAR       after April 2009
+!    DIFFUSION        =          37.11161673 ANG^2/PS
+!    HEAT OF VAP      =           2.24216910 KCAL/MOL*K
+!      ROT.KE TEMP =     295.49
+!    TRANS.KE TEMP =     307.98
+!
+ $contrl runtyp=md coord=fragonly $end
+ $md     mdint=vverlet nsteps=5 dt=1.0d-15 rstemp=.true.
+         batht=300.0 mbt=.true. mbr=.true.
+         jevery=1 kevery=1 pbcout=.true. $end
+ $mdprp  pressr=.true. difusn=.true. htvap=.true. $end
+ $efrag
+SWR1=4.8 SWR2=6.0 xbox=12.3 ybox=12.3 zbox=12.3
+FRAGNAME=H2ORHF
+ZO1          0.57554483    -1.19246089     0.00560410
+ZH2          0.75275075    -0.79325682     0.84233147
+ZH3         -0.34976476    -1.09305429    -0.15187272
+FRAGNAME=H2ORHF
+ZO1          1.21309900     2.96665192    -1.21026146
+ZH2          1.45009017     2.16737008    -1.65282440
+ZH3          0.35577732     3.20646501    -1.52389777
+FRAGNAME=H2ORHF
+ZO1         -2.83366489    -4.27402401     1.60854614
+ZH2         -2.91159558    -4.16611481     0.67411536
+ZH3         -1.96574378    -4.60714293     1.77171254
+FRAGNAME=H2ORHF
+ZO1         -3.12070370    -2.12190032     3.36496830
+ZH2         -3.14343238    -2.83564568     2.74777341
+ZH3         -3.79026341    -2.29685163     4.00680923
+ $end
+
+! TRAVIS-CI SMALL
+

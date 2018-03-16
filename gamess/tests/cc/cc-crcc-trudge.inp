@@ -1,0 +1,47 @@
+!   TRUDGE optimization of N2 at the CR-CCSD(T) level.
+!   The basis set used is Dunning's original DZ contraction to [4s,2p]
+!   of Huzinaga-san's (9s,5p) set.  There are no polarization functions.
+!   Two very high energy virtuals are omitted from the CC calculation.
+!
+!   The initial TRUDGE ENERGY VALUE is -109.1016626971, at R=1.0943386
+!   The  last   TRUDGE ENERGY VALUE is -109.1087991999, at R=1.1497149
+!   This run takes 37 steps, it seems like far too many for 1 coordinate.
+!
+!   This test takes 2 seconds on 2.66 GHz Cloverton (30 Oct 2009)
+!   results have not changed since Nov 2005
+!
+ $contrl scftyp=rhf cctyp=cr-cc runtyp=trudge coord=hint units=bohr $END
+ $system mwords=1 timlim=5 $end
+ $trudge optmiz=geometry npar=1 iex(1)=11 $end
+ $guess  guess=huckel $end
+ $ccinp  nfzv=2 $end
+ $data                                                                          
+N2 CR-CCSD(T) optimization, beginning from the exp. geometry, R=2.068 a.u.
+Dnh 4
+ 
+nitrogen 7.0 LC  1.034 0.0 0.0 - O K
+ S   6                                                                          
+  1        5909.440000         0.2004000000E-02                                 
+  2        887.4510000         0.1531000000E-01                                 
+  3        204.7490000         0.7429300000E-01                                 
+  4        59.83760000         0.2533640000                                     
+  5        19.99810000         0.6005760000                                     
+  6        2.686000000         0.2451110000                                     
+ S   1                                                                          
+  1        7.192700000          1.000000000                                     
+ S   1                                                                          
+  1       0.7000000000          1.000000000                                     
+ S   1                                                                          
+  1       0.2133000000          1.000000000                                     
+ P   4                                                                          
+  1        26.78600000         0.1825700000E-01                                 
+  2        5.956400000         0.1164070000                                     
+  3        1.707400000         0.3901110000                                     
+  4       0.5314000000         0.6372210000                                     
+ P   1                                                                          
+  1       0.1654000000          1.000000000                                     
+                                                                                
+ $end
+
+! TRAVIS-CI SMALL
+

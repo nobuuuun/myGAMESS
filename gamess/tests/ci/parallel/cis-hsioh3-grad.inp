@@ -1,0 +1,42 @@
+!   HSi(OH)3....72 AOs with 6-31G(d)...gradient of excited state
+!
+!        ground state's FINAL E= -515.9639827153
+!   CONVERGED STATE   1  ENERGY= -515.6138807851  S = 1.0  SPACE SYM = A
+!   CONVERGED STATE   2  ENERGY= -515.6088756125  S = 1.0  SPACE SYM = A
+!   CONVERGED STATE   3  ENERGY= -515.6055250630  S = 1.0  SPACE SYM = A
+!   CONVERGED STATE   4  ENERGY= -515.5849778024  S = 0.0  SPACE SYM = A
+!   CONVERGED STATE   5  ENERGY= -515.5829788173  S = 1.0  SPACE SYM = A
+!
+!   properties and gradient are found for the S3 state,
+!   NOON= 41.0146 & 0.9854, dipole= 2.316040 Debye, RMS grad= 0.039740005
+!
+!   this run takes 40 seconds on a 2.66 GHz Cloverton (18 Jun 2014)
+!          results have not changed since February 2007
+!
+ $contrl scftyp=rhf cityp=cis runtyp=gradient ispher=1 $end
+ $system mwords=10 $end
+ $basis  gbasis=accd $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $cis    nstate=5 iroot=3 hamtyp=dets $end
+ $data
+HSi(OH)3...RHF/6-31G(d) structure...Takako's geometry
+C1
+SI 14.0  0.0304799887 -0.0082970972 -0.3288730548
+H   1.0  0.0703739544 -0.1122076377 -1.7921633064
+O   8.0 -0.4998851149 1.4440260207 0.2091769299
+O   8.0  1.5705088212 -0.2426013499 0.1698918152
+O   8.0 -1.0316966803 -1.0967883017 0.2991753808
+H   1.0 -1.3942730891 1.4763780514 0.5196235497
+H   1.0  1.7930543871 0.0546478216 1.0418098522
+H   1.0 -0.9116534313 -2.0122262661 0.0896833780
+ $end
+
+------ C3 is not a minimum, "e" imag freq about 50i, E= -515.9633171000
+H           1.0   0.0000000000   0.0000000000   1.4091712505
+SI         14.0   0.0000000000   0.0000000000  -0.0558471636
+O           8.0   1.5354195528   0.1570811175  -0.6163176435
+H           1.0   1.7204117004   0.9279754134  -1.1347903855
+
+! TRAVIS-CI MEDIUM
+

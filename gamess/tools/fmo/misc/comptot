@@ -1,0 +1,29 @@
+#!/bin/csh
+# Sample script to compile totfock.f
+# As it relies upon the specific location of the BLAS library (MKL), 
+# a modification is necessary.
+# It is not known if compilers other than Intel will ever work for this code!
+# D. G. Fedorov
+# RICS, AIST, Japan
+
+# MKL path
+set MKL=/opt/intel/mkl/lib/intel64
+
+#-------- in 32 bits
+#ifort -O3 -assume buffered_io -assume byterecl -cm -w -c totfock.f
+#ifort -o totfock.x -static -L/usr/global/opt/intel/mkl/10.0.4.023/lib/32 -lmkl_ia32 -lguide -lpthread -Vaxlib totfock.o
+
+#-------- in 64 bits
+ifort -O3 -i8 -assume buffered_io -assume byterecl -cm -w -c totfock.f
+
+#dynamic linking, sequential
+#ifort -o totfock.x -L/opt/intel/mkl/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core totfock.o
+
+#static linking, sequential
+#ifort -i8 -o totfock.x totfock.o -Wl,--start-group /opt/intel/mkl/lib/intel64/libmkl_intel_ilp64.a /opt/intel/mkl/lib/intel64/libmkl_sequential.a /opt/intel/mkl/lib/intel64/libmkl_core.a -Wl,--end-group
+
+#static linking, parallel (OpenMP)
+#ifort -O3 -i8 -openmp -assume buffered_io -assume byterecl -cm -w -c totfock.f
+ifort -static -i8 -o totfock.x totfock.o -openmp -I$MKL/include \
+      -Wl,--start-group $MKL/libmkl_intel_ilp64.a \
+      $MKL/libmkl_core.a $MKL/libmkl_intel_thread.a -Wl,--end-group

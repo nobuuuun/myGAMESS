@@ -1,0 +1,47 @@
+#!/bin/csh
+#
+#    test case 'moro-wat3'
+#    Morokuma and RVS energy decomposition, on three waters.
+#    RHF level test
+#
+set ierr=0
+set ethrsh=0.01
+#
+#      checking only "Kitaura/Morokuma" results, which is the first set.
+set  ES0=-22.76
+set  EX0=14.82
+set POL0=-2.27
+set  CT0=-7.22
+set MIX0=0.14
+set CPX0=-9.24
+set RES0=-0.11
+set TIH0=-17.29
+
+set  ES=`grep "ELECTROSTATIC ENERGY             ES=" $1 | head -1 | awk '{ print $5 }'`0
+set  EX=`grep "EXCHANGE REPULSION ENERGY        EX=" $1 | head -1 | awk '{ print $6 }'`0
+set POL=`grep "POLARIZATION ENERGY              PL=" $1 | head -1 | awk '{ print $5 }'`0
+set  CT=`grep "CHARGE TRANSFER ENERGY           CT=" $1 | head -1 | awk '{ print $6 }'`0
+set MIX=`grep "HIGH ORDER COUPLING ENERGY      MIX=" $1 | head -1 | awk '{ print $7 }'`0
+set CPX=`grep "CT + PL + X,                  CTPLX=" $1 | head -1 | awk '{ print $8 }'`0
+set RES=`grep "HIGH ORDER COUPLING FOR CPLX,   RES=" $1 | head -1 | awk '{ print $8 }'`0
+set TIH=`grep "TOTAL INTERACTION ENERGY,   DELTA-E=" $1 | head -1 | awk '{ print $6 }'`0
+#
+set ESerr=`$chkabs $ES $ES0 $ethrsh`
+if($status != 0) set ierr=1 
+set EXerr=`$chkabs $EX $EX0 $ethrsh`
+if($status != 0) set ierr=1 
+set POLerr=`$chkabs $POL $POL0 $ethrsh`
+if($status != 0) set ierr=1 
+set CTerr=`$chkabs $CT $CT0 $ethrsh`
+if($status != 0) set ierr=1 
+set MIXerr=`$chkabs $MIX $MIX0 $ethrsh`
+if($status != 0) set ierr=1 
+set CPXerr=`$chkabs $CPX $CPX0 $ethrsh`
+if($status != 0) set ierr=1 
+set RESerr=`$chkabs $RES $RES0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIHerr=`$chkabs $TIH $TIH0 $ethrsh`
+if($status != 0) set ierr=1 
+#
+echo -n "ESerr=$ESerr EXerr=$EXerr POLerr=$POLerr CTerr=$CTerr MIXerr=$MIXerr CPXerr=$CPXerr RESerr=$RESerr TIHerr=$TIHerr"
+exit $ierr 

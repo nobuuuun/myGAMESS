@@ -1,0 +1,95 @@
+!   Si(C(CH3)3)...called here as TBS...331 AOs, 53 atoms
+!   the novelty of tetra-(t-butyl)silane is its symmetry T, not Td.
+!   note that the NMR internal standard TMS is Td, see below.
+!
+!   FINAL E= -915.7279546107, 11 iters
+!    minimum FREQ= 141.11 (t), 160.23 (e), 179.73 (a), ...
+!    maximum FREQ= ..., 3317.15 (a), 3325.75 (t), 3328.62 (e)
+!   residual FREQ= 0.03 (t) and 1.31 (t)
+!
+!   This run takes 1752 seconds on 2.66 GHz Cloverton (17 Mar 2015)
+!   results have not changed since 2011
+!
+ $INTGRL INTOMP=0 $END
+ $contrl scftyp=rhf runtyp=hessian molplt=.true. $end
+ $system mwords=25 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.t. $end
+ $statpt opttol=1d-5 $end
+ $data
+tetra-(t-butyl)-silane...RHF/6-31G* coordinates
+T
+
+Si 14.0   0.0000000000   0.0000000000   0.0000000000
+C   6.0   1.1523427023   1.1523427023   1.1523427023
+C   6.0   0.3769606901   1.7860243561   2.3313146952
+H   1.0   1.0366828323   2.4678367445   2.8648437658
+H   1.0   0.0403426709   1.0519099093   3.0508474240
+H   1.0  -0.4835693664   2.3608479787   2.0163133881
+ $end
+
+------- T, E= -915.7279546107, pos.def.
+Si 14.0   0.0000000000   0.0000000000   0.0000000000
+C   6.0   1.1523427023   1.1523427023   1.1523427023
+C   6.0   0.3769606901   1.7860243561   2.3313146952
+H   1.0   1.0366828323   2.4678367445   2.8648437658
+H   1.0   0.0403426709   1.0519099093   3.0508474240
+H   1.0  -0.4835693664   2.3608479787   2.0163133881
+
+------- staggered Td, E= -915.7001156692, w= 204.29i (a2), 136.60i (t1)
+Si 14.0   0.0000000000   0.0000000000   0.0000000000
+C   6.0   1.1742145015   1.1742145015   1.1742145015
+C   6.0   2.1122979607   2.1122979607   0.3783175296
+H   1.0   2.6977682448   2.6977682448   1.0842285277
+H   1.0  -0.2427036608   2.8187403942   1.5829544760
+
+------- eclipsed Td, E= -915.6082536896, w= 154.59i (a2), 121.18 (t1)
+Si 14.0   0.0000000000   0.0000000000   0.0000000000
+C   6.0   1.2431071405   1.2431071405   1.2431071405
+C   6.0   1.0532549788   1.0532549788   2.7629961391
+H   1.0   1.7328878909   1.7328878909   3.2708691072
+H   1.0   0.0607019969   1.3046704061   3.1029662147
+
+!   Td is generated from T by adding sigma-d mirror planes.
+!   Going from the lower energy Td to T is easy with its normal modes,
+!               a2(155i)    ----------- t1(121i) -----------
+!     C-17  X -0.03360010  0.03586875  0.01749444  0.05183980
+!           Y  0.03360010 -0.03551117 -0.02882549 -0.04677643
+!           Z  0.00000000 -0.00057225  0.01813406 -0.00810334
+!   Both a2 and t1 have odd character for the sigma-d ops.
+!   One can generate T from Td by adding atom H-41, then
+!   change C17's coords by -/+0.03, so starting at
+!       Si 14.0   0.0000000000   0.0000000000   0.0000000000
+!       C   6.0   1.1742145015   1.1742145015   1.1742145015
+!       C   6.0   2.0822979607   2.1422979607   0.3783175296
+!       H   1.0   2.6977682448   2.6977682448   1.0842285277
+!       H   1.0  -0.2427036608   2.8187403942   1.5829544760
+!       H   1.0   2.8187403942  -0.2427036608   1.5829544760
+!   optimizes to -915.7279546222, reproducing the T energy, and
+!       Si  14.0   0.0000000000   0.0000000000   0.0000000000
+!       C    6.0   1.1523200219   1.1523200219   1.1523200219
+!       C    6.0   1.7859752188   2.3313144238   0.3769516417
+!       H    1.0   2.4676620615   2.8649373383   1.0367287175
+!       H    1.0  -0.4834971278   2.3609202087   2.0163169447
+!       H    1.0   3.0507734074   0.0402043716   1.0518419221
+!   note, the $data above was generated first, differently.
+!
+!
+!       tetramethlysilane (TMS) is the internal standard for
+!       1-H, 13-C, or 39-Si NMR spectra, in organic solvents.
+!       E= -447.4109268303, 10 iters, positive definite in Td.
+!       Its higher symmetry reflects less steric crowding, as
+!       does the SiC distance of 1.896 versus 1.996 in TBS.
+!
+--- $data
+tetramethylsilane...Si(CH3)4...the NMR reference compound
+Td
+
+SI         14.0   0.0000000000   0.0000000000   0.0000000000
+C           6.0   1.0946385139   1.0946385139   1.0946385139
+H           1.0   1.7368301611   1.7368301611   0.4969233724
+ $end
+
+! TRAVIS-CI MEDIUM
+

@@ -1,0 +1,661 @@
+{
+  "name": "fmo-h2o4-efp20-ddi.log",
+  "validation": [
+    {
+      "header": "SYSTEM PROPERTIES",
+      "name": "TOTAL NUMBER OF ATOMS",
+      "value": "12",
+      "type": "integer",
+      "precision": 0,
+      "tolerance": 0
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-681.2842027084",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "246.0893518954",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "130.5030565350",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-304.6917942780",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "130.5030565350",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "246.0893518954",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-984.2147925250",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-FRAGMENT MULTIPOLE ENERGY",
+      "value": "-0.0870277400",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-FRAGMENT REMAINDER ENERGY",
+      "value": "0.0288121685",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "STATIC INTERFRAGMENT ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "FRAGMENT-NUCLEAR ENERGY",
+      "value": "0.0149731076",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL FRAGMENT INDUCTION ENERGY",
+      "value": "-0.0652826455",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-FRAGMENT EXCHANGE REPULSION",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-607.6223840945",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL KINETIC ENERGY",
+      "value": "302.9305898166",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "SOLUTE POTENTIAL ENERGY",
+      "value": "-304.6581179556",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "SOLUTE KINETIC ENERGY",
+      "value": "151.9036839466",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "2.0058138878",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-152.6064929210",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2",
+      "name": "E(SCF)",
+      "value": "-152.6064929210",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2",
+      "name": "E(2)",
+      "value": "-0.2564661974",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2",
+      "name": "E(MP2)",
+      "value": "-152.8629591184",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(2S)",
+      "value": "-0.1957838736",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(2T)",
+      "value": "-0.0606823238",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(2ST)",
+      "value": "-0.2551680896",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(SCS-MP2)",
+      "value": "-152.8616610106",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "FMO",
+      "name": "TOTAL ENERGY OF MOLECULE - FMO",
+      "value": "-304.174454527",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 1",
+      "value": "0.010645173",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 2",
+      "value": "0.000738342",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 3",
+      "value": "-0.011014559",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 4",
+      "value": "0.007718773",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 5",
+      "value": "-0.008764573",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 1",
+      "value": "-0.001000211",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 2",
+      "value": "-0.000146465",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 3",
+      "value": "0.000463888",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 4",
+      "value": "-0.008807102",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 5",
+      "value": "0.004840146",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 1",
+      "value": "0.016614380",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 2",
+      "value": "0.000791573",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 3",
+      "value": "-0.017259551",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 4",
+      "value": "0.002853513",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 5",
+      "value": "0.004354972",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 1",
+      "value": "-0.001954091",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 2",
+      "value": "0.000703257",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 3",
+      "value": "0.001421770",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 4",
+      "value": "0.001503872",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 5",
+      "value": "-0.000709054",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 1",
+      "value": "-0.002602219",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 2",
+      "value": "0.001240411",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 3",
+      "value": "-0.000120539",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 4",
+      "value": "0.000964372",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 5",
+      "value": "-0.000081314",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 1",
+      "value": "-0.000052264",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 2",
+      "value": "-0.001031635",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 3",
+      "value": "0.002978053",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 4",
+      "value": "0.002603777",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 5",
+      "value": "0.000515511",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "DIPOLE MOMENT D(XYZ) - FMO",
+      "value": "8.7874747",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "GRADIENT",
+      "name": "MAXIMUM GRADIENT",
+      "value": "0.016076878",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "GRADIENT",
+      "name": "RMS GRADIENT",
+      "value": "0.003515180",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "5.718046",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - NUCLEAR CHARGE  ",
+      "value": "8.9441787106",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP CHARGE      ",
+      "value": "-0.0274820612",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP DIPOLE      ",
+      "value": "-0.0187116268",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP QUADRUPOLE  ",
+      "value": "-0.0004226904",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP OCTUPOLE    ",
+      "value": "-0.0016270072",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP CHARGE      ",
+      "value": "-0.1256989898",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP DIPOLE      ",
+      "value": "-0.0878854407",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP QUADRUPOLE  ",
+      "value": "-0.0533094645",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP OCTUPOLE    ",
+      "value": "-0.0000566667",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP DIPOLE     - EFP DIPOLE      ",
+      "value": "-0.0140524461",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP DIPOLE     - EFP QUADRUPOLE  ",
+      "value": "-0.0137736462",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP QUADRUPOLE - EFP QUADRUPOLE  ",
+      "value": "-0.0080248215",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP EXCHANGE REPULSION ENERGY",
+      "value": "0.1285202475",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP DISPERSION ENERGY (C6)   ",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP DISPERSION ENERGY (C8)   ",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "TOTAL INTERFRAGMENT INTERACTION  ",
+      "value": "-0.1742812280",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP1",
+      "name": "EFP1 INDUCED DIPOLE X(IND)",
+      "value": "0.32691",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP1",
+      "name": "EFP1 INDUCED DIPOLE Y(IND)",
+      "value": "0.26667",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP1",
+      "name": "EFP1 INDUCED DIPOLE Z(IND)",
+      "value": "0.68360",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    }
+  ]
+}

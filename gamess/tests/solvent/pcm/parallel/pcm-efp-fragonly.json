@@ -1,0 +1,165 @@
+{
+  "name": "pcm-efp-fragonly.log",
+  "validation": [
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.071293",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-CHARGE",
+      "value": "-0.0564872517",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-DIPOLE",
+      "value": "-0.0352539143",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-QUADRUPOLE",
+      "value": "-0.0298104187",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "DIPOLE-DIPOLE",
+      "value": "-0.0059618100",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "DIPOLE-QUADRUPOLE",
+      "value": "-0.0047753213",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "QUADRUPOLE-QUADRUPOLE",
+      "value": "-0.0060695926",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "OVERLAP PEN. ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "ELECTROSTATIC ENERGY",
+      "value": "-0.1383035068",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "REPULSION ENERGY",
+      "value": "0.0594985712",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "POLARIZATION ENERGY",
+      "value": "-0.0275032899",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "FREE ENERGY IN SOLVENT - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "INTERNAL ENERGY IN SOLVENT - PCM",
+      "value": "0.0329164507",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "DELTA INTERNAL ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "ELECTROSTATIC INTERACTION ENERGY - PCM",
+      "value": "-0.0329164507",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "PIEROTTI CAVITATION ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "DISPERSION FREE ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "REPULSION FREE ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "TOTAL INTERACTION ENERGY - PCM",
+      "value": "-0.0329164507",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "TOTAL FREE ENERGY IN SOLVENT - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

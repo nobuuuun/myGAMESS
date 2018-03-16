@@ -1,0 +1,73 @@
+!   diatomic molecule HF, which is not to be confused with Hartree-Fock!
+!
+!  test case for the static hyperpolarizabilities in water,
+!  with inclusion of repulsion and dispersion effects
+!  these are high derivatives, esp. gamma, and the last digits change
+!  frequently over time, so expecting perfect agreement is a stupidity.
+!
+!  FINAL E= -100.0584250318 after 8 iters
+!   ALPHA XX = 4.5504
+!   ALPHA YY = 4.5504
+!   ALPHA ZZ = 5.9260
+! ISOTROPIC AVERAGE ALPHA = 5.0089 A.U.
+!   BETA ZXX =   .7318
+!   BETA XXZ =   .7318
+!   BETA ZYY =   .7318
+!   BETA YYZ =   .7318
+!   BETA ZZZ = -9.0117
+! STATIC BETA-V VALUE = 22.6443
+! AVERAGE BETAZ VALUE = -4.5289
+!   GAMMA XXXX = 162.3618
+!   GAMMA YYYY = 162.3617
+!   GAMMA ZZZZ = 231.6868
+!   GAMMA XXYY =  54.1204
+!   GAMMA XXZZ =  36.3154
+!   GAMMA YYZZ =  36.3153
+! AVERAGE GAMMA VALUE = 161.9825 A.U.
+!
+!  Very similar gamma values are computed by a response equation as well.
+!  for example, gamma(zzzz)= 231.6855
+!
+!  FREE ENERGY IN SOLVENT = <PSI| H(0)+V/2 |PSI>       =  -100.0647624732 A.U.
+!  INTERNAL ENERGY IN SOLVENT = <PSI| H(0) |PSI>       =  -100.0513445142 A.U.
+!  DELTA INTERNAL ENERGY =  <D-PSI| H(0) |D-PSI>       =      .0009041439 A.U.
+!  ELECTROSTATIC INTERACTION = 1/2(PB+PC) + 1/2PX + UNZ=     -.0091603824 A.U.
+!  PIEROTTI CAVITATION ENERGY                          =      .0063374415 A.U.
+!  DISPERSION FREE ENERGY                              =     -.0060756657 A.U.
+!  REPULSION FREE ENERGY                               =      .0018180890 A.U.
+!  TOTAL INTERACTION (DELTA + ES + CAV + DISP + REP)   =     -.0070805176 A.U.
+!  TOTAL FREE ENERGY IN SOLVENT                        =  -100.0584250317 A.U.
+!  TOTAL FREE ENERGY IN SOLVENT =      -62787.62 KCAL/MOL
+!
+!  This run takes 18 seconds on a 2.66 GHz Cloverton ( 2 Oct 2015)
+!  results essentially unchanged since 2008.
+!
+ $contrl scftyp=rhf runtyp=tdhf $end
+ $system mwords=2 $end
+ $guess  guess=huckel $end
+
+ $tdhf   nfreq=1 freq(1)=0.0 inib=2 inig=2 $end
+
+ $pcm    solvnt=water ief=3 icomp=0 icav=1 idisp=0 irep=1 idp=1 IFIELD=0 $end
+ $tescav mthall=1 $end
+ $newcav iptype=2 itsnum=960 $end
+
+ $DATA
+HF...polarizabilities with PCM
+C1
+HYDROGEN    1.0
+  DZV
+  P    1  ; 1    1.00000000      1.0
+  P    1  ; 1    0.33333333      1.0
+  S    1  ; 1    0.05435467      1.0
+
+FLUORINE    9.0   0.0 0.0 -0.917
+  DZV
+  D    1  ; 1    0.900000        1.0
+  D    1  ; 1    0.300000        1.0
+  P    1  ; 1    0.091100        1.0
+  S    1  ; 1    0.121133        1.0
+
+ $END
+
+! TRAVIS-CI SMALL

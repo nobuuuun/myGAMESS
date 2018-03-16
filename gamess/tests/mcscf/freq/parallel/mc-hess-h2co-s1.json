@@ -1,0 +1,229 @@
+{
+  "name": "mc-hess-h2co-s1.log",
+  "validation": [
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-211.8355941210",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "69.4000946423",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "28.6246990328",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-113.8108004459",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "28.6246990328",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "69.4000946423",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-325.4001220301",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-227.3753283550",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL KINETIC ENERGY",
+      "value": "113.5645279090",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "2.0021685692",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-113.8108004459",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -5",
+      "value": "-113.7709579105",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -4",
+      "value": "-113.5412873856",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -3",
+      "value": "-113.4991824574",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-113.4899801098",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-113.4527789227",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 1",
+      "value": "1.72",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 2",
+      "value": "0.16",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 3",
+      "value": "0.07",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 4",
+      "value": "0.02",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 5",
+      "value": "0.14",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 1",
+      "value": "0.26767",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 2",
+      "value": "0.07621",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 3",
+      "value": "0.01345",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 4",
+      "value": "0.00006",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 5",
+      "value": "0.07420",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "1.626905",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

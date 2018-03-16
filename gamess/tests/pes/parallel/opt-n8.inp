@@ -1,0 +1,41 @@
+!  An example showing a constraint applied in an optimization.
+!  SCF convergence is difficult due to the long bond constraint,
+!  so damping is turned on.
+!
+!  See "cubic fuels" 
+!  M.W.Schmidt, M.S.Gordon Int.J.Quantum Chem. 76, 434(2000)
+!  and "an ab initio study of potential surface for N8 isomers"
+!  G.Chung, M.W.Schmidt, M.S.Gordon  J.Phys.Chem.A 104, 5647(2000)
+!
+!     NSERCH:   0  E=      -47.2530320460  R.M.S.=  0.0072888
+!     NSERCH:   1  E=      -47.2541762011  R.M.S.=  0.0028672
+!     NSERCH:   2  E=      -47.2544253809  R.M.S.=  0.0006111
+!         ...snipped...
+!     NSERCH:  57  E=      -47.4339282853  R.M.S.=  0.0000579
+!     NSERCH:  58  E=      -47.4339284421  R.M.S.=  0.0000245
+!
+!  This run takes a second on almost anything ( 9 Nov 2005)
+!  results scarcely changed since 2005.
+!
+ $contrl scftyp=rhf runtyp=optimize nzvar=18 $end
+ $basis  gbasis=pm3 $end
+ $guess  guess=huckel $end
+ $scf    damp=.t. $end
+ $zmat   dlc=.t. auto=.t. ifzmat(1)=1,3,4 fvalue(1)=2.5 nonvdw(1)=3,4 $end
+ $statpt nstep=200 $end
+ $data
+on PES for ring opening of azidopentazole towards diazidodiimide
+C1     
+N           7.0  -1.8781488374  -0.0000204354  -0.0000013764
+N           7.0   1.8781486678  -0.0000204481   0.0000013769
+N           7.0  -0.0000000792  -1.1499811621   0.0000000000
+N           7.0  -0.0000000703   1.1500188379  -0.0000000001
+N           7.0   1.2589965060  -1.1581244039   0.0000111309
+N           7.0  -1.2589834253   1.1581259764   0.0000131845
+N           7.0  -1.2589963551  -1.1581243664  -0.0000111309
+N           7.0   1.2589835934   1.1581260016  -0.0000131848
+ $end 
+
+
+! TRAVIS-CI SMALL
+

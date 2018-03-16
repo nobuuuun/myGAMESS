@@ -1,0 +1,53 @@
+{
+  "name": "cc-h3nnh.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-112.2505895086",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "4.428493",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "LIBCCHEM",
+      "name": "E(RHF)     ",
+      "value": "-112.2505895086",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "LIBCCHEM",
+      "name": "E(MP2)     ",
+      "value": "-112.7621670737",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "LIBCCHEM",
+      "name": "E(CCSD)    ",
+      "value": "-112.7800759595",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "LIBCCHEM",
+      "name": "E(CCSD(T)) ",
+      "value": "-112.8025001418",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

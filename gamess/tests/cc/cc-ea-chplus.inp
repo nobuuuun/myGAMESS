@@ -1,0 +1,97 @@
+!   CH+ electron attachment to CH radical's ground and excited states
+!   "active" triples are used, involving 3 orbitals.
+!
+!   Both doublet and quartet states are solved for, requiring the 
+!   initial guess use active doubles to get starting quartets.
+!   The calculation is spin-adapted since it starts from S=0.
+!   Note that the job actually runs through ROHF steps, although
+!   the input group looks like RHF!
+!
+!    FINAL ROHF E= -37.7687349617, 11 iters
+!    ground state RO-CCSD = -37.9019842221, 19 iters
+!
+!             ---- SUMMARY OF EA-EOMCCSDt CALCULATIONS ----
+!                        ELECTRON
+!             SPIN      ATTACHMENT        TOTAL
+!      SYMM   MULT      ENERGY (H)      ENERGY (H)       ITERATIONS
+!       A1     2      -0.2913997512   -38.1933839733     CONVERGED
+!       A1     2      -0.2881910418   -38.1901752639     CONVERGED
+!       A2     4      -0.3508931377   -38.2528773598     CONVERGED
+!       A2     2      -0.2881910418   -38.1901752639     CONVERGED
+!       B1     2      -0.3859178596   -38.2879020817     CONVERGED
+!       B1     4      -0.3285417868   -38.2305260089     CONVERGED
+!       B2     2      -0.3859178596   -38.2879020817     CONVERGED
+!       B2     4      -0.3285417868   -38.2305260089     CONVERGED
+!
+!    This run takes 9 seconds on a 2.66 GHz Cloverton ( 3 Apr 2015)
+!    results haven't changed since 2010, except for a guess change.
+!
+!
+!   the results that are expected if one uses CCTYP=EA-EOM2 follow:
+!
+!          ---- SUMMARY OF EA-EOMCCSD(2P-1H) CALCULATIONS ----
+!                     ELECTRON
+!          SPIN      ATTACHMENT             TOTAL
+!   SYMM   MULT      ENERGY (H)           ENERGY (H)       ITERATIONS
+!    A1     2       -.2775718994        -38.1795561215     CONVERGED
+!    A1     2       -.1377070789        -38.0396913010     CONVERGED
+!    A2     4       -.2178103596        -38.1197945817     CONVERGED
+!    A2     2       -.1377070789        -38.0396913010     CONVERGED
+!    B1     2       -.3771415887        -38.2791258108     CONVERGED
+!    B1     4       -.2841839540        -38.1861681761     CONVERGED
+!    B2     2       -.3771415887        -38.2791258108     CONVERGED
+!    B2     4       -.2841839540        -38.1861681761     CONVERGED
+!
+ $CONTRL icharg=+1 scftyp=rhf RUNTYP=ENERGY CCTYP=EA-EOM3A $END
+ $system mwords=1 $end
+ $GUESS  GUESS=huckel $END
+ $eominp mult=-1 MINIT=1 NOACT=2 NUACT=8   nact=3
+         NSTATE(1)=2,2,2,2,0,0,0,0 $end
+ $data
+CH molecule at R=2.00 angs...basis set from CPL 154,380(1989)
+Cnv    2
+
+Carbon       6. 
+  S    6
+    1   4231.610       0.002029
+    2    634.882       0.015535
+    3    146.097       0.075411
+    4     42.4974      0.257121
+    5     14.1892      0.596555
+    6      1.9666      0.242517
+  S    1
+    1      5.1477      1.000000
+  S    1
+    1      0.4962      1.000000
+  S    1
+    1      0.1533      1.000000
+  S    1
+    1      0.0150      1.000000
+  P    4
+    1     18.1557      0.018534
+    2      3.9864      0.115442
+    3      1.1429      0.386206
+    4      0.3594      0.640089
+  P    1
+    1      0.1146      1.000000
+  P    1
+    1      0.011       1.000000
+  D    1
+    1      0.75        1.000000
+
+Hydrogen   1.  0.0  0.0 2.000
+  S    3
+    1   1.924060D+01   3.282800D-02
+    2   2.899200D+00   2.312080D-01
+    3   6.534000D-01   8.172380D-01
+  S    1
+    1   1.776000D-01   1.000000D+00
+  S    1
+    1   2.500000D-02   1.000000D+00
+  P    1
+    1   1.000000D+00   1.000000D+00
+
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,26 @@
+!   C28 -2 ion  (-2 fills a F2 shell)...6-311G(d)=532 AOs and 504 MOs
+!
+!       Td cage invented by Harry Kroto, Nature, 329, 529-531(1987)
+!   "the stability of the fullerenes Cn, n=24, 28, 32, 36, 50, 60, 70"
+!        The three unique distances are 1.4213, 1.4324, and 1.5106
+!
+!   FINAL E= -1059.6723788032, 13 iters, RMS= 0.000000344
+!            phi 82-85 (HOMO) has eps(f2)= +0.0413
+!
+!   This run takes 127 seconds on 2.66 GHz Cloverton (17 Mar 2015)
+!   answers stable since at least 2008
+!
+ $contrl scftyp=rhf runtyp=gradient icharg=-2 ispher=1 molplt=.true. $end
+ $system mwords=5 $end
+ $basis  gbasis=n311 ngauss=6 ndfunc=1 $end
+ $data
+tetrahedral C28 cluster
+Td
+
+C   6.0   1.3904149550   1.3904149550   1.3904149550
+C   6.0   0.5340926866  -0.5340926866   2.3054442062
+C   6.0   0.0209795328   1.6874271866   1.6874271866
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,261 @@
+{
+  "name": "pcm-efp-benzoic.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-418.3709934214",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "GRADIENT",
+      "name": "MAXIMUM GRADIENT",
+      "value": "0.000539372",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "GRADIENT",
+      "name": "RMS GRADIENT",
+      "value": "0.000232553",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.227137",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - NUCLEAR CHARGE  ",
+      "value": "407.9504104535",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP CHARGE      ",
+      "value": "-0.0897357301",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP DIPOLE      ",
+      "value": "-0.0642554135",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP QUADRUPOLE  ",
+      "value": "0.0026200518",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP OCTUPOLE    ",
+      "value": "-0.0024676082",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP CHARGE      ",
+      "value": "-0.0048835763",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP DIPOLE      ",
+      "value": "-0.0030025793",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP QUADRUPOLE  ",
+      "value": "-0.0025057810",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP OCTUPOLE    ",
+      "value": "0.0000059364",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP DIPOLE     - EFP DIPOLE      ",
+      "value": "-0.0006187160",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP DIPOLE     - EFP QUADRUPOLE  ",
+      "value": "-0.0001406854",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP QUADRUPOLE - EFP QUADRUPOLE  ",
+      "value": "-0.0006719991",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP EXCHANGE REPULSION ENERGY",
+      "value": "0.0055451860",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP DISPERSION ENERGY (C6)   ",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP DISPERSION ENERGY (C8)   ",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "TOTAL INTERFRAGMENT INTERACTION  ",
+      "value": "-0.0062722147",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP1",
+      "name": "EFP1 INDUCED DIPOLE X(IND)",
+      "value": "0.23646",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP1",
+      "name": "EFP1 INDUCED DIPOLE Y(IND)",
+      "value": "0.45780",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP1",
+      "name": "EFP1 INDUCED DIPOLE Z(IND)",
+      "value": "0.01460",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "PCM",
+      "name": "FREE ENERGY IN SOLVENT - PCM",
+      "value": "-418.3709934214",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "INTERNAL ENERGY IN SOLVENT - PCM",
+      "value": "-418.3554476053",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "DELTA INTERNAL ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "ELECTROSTATIC INTERACTION ENERGY - PCM",
+      "value": "-0.0155458161",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "PIEROTTI CAVITATION ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "DISPERSION FREE ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "REPULSION FREE ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "TOTAL INTERACTION ENERGY - PCM",
+      "value": "-0.0155458161",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "TOTAL FREE ENERGY IN SOLVENT - PCM",
+      "value": "-418.3709934214",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

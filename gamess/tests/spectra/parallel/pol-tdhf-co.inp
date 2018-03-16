@@ -1,0 +1,84 @@
+!    CO...static polarizabilities...basis set "BS1"
+!        G. Maroulis  J.Phys.Chem. 100, 13466-13473(1996)
+!    see also X.Andrade, S.Botti, M.A.L.Marques, A.Rubio 
+!             J.Chem.Phys. 126, 184106(2007)
+!
+!    the TDHF program cannot run in spherical harmonics (as of 4/2015),
+!    but the literature did use spherical harmonics for "BS1"
+!                    GAMESS   Maroulis
+!         alpha-xx   11.2648    11.250
+!         alpha-zz   14.4503    14.420
+!  isotropic alpha   12.3266    12.307
+!         beta-zxx    4.6736     5.02
+!         beta-zzz   30.6157    31.20
+!     average beta   23.9777    24.75  (from non-iterative output)
+!       gamma-xxxx  918.2833   902
+!       gamma-zzzz 1207.0050  1217
+!       gamma-xxyy  306.0944     ?
+!       gamma-xxzz  362.6399   355
+!    average gamma 1021.2639  1008
+!
+!    As of January 2011, the number of response iterations was
+!    Ua = 9,9,9 and Uab= 75,18,20,75,20,63 as Ua now uses DIIS,
+!    lowering its iteration count from 18,18,82.  This changes
+!    the results in the last digits (alpha, beta, and gamma),
+!    and lowered the time from 96 sec to 73.
+!
+!    This test takes 101 seconds on 2.66 GHz Cloverton (14 Jul 2016)
+!
+!    Note that the iterative beta output gives an answer exactly 5x
+!    bigger for the tensor trace than the non-iterative output.
+!
+ $CONTRL scftyp=rhf RUNTYP=tdhf UNITS=BOHR ispher=0 $END
+ $system mwords=1 $end
+!
+!    that other program does moments at the center of nuclear charge,
+!    but table 2 says the center of mass was used.  Only the first 
+!    non-vanishing moment is origin-independent.
+!    dipole with spherical harmonics= -0.267632 Debye --> -0.1053 a.u.
+!    not sure how to boil down one number from quadrupoles or octupoles
+ $elmom  iemom=3 where=comass $end
+--- $points
+---bohr 1  ! next is center of nuclear charge (8*R/14)
+---0.0 0.0 1.218412 
+--- $end
+
+!    the paper is static polarizabilities???
+!    a wavelength of 694.3 nm is mentioned, but not computed directly?
+x$TDHF   FREQ(1)=0.04557 INIB=2 inig=1 $END
+ $TDHF   FREQ(1)=0.0 INIB=2 inig=1 $END
+ $data
+newer Dunning/Hay contraction of Huzinaga basis, plus diffuse supplements
+Cnv 4
+ 
+CARBON      6.0 
+  dh
+  s 1 ; 1 0.047362 1.0
+  s 1 ; 1 0.014632 1.0
+  p 1 ; 1 0.036542 1.0
+  p 1 ; 1 0.011652 1.0
+  d 1 ; 1 1.248985 1.0
+  d 1 ; 1 0.70     1.0
+  d 1 ; 1 0.219877 1.0
+  d 1 ; 1 0.069065 1.0
+  f 1 ; 1 0.015    1.0
+  f 1 ; 1 0.069065 1.0
+ 
+OXYGEN      8.0   0.0 0.0 2.132221
+  dh
+  s 1 ; 1 0.086186 1.0
+  s 1 ; 1 0.026100 1.0
+  p 1 ; 1 0.063684 1.0
+  p 1 ; 1 0.018978 1.0
+  d 1 ; 1 1.516625 1.0
+  d 1 ; 1 0.85     1.0
+  d 1 ; 1 0.266993 1.0
+  d 1 ; 1 0.083865 1.0
+  f 1 ; 1 0.1668   1.0
+  f 1 ; 1 0.083865 1.0
+ 
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,42 @@
+!   H3PO...closed shell DFT hessian calculation...55 AOs, 52 MOs.
+!
+!   The analytic run automatically picks CPHF=AO (the only option),
+!   but requires user to select direct AO integrals and no symmetry
+!
+!   FINAL R-PBE E= -418.1265940222, 14 iters  (this geom's r-m-s= 0.000007595)
+!   analyt. FREQ=  804.49,    1064.36,    1098.18,     1220.94,
+!           FREQ= 2286.94,    2306.98
+!   seminum FREQ=  804.00(e), 1063.70(e), 1097.75(a1), 1220.62(a1),
+!           FREQ= 2286.96(e), 2307.02(a1)
+!
+!   analyt. residual= 0.10, 0.02, 0.02, 4.88, 6.58, 54.25
+!   seminum residual= 2.67, 2.00, 0.30, 1.39, 1.68, 11.24
+!
+!        analytic run= 182 seconds, on 2.66 GHz Cloverton (5 Dec 2014)
+!   seminumerical run= 181 s.conds (integrals on disk)
+!
+ $contrl scftyp=rhf dfttyp=pbe runtyp=hessian ispher=1 $end
+ $system mwords=5 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=ccd $end
+!
+!            as of 12/2014, analytic evaluation requires C1 symmetry,
+!            and user must select AO integral direct mode.
+ $force  method=analytic $end
+ $scf    dirscf=.true. $end
+ $contrl nosym=1 $end
+!
+!            half-numerical evaluation
+x$force  method=seminum $end
+
+ $data
+phosphine oxide...PBE/CCD geometry
+Cnv 3
+
+P   15.0   0.0000000000   0.0000000000   0.0144791092
+O    8.0   0.0000000000   0.0000000000   1.5176774579
+H    1.0   1.2730813029   0.0000000000  -0.6627876467
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,58 @@
+!  Test of ZAPT on a-3-pi-u state of C2, Table 1 of
+!  T.J.Lee, A.P.Rendell, K.G.Dyall, D.Jayatilaka
+!  J.Chem.Phys. 100, 7400-7409(1994)
+!
+!  GAMESS: FINAL E= -75.4898507488, ZAPT E(MP2)= -75.7531860991
+!  literature: ZAPT E(MP2)= -75.753186
+!
+!  This run takes a few seconds on anything ( 8 Nov 2005)
+!
+ $contrl scftyp=rohf mult=3 mplevl=2 runtyp=energy nosym=0 $end
+ $system parall=.true. mwords=2 memddi=2 $end
+!
+!   Huckel guess puts sigma-g below pi-u below sigma-u below sigma-g,
+!   must reorder to get (sigma-g)**2 (sigma-u)**2 (pi-u)**3 (sigma-g)**1
+!   which is the occupancy of the 3-pi-u excited state.
+!   This is done as a ROHF (not GVB) run, raising the degeneracy
+!   of the pi-u level due to inequivalent occupancies.  Thus the
+!   computation is being done in D2h subgroup of D-inf-h group.
+!
+ $guess  guess=huckel norder=1 iorder(3)=3,6,4,5,7 $end
+!   The orbital restriction seems to be necessary to get convergence
+ $scf    rstrct=.t. $end
+ $mp2    code=serial ospt=rmp $end
+!   We run in the highest Abelian subgroup,
+!   noting that ROHF breaks pi degeneracy anyway.
+ $data
+C2 energy calculation
+Dnh 2
+
+C  6.0     0.0000  0.0000  1.3164/2
+  S 6
+   1  9471.0    0.000776
+   2  1398.0    0.006218
+   3   307.5    0.033575
+   4    84.54   0.134278
+   5    26.91   0.393668
+   6     9.409  0.544169
+  S 2
+   1     9.409  0.248075
+   2     3.500  0.782844
+  S 1 ; 1 1.068  1.0
+  S 1 ; 1 0.4002 1.0
+  S 1 ; 1 0.1351 1.0
+  P 3
+   1 25.37  0.038802
+   2  5.776 0.243118
+   3  1.787 0.810162
+  P 1 ; 1 0.6577  1.0
+  P 1 ; 1 0.2480  1.0
+  P 1 ; 1 0.09106 1.0
+  D 1 ; 1 1.097 1.0
+  D 1 ; 1 0.318 1.0
+  F 1 ; 1 0.761 1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+

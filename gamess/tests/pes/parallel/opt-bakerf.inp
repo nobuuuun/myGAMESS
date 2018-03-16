@@ -1,0 +1,32 @@
+!  This is Baker's test case F.
+!  See J.Baker  J.Comput.Chem.  7,385-395(1986)
+!
+!     NSERCH:   0  E=     -137.9167200547  R.M.S.=  0.0635796
+!     NSERCH:   1  E=     -137.9822126322  R.M.S.=  0.0631733
+!             ...snipped....
+!     NSERCH:  11  E=     -138.2818931095  R.M.S.=  0.0000627
+!     NSERCH:  12  E=     -138.2818931767  R.M.S.=  0.0000036
+!      The optimized geometry should be 1.404, 1.079, 109.4
+!
+!  This run takes 0 seconds on almost anything (28 Apr 2015)
+!  results little changed since at least 2005
+!
+ $contrl scftyp=rhf runtyp=optimize nzvar=9 maxit=50 $end
+ $system mwords=1 $end
+ $basis  gbasis=n21 ngauss=3 $end
+ $guess  guess=huckel $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,   1,1,4,   1,1,5,
+                  2,2,1,3,   2,2,1,4,    2,2,1,5,
+                  3,3,1,2,4,    3,3,1,2,5    $end
+ $DATA
+Optimization of CH3F...Baker's example "F"
+Cnv 3
+ 
+CARBON      6.0
+FLUORINE    9.0    0.0    0.0   2.0
+HYDROGEN    1.0    1.6
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,101 @@
+{
+  "name": "irc-gs2.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-450.2991250499",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -5",
+      "value": "-450.2991064",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -4",
+      "value": "-450.2991105",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -3",
+      "value": "-450.2991149",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -2",
+      "value": "-450.2991198",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -1",
+      "value": "-450.2991250",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "PATH DISTANCE STOTAL : IRC",
+      "value": "0.19982",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "IRC",
+      "name": "NUCLEAR REPULSION : IRC",
+      "value": "387.9618933507",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "IRC",
+      "name": "ENERGY : IRC",
+      "value": "-450.2991250",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "MASS WEIGHTED TANGENT GRAD. NORM : IRC",
+      "value": "0.0000013",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "NEXT GEOMETRY STEP PREDICTED ANGLE : IRC",
+      "value": "0.107",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "IRC",
+      "name": "NEXT CARTESIAN RMS DISPLACEMENT : IRC",
+      "value": "0.0000025",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    }
+  ]
+}

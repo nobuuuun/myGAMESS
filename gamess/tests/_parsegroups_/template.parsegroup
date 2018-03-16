@@ -1,0 +1,58 @@
+{
+  "parse_header" : "parse_header",
+  "parse_group" : [
+   {
+     "comment" : "Basic template for generic parsing",
+     "regex_string" : "regex_string",
+     "parse_name"   : "parse_name",
+     "parse_case_sensitive" : true,
+     "parse_type" : "float",
+     "parse_precision" : 10,
+     "parse_tolerance" : 1e-10,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "comment" : "Basic template for using a parse_recipe",
+     "regex_string" : "regex_string",
+     "parse_name"   : "parse_name",
+     "parse_case_sensitive" : true,
+     "parse_type" : "float",
+     "parse_precision" : 10,
+     "parse_tolerance" : 1e-10,
+     "parse_line_offset" : 0,
+     "parse_required" : true,
+     "parse_recipe" : "firstinstance_firstindex"
+   },
+   {
+     "comment" : "Basic template for using parse_multiple_instances",
+     "regex_string" : "regex_string",
+     "parse_name"   : "parse_name",
+     "parse_case_sensitive" : true,
+     "parse_type" : "float",
+     "parse_precision" : 10,
+     "parse_tolerance" : 1e-10,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE",
+     "parse_required" : true
+   },
+    {
+     "comment" : "Basic template for using parse_multiple_lines",
+     "regex_string" : "regex_string",
+     "parse_name"   : "parse_name",
+     "parse_case_sensitive" : true,
+     "parse_type" : "float",
+     "parse_precision" : 10,
+     "parse_tolerance" : 1e-10,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "STATE",
+     "parse_required" : true
+   }
+ ]
+}

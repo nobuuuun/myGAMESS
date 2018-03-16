@@ -1,0 +1,69 @@
+!   minimum energy crossing point (MECP)
+!   between the singlet "ylide" H3NNH mimimum,
+!   and the separated singlet H3N + triplet NH,
+!   using single reference MP2 potential energy surfaces.
+!
+!   See "The decomposition of hydrazine in the gas phase and over
+!   an Iridium catalyst"   figure 1a
+!   M.W.Schmidt, M.S.Gordon  Z.Phys.Chem. 227, 1301-1336(2013)
+!
+!   results added to this file for the first time (3/2015) are
+!      NSERCH= 22        ACTUAL                 THRESHOLD
+!         ------------------------------------  ----------
+!         ENERGY OF FIRST STATE  = -111.377080
+!         ENERGY OF 2nd    STATE = -111.377075
+!         ENERGY DIFFERENCE =         0.000005    0.000010
+!         MAX EFFECTIVE GRADIENT =    0.000059    0.000500
+!         RMS EFFECTIVE GRADIENT =    0.000022    0.000300
+!         MAX CHANGE OF X =           0.000283    0.002000
+!         RMS CHANGE OF X =           0.000091    0.001500
+!
+!   This run takes 24 seconds on 2.66 GHz Cloverton (29 Apr 2015)
+!
+ $mp2 code=ddi $end
+ $contrl runtyp=mex mplevl=2 nzvar=12 $end
+ $mex    scf1=rohf mult1=3 
+         scf2=rhf  mult2=1 nrdmos=0 $end
+ $system parall=.t. mwords=10 memddi=20 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  1,1,4,  1,1,5,  1,5,6,
+            2,2,1,5,  2,3,1,5,  2,4,1,5,  2,6,5,1,
+            3,2,1,5,6,  3,3,1,5,6,  3,4,1,5,6,  $end
+ $data
+MECP for dissociating H3N-NH...
+Cs
+
+N   7.0  -0.0415407622   0.0578501106   0.0000000000
+H   1.0  -0.4939336016  -0.3295548709   0.8155159880
+H   1.0   0.9021627550  -0.2833638108   0.0000000000
+N   7.0   0.0997131689   2.0            0.0000000000
+H   1.0  -0.8724679585   1.8261055198   0.0000000000
+ $end
+
+optimized geometry for the ylide has NN bond along Y-axis,
+N   7.0  -0.0415407622   0.0578501106   0.0000000000
+H   1.0  -0.4939336016  -0.3295548709   0.8155159880
+H   1.0   0.9021627550  -0.2833638108   0.0000000000
+N   7.0   0.0997131689   1.5437918012   0.0000000000
+H   1.0  -0.8724679585   1.8261055198   0.0000000000
+
+Just setting the 2nd atom's Y coordinate to 2.0 leads to a successful 
+minumum enercy crossing point search!  We have at the initial geometry,
+   ROHF= -111.0778441457, ZAPT= -111.3659854157
+    RHF= -111.0611840476,  MP2= -111.3708964899
+       DIFFERENCE GRADIENT: (RMS * DE:   0.014471)
+         PARALLEL GRADIENT: (RMS:   0.038366)
+and 22 steps locates the MECP:
+N   7.0  -0.0600606441  -0.0174601780   0.0000000000
+H   1.0  -0.4814438761  -0.4268935923   0.8302919969
+H   1.0   0.9332648095  -0.2223338752   0.0000000000
+N   7.0   0.1094438754   1.9600533635   0.0000000000
+H   1.0  -0.9197602887   2.0750099524   0.0000000000
+   ROHF= -111.0883661003, ZAPT= -111.3770795463
+    RHF= -111.0666581488,  MP2= -111.3770745514
+       DIFFERENCE GRADIENT: (RMS * DE:   0.000021)
+         PARALLEL GRADIENT: (RMS:   0.034043)
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

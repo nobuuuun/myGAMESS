@@ -1,0 +1,19 @@
+#!/bin/bash
+
+state2E0=-415.6478892459
+
+state2E=`grep "TOTAL ENERGY = " $1 | tail -n 1 | awk '{print $4}'`
+
+tolE0=$tolE
+
+error=0
+
+#total energy
+diffe=`$chkabs $state2E0 $state2E $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$((error + 1))
+fi
+
+printf "state2E=%12.8f\n" $diffe
+exit $error

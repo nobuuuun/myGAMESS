@@ -1,0 +1,11 @@
+{
+  "parse_header" : "SYSTEM PROPERTIES",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)NUMBER OF ATOMS(\\s*).*$",
+     "parse_name"   : "TOTAL NUMBER OF ATOMS",
+     "parse_case_sensitive" : false,
+     "parse_type" : "integer",
+     "parse_instance" : 1
+   }  ]
+}

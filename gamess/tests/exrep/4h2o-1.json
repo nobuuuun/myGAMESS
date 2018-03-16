@@ -1,0 +1,309 @@
+{
+  "name": "4h2o-1.log",
+  "validation": [
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-123.1449771930",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "37.7842694917",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "9.2746960428",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-76.0957731461",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "9.2746960428",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "37.7842694917",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-199.0376637554",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-FRAGMENT MULTIPOLE ENERGY",
+      "value": "-0.0547675606",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-FRAGMENT REMAINDER ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "STATIC INTERFRAGMENT ENERGY",
+      "value": "-0.0071833295",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "FRAGMENT-NUCLEAR ENERGY",
+      "value": "0.0084779779",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL FRAGMENT INDUCTION ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-FRAGMENT DISPERSION ENERGY",
+      "value": "-0.0057780772",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-FRAGMENT EXCHANGE REPULSION",
+      "value": "0.0242064068",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-152.0432272691",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "SOLUTE POTENTIAL ENERGY",
+      "value": "-152.0334657815",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "SOLUTE KINETIC ENERGY",
+      "value": "75.9474541230",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "2.0018243868",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-76.0957731461",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORBITAL LOCALIZATION",
+      "name": "ORBITAL LOCALIZATION",
+      "value": "286.002048",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.273263",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - NUCLEAR CHARGE  ",
+      "value": "9.2746960428",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP CHARGE      ",
+      "value": "0.0114052482",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP DIPOLE      ",
+      "value": "-0.0377338783",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP QUADRUPOLE  ",
+      "value": "0.0344989589",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "NUCLEAR CHARGE - EFP OCTUPOLE    ",
+      "value": "0.0003076491",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP CHARGE      ",
+      "value": "-0.0109319153",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP DIPOLE      ",
+      "value": "-0.0084127663",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP QUADRUPOLE  ",
+      "value": "-0.0032413420",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP CHARGE     - EFP OCTUPOLE    ",
+      "value": "0.0003084055",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP DIPOLE     - EFP DIPOLE      ",
+      "value": "-0.0023000453",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP DIPOLE     - EFP QUADRUPOLE  ",
+      "value": "-0.0016820109",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP QUADRUPOLE - EFP QUADRUPOLE  ",
+      "value": "-0.0015882350",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP EXCHANGE REPULSION ENERGY",
+      "value": "0.0206645798",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP DISPERSION ENERGY (C6)   ",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "EFP-EFP DISPERSION ENERGY (C8)   ",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+      "name": "TOTAL INTERFRAGMENT INTERACTION  ",
+      "value": "-0.0071833295",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

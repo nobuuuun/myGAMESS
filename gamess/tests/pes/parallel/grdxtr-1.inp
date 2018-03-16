@@ -1,0 +1,63 @@
+!    This job tests the gradient extremal routine.
+!
+!    The run traces the extremal leading from minimum M4
+!    to the 2nd order saddle point SOSP1.  It is from
+!    K.Bondensgard and F.Jensen, J.Chem.Phys. 104, 8025-8031(1996)
+!
+!    The lowest mode is followed in the negative direction
+!    After 11 steps, a GE bifurcation is found.
+!    After 18 steps, the algorithm switches to a NR search,
+!    which locates a 2nd order saddle point in three steps.
+!
+!    The hessian is computed numerous times in this run.
+!
+!      the results should be
+!    CYCLE    1   ENERGY  -112.26908884   GNORM  0.000881  GE CURVATURE  0.258
+!    CYCLE    2   ENERGY  -112.26857122   GNORM  0.009413  GE CURVATURE  0.257
+!    CYCLE    3   ENERGY  -112.26722242   GNORM  0.017521  GE CURVATURE  0.256
+!    CYCLE    4   ENERGY  -112.26508098   GNORM  0.025280  GE CURVATURE  0.257
+!    CYCLE    5   ENERGY  -112.26217845   GNORM  0.032757  GE CURVATURE  0.261
+!    CYCLE    6   ENERGY  -112.25854033   GNORM  0.040006  GE CURVATURE  0.268
+!    CYCLE    7   ENERGY  -112.25418714   GNORM  0.047074  GE CURVATURE  0.284
+!    CYCLE    8   ENERGY  -112.24913564   GNORM  0.053995  GE CURVATURE  0.315
+!    CYCLE    9   ENERGY  -112.24340065   GNORM  0.060790  GE CURVATURE  0.388
+!    CYCLE   10   ENERGY  -112.23699965   GNORM  0.067458  GE CURVATURE  0.577
+!    CYCLE   11   ENERGY  -112.22997709   GNORM  0.073939  GE CURVATURE  1.203
+!    CYCLE   11   ENERGY  -112.23369572   GNORM  0.070607  GE CURVATURE  1.119
+!    CYCLE   11   ENERGY  -112.23438126   GNORM  0.069969  GE CURVATURE  1.103
+!    CYCLE   11   ENERGY  -112.23447582   GNORM  0.069880  GE CURVATURE  1.101
+!    CYCLE   12   ENERGY  -112.22725268   GNORM  0.076245  GE CURVATURE  1.706
+!    CYCLE   13   ENERGY  -112.22108436   GNORM  0.080948  GE CURVATURE  9.751
+!    CYCLE   14   ENERGY  -112.21970918   GNORM  0.081768  GE CURVATURE 10.088
+!    CYCLE   15   ENERGY  -112.21856765   GNORM  0.081865  GE CURVATURE  0.585
+!    CYCLE   16   ENERGY  -112.21461839   GNORM  0.079448  GE CURVATURE  3.170
+!    CYCLE   17   ENERGY  -112.20861805   GNORM  0.068963  GE CURVATURE  3.126
+!    CYCLE   18   ENERGY  -112.20296135   GNORM  0.048031  GE CURVATURE  1.704
+!      after which the run shifts to a saddle point search,
+!    NSERCH:   0  E=     -112.1995664236  R.M.S.=  0.0056366
+!    NSERCH:   1  E=     -112.1981535560  R.M.S.=  0.0111897
+!    NSERCH:   2  E=     -112.1989747325  R.M.S.=  0.0008369
+!    NSERCH:   3  E=     -112.1989779727  R.M.S.=  0.0000037
+!
+!  This run takes 7 seconds on a 2.66 GHz Cloverton (29 Apr 2015)
+!  results haven't changed significantly since at least 2005.
+!
+ $contrl scftyp=rhf runtyp=gradextr nzvar=6 $end
+ $system mwords=1 $end
+ $zmat   izmat(1)=1,1,2, 1,1,3, 1,2,4, 2,1,2,4, 2,2,1,3,
+                  3,3,1,2,4  $end
+ $scf    nconv=8 $end
+ $gradex ifolow=-1 $end
+ $basis  gbasis=sto ngauss=3 $end
+ $data
+cis hydroxycarbene...trace the extremal connecting M4 to SOSP1
+Cs
+
+C      6.      0.124591    0.751969    0.000000
+O      8.      0.124591   -0.574438    0.000000
+H      1.     -0.962414    1.065717    0.000000
+H      1.     -0.781864   -0.982024    0.000000
+ $end
+
+! TRAVIS-CI SMALL
+

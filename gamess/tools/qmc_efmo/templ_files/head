@@ -1,0 +1,7 @@
+ $CONTRL 
+         ispher=1
+         PP=READ $END
+ $SYSTEM MWORDS=1000 $END
+ $DATA
+
+C1

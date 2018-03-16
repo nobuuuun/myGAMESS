@@ -1,0 +1,46 @@
+!   Difluoroethene...spin-flip CIS test...test from Noriyuki 4/2011
+!   the reference state is ROHF type, target state is the ground state.
+!
+!   reference triplet state FINAL E= -273.7154733129, 11 iters,
+!   the spin-flip CIS states are
+!      STATE             ENERGY     EXCITATION     S-SQUARED
+!            2 NEGATIVE ROOT(S) FOUND.
+!      1  A         -273.9030207751   -5.103        0.0088
+!      2  A         -273.7220285693   -0.178        2.0000
+!      0  A         -273.7154733129    0.000               (REFERENCE STATE)
+!      3  A         -273.6469450882    1.865        1.0009
+!      4  A         -273.5963282818    3.242        1.0012
+!      5  A         -273.5090150765    5.618        1.0067
+!   and the target state 1's RMS gradient=  0.322639302, mu= 0.463039 Debye
+!
+!   since TD-DFT with no functional is equivalent to CIS (w/o frozen core),
+!   the SF-TD-DFT run gives r.m.s. gradient 0.322639304
+!
+!   this run takes 1 seconds on 2.66 GHz Cloverton (4 May 2011)
+!
+ $CONTRL SCFTYP=ROHF MULT=3 RUNTYP=GRADIENT CITYP=SFCIS              $END
+x$CONTRL SCFTYP=ROHF MULT=3 RUNTYP=GRADIENT DFTTYP=NONE TDDFT=SPNFLP $end
+ $SYSTEM MWORDS=1 $END 
+!-----------------------------------------------------------------------
+! Wave function
+!-----------------------------------------------------------------------
+ $GUESS GUESS=HUCKEL $END 
+ $BASIS GBASIS=N21 NGAUSS=3 $END
+ $CIS   NSTATE=5 IROOT=1 MULT=1 $END
+ $TDDFT NSTATE=5 IROOT=1 MULT=1 $END
+!-----------------------------------------------------------------------
+! Geometry
+!-----------------------------------------------------------------------
+ $DATA  
+cis-DFE Gas RO-SF-CIS/3-21G S0
+C1
+C     6.0  -0.0000000000   0.6505243427  -0.0165521420
+C     6.0   0.0000000000  -0.6505243428  -0.0165521421
+F     9.0  -0.0000000000   1.2156446665  -0.9192030778
+F     9.0   0.0000000000  -1.2156446664  -0.9192030780
+H     1.0  -0.0000000000  -1.3965430797   1.1178852200
+H     1.0   0.0000000000   1.3965430798   1.1178852199
+ $END
+
+! TRAVIS-CI SMALL
+

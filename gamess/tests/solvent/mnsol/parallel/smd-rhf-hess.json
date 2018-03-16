@@ -1,0 +1,101 @@
+{
+  "name": "smd-rhf-hess.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-115.0440548664",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 1",
+      "value": "128.73",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 2",
+      "value": "86.73",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 3",
+      "value": "54.18",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 4",
+      "value": "0.01",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 5",
+      "value": "0.01",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 1",
+      "value": "1.38397",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 2",
+      "value": "0.28086",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 3",
+      "value": "0.27826",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 4",
+      "value": "0.00000",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 5",
+      "value": "0.00000",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.080359",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

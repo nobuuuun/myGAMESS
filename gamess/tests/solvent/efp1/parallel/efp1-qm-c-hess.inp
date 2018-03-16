@@ -1,0 +1,83 @@
+!   HNO (QM) plus two H2O (EFP1)....EFP position constraint test.
+!   Expected result is case c.  Test created in 2012
+!
+!   two different approaches work reasonably well,
+!   although IFREEZ and FIXED give different numerical results.
+!   See also a similar optimization test case.
+!
+!   a) no constraints used, at fully optimized geometry (see below):
+!      43 E/gradient computed: 1 + 2*3*Nat + 2*6*Nefp = 1 + 18 + 24 = 43
+!      3*Nat + 6*Nefp modes should be generated, in all 21.
+!      residual FREQ= 9.70, 3.43, 0.86, 2.18, 4.33, 13.33
+!          true FREQ= 68.05,  87.96, 122.09, 163.44, 166.64, 198.49,
+!          true FREQ=211.38, 265.58, 349.58, 385.03, 572.58, 677.77,
+!          true FREQ= 1717.69, 1981.75, 3462.98
+!      the last three are HNO's internal modes: its gas phase hessian is
+!         1683.59, 1959.04, 3401.72 using the non-optimal geometry below.
+!      the 12 small ones are relative motions of the three moeities.
+!
+!      Using the QM/EFP structure optimized with EFP constraints,
+!
+!   b) IFREEZ used:
+!      19 E/gradients computed (1 + 2*3*Nat)
+!      zapped out FREQ=  0.00  0.00  0.00  0.00  0.00 0.00
+!           other FREQ= 0.12, 0.21, 0.24, 0.25, 0.33, 0.36, 1.39,
+!           other FREQ= 15.57, 71.26, 87.45, 178.52, 393.34,
+!           other FREQ= 1717.10, 1981.58, 3457.71
+!      The Vib0 gradient has tiny but non-zero EFP parts!
+!      The hessian prints as identically zero in the EFP/EFP blocks,
+!      and in the QM/EFP blocks.  The printout says 
+!      THERE ARE FROZEN COORDINATES, PARTIAL HESSIAN ANALYSIS WILL BE DONE.
+!
+!   c) POSITION=FIXED used:
+!      19 E/gradients computed (1 + 2*3*Nat)
+!      FREQ= 17.09, 38.42, 88.60, 98.77, 182.12, 395.44,
+!      FREQ= 1717.10, 1981.58, 3457.72
+!      The gradient and hessian print only QM components.
+!      Quite naturally, the use of hssend=.true. during a FIXED geometry
+!      optimization gives essentially the same results.
+!
+!  The run 'c' takes 6 seconds on 2.66 GHz Cloverton (26 Oct 2015)
+!  results unchanged since 2012
+!
+ $contrl scftyp=rhf runtyp=hessian $end
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $guess  guess=huckel $end
+!           we have 6 T+R degrees of freedom for each EFP to freeze:
+x$statpt ifreez(1)=10,11,12,13,14,15,   16,17,18,19,20,21 $end
+ $data
+HNO plus two waters (NH...OH(u)...OH(d) ring)...using constrained QM/EFP1 geom
+C1
+H           1.0   1.4071519102   0.3602366490   0.1857888824
+N           7.0   1.1612653662  -0.6012823903   0.4479045111
+O           8.0   2.1060678444  -1.1649820149   0.8661939940
+ $end
+ $efrag
+position=fixed >
+coord=cart
+FRAGNAME=H2ORHF
+ZO1              -1.7810788844  -0.4032410931  -0.3120521718
+ZH2              -1.0393379910  -0.8557921633   0.0565891580
+ZH3              -2.1004408536  -0.9383486684  -1.0209571510
+FRAGNAME=H2ORHF
+ZO1              -0.0776169231   1.9064264506  -0.6647047920
+ZH2              -0.3751921632   2.7123347333  -0.2737581584
+ZH3              -0.8140290729   1.3160256597  -0.6631218022
+ $end
+
+------- this fully optimized geometry can used for case "a":
+H           1.0   1.4053291430   0.4200740899   0.1249831360
+N           7.0   1.2092840913  -0.5553155703   0.3766557267
+O           8.0   2.1880317432  -1.0832176249   0.7626430764
+FRAGNAME=H2ORHF
+ZO1              -1.7437892267  -0.4390824744  -0.3082905886
+ZH2              -0.9686446479  -0.8665298903   0.0193037377
+ZH3              -2.1496950629  -1.0395279678  -0.9129261116
+FRAGNAME=H2ORHF
+ZO1              -0.1100213095   1.9390494879  -0.6670138466
+ZH2              -0.3929024437   2.7631233926  -0.3040277346
+ZH3              -0.8678817020   1.3767817891  -0.6865359987
+
+! TRAVIS-CI SMALL
+

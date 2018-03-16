@@ -1,0 +1,165 @@
+{
+  "name": "rna-3nj6-fixsol.log",
+  "validation": [
+    {
+      "header": "QUANPOL MD",
+      "name": "BOND STRETCHING ENERGY - QUANPOL MD",
+      "value": "347.8174189153",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "DIHEDRAL ROTATION ENERGY - QUANPOL MD",
+      "value": "202.0910155569",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "DIHEDRAL BENDING ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "CMAP ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "WAGGING ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "LJ REPULSION ENERGY - QUANPOL MD",
+      "value": "397.7365875120",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "LJ DISPERSION ENERGY - QUANPOL MD",
+      "value": "-459.0339594873",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "CHARGE ENERGY - QUANPOL MD",
+      "value": "-742.0211317073",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "INDUCED DIPOLE ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "SPHSOL ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "FIXSOL ENERGY - QUANPOL MD",
+      "value": "-1656.4946454344",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "QM CENTER ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "SPHERE ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "POTENTIAL ENERGY - QUANPOL MD",
+      "value": "-1844.8560580028",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "KINETIC ENERGY - QUANPOL MD",
+      "value": "288.6634722626",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "TOTAL ENERGY - QUANPOL MD",
+      "value": "-1556.1925857403",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE POTENTIAL ENERGY - QUANPOL MD",
+      "value": "-1844.8560580028",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE TOTAL ENERGY - QUANPOL MD",
+      "value": "288.6634722626",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE TEMPERATURE - QUANPOL MD",
+      "value": "299.8161501894",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE PRESSURE - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    }
+  ]
+}

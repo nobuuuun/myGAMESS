@@ -1,0 +1,26 @@
+!  FINAL E=-203.2596257725, 12 iters, RMS grad=0.020919817
+!
+!  The RSTRCT=.T. is required, since this doubly negative ion
+!  has a open shell f-u level as its HOMO, with positive energy,
+!  namely eps(t2)= +0.1502 with default canonicalization.
+!  SOSCF does not handle this molecule gracefully.
+!
+!  This run takes 1 second on almost anything (31 Mar 2015)
+!  results have not changed substantially since at least 2005.
+!
+ $contrl scftyp=rohf runtyp=gradient ecp=sbkjc mult=4 icharg=-2 $end
+ $system mwords=1 timlim=5 $end
+ $scf    rstrct=.true. ethrsh=1.0 $end
+ $basis  gbasis=sbkjc $end
+ $guess  guess=huckel $end 
+ $data
+[CoCl4]2-
+Td
+
+Co  27.0
+Cl  17.0   1.300 1.300 1.300
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,53 @@
+{
+  "parse_header" : "MD",
+  "parse_group" : [
+   {
+     "regex_string" : "^     POT  ENERGY      =.*$",
+     "parse_name"   : "POTENTIAL ENERGY - MD",
+     "parse_type" : "float",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^     TRANS    KE      =.*$",
+     "parse_name"   : "TRANSLATIONAL KINETIC ENERGY - MD",
+     "parse_type" : "float",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^     ROT      KE      =.*$",
+     "parse_name"   : "ROTATIONAL KINETIC ENERGY - MD",
+     "parse_type" : "float",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^     TOT      KE      =.*$",
+     "parse_name"   : "TOTAL KINETIC ENERGY - MD",
+     "parse_type" : "float",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^     TOT  ENERGY      =.*$",
+     "parse_name"   : "TOTAL ENERGY - MD",
+     "parse_type" : "float",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^     TEMPERATURE      =.*$",
+     "parse_name"   : "TEMPERATURE - MD",
+     "parse_type" : "float",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_required" : true
+   }
+  ]
+}

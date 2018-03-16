@@ -1,0 +1,38 @@
+!   Dejun and Hui's ZAPT + PCM example: Cu(H2O) +2 doublet ion
+!
+!   geometry optimization is nicely monotonic:
+!      NSERCH:   0  E=    -1714.7119081219  R.M.S.=  0.0201703
+!      NSERCH:   1  E=    -1714.7149050653  R.M.S.=  0.0051471
+!      NSERCH:   2  E=    -1714.7152281771  R.M.S.=  0.0013182
+!      NSERCH:   3  E=    -1714.7152703833  R.M.S.=  0.0009433
+!      NSERCH:   4  E=    -1714.7152947489  R.M.S.=  0.0009607
+!      NSERCH:   5  E=    -1714.7153778399  R.M.S.=  0.0011069
+!      NSERCH:   6  E=    -1714.7154639497  R.M.S.=  0.0013836
+!      NSERCH:   7  E=    -1714.7155359369  R.M.S.=  0.0013122
+!      NSERCH:   8  E=    -1714.7155981476  R.M.S.=  0.0005010
+!      NSERCH:   9  E=    -1714.7156073083  R.M.S.=  0.0000841
+!      NSERCH:  10  E=    -1714.7156073517  R.M.S.=  0.0000091
+!      NSERCH:  11  E=    -1714.7156075126  R.M.S.=  0.0000028
+!
+!   This run takes 147 seconds on 2.66 GHz Cloverton ( 2 Oct 2015)
+!   results have not changed since 2010
+!
+ $contrl scftyp=rohf mplevl=2 icharg=2 mult=2 runtyp=optimize nzvar=6 $end
+ $system mwords=20 memddi=20 parall=.true. $end
+ $basis  gbasis=N31 ngauss=6 ndfunc=1 $end
+ $PCM    SOLVNT=WATER $END
+ $PCMCAV RADII=SUAHF $END
+ $scf    dirscf=.true. $end
+ $statpt opttol=1.0D-05 $end
+ $zmat   izmat(1)=1,1,2,  1,2,3,  1,2,4,  2,1,2,3,  2,1,2,4,  4,1,2,3,4 $end
+ $data
+Cu(H2O) +2 ion
+C1
+Cu   29.0    -0.41621155     0.00000563     0.00000102
+O     8.0     1.40371251     0.00003630    -0.00001450
+H     1.0     1.97645342     0.79774398     0.00008838
+H     1.0     1.97490287    -0.79870415     0.00008827
+ $end
+
+! TRAVIS-CI SMALL
+

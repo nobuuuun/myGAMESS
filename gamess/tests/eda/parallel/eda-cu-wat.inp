@@ -1,0 +1,38 @@
+!  energy decomposition analysis...Cu+2/H2O
+!
+! -------------
+! OWN BASIS SET                                       HARTREE          KCAL/MOL
+! -------------
+! ELECTROSTATIC E.ERGY                  ES=         -0.158726            -99.60
+! EXCHANGE E.ERGY                       EX=         -0.035223            -22.10
+! REPULSION E.ERGY                     REP=          0.098580             61.86
+! POLARIZATION E.ERGY                  POL=         -0.094864            -59.53
+! TOTAL INTERACTION E.ERGY HF OR DFT     E=         -0.190232           -119.37
+!
+! -------------------------------------
+! IN SUPER MOL (FOR SPECIAL COMPARISON)               HARTREE          KCAL/MOL
+! -------------------------------------
+! ELECTROSTATIC E.ERGY                  ES=         -0.438543           -275.19
+! EXCHANGE E.ERGY                       EX=         -0.031691            -19.89
+! TOTAL INTERACTION E.ERGY HF OR DFT     E=         -0.470234           -295.08
+!
+!   this run takes 51 seconds on 2.66 GHz Cloverton (29 Apr 2009)
+!
+ $CONTRL SCFTYP=UHF RUNTYP=eda ICHARG=2 MULT=2 ispher=0 maxit=50 $end
+ $SYSTEM MWORDS=8 timlim=40 $END
+ $LMOEDA MATOM(1)=1 3 MCHARG(1)=2 0 MMULT(1)=2 1 $END
+ $BASIS  GBASIS=N21 NGAUSS=3  $END
+ $SCF    DIIS=.T. SOSCF=.F. DIRSCF=.T. FDIFF=.F. $END
+ $DATA
+Copper +2 ion (doublet) with water
+C1
+CU         29.0   4.9359608708   3.4321624494  -0.8372720444
+O           8.0   5.8047975131   1.8197449941  -0.7359714918
+H           1.0   6.7764546401   1.6887407524  -0.6674122795
+H           1.0   5.3813284260   0.9328202042  -0.7403673543
+ $END
+
+! TRAVIS-CI SMALL
+! TRAVIS-CI SKIP
+! EDA PARSING DOES NOT SEEM CORRECT FOR THIS PARTICULAR CASE
+

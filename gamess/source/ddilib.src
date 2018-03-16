@@ -1,0 +1,638 @@
+C 18 Apr 16 - SRP - tweaks for GDDI 
+C 26 Feb 15 - SRP - Moved Comm destruction to separate routine, adjusted 
+C                   GDDI common, and created GDDI_REGROUP subroutine
+C xx Aug 14 - AG  - updated Doxygen comments for ML-GDDI
+C  6 Feb 13 - SRP - delete old communicators when making new ones
+C 23 MAR 12 - DGF - PAD COMMON BLOCKS
+C 28 DEC 11 - DGF - REDUCE GDDI OUTPUT
+C xx Jan 11 - AG  - introduced ML-GDDI functionality
+C 11 AUG 11 - MWS/GDF - GDDI_INIT: SUPPRESS SCOPE CHANGE MESSAGES
+C 11 AUG 10 - DGF - ADD GDDI_ASCOPE TO CHANGE SCOPE ASYNCHRONOUSLY
+C 22 DEC 06 - BN,DGF  - VSCF SUBGROUP SUPPORT, REMOVE UNUSED ROUTINES
+C  6 NOV 06 - MWS - ADJUST GDDI COMMON BLOCK
+C  7 SEP 06 - RMO - CHANGE INTERFACE TO DDI GROUPS
+C  5 JUL 05 - MWS - SELECT NEW ATOM,BASIS,EFP,PCM,DAF DIMENSIONS
+C 30 APR 05 - DGF - SYNCHRONISE SYMBLK COMMON GDDI
+C 19 MAY 04 - DGF - GAMESS-SPECIFIC INTERFACE WITH DDI ROUTINES
+C
+C*MODULE DDILIB   *DECK DDI_NSUMI
+      SUBROUTINE DDI_NSUMI(MSGTAG, INT1, INT2, INT3, INT4, MSGLEN)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      PARAMETER (NBUF=4)
+      INTEGER IBUF(NBUF)
+C
+C     SUM UP TO 4 INTEGERS IN ONE DDI_GSUMI
+C
+      IF(MSGLEN.GT.NBUF) CALL ABRT
+C
+C
+      IF(MSGLEN.GE.1) IBUF(1)=INT1
+      IF(MSGLEN.GE.2) IBUF(2)=INT2
+      IF(MSGLEN.GE.3) IBUF(3)=INT3
+      IF(MSGLEN.GE.4) IBUF(4)=INT4
+C
+      CALL DDI_GSUMI(MSGTAG,IBUF,MSGLEN)
+C
+      IF(MSGLEN.GE.1) INT1=IBUF(1)
+      IF(MSGLEN.GE.2) INT2=IBUF(2)
+      IF(MSGLEN.GE.3) INT3=IBUF(3)
+      IF(MSGLEN.GE.4) INT4=IBUF(4)
+C
+      RETURN
+      END
+C*MODULE DDILIB   *DECK GDDI_INIT
+C>
+C>  @brief   create desired subgroup partitioning of assigned nodes
+C>
+C>  @details create desired subgroup partitioning of assigned nodes
+C>
+C>  @author  Dmitri Fedorov and/or Ryan Olson
+C>  @note Modified by Spencer Pruit to destroy old MPI communicators
+C>  @note Modified by Alexander Gaenko to allow splitting at GROUP level     
+C>  @note Modified by Spencer R. Pruitt to move Comm destruction to a new subroutine
+C>        so that ML-GDDI actually works with NGRFMO
+C>
+      SUBROUTINE GDDI_INIT(NEWNGROUPS,MANNOD,some,isplit)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      LOGICAL ISGDDI,PAROUT,INITGDDI,some,wasgddi,MLGDDI
+      INTEGER DDI_WORLD,DDI_GROUP,DDI_MASTERS,MANNOD(0:*)
+      PARAMETER(DDI_WORLD=0,DDI_GROUP=1,DDI_MASTERS=2)
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+C
+      INTEGER COMM(DDI_WORLD:DDI_MASTERS)
+      COMMON /GRPCOM/ COMM
+C
+      LOGICAL FIRST
+      DATA FIRST /.TRUE./
+      SAVE FIRST
+
+      CALL GDDI_SCOPE(DDI_WORLD)
+
+      if(some) WRITE(IW,9000) MEGLOB,NGROUPS,MYGROUP
+C
+      IF(.NOT.FIRST .AND. COMM(DDI_WORLD).NE.COMM(DDI_GROUP)) THEN
+C      IF(isplit .EQ. 0) THEN
+       DO I=DDI_GROUP,DDI_MASTERS
+        CALL DDI_COMM_DESTROY(COMM(I))
+       ENDDO
+       first=.false.
+      ENDIF
+C
+      IF(MANNOD(0).LT.0) THEN
+        CALL DDI_GROUP_CREATE(NEWNGROUPS,COMM(0),COMM(1),COMM(2))
+      ELSE
+        CALL DDI_GROUP_CREATE_CUSTOM(NEWNGROUPS,MANNOD,
+     &                               COMM(0),COMM(1),COMM(2))
+      ENDIF
+C
+      NGROUPS=NEWNGROUPS
+      CALL GDDI_SCOPE(DDI_GROUP)
+      CALL DDI_NGROUP(NGROUPS,MYGROUP)
+      if(some) WRITE(IW,9010) MEGLOB,NGROUPS,MYGROUP
+      if(NGROUPS.lt.0) write(6,*) isplit
+C
+      RETURN
+ 9000 FORMAT(/1X,'GDDI IS ABOUT TO SWITCH GROUPS: ',
+     *        'MEGLOB=',I4,' NGROUPS=',I3,' MYGROUP=',I3)
+ 9010 FORMAT(/1X,'GDDI HAS SWITCHED GROUPS: ',
+     *        'MEGLOB=',I4,' NGROUPS=',I3,' MYGROUP=',I3)
+      END
+C*MODULE DDILIB   *DECK GDDI_DESTROY
+C>
+C>  @brief   Destroy DDI_GROUP and DDI_MASTERS communicators
+C>
+C>  @details Required to avoid COMM build-up and for ML-GDDI
+C>
+C>  @author  Spencer R. Pruitt
+C>
+      SUBROUTINE GDDI_DESTROY
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+c     LOGICAL ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+      INTEGER DDI_WORLD,DDI_GROUP,DDI_MASTERS
+      PARAMETER(DDI_WORLD=0,DDI_GROUP=1,DDI_MASTERS=2)
+c     COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+c    *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+c    *                MeUniv,NPUniv
+c     COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+C
+      INTEGER COMM(DDI_WORLD:DDI_MASTERS)
+      COMMON /GRPCOM/ COMM
+C
+      CALL GDDI_SCOPE(DDI_WORLD)
+c     WRITE(IW,9000)
+C
+C  SRP: DESTROYING OLD MPI COMMUNICATORS
+C
+      DO I=DDI_GROUP,DDI_MASTERS
+         CALL DDI_COMM_DESTROY(COMM(I))
+      ENDDO
+C
+      RETURN
+c9000 FORMAT(/1X,'GDDI IS ABOUT TO DESTROY COMMUNICATORS ')
+      END
+C
+C*MODULE DDILIB   *DECK GDDI_COMMID
+      SUBROUTINE DDI_COMMID(DDI_SCOPE,COMMID)
+      IMPLICIT NONE
+C
+      INTEGER DDI_SCOPE,COMMID
+      INTEGER COMM(0:2)
+      COMMON /GRPCOM/ COMM
+C
+      COMMID = COMM(DDI_SCOPE)
+      RETURN
+      END
+C
+C*MODULE DDILIB   *DECK GDDI_MASTID
+      SUBROUTINE GDDI_MASTID(MASTID)
+      IMPLICIT NONE
+      INTEGER DDI_WORLD,DDI_GROUP
+      LOGICAL ISGDDI,PAROUT,INITGDDI,GOPARR,DSKWRK,MASWRK,wasgddi,MLGDDI
+      INTEGER ME,MASTER,NPROC,IBTYP,IPTIM,NSUBGR,MEUNIV,NPUNIV
+      PARAMETER(DDI_WORLD=0,DDI_GROUP=1)
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      INTEGER NGROUPS,MYGROUP,ISCOPE,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *        MASTID(0:NGROUPS-1),I
+C
+C     FOR MASTID TO BE FILLED IN PROPERLY THE SCOPE MUST BE DDI_GROUP.
+C     MASTID WILL CONTAIN THE GLOBAL ID OF MASTERS.
+C
+      DO I=0,NGROUPS-1
+        MASTID(I)=0
+        IF(I.EQ.MYGROUP.AND.ME.EQ.MASTER) MASTID(I)=MEGLOB
+      ENDDO
+      CALL GDDI_SCOPE(DDI_WORLD)
+      CALL DDI_GSUMI( 2900, MASTID, NGROUPS )
+      CALL GDDI_SCOPE(DDI_GROUP)
+      RETURN
+      END
+C
+C*MODULE DDILIB   *DECK GDDICOUNT
+      SUBROUTINE GDDICOUNT(IMODE,LGROUP,MYJOB)
+      IMPLICIT NONE
+      INTEGER IMODE,MINE,NEXT,NGROUPS,LGROUP,MYGROUP,ISCOPE,MEGLOB,
+     *        NPGLOB,NNGLOB,JBTYP,DDI_WORLD,DDI_GROUP,NPUNIV,MEUNIV,
+     *        NSUBGR
+      PARAMETER(DDI_WORLD=0,DDI_GROUP=1)
+      LOGICAL MYJOB,NXT,ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      SAVE MINE,NEXT
+C
+C     STATIC AND DYNAMIC LOAD BALANCING BETWEEN GROUPS FOR GDDI.
+C     NOTE THAT WORK DIVISION INSIDE A GROUP IS DONE ELSEWHERE.
+C     DETERMINE IF THE CURRENT TASK MUST BE DONE BY THIS NODE.
+C     BEFORE USAGE CALL WITH IMODE=-1 TO INITIALISE. THEN USE WITH
+C     IMODE=0 FOR GETTING JOB STATUS. AFTER USAGE CALL WITH IMODE=1.
+C     ON EXIT MYJOB IS TRUE OR FALSE, LGROUP WILL POINT WHAT GROUP WILL
+C     DO THIS JOB IF STATIC LOAD BALANCING IS IN EFFECT.
+C     HOPEFULLY IT IS UNDERSTOOD THAT CALLS TO GDDICOUNT CAN'T BE NESTED
+C     (ONLY ONE LOOP CAN BE DIVIDED INTO GROUPS AT A TIME).
+C
+      NXT = JBTYP.EQ.1
+      IF(ABS(IMODE).EQ.1) THEN
+        NEXT = -1
+        MINE = -1
+        LGROUP=-1
+C       NEVER, NEVER ADD .AND. GOPARR TO NXT FOR GDDI!
+C       SOME GROUPS MAY HAVE ONE NODE AND GOPARR=.FALSE.
+        IF(NXT) THEN
+C        ACCORDING TO THE REST OF GAMESS WE CALL DDI_DLBRESET AT THE
+C
+C        END (NOT AT THE BEGINNING, STRANGE AS IT MAY BE).
+C        CHANGING SCOPES TO THE WORLD BACK IS NECESSARY, BECAUSE
+C        OTHERWISE SYNCING WILL BE DONE IN THE SAME GROUP, THUS
+C        LEADING TO PROCESSES RESETTING AND ASKING FOR DLB OUT OF SYNC.
+C
+           IF(IMODE.EQ.1) THEN
+             CALL GDDI_SCOPE(DDI_WORLD)
+             CALL DDI_GDLBRESET()
+             CALL GDDI_SCOPE(DDI_GROUP)
+           ENDIF
+        ENDIF
+        MYJOB=.TRUE.
+      ELSE
+        MINE=MINE+1
+        IF(NXT) THEN
+C         DYNAMIC LOAD BALANCING
+          IF(MINE.GT.NEXT) CALL DDI_GDLBNEXT(NEXT)
+C         -1 SHOWS THAT THE GROUP RESPONSIBLE IS UNKNOWN.
+          LGROUP=-1
+          MYJOB=NEXT.EQ.MINE
+        ELSE
+C         STATIC LOAD BALANCING
+          LGROUP=MOD(MINE,NGROUPS)
+          MYJOB=LGROUP.EQ.MYGROUP
+        ENDIF
+      ENDIF
+      RETURN
+      END
+C
+C*MODULE DDILIB   *DECK GDDI_SCOPE
+C>    @brief Switches parallelization scope or parallelization level
+C>
+C>    @author Ryan Olsen and/or Graham Fletcher
+C>    @note Modified by Alexander Gaenko to introduce SUPERWORLD and SUBGROUP scopes
+      SUBROUTINE GDDI_SCOPE(NEWSCOPE)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      LOGICAL GOPARR,DSKWRK,MASWRK,ISGDDI,PAROUT,INITGDDI,wasgddi,
+     *        MLGDDI
+      INTEGER DDI_MASTERS
+      PARAMETER(DDI_MASTERS=2)
+      integer DDI_GROUP
+      parameter (DDI_GROUP=1)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+C
+      INTEGER COMM(0:2)
+      COMMON /GRPCOM/ COMM
+C
+C           POTENTIALLY USEFUL FOR DEBUGGING SUBGROUPS SHIFTS.
+C--   WRITE(6,1) ISCOPE,NEWSCOPE
+C-- 1 FORMAT(1X,'GDDI_SCOPE: CHANGING SCOPE FROM',I4,' TO ', I4)
+C--   CALL FLSHBF(6)
+C
+      call GDDI_SUBSUPER(newscope,iscope)
+      CALL DDI_SCOPE(COMM(ISCOPE))
+      CALL DDI_NPROC( NPROC, ME )
+C
+C     NGROUPS HAS THE TOTAL NUMBER OF GROUPS,
+C     NOT THIS NUMBER WITHIN THE CURRENT SCOPE
+C     MASWRK=IMASTER.NE.0
+C
+C  NOTE: DDI_NGROUP WAS NEVER USED.  THE FUNCTIONALITY HAS CHANGED, IT
+C  NOW REPORTS THE TOTAL NUMBER OF GROUPS AND THE RANK OF THE GROUP OF
+C  THE CALLING PROCESS.  IN THE DDI_MASTERS SCOPE, THERE ARE ALWAYS TWO
+C  GROUPS: MYGRP.EQ0 = GROUP MASTERS, MYGRP.EQ.1 = ALL OTHER PROCESSES
+C  THE CONVENTION IS TO USE THE LOGICAL VARIABLE MASWRK TO DECIDE WHICH
+C  PROCESSES SHOULD CONTINUE ON AND PERFORM COMMUNICATION CALL AND WHICH
+C  PROCESSES SHOULD BYPASS THE COMMUNICATION.
+C
+      MASWRK=ME.EQ.MASTER
+      IF(ISCOPE.EQ.DDI_MASTERS) THEN
+         CALL DDI_NGROUP(NGRP,MYGRP)
+         MASWRK=MYGRP.EQ.MASTER
+      else if (ISCOPE.EQ.DDI_GROUP) then
+C        update number of groups and group ID
+         CALL DDI_NGROUP(NGROUPS,MYGROUP)
+      END IF
+C
+      GOPARR=NPROC.GT.1
+      RETURN
+      END
+
+C
+C*MODULE DDILIB   *DECK GDDI_ASCOPE
+      SUBROUTINE GDDI_ASCOPE(NEWSCOPE)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      LOGICAL GOPARR,DSKWRK,MASWRK,ISGDDI,PAROUT,INITGDDI,wasgddi,
+     *        MLGDDI
+      INTEGER DDI_MASTERS
+      PARAMETER(DDI_MASTERS=2)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+C
+C     ASYNCHRONOUS CLONE OF GDDI_SCOPE (DO NOT RUN DDI_SYNC WHILE
+C     SWITCHING SCOPES IN DDI_ASCOPE). 
+C     DDI_NPROC AND DDI_NGROUP SHOULD NOT CALL DDI_SYNC, OR ELSE
+C     THEY CAN PROBABLY BE COMMENTED OUT BELOW.
+C
+      INTEGER COMM(0:2)
+      COMMON /GRPCOM/ COMM
+C
+      call GDDI_SUBSUPER(newscope,iscope)
+c     ISCOPE=NEWSCOPE
+      CALL DDI_ASCOPE(COMM(ISCOPE))
+      CALL DDI_NPROC( NPROC, ME )
+C
+      MASWRK=ME.EQ.MASTER
+      IF(ISCOPE.EQ.DDI_MASTERS) THEN
+         CALL DDI_NGROUP(NGRP,MYGRP)
+         MASWRK=MYGRP.EQ.MASTER
+      END IF
+C
+      GOPARR=NPROC.GT.1
+      RETURN
+      END
+
+C A.G.: Additions for multilevel grouping.
+      
+C>   @brief Initializes COMMON block variables used for multilevel grouping
+C>      
+C>   @author Alexander Gaenko
+      Block Data GDDI_SPLIT_BDATA
+      implicit none
+      integer Level, LenCommStack
+      common /COMVAR/ Level, LenCommStack
+      data Level /0/, LenCommStack /0/
+      End
+      
+C>    @brief Splits group communicator, creating new level of parallelism
+C>
+C>    @param[IN] newgroups: number of new subgroups
+C>    @param[IN] mannod: array of nodes/group or (-1) for default equal distribution
+C>
+C>    @details Splits the current communicator (must be a GROUP communicator) and
+C>             creates a new communicator triad (WORLD, GROUP, MASTERS);
+C>             the new WORLD communicator is the old GROUP after the splitting.
+C>
+C>    @author Alexander Gaenko      
+      subroutine GDDI_SPLIT(newgroups,mannod)
+      implicit none
+C     Arguments:
+      integer newgroups, mannod(0:*)
+
+C     Common blocks:
+      LOGICAL ISGDDI,PAROUT,INITGDDI,wasgddi,mlgddi
+      integer ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,nsubgr,
+     *        meuniv,npuniv
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      integer IR,IW,IP,IS,IPK,IDAF,NAV,IODA
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA (950)
+C
+      INTEGER DDI_WORLD,DDI_GROUP,DDI_MASTERS
+      parameter (DDI_WORLD=0, DDI_GROUP=1, DDI_MASTERS=2)
+      INTEGER COMM(DDI_WORLD:DDI_MASTERS)
+      COMMON /GRPCOM/ COMM
+
+C     Stack of communicators (arrays are in separate commons for robustness)
+      integer MAXLEVEL
+      parameter (MAXLEVEL=2048)
+      integer CommStack, MCommStack, Level, LenCommStack
+      common /COMSTK/ CommStack(0:MAXLEVEL-1)
+      common /MCOMST/ MCommStack(0:MAXLEVEL-1)
+      common /COMVAR/ Level, LenCommStack
+C     Local variables
+c     integer mynode
+      
+      if (iscope .ne. DDI_GROUP) then
+         write (IW,*) 'GDDI_SPLIT(): splitting in scope=',iscope,
+     $        ' is unsupported'
+         call Abrt
+      endif
+
+      if (Level+2 .ge. MAXLEVEL) then
+         write (IW,*) 'GDDI_SPLIT(): too many levels: Level=',Level
+         call Abrt
+      endif
+         
+      CommStack(Level)=Comm(DDI_WORLD)
+      MCommStack(Level)=Comm(DDI_MASTERS)
+      Level=Level+1
+      CommStack(Level)=Comm(DDI_GROUP)
+C     Trick to make GDDI_INIT to split the group
+      Comm(DDI_WORLD)=Comm(DDI_GROUP)
+      call GDDI_Init(newgroups,mannod,.true.,0)
+C     Verify that splitting occured as predicted: new WORLD is old GROUP
+      if (Comm(DDI_WORLD) .ne. CommStack(Level)) then
+         write (IW,*) 'GDDI_SPLIT(): unexpected splitting, '//
+     $        'NEW_WORLD<>OLD_GROUP'
+         call Abrt
+      endif
+      CommStack(Level+1)=Comm(DDI_GROUP)
+      MCommStack(Level)=Comm(DDI_MASTERS)
+      LenCommStack=Level+2
+C     Now CommStack(Level-1) is SUPERWORLD, MCommStack(Level-1) is the superworld's MASTERS,
+C         CommStack(Level) is WORLD (the superworld's GROUP), MCommStack(Level) is MASTERS,
+C         CommStack(Level+1) is GROUP,  MCommStack(Level+1) is undefined,
+C         LenCommStack is the length of the initialized CommStack.
+      call GDDI_Scope(DDI_WORLD)
+      call DDI_NProc(NPGlob,MeGlob)
+C???      CALL DDI_NNODE(NNGLOB,mynode)
+      
+      return
+      End
+      
+C>    @brief Helper subroutine: Switches parallelization levels, returns new scope
+C>
+C>    @param swscope(IN): level or scope to switch to (SUPERWORLD,SUBGROUP,GROUP,WORLD,MASTERS)
+C>    @param iscope(IN): current scope (GROUP,WORLD,MASTERS)
+C>    @param iscope(OUT): scope to switch to in the new level (GROUP,WORLD,MASTERS)
+C>      
+C>    @details This is not supposed to be called outside ddilib.src.
+C>             This helper subroutine processes SUPERWORLD and SUBGROUP pseudo-scopes
+C>             and changes the parallelization level by switching to the new
+C>             (WORLD, GROUP, MASTERS) triad.
+C>
+      subroutine GDDI_SUBSUPER(swscope,iscope)
+      implicit none
+C     Arguments:
+      integer swscope
+      integer iscope
+C     Common blocks:
+C     Scope constants and communicators
+      INTEGER DDI_WORLD,DDI_GROUP,DDI_MASTERS
+      integer DDI_SUPERWORLD,DDI_SUBGROUP
+      parameter (DDI_WORLD=0, DDI_GROUP=1, DDI_MASTERS=2,
+     $     DDI_SUPERWORLD=-1, DDI_SUBGROUP=4)
+      INTEGER COMM(DDI_WORLD:DDI_MASTERS)
+      COMMON /GRPCOM/ COMM
+C     GDDI commons:
+      LOGICAL ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+      integer ISCOPE0,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,MEUNIV,
+     *        NPUNIV,NSUBGR
+      COMMON /GDDI/ISCOPE0,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *             ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *             MeUniv,NPUniv
+C     Stack of communicators (arrays are in separate commons for robustness)
+      integer MAXLEVEL
+      parameter (MAXLEVEL=2048)
+      integer CommStack,MCommStack,Level,LenCommStack
+      common /COMSTK/ CommStack(0:MAXLEVEL-1)
+      common /MCOMST/ MCommStack(0:MAXLEVEL-1)
+      common /COMVAR/ Level, LenCommStack
+C     GAMESS I/O
+      integer IR,IW,IP,IS,IPK,IDAF,NAV,IODA
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      
+      if (swscope .eq. DDI_SUPERWORLD) then
+         if (iscope .eq. DDI_GROUP) then
+            iscope=DDI_WORLD
+            return
+         endif
+         if (iscope .eq. DDI_MASTERS) then
+            write (IW,*) 'GDDI_UPDOWN_SCOPE(): ',
+     $           'Cannot upswitch MASTERS'
+            call Abrt
+         endif
+C        Otherwise, we're switching up from WORLD.
+         if (Level .lt. 1) then
+            write (IW,*) 'GDDI_UPDOWN_SCOPE(): ',
+     $           'Cannot switch up, level=', Level
+            call Abrt
+         endif
+         Level=Level-1
+         iscope=DDI_GROUP
+         
+      else if (swscope .eq. DDI_SUBGROUP) then
+         if (iscope .eq. DDI_WORLD) then
+            iscope=DDI_GROUP
+            return
+         endif
+         if (iscope .eq. DDI_MASTERS) then
+            write (IW,*) 'GDDI_UPDOWN_SCOPE(): ',
+     $           'Cannot downswitch MASTERS'
+            call Abrt
+         endif
+C        Oterwise, we're switching down from GROUP.
+         if (Level .ge. LenCommStack-2) then
+            write (IW,*) 'GDDI_UPDOWN_SCOPE(): ',
+     $           'Cannot switch down, level=', Level,
+     $           ' LenCommStack=', LenCommStack
+            call Abrt
+         endif
+         Level=Level+1
+         iscope=DDI_WORLD
+      else
+C        It is a traditional "explicit" switching, just assign iscope:
+         iscope=swscope
+         return
+      endif
+C     set scope communicators for the new WORLD
+      Comm(DDI_WORLD)=CommStack(Level)
+      Comm(DDI_GROUP)=CommStack(Level+1)
+      Comm(DDI_MASTERS)=MCommStack(Level)
+C     update NpGlob and MeGlob for the new WORLD
+      call DDI_NProc_comm(Comm(DDI_WORLD),NpGlob,MeGlob)
+      return
+      End
+c
+
+C*MODULE DDILIB   *DECK GDDI_REGROUP
+C>
+C>  @brief   Destroy and regroup NGROUP,NSUBGR, or both
+C>
+C>  @details Allows for dynamic regrouping at either level
+C>           similar to NGRFMO. 
+C>
+C>  @author  Spencer R. Pruitt
+C>
+!>  @param NEWGRS : new group division
+!>
+!>  @param NEWSUB : new subgroup divisions
+!>
+!>  @param NEWMAN1 : new manual group division
+!>
+!>  @param NEWMAN2 : new manual subgroup division
+!>
+C>  @date    Feb 26, 2015 - Spencer R. Pruitt
+C>           Created subroutine
+C>
+      SUBROUTINE GDDI_REGROUP(NEWGRS,NEWSUB,NEWMAN1,NEWMAN2)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      INTEGER DDI_WORLD,DDI_GROUP,DDI_SUBGROUP,DDI_SUPERWORLD
+c     PARAMETER(MXUNIT=299,MAXGR=16384)
+      parameter (DDI_WORLD=0, DDI_GROUP=1, DDI_SUPERWORLD=-1,
+     *          DDI_SUBGROUP=4)
+      LOGICAL ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,GOPARR,DSKWRK,MASWRK
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+c     COMMON /OPNNFT/ NFTOPN(MXUNIT),NODEXT(MXUNIT),IOSMP(2)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+c     DIMENSION NEWMAN(0:MAXGR-1)
+
+      !ROUTINE TO ALLOW EASY DESTRUCTION AND RECREATION OF 
+      !GDDI GROUPS (MPI COMMUNICATORS)
+
+      !FOUR PASSED VARIABLES MAY BE SET:
+      !NEWGRS - NEW NUMBER OF TOP LEVEL GDDI GROUPS 
+      !NEWSUB - NEW NUMBER OF ML-GDDI SUBGROUPS PER GDDI GROUP
+      !NEWMAN1 - MANNOD FOR TOP LEVEL GDDI GROUPS
+      !NEWMAN2 - MANNOD FOR ML-GDDI SUBGROUPS
+
+      !IT IS POSSIBLE TO ONLY REGROUP AT THE LOWEST LEVEL
+      !BY CALLING WITH NEWGRS & NEWMAN = -1
+
+      !IF ONLY REGROUPING AT THE TOP LEVEL GDDI
+      !CALL WITH NEWSUB & NEWMAN2 = -1
+
+      !YOU CAN ALSO REGROUP EVERYTHING
+
+      IF(NEWGRS.LT.0.AND.NEWSUB.LT.0) THEN
+         WRITE(IW,8000)
+         RETURN
+      ENDIF
+
+      CALL GDDI_SCOPE(DDI_WORLD)
+
+      IF(NEWGRS.LT.0) THEN
+      !ONLY REGROUPING SUBGROUPS, SCOPE DOWN
+         CALL GDDI_SCOPE(DDI_GROUP)
+         CALL GDDI_SCOPE(DDI_SUBGROUP)
+      ENDIF
+
+      MYGROUP = 0
+
+      !WE WANT TO CREATE OUT OWN DYNAMIC GDDI GROUPING/SUBGROUPING
+      !FOR EXAMPLE, THIS CAN BE BASED ON THE NUMBER OF FRAGMENTATION
+      !STATES WE HAVE FOR REACTIVE MOLECULAR DYNAMICS.
+
+      !FIRST DESTROY THE OLD DDI_GROUP AND DDI_MASTERS AT THE TOP LEVEL
+
+      CALL GDDI_DESTROY
+
+      !CREATE NGROUPS=NEWGRS
+      !NUMBER OF GROUPS FOR FMOX IS CONTROLLED BY NGRFMO OR MANNOD (READ LATER)
+
+      IF(NEWGRS.GT.0) THEN
+
+         CALL GDDI_INIT(NEWGRS,NEWMAN1,.FALSE.,0)
+
+         IF(MASWRK.AND..NOT.PAROUT) THEN
+
+      !SEQOPN WILL NOT OPEN FILES IF THEY ARE ALREADY OPENED.
+
+            CALL SEQOPN(IR,'INPUT', 'OLD',.TRUE., 'FORMATTED')
+            CALL SEQOPN(IW,'OUTPUT','UNKNOWN',.FALSE., 'FORMATTED')
+            CALL SEQOPN(IP,'PUNCH', 'NEW',.FALSE.,'FORMATTED')
+         ENDIF
+
+         NGPROC = INT(NPUNIV / NEWGRS)
+
+         IF(MASWRK.OR.PAROUT) WRITE(IW,9000) NEWGRS,NGPROC
+
+      ENDIF
+
+      !CREATE SUB-GROUPS IF USING ML-GDDI
+
+      IF(NEWSUB.GT.0) THEN
+         CALL GDDI_SPLIT(NEWSUB,NEWMAN2)
+         NSGPROC = INT(NGPROC / NEWSUB)
+         IF(MASWRK.OR.PAROUT) WRITE(IW,9001) NEWSUB,NSGPROC
+         CALL GDDI_SCOPE(DDI_WORLD)
+         CALL GDDI_SCOPE(DDI_SUPERWORLD)
+      ENDIF
+
+      CALL GDDI_SCOPE(DDI_WORLD)
+
+      RETURN
+ 8000 FORMAT(//1X,55(1H-)/,
+     * 1X,"GDDI_REGROUP: YOU SHOULDN'T BE HERE...",/
+     * 1X,"NEWGRS AND NEWSUB BOTH EQUAL -1",1X/
+     * 1X,"MAYBE A BUG, MAYBE YOU DON'T KNOW WHAT YOU'RE DOING",1X/
+     * 1X,55(1H-)/)
+ 9000 FORMAT(//1X,55(1H-)/,
+     * 1X,'GDDI: REGROUPING OF NODES SUCCESSFUL, NGROUP = ',I6,/
+     * 1X,'      WITH ',I5,' PROCESSES PER GROUP',1X/
+     * 1X,55(1H-)/)
+ 9001 FORMAT(//1X,55(1H-)/,
+     * 1X,'ML-GDDI: SUBGROUPING SUCCESSFUL, NSUBGR = ',I6,/
+     * 1X,'         WITH ',I5,' PROCESSES PER SUB-GROUP',1X/
+     * 1X,55(1H-)/)
+      END

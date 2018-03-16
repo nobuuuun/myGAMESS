@@ -1,0 +1,26 @@
+!   AuCl4 anion...test of RESC transformation
+!   Sapporo core/valence basis has 192 AOs and 173 MOs.
+!   The RI step keeps 536 GTOs, dropping only two, for both d.p. and q.p.
+!   but the gradient is seriously defective unless the latter is used.
+!
+!   d.p. FINAL E= -20874.2550758579, 12 iters, RMS= 0.656875438
+!   q.p. FINAL E= -20874.2550759196, 12 iters, RMS= 0.014914512
+!
+!   This run takes 49 seconds on a 2.66 GHz Cloverton (11 Aug 2015)
+!      d.p.   1e-=   2, 2e-= 16, SCF=  2, 1e- grad= 89, 2e- grad=23
+!      q.p.   1e-= 169, 2e-= 16, SCF=  2, 1e- grad= 88, 2e- grad=23
+!
+ $contrl scftyp=rhf icharg=-1 relwfn=resc runtyp=gradient ispher=1 $end
+ $system mwords=15 $end
+ $basis  gbasis=SPKrDZC $end
+ $guess  guess=huckel $end
+ $relwfn modeqr=9 $end
+ $data
+AuCl4 anion...square planar...this is the MIDI RHF NR geometry
+Dnh 4
+
+Au   79.0    .0000000000    .0000000000    .0000000000
+Cl   17.0   1.7230477203   1.7230477203    .0000000000
+ $end
+! TRAVIS-CI SKIP
+

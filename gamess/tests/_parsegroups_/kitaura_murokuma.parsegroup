@@ -1,0 +1,83 @@
+{
+  "parse_header" : "KITAURA-MOROKUMA ANALYSIS",
+  "parse_group" : [
+   {
+     "regex_string" : "^ ELECTROSTATIC ENERGY             ES=.*$",
+     "parse_name"   : "ELECTROSTATIC ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ EXCHANGE REPULSION ENERGY        EX=.*$",
+     "parse_name"   : "EXCHANGE REPULSION ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ POLARIZATION ENERGY              PL=.*$",
+     "parse_name"   : "POLARIZATION ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ CHARGE TRANSFER ENERGY           CT=.*$",
+     "parse_name"   : "CHARGE TRANSFER ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ HIGH ORDER COUPLING ENERGY      MIX=.*$",
+     "parse_name"   : "HIGH ORDER COUPLING ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ TOTAL INTERACTION ENERGY,   DELTA-E=.*$",
+     "parse_name"   : "TOTAL INTERACTION ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ CHARGE TRANSFER ENERGY, MON=  1  CT=.*$",
+     "parse_name"   : "CHARGE TRANSFER ENERGY 1 - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ CHARGE TRANSFER ENERGY, MON=  2  CT=.*$",
+     "parse_name"   : "CHARGE TRANSFER ENERGY 2 - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ EPL,                    MON=  1  PL=.*$",
+     "parse_name"   : "EPL 1 ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ EPL,                    MON=  2  PL=.*$",
+     "parse_name"   : "EPL 2 ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ HIGH ORDER COUPLING FOR PL,    PMIX=.*$",
+     "parse_name"   : "HIGH ORDER COUPLING PL ENERGY - MOROKUMA",
+     "parse_type" : "float",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   }
+  ]
+}

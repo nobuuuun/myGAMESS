@@ -1,0 +1,50 @@
+!  RMP2/6-31G(d) geometry optimization of acetaldehyde
+!  Memory is set small to force MP2 into doing passes.
+!  There are 53 AOs and 50 MOs, using pure 5d basis.
+!
+!     NSERCH:   0  E=     -153.3382673858  R.M.S.=  0.0091343
+!     NSERCH:   1  E=     -153.3395338366  R.M.S.=  0.0028131
+!     NSERCH:   2  E=     -153.3396206088  R.M.S.=  0.0018158
+!     NSERCH:   3  E=     -153.3397344996  R.M.S.=  0.0005319
+!     NSERCH:   4  E=     -153.3397379468  R.M.S.=  0.0002182
+!     NSERCH:   5  E=     -153.3397386356  R.M.S.=  0.0000379
+!     NSERCH:   6  E=     -153.3397387174  R.M.S.=  0.0000156
+!     NSERCH:   7  E=     -153.3397387559  R.M.S.=  0.0000038
+!     NSERCH:   8  E=     -153.3397387689  R.M.S.=  0.0000007
+!
+!  This run takes 27 seconds on a 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results have not changed much since 2005
+!
+ $contrl scftyp=rhf runtyp=optimize mplevl=2 ispher=1 nzvar=15 coord=zmt $end
+ $system mwords=1 memddi=0 $end
+ $statpt opttol=0.00001 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $mp2    code=ims $end
+ $data
+acetaldehyde...starting at RHF/AM1 geometry
+Cs
+
+O
+C 1 rCO
+C 2 rCC  1 aCCO
+H 3 rCHa 2 aHCHa 1  180.0
+H 3 rCHb 2 aHCHb 1  wHCCO
+H 3 rCHb 2 aHCHb 1 -wHCCO
+H 2 rCHc 3 aHCHc 4   0.0
+
+rCO=1.2318887
+rCC=1.4904024
+rCHa=1.1155143
+rCHb=1.1182753
+rCHc=1.1139774
+aCCO=123.22482
+aHCHa=111.07266
+aHCHb=109.92908
+aHCHc=115.73159
+wHCCO=59.39658
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

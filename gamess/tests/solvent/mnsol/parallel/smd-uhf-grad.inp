@@ -1,0 +1,28 @@
+!   O2 anion in methanol...SMD/C-CPCM using UHF...gradient test
+!
+!   FINAL UHF E= -149.6989438486, <S**2>=0.766, 10 iters, RMS= 0.027202866
+!
+!   ELECTROSTATIC INTERACTION    =         -86.30 KCAL/MOL
+!   CDS INTERACTION              =           0.59 KCAL/MOL
+!
+!   This run takes 2 seconds on 2.66 GHz Cloverton (28 Oct 2010)
+!
+ $CONTRL SCFTYP=UHF mult=2 icharg=-1 RUNTYP=GRADIENT $end
+ $system mwords=1 $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+
+ $PCM    SMD=.T. SOLVNT=METHANOL IEF=-3 $END
+ $TESCAV MTHALL=2 NTSALL=240 $END
+
+ $DATA
+SMD/UHF/6-31G(d) analytical gradients - O2^-1 doublet in methanol 
+C1
+O               8.0         0.000000  0.000000   0.666820
+O               8.0         0.000000  0.000000  -0.666820
+ $END
+
+
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

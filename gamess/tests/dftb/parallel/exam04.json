@@ -1,0 +1,285 @@
+{
+  "name": "exam04.log",
+  "validation": [
+    {
+      "header": "SYSTEM PROPERTIES",
+      "name": "TOTAL NUMBER OF ATOMS",
+      "value": "24",
+      "type": "integer",
+      "precision": 0,
+      "tolerance": 0
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-4.9997780684",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "FMO",
+      "name": "TOTAL ENERGY OF MOLECULE - FMO",
+      "value": "-10.069732354",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 1",
+      "value": "0.037554567",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 2",
+      "value": "-0.021023623",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 3",
+      "value": "-0.010195554",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 4",
+      "value": "-0.017176706",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (X) - FMO : ATOM 5",
+      "value": "-0.000278299",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 1",
+      "value": "0.030444723",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 2",
+      "value": "-0.015334764",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 3",
+      "value": "-0.008120460",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 4",
+      "value": "-0.016849792",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Y) - FMO : ATOM 5",
+      "value": "-0.003773768",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 1",
+      "value": "-0.010483356",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 2",
+      "value": "0.006622027",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 3",
+      "value": "0.006269000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 4",
+      "value": "0.024862667",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(1) (Z) - FMO : ATOM 5",
+      "value": "-0.011450113",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 1",
+      "value": "-0.001097118",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 2",
+      "value": "-0.001108006",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 3",
+      "value": "0.000487729",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 4",
+      "value": "-0.005333882",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (X) - FMO : ATOM 5",
+      "value": "0.002892398",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 1",
+      "value": "0.002413572",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 2",
+      "value": "0.003939504",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 3",
+      "value": "-0.002063830",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 4",
+      "value": "0.010176128",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Y) - FMO : ATOM 5",
+      "value": "-0.000945074",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 1",
+      "value": "0.006264114",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 2",
+      "value": "0.000780381",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 3",
+      "value": "0.000495251",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 4",
+      "value": "-0.011031849",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "E. GRAD. G(2) (Z) - FMO : ATOM 5",
+      "value": "0.001080427",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "FMO",
+      "name": "DIPOLE MOMENT D(XYZ) - FMO",
+      "value": "4.1652218",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "1.709844",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

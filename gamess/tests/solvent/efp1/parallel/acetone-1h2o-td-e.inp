@@ -1,0 +1,94 @@
+!   acetone plus one water...TDDFT + EFP test case from Soohaeng...90 AOs
+!   of course, the water is H-bonded to the oxygen in carbonyl (1.98 Ang)
+!
+!   the run should yield the   --MIDDLE--   set of results just below,
+!   unless you modify the input.
+!
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!                   HARTREE          EV         X       Y       Z     STRENGTH
+!         run in the gas phase
+!  0  A         -193.0793407639    0.000
+!  1  A         -192.9176149541    4.401    -0.0056  0.0053  0.0016    0.000
+!  2  A         -192.7754300561    8.270     0.0328  0.2563 -0.0485    0.014
+!  3  A         -192.7685332356    8.458    -0.0483 -0.0245 -0.0391    0.001
+!  4  A         -192.7603947038    8.679     0.0206  0.0331 -0.0209    0.000
+!         run with one DFT-level water EFP1 present
+!  0  A         -193.0885644167    0.000
+!  1  A         -192.9241880936    4.473    -0.0044  0.0062  0.0023    0.000
+!  2  A         -192.7822083849    8.336     0.0171  0.0329  0.0396    0.001
+!  3  A         -192.7761242335    8.502    -0.0473 -0.2522  0.0516    0.014
+!  4  A         -192.7672666714    8.743    -0.0365  0.0388 -0.0454    0.001
+!         run with an ab initio water (well, B3LYP, that is) present
+!  0  A         -269.4962090807    0.000
+!  1  A         -269.3312025335    4.490 *  -0.0167  0.0071 -0.0001    0.000
+!  2  A         -269.2940621576    5.501     0.1603 -0.0238  0.0190    0.004
+!  3  A         -269.2221686111    7.457     0.1804 -0.0256  0.0331    0.006
+!  4  A         -269.1910472989    8.304 *   0.0207  0.0298  0.0410    0.001
+!  5  A         -269.1865171476    8.427    -0.0940  0.0611  0.2547    0.016
+!  6  A         -269.1828953259    8.526 *   0.0007 -0.2581  0.0431    0.014
+!  7  A         -269.1732758530    8.787 *   0.7271 -0.0681  0.0173    0.115
+!  8  A         -269.1726274394    8.805    -0.4567 -0.0039  0.0503    0.046
+!  9  A         -269.1663753553    8.975    -0.0156  0.0202  0.0754    0.001
+!   The orbitals in the combined run are very cleanly separated
+!   into water orbitals and acetone orbitals:
+!   occupied= 16=A, 17=A, 18=A(pi), 19=W, 20=A(n), 21=W
+!    virtual= 22=A(pi*), 23=A, 24=W, 25=A, 26=A, 27=A
+!   Therefore it is quite easy, for the most part, to assign the
+!   states to acetone, to water, or to charge transfer states,
+!   as only two of them have very much mixed character.
+!        acetone states   = 1, 4, 6, 7, 8
+!         water  state    = 5
+!        water -> acetone = 2, 3, 9 charge transfer states.
+!   state 5 has non-trivial W->A CT character
+!   state 9 has non-trivial water state character
+!
+!   Clearly, we must compare the energies of states 1,4,6,7 to the EFP run.
+!   Those are marked by a *, and compare very well to the EFP run, except
+!   perhaps for state 7's intensity.  It probably mixes with state 9.
+!
+!   The gas phase   run takes 108 s_conds on a 2.66 GHz Cloverton (24 Jul 2012)
+!   The EFP + TDDFT run takes 108 s_conds on a 2.66 GHz Cloverton (24 Jul 2012)
+!   The DFT + TDDFT run takes 325 s_conds on a 2.66 GHz Cloverton (24 Jul 2012)
+!      the long time for the latter is 9 states, instead of 4,
+!      as well as the increased basis set/grid point computation.
+!
+!   The EFP + TDDFT run takes 120 seconds on 2.66 GHz Cloverton (3 Sep 2009)
+!
+ $CONTRL SCFTYP=RHF dfttyp=b3lyp tddft=excite RUNTYP=energy $END
+ $SYSTEM mwords=10 $END
+ $TDDFT  NSTATE=4 MULT=1 $END
+ $GUESS  GUESS=HUCKEL $END
+ $BASIS  GBASIS=DH npfunc=1 ndfunc=1 $END
+ $DATA
+EXCITED STATES of acetone plus one water 
+C1
+C           6.0  -0.0885277845   0.1597838576  -0.3749512553
+O           8.0  -1.3060252005   0.2688223180  -0.4099753889
+C           6.0   0.8253409420   1.3619851044  -0.5426087382
+C           6.0   0.5813089859  -1.1905229614  -0.1880132279
+H           1.0   0.3016993237   2.2809337621  -0.2672053995
+H           1.0   1.7474933408   1.2567168336   0.0381874993
+H           1.0   1.1103185388   1.4329851078  -1.6012143121
+H           1.0  -0.1603265556  -1.9902089055  -0.2392809662
+H           1.0   1.0850256713  -1.2184479976   0.7864603480
+H           1.0   1.3535775813  -1.3411385666  -0.9525524144
+ $END
+
+     move these three atoms into $D_TA to do full "ab initio" DFT job,
+     bump up the number of states, comment out EFP input group below.
+O1    8        -4.0158129350   0.8947619698  -1.2773582993
+H2    1        -4.3114177048  -0.0091879404  -1.1104569829
+H3    1        -3.0910743925   0.8959973748  -0.9825635512
+
+     comment out EFP particle's input to do gas phase.
+ $EFRAG
+coord=cart
+FRAGNAME=H2ODFT
+O1             -4.0158129350   0.8947619698  -1.2773582993
+H2             -4.3114177048  -0.0091879404  -1.1104569829
+H3             -3.0910743925   0.8959973748  -0.9825635512
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

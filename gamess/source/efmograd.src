@@ -1,0 +1,4967 @@
+*MODULE EFMOGRAD     *DECK EFMO_FOCK_DER_PASS
+C>
+C>    @brief Calculates part of the Fock matrix derivative
+C>
+C>    @details  Calculates the AO-derivative of the Fock matrix and the
+C>              terms involving the orbital hessian for a given fragment in
+C>              EFMO. That is, if the derivative of the Fock matrix is written
+C>              as \frac{\partial F_{ij}}{\partial a} = F_{ij}^a
+C>              \text{(AO derivative)} + \sum_k^{all MOs}\left(
+C>              U^a_{ki}F_{kj}+ U_{kj}^aF_{ik}\right) + \sum_k^{all MOs}
+C>              \sum_l^{d.o. MOs} U^a_{kl} A_{ij,kl} as it is in "A New
+C>              Dimension to Quantum Chemistry"  Y.Yamaguchi, Y.Osamura,
+C>              J.D.Goddard, H.F.Schaefer  Oxford Press, NY 1994 (Eq. (4.35)),
+C>              then this subroutine calculates the first and last terms on the RHS. The
+C>              nonresponse terms are added to the Common Block DE, and the
+C>              response terms (that is, the lagrangian, the coefficient of the
+C>              response matrix) are added to the vector that EFMO uses to store
+C>              the lagrangian.
+C>
+C>              Note that the last term, 
+C>              \sum_k^{all MOs} \sum_l^{d.o. MOs} U^a_{kl} A_{ij,kl}
+C>              can be written as
+C>              \sum_k^{d.o. MOs} \sum_l^{d.o. MOs} U^a_{kl} A_{ij,kl} +
+C>              \sum_k^{vir MOs} \sum_l^{d.o. MOs} U^a_{kl} A_{ij,kl} =
+C>              \sum_k^{d.o. MOs} \sum_l^{d.o. MOs} (-1/2)S^(a)_{kl} A_{ij,kl} +
+C>              \sum_k^{vir MOs} \sum_l^{d.o. MOs} U^a_{kl} A_{ij,kl} =
+C>              
+C>              so that there is an overlap derivative as well, which is how the last
+C>              term is calculated in this routine.
+C>
+C>              Handles terms like:
+C>              \sum_{uv}^{AO} D_{uv} \frac{\del F_{uv}}{\del a}, and the corresponding
+C>              orbital hessian term where D_{uv} is the efmo_fock_der parameter input 
+C>
+C>    @author C. Bertoni
+C>
+C>    @param efmo_fock_der : A double array of (ndim,num frags). This contains a
+C>           weighted density matrix for each fragment. The density is used to
+C>           calculate part of the Fock matrix derivative. See the '@details'
+C>           section for which terms are calculated.
+C>    @param l1 : The total number of AOs in the given fragment. 
+C>    @param nfrag : The total number of fragments in this EFMO run.
+C>    @param frag : The  fragment we're calculating the Fock derivative terms for.
+C>    @param scffrg : A character array (in Hollerith format) of (number of fragments)
+C>                    storing what type of SCF procedure was done to generate the
+C>                    orbitals for each fragment (such as RHF,UHF,ROHF,GVB).
+C>    @param ndim : An integer holding the value (X*X+X)/2, where X is the maximum
+C>                  number of basis functions amoung all the fragments. This is
+C>                  used as a dimension in the efmo_fock_der() array.
+C>    @param coeff : A double array of (num AOs in frag, num MOs in frag) holding
+C>                   the molecular orbital coefficients.
+C>    @param da : The density matrix for the fragment. 
+C>    @param zvlag : An array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>    @param iptlg : An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param orbh : A double array of (X*X+X)/2 ((X*X+X)/2) where X=the number of AOs in the
+C>                  fragment. It's used as scratch.
+C>    @param nvir : The number of virtual orbitals for the fragment.
+C>    @param sqr_ao : A double array of X*X (X,X) where X=the number of AOs in the
+C>                    fragment. It's used as scratch. Within the subroutine it holds
+C>                    sqr_ao(o,l) = (\sum_uv^{AO} P_uv * (4(uv|ol)-2(uo|vl))), where P_uv
+C>                    is the weighted density (efmo_fock_der) 
+C>
+C>
+      subroutine efmo_fock_der_pass( efmo_fock_der, l1, nfrag, frag,
+     *     scffrg, ndim, coeff, da, zvlag, iptlg, orbh, nvir, sqr_ao )
+
+      IMPLICIT DOUBLE PRECISION (A-H, O-Z)
+
+      PARAMETER (MXATM=2000,MXSH=5000,MXGTOT=20000,MXAO=8192,MXGSH=30,
+     *           MXG2=MXGSH*MXGSH,MAXL=5,
+     *     MXFRG=1050, MXFGPT=12000)
+
+      LOGICAL FDIFF,SCHWRZ,PACK2E,
+     *     dirscf
+
+      integer l2, frag, nfrag
+      DIMENSION SCFFRG(*),KARTEN(0:MAXL-1)
+
+      double precision, dimension(ndim,nfrag) :: efmo_fock_der
+      double precision, dimension((l1*l1+l1)/2) :: orbh
+      double precision, dimension(l1,l1) :: sqr_ao
+      double precision, dimension(l1,l1) :: coeff
+      integer :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+      double precision :: ex,cs,cp,cd,cf,cg,ch,ci
+      COMMON /FMCOM / X(1)
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /INTFIL/ NINTMX,NHEX,NTUPL,PACK2E,INTTYP,IGRDTYP
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /PAULMO/ CENTNM(MXFGPT),CENTCD(3,MXFGPT),NORB(MXFRG),
+     *                NPBF(MXFRG),NTMO
+      COMMON /SHLEXC/ NORGSH(3),NORGSP(3),IEXCH,NANGM,NGTH(4)
+      COMMON /RESTAR/ TIMLIM,IREST,NREC,INTLOC,IST,JST,KST,LST
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+
+      dimension zvlag(1), iptlg(1), da(1)
+
+      PARAMETER (ONE=1.0D+00, TWO=2.0D+00, HALF=0.5D+00)
+
+      DATA KARTEN/1,4,6,10,15/
+      DATA RHF/8HRHF     /
+
+      SCHWRZ = .TRUE.
+      dirscf = .true.
+      L2 = (L1*L1+L1)/2
+
+      NSH2 = (NSHELL*NSHELL+NSHELL)/2
+      CALL BASCHK(LMAX)
+      IF(LMAX.GE.5) THEN
+         IF(MASWRK) WRITE(IW,*) 'FMO HAS NOT BEEN REVIEWED FOR H,I'
+         CALL ABRT
+      END IF
+
+      NANGM=KARTEN(MAX(LMAX,1))
+      MAXG = NANGM**4
+
+      nocc = na
+
+      CALL VALFM(LOADFM)
+      LXINTS= LOADFM + 1
+      LGHOND= LXINTS + NSH2
+      LDSH  = LGHOND + MAXG
+      LDSHB = LDSH   + NSH2
+      LDDIJ = LDSHB  + NSH2
+      Lsq_wrk1  = LDDIJ  + 49*MXG2
+      lwrk3 = lsq_WRK1 + l1*l1
+      llag = lwrk3 + l1*l1
+      lfmo = llag + nocc * nvir
+      last = lfmo + nocc * (nocc+1)/2
+      NEED1 = LAST - LOADFM -1
+      CALL GETFM(NEED1)
+
+      NXYZ = 1
+      NINT  =0
+      NSCHWZ=0
+      NCURSH=0
+      IST=1
+      JST=1
+      KST=1
+      LST=1
+
+      nsav_ntmo = ntmo
+      ntmo = 0
+
+      IF(SCHWRZ) THEN
+        DUMMY = 0.0D+00
+c$$$ shlden gets the maximum AO density in a shell,
+c$$$ based on efmo_fock_der(1,frag) and puts it in x(ldsh)
+        CALL SHLDEN(scffrg(frag),efmo_fock_der(1,frag),
+     *       efmo_fock_der(1, frag) ,DUMMY,X(LDSH),IA,
+     *              L1,L2,NSH2,1)
+        ! XINTS IS STORED IN DISK IN THIS CASE (NCURSH IS 0)
+        CALL EXCHNG(X(LXINTS),X(LGHOND),X(LDDIJ),NSH2,MAXG,INTTYP)
+      END IF
+
+c$$$  calculate the AO-fock derivative
+
+c$$$ "h" parts
+      CALL TVDER( efmo_fock_der(1, frag) ,dummy1,dummy2,L2,0)
+      CALL HELFEY( efmo_fock_der(1, frag) ,dummy1,L2)
+
+c$$$ two e- parts
+      IF(SCHWRZ) LFMOBUF(3) = 0 ! READ IN XINTS FROM A FILE
+      CALL ESD2DER( da,
+     *      efmo_fock_der(1,frag), -1)
+
+CZ
+CZ     IN: efmo_fock_der(1,1,frag) DENSITY-LIKE MATRIX
+CZ    OUT: ORBH    FOCK-LIKE MATRIX
+CZ
+
+      IDUMMY=1
+      NXYZ = 1
+      NINT  =0
+      NSCHWZ=0
+      NCURSH=0
+      IST=1
+      JST=1
+      KST=1
+      LST=1
+      nov = nvir*nocc
+
+      CALL DSCAL(ndim,two*two,efmo_fock_der(1,frag),1)
+
+      IF(SCHWRZ) THEN
+c$$$ shlden gets the maximum AO density in a shell,
+c$$$ based on efmo_fock_der(1,frag) and puts it in x(ldsh)
+        CALL SHLDEN(scffrg(frag),efmo_fock_der(1,frag),
+     *       efmo_fock_der(1, frag) ,DUMMY,X(LDSH),IA,
+     *              L1,L2,NSH2,1)
+      END IF
+
+c$$$ get (1/4) A--this is why we multiplied by 4 above (so it's now A)
+c$$$ calculates \sum_uv^{AO} P_uv * (uv|ol)-0.5(uo|vl)
+      CALL VCLR(ORBH,1,L2)
+      CALL TWOEI(RHF,DIRSCF,.FALSE.,.FALSE.,.FALSE.,
+     *           INTTYP,SCHWRZ,NINT,NSCHWZ,L1,L2,
+     *           DUMMY,DUMMY,IDUMMY,1,X(LXINTS),NSH2,X(LGHOND),
+     *     MAXG,X(LDDIJ),IA,efmo_fock_der(1,frag),
+     *           ORBH,dummy2,
+     *           dummy3,X(LDSH),DUMMY,DUMMY,NXYZ)
+
+      CALL DSCAL(L2,HALF,ORBH,1)
+      II = 0
+      DO I=1, L1
+        II = II+I
+        ORBH(II) = ORBH(II) + ORBH(II)
+      ENDDO
+
+
+      call dcopy( l2, orbh, 1, sqr_ao, 1)
+      if(goparr) call ddi_gsumf(3000, sqr_ao, l2)
+
+      CALL CPYTSQ(orbh,sqr_ao,L1,1)
+
+      CALL SWBASIS(1,L1,NOCC,NVIR,coeff,sqr_ao,L1,x(llag),NVIR,
+     *     x(lWRK3))
+
+c$$$ because the fmo response multiplies by 4
+      CALL DSCAL(nov,half*half,x(llag),1)
+c$$$ it's now in an appropriate form to send to the lagrangian
+      call daxpy(nov, one, x(llag),1,zvlag(iptlg(frag)),1 )
+
+c$$$ now make something we can send to sder as a modifed density
+c$$$ we need to put it in MO basis
+
+      if(goparr) call ddi_gsumf(3000,orbh,l1*(l1+1)/2)
+
+c$$$ make an MO version--contract orbh with MO coefficients
+      call tftri(x(lfmo), orbh, coeff,x(lwrk3),nocc,l1,l1 )
+c$$$ copy coefficients to sqr_ao
+      call dcopy( l1*l1, coeff, 1,sqr_ao,1)
+c$$$ switch back to AO: transpose MO coefficients, then contract with MO version 
+      call trposq( sqr_ao, l1)
+      call tftri(orbh, x(lfmo), sqr_ao,x(lwrk3), l1,nocc,l1)
+      call dscal( l1*(l1+1)/2, -half, orbh,1)
+
+      call sder(orbh, dum, l1,l2, .false.)
+
+      CALL RETFM(need1)
+
+      ntmo = nsav_ntmo
+
+      return
+      end
+
+
+
+*MODULE EFMOGRAD     *DECK EFMO_STORE_FOCK_DER
+C>
+C>    @brief Stores a weighted density for a given fragment
+C>
+C>    @details  Stores an input weighted density matrix in X(lefmo_fock_der)
+C>              (in the EFMOPO Common Block) for a given fragment. It passes the
+C>              weighted density and efmo_fock_der array to another subroutine,
+C>              which does the storing. This is used in EFMO.
+C>              This density matrix is used later to calculate the
+C>              derivative of the terms involving the Fock Matrix.
+C>              See the subroutine ::efmo_fock_der_pass
+C>
+C>    @author C. Bertoni
+C>
+C>    @param ifg : The fragment the weighted density matrix (the second parameter)
+C>                 corresponds to. This is needed to store in the correct spot
+C>                 in the X(lefmo_fock_der) array.
+C>    @param weighted_dens : A double array of (X), where
+C>                           X=(num AOs*num AOs+num AOs)/2. This is stored in
+C>                           X(lefmo_fock_der) at the given fragment (ifg)'s index.
+C>    @param l2 : (num AOs * num AOs + num AOs)/2 for the given fragment (ifg)
+C>
+C>
+      subroutine efmo_store_fock_der( ifg, weighted_dens,
+     *     l2 )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      PARAMETER(MXFRG=1050)
+      PARAMETER (MXDFG=5, MXDPPT=MXFRG*MXDFG*12)
+      COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+     *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+     *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+     *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+     *                IMODEFCT,IDIMTYP,iefmo_agrad
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *     lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FMCOM / X(1)
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+
+      dimension weighted_dens(l2)      
+      mxbsfn = 0
+      DO I=1,iefmonfrg
+         MXBSFN=MAX(MXBSFN,NBSFN(I))
+      ENDDO
+
+      ndim = (MXBSFN*MXBSFN+MXBSFN)/2
+
+      call efmo_store_fock_der_m( ifg, weighted_dens, l2,
+     *     x(lefmo_fock_der), iefmonfrg, ndim )
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_STORE_FOCK_DER_M
+C>
+C>    @brief Adds an array to another array at a specified index
+C>
+C>    @details  Adds the values in an input array to another input array
+C>              at an input index.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param frag : Second index for the array that is added to. 
+C>    @param weighted_dens : Double array of (l2) that is added to
+C>           another array.
+C>    @param l2 : Size of array weighted_dens.
+C>    @param efmo_fock_der : Double array of (ndim,nfrag) that has
+C>           values in weighted_dens added to it.
+C>    @param nfrag : Size of second dimension in efmo_fock_der
+C>    @param ndim : Size of first dimension in efmo_fock_der
+C>
+C>
+      subroutine efmo_store_fock_der_m( frag, weighted_dens,
+     *     l2, efmo_fock_der, nfrag, ndim )
+      
+      implicit none
+
+      integer l2, frag, nfrag, ndim
+      
+      double precision, dimension(ndim,nfrag) :: efmo_fock_der
+      double precision, dimension(l2) :: weighted_dens
+
+      call daxpy( l2, 1.0d0, weighted_dens, 1,
+     *      efmo_fock_der(1, frag ),1)
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_SAVE_TRAN
+C>
+C>    @brief Stores a localization transform for a given fragment
+C>
+C>    @details  Stores an input localization matrix in X(lefmo_tran)
+C>              (in the EFMOPO Common Block) for a given fragment. It passes the
+C>              localization matrix and efmo_tran array to another subroutine,
+C>              which does the storing.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param ifg : The fragment the localization matrix "tran" corresponds to.
+C>                 This is used to index in to X(lefmo_tran), and store 
+C>                 "tran" in the correct spot.
+C>    @param tran : A double array of (nocc, nocc). This contains the
+C>           localization transform for "ifg".
+C>    @param nloc : An integer containing the number of LMOs (equivalently,
+C>           non-core orbitals) in "ifg"
+C>    @param nocc : An integer containing the dimensions of "tran"
+C>
+C>
+      subroutine efmo_save_tran( ifg, tran,
+     *     nloc,nocc )
+      
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      PARAMETER(MXFRG=1050)
+      PARAMETER (MXDFG=5, MXDPPT=MXFRG*MXDFG*12)
+
+      COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+     *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+     *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+     *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+     *                IMODEFCT,IDIMTYP,iefmo_agrad
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *                lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FMCOM / X(1)
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+
+      double precision, dimension(nocc,nocc) :: tran 
+      integer nocc,nloc
+
+      if( nloc .gt. nocc ) then
+         write(*,*) 'problem in efmo_save_tran'
+         call abrt
+      endif
+
+c$$$ calculate dimension of efmo_tran (the largest number of occupied
+c$$$ orbitals from all fragments)
+      mxmo = 0
+      DO I=1,iefmonfrg
+         MXMO=MAX(MXMO,NMXMO(I))
+      ENDDO
+
+      ndim = mxmo*mxmo
+
+      call efmo_save_tran_m( ifg, tran, nocc,nloc,
+     *     x(lefmo_tran), iefmonfrg, ndim )
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_SAVE_TRAN_M
+C>
+C>    @brief Adds a subset of one array to another array
+C>
+C>    @details This adds the subset (nloc,nloc) of the (n,n) tran
+C>             array to efmo_tran.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param frag : The first index into efmo_tran
+C>
+C>    @param tran : A double array of (nocc, nocc). The elements (1,1) to
+C>           (nloc,nloc) of this array are added to efmo_tran
+C>
+C>    @param nocc : An integer containing the dimensions of "tran"
+C>    @param nloc : An integer containing the number of LMOs (equivalently,
+C>           non-core orbitals) in "frag", and thus the we need to add
+C>           nloc*nloc elements from tran to efmo_tran.
+C>    @param efmo_tran : A double array of (ndim, nfrag). This contains the
+C>           localization transforms for each fragment.
+C>
+C>    @param nfrag : An integer containing the number of EFMO fragments.
+C>           This is used to index efmo_tran.
+C>    @param ndim : An integer containing X^2, where X is the largest number
+C>           of occupied orbitals among all the fragments.
+C>
+C>
+      subroutine efmo_save_tran_m( frag, tran,
+     *     nocc,nloc, efmo_tran, nfrag, ndim )
+      
+      implicit none
+
+      integer index, frag, nfrag, ndim,nloc,nocc,index2,ind
+      
+      double precision, dimension( ndim ,nfrag) :: efmo_tran
+      double precision, dimension(nocc,nocc) :: tran
+
+      ind = 1
+      do index=1, nloc
+         do index2=1,nloc
+            efmo_tran(ind, frag) = tran(index2,index)
+            ind = ind + 1
+         enddo
+      enddo
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_RETRIEVE_TRAN
+C>
+C>    @brief Copies a localization transform for a given fragment into an array
+C>
+C>    @details  Retrieves the localization matrix for a given fragment from
+C>              X(lefmo_tran) (in the EFMOPO Common Block) and copies it to tran.
+C>              It passes the localization matrix and efmo_tran array to
+C>              another subroutine, which does the copying.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param tran : A double array of (dim1, dim1). The
+C>           localization transform for "frag" is copied here.
+C>    @param dim1 : An integer containing dimension of "tran"
+C>    @param dim2 : An integer containing the dimension of the (dim2,dim2)
+C>           matrix in X(lefmo_tran) that is copied to "tran". dim2
+C>           must be <= dim1
+C>    @param frag : The fragment the localization matrix "tran" corresponds to.
+C>           This is used to index in to X(lefmo_tran)
+C>
+C>
+      subroutine efmo_retrieve_tran( tran, dim1,dim2, frag)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      integer frag, dim1, dim2
+
+      PARAMETER(MXFRG=1050)
+      PARAMETER (MXDFG=5, MXDPPT=MXFRG*MXDFG*12)
+
+      COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+     *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+     *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+     *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+     *                IMODEFCT,IDIMTYP,iefmo_agrad
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *                lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FMCOM / X(1)
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+
+      double precision, dimension(dim1,dim1) :: tran 
+
+      if( dim2 .gt. dim1 ) then
+         write(*,*) "Problem in efmo_retrieve_tran"
+         call abrt
+      endif
+
+      mxmo = 0
+      DO I=1,iefmonfrg
+         MXMO=MAX(MXMO,NMXMO(I))
+      ENDDO
+
+      ndim = mxmo*mxmo
+      
+      call efmo_retrieve_tran_m( frag, tran, dim1, dim2,
+     *     x(lefmo_tran), iefmonfrg, ndim )
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_RETRIEVE_TRAN_M
+C>
+C>    @brief Copies an array to another array in a specific manner
+C>
+C>    @details  Retrieves the localization matrix for a given fragment from
+C>              X(lefmo_tran) (in the EFMOPO Common Block) and copies it to tran.
+C>              It passes the localization matrix and efmo_tran array to
+C>              another subroutine, which does the copying.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param frag : The second dimension of efmo_tran.
+C>    @param tran : A double array of (dim1, dim1). The values
+C>           in efmo_tran corresponding to frag are copied here.
+C>    @param dim1 : An integer containing dimension of "tran"
+C>    @param dim2 : An integer containing the dimension of the (dim2,dim2)
+C>           matrix in efmo_tran that is copied to "tran". dim2
+C>           must be <= dim1
+C>    @param efmo_tran : A double array of (ndim, nfrag).
+C>           The values in this array at frag are copied to tran.
+C>    @param nfrag : An integer containing the number of EFMO fragments.
+C>           This is used to index efmo_tran.
+C>    @param ndim : An integer containing X^2, where X is the largest number
+C>           of occupied orbitals among all the fragments.
+C>
+      subroutine efmo_retrieve_tran_m( frag, tran, dim1,dim2, efmo_tran,
+     *     nfrag, ndim)
+      
+      implicit none
+
+      integer index, dim1,dim2, frag, nfrag, ind_tot, ndim, index2
+      
+      double precision, dimension( ndim ,nfrag) :: efmo_tran
+      double precision, dimension(dim1,dim1) :: tran
+
+c$$$ note that this results in tran(LMO,CMO) as is done in the equations
+c$$$ I've seen. This is the case in my work and SPWebb's thesis. For whatever
+c$$$ reason, in other places in the code (locpol.src), it's tran(CMO,LMO)
+
+      ind_tot = 0
+      do index=1, dim2
+         do index2=1, dim2
+            ind_tot = ind_tot + 1
+            tran(index,index2) = efmo_tran(ind_tot,frag)
+         enddo
+      enddo
+
+      return
+      end
+
+
+
+C*MODULE EFMOGRAD     *DECK efmo_cpl_and_fock
+C>
+C>    @brief Calls the CPL solving routines, calculates part of the fock derivative terms
+C>
+C>    @details All efmo_occ_occ_resp calls should be before this,
+C>             and all contributions to cpl_contrib.
+C>
+C>             Various EFMO gradient terms involve the derivative of the localization
+C>             transform and the derivative of the canonical fock matrix.
+C>             For all EFMO fragments, this routine calculates the term which involves
+C>             the derivative of the localization transform matrix (v^x):
+C>
+C>             \sum_{ml} v^x_{ml} A_{ml}
+C>
+C>             The corresponding Zvector equations are solved, and the appropriate
+C>             terms are added in the ::cpl_setup routine.
+C>
+C>             Additionally, part of the term which involves the derivative of the
+C>             canonical fock matrix is calculated:
+C>             
+C>             \sum_{ij} \frac{\del F_{ij}}{\del x} D_{ij}
+C>
+C>             See the ::efmo_fock_der_pass routines for more detail on what parts are
+C>             calculated.
+C>             
+C>             Uses GDDI to loop over all fragments.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param ilay: current FMO layer
+C>    @param loadhf: an integer flag that is 1 if a "heavy job first" strategy is used
+C>           (mod(modpar,2) == 1).
+C>    @param loadm: integer array with load balancing information which reorders the fragments.
+C>           It takes in a number and returns a fragment, in decreasing order of number of AOs
+C>           work. So, it does the expensive fragments first. This is only used
+C>           if loadhf=1
+C>    @param da: work array. if L1=max number of AOs for all fragments, da has
+C>           space for L1*(L1+1)/2+L1*L1+L1
+C>    @param iptlg : An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param zvlag: An array that stores the lagrangian and
+C>                  is used to calculate the response.
+C>    @param fmode: A double array of (3,number of atoms in the entire FMO calculation).
+C>                  The first index is whether the derivative is with respect to x,y, or
+C>                  z, and the second index is which atom the derivative is with respect
+C>                  to. It holds FMO gradient values for dimer contributions that will be
+C>                  printed out, and used in MD calculations.
+C>    @param numfrg(): integer array with the number of AO basis functions for each fragment
+C>    @param iodfmo: io array for FMO
+C>    @param scffrg: scf type for the run (UHF or RHF)
+C>    @param isgddi: logical flag for whether it's a GDDI run
+C>    @param irec0: Record number to read the orbitals in the fragments
+C>    @param ngrfmo(maxpst,layers): integer array holding the number of GDDI groups for monomers,
+C>           dimers, etc., and is set for each layer
+C>    @param mannod(): defines manual node division into groups for each ngrfmo(i,j)
+C>    @param mastid(): contains the global id of group masters 
+C>    @param nqmtfg(): integer array that can be used to get the number of MO basis functions
+C>           in each fragment
+C>    @param irmdfmo: flag for RMD, but doesn't seem to do anything in this circumstance
+C>
+      SUBROUTINE efmo_cpl_and_fock(ILAY,LOADHF,LOADM,DA,IPTLG,
+     *                    ZVLAG,FMODE,NUMFRG,
+     *                    IODFMO,SCFFRG,ISGDDI,IREC0,
+     *                    NGRFMO,MANNOD,MASTID,NQMTFG,irmdfmo)
+C
+      IMPLICIT DOUBLE PRECISION (A-H, O-Z)
+C
+      LOGICAL DIRSAV
+      LOGICAL ISGDDI,MYJOB
+      LOGICAL dirscf, fdiff
+C
+      INTEGER DDI_WORLD,DDI_GROUP
+      PARAMETER (DDI_WORLD=0,DDI_GROUP=1)
+      PARAMETER (MXATM=2000,MAXPST=10)
+C
+      PARAMETER(MXFRG=1050)
+      PARAMETER (MXDFG=5, MXDPPT=MXFRG*MXDFG*12)
+
+      DIMENSION DA(1)
+      DIMENSION LOADM(*),NUMFRG(*),NQMTFG(*)
+      DIMENSION IODFMO(*),SCFFRG(*)
+      DIMENSION NGRFMO(MAXPST,*),MANNOD(*),MASTID(*)
+      DIMENSION FMODE(3,*)
+      DIMENSION IPTLG(*),ZVLAG(*)
+
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *     lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FMCOM / X(1)
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /GRAD  / DE(3,MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+      COMMON /RESTAR/ TIMLIM,IREST,NREC,INTLOC,IST,JST,KST,LST
+czcz
+C
+      mxbsfn = 0
+      mxmos = 0
+      DO I=1,nfg
+         MXBSFN=MAX(MXBSFN,NBSFN(I))
+         MXMOS=MAX(MXMOS,NMXMO(I))
+      ENDDO
+
+      ncpl_mem = 0
+c     being precise in how much cpl memory is needed.
+      do i=1,nfg
+         ncpl_mem = ncpl_mem + nmxmo(i)*(nmxmo(i)+1)/2
+      enddo
+
+      ndim = (MXBSFN*MXBSFN+MXBSFN)/2
+
+c$$$ move to world scope so that things can by summed
+      IF (ISGDDI) CALL GDDI_SCOPE(DDI_WORLD)
+C
+c$$$ sum up cpl_coeff for efmo
+      IF (GOPARR) then
+         CALL DDI_GSUMF(3000,x(lcpl_coeff),ncpl_mem)
+         CALL DDI_GSUMF(3001,x(lefmo_fock_der),nfg*ndim)
+      endif
+C
+CZ
+CZ    SWITCH TO GROUP so that we can use multilevel parallelism
+CZ
+      IF (ISGDDI) CALL GDDI_SCOPE(DDI_GROUP)
+c$$$ checks if there are more than one SCF monomer groups
+      IF (ISGDDI.AND.NGRFMO(1,ILAY).NE.0)
+     *  CALL FMOPRE(ILAY,1,NGRFMO,MANNOD,MASTID,irmdfmo)
+c      print *, "ngrfmo", NGRFMO(1,ILAY)
+C
+      IF (ISGDDI) CALL GDDICOUNT(-1,LGROUP,MYJOB)
+
+
+      DO 230 IIFG = 1,NFG
+        IFG = IIFG
+        IF (LOADHF.EQ.1) IFG = LOADM(IIFG)
+C
+        IF (ISGDDI) THEN
+          CALL GDDICOUNT(0,LGROUP,MYJOB)
+          IF (.NOT.MYJOB) GOTO 230
+        END IF
+C
+        CALL CLOSDA('DELETE')
+        CALL OPENDA(0)
+        CALL MAKEMOL(IFG,0,0,ILAY,0,0,0,0,0,0,0,.TRUE.)
+        L1 = NUM
+        L2 = (L1*L1+L1)/2
+        L3 =  L1*L1
+        IDMREC0I = IFG + IREC0
+
+c$$$ this is necessary to initialize variables for the call to TWOEI 
+        DIRSAV = DIRSCF
+        DIRSCF = .TRUE.
+        IST=1
+        JST=1
+        KST=1
+        LST=1
+        CALL JANDK
+        DIRSCF = DIRSAV
+        NQI    = IAND(NQMTFG(IFG),65535)
+        NAI    = ISHFT(NUMFRG(IFG),-16)
+
+        CALL VALFM(LOADFM)
+        lorbh = LOADFM + 1
+        lsqr_ao = lorbh + ndim
+        lda =  lsqr_ao + L1*L1*4
+        lsol = lda + l1*nai
+        lvv  = lsol + nai*(nai+1)/2
+c$$$ the 46 is for IM+1 (see cpl_setup)        
+        lr  = lvv + nai*(nai+1)/2*46
+        locc_dens = lr + nai*nai*3
+        lRcanloc = locc_dens + l1*l1
+        last = lRcanloc + l1*nai*3
+        NEED = LAST - LOADFM -1
+        CALL GETFM(NEED)
+
+C
+! MO COEF. AND ORBITAL ENERGIES
+        CALL RAREADS(IDAFMO,IODFMO,DA(L2+1),L3+L1,IDMREC0I,0)
+        CALL DMTX2(DA,DA(L2+1),NAI,L1,L1,NAI)
+
+        CALL VCLR(DE,1,NAT*3)
+        NCURSH = 0
+
+        nqi = IAND(NQMTFG(IFG),65535)
+        nvir = nqi - nai
+
+        call efmo_get_norb( x(lnefmopts), norb, ifg, nfg )
+
+        ncore = nai-norb
+
+        loffset=0
+
+        do index=1,ifg-1
+           loffset = loffset + nmxmo(index)*(nmxmo(index) + 1)/2
+        enddo
+
+        call vclr( x(lsqr_ao), 1, L1*L1*4)
+        call vclr( x(lorbh), 1, ndim)
+        call vclr( x(lSOL), 1, nai*(nai+1)/2)
+
+        call dipint( 0,0,0, .false.)
+        call daread(idaf,ioda,x(locc_dens),l2,95,0)
+        call cpytsq(x(locc_dens), x(lsqr_ao), l1, 1 )
+        call daread(idaf,ioda,x(locc_dens),l2,96,0)
+        call cpytsq(x(locc_dens), x(lsqr_ao+l1*l1), l1, 1 )
+        call daread(idaf,ioda,x(locc_dens),l2,97,0)
+        call cpytsq(x(locc_dens), x(lsqr_ao+ 2*l1*l1), l1, 1 )
+
+c$$$ calculate the localization matrix derivative term
+        call cpl_setup(x(lr), x(lcpl_coeff+loffset), x(lsol),
+     *       norb*(norb+1)/2,45,x(lvv), x(lorbh),50,
+     *       l1,x(lsqr_ao),ierr, nai, x(lefmolmo),ifg,nfg,mxbsfn,
+     *       mxmos, x(lda),da(l2 + 1), nvir,
+     *       zvlag, iptlg, da(l2+l3+1), x(locc_dens),x(lrcanloc),
+     *       ncore )
+
+        call vclr( x(lsqr_ao), 1, L1*L1*4)
+        call vclr( x(lorbh), 1, ndim)
+
+c$$$ cpl_setup adds something to efmo_fock_der on the maswrk core, affecting only
+c$$$ the fragment we're on right now, so we broadcast it before we deal with
+c$$$ efmo_fock_der_pass  
+        if(goparr) call ddi_bcast( 3005, 'F',
+     *       x(lefmo_fock_der+(ifg-1)*ndim),ndim,master)
+
+c$$$ contributions from canonical fock matrix derivative 
+        call efmo_fock_der_pass(x(lefmo_fock_der),l1,nfg, ifg,
+     *       scffrg, ndim, da(l2+1), da, zvlag, iptlg, x(lorbh),
+     *       nvir, x(lsqr_ao))
+
+        IF (GOPARR) CALL DDI_GSUMF(2418,DE,NAT*3)
+
+        IF (MASWRK) CALL FMODEG(1,FMODE,X(LFMOPG),X(LIAGLOB))
+
+        CALL RETFM(need)
+
+  230 CONTINUE
+C
+      IF (ISGDDI) CALL GDDICOUNT( 1,LGROUP,MYJOB)
+C
+      RETURN
+      END
+
+*MODULE EFMOGRAD     *DECK EFMO_DIPDER_GRAD
+C>
+C>    @brief Calculates some of the dipole and polarizability derivative terms
+C>
+C>    @details  Calculates the derivative of terms involving dipoles, and
+C>              calculates some terms needed for the polarizability tensor derivative.
+C>              This loops through all fragments.
+C>              Two subroutines are called: efmo_pol_der_pass, and
+C>              efmo_pd_der_pass.
+C>
+C>              efmo_pol_der_pass:
+C>              This is used in the EFMO exchange repulsion and polarization
+C>              gradients. Both have terms of the form
+C>              \sum_i^{LMOs in frag I}
+C>              \left< \frac{\partial i}{\partial x_a} | \bold{x} | i \right>
+C>              \left[ C(\bold{x}, i) \right].
+C>              The coefficients (C(\bold{x}, i)) from all contributions
+C>              are stored in x(lefmodipder) (in the EFMOPO Common Block).
+C>              See ::efmo_pol_der_pass for more details.
+C>
+C>              efmo_pd_der_pass:
+C>              This is used in the EFMO polarization gradient. Specifically,
+C>              for the term that involves the derivative of the polarizability
+C>              tensor. The derivative of the EFP polarizability tensor has
+C>              three terms: one involving the localization derivative, one
+C>              involving a dipole derivative, and one involving a second-order
+C>              response. This subroutine calculates the dipole derivative terms,
+C>              and calculates terms needed to solve the localization and second-  
+C>              order response terms.
+C>              See efmo_pd_der_pass for more details.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param iptlg : An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It holds the number of occ*vir orbitals
+C>                   for each fragment which needs to be in
+C>                   this order so that the response-solver in FMO works
+C>                   correctly.
+C>    @param zvlag : An array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>    @param fmode : A double array of (3,number of atoms in the entire FMO calculation).
+C>                   The first index is whether the derivative is with respect to x,y, or
+C>                   z, and the second index is which atom the derivative is with respect
+C>                   to. It holds FMO gradient values for dimer contributions that will be
+C>                   printed out, and used in MD calculations.
+C>    @param iefmoiglob : An integer array of (number of atoms in the entire FMO
+C>                      calculation). This is used later to map the atoms in the
+C>                      fragments to the global atom lookup table. In this case,
+C>                      the map is the same order as the atoms, so we need to set
+C>                      iefmoiglob(i) = i for all i atoms.
+C>    @param efmodimg :  A double array of (3,number of atoms in the entire FMO calculation).
+C>                   The first index is whether the derivative is with respect to x,y, or
+C>                   z, and the second index is which atom the derivative is with respect
+C>                   to. It holds FMO gradient values for dimer contributions that will be
+C>                   printed out, and used in MD calculations.
+C>    @param isgddi: logical flag for whether it's a GDDI run
+C>    @param ilay: current FMO layer
+C>    @param ngrfmo(maxpst,layers): integer array holding the number of GDDI groups for monomers,
+C>           dimers, etc., and is set for each layer
+C>    @param mannod(): defines manual node division into groups for each ngrfmo(i,j)
+C>    @param mastid(): contains the global id of group masters 
+C>    @param irec0: Record number to read the orbitals in the fragments
+C>    @param loadhf: an integer flag that is 1 if a "heavy job first" strategy is used
+C>           (mod(modpar,2) == 1).
+C>    @param loadm: integer array with load balancing information which reorders the fragments.
+C>           It takes in a number and returns a fragment, in decreasing order of number of AOs
+C>           work. So, it does the expensive fragments first. This is only used
+C>           if loadhf=1
+C>    @param iodfmo: io array for FMO
+C>    @param irmdfmo: flag for RMD, but doesn't seem to do anything in this circumstance
+C>
+      subroutine efmo_dipder_grad( iptlg, zvlag,
+     *     FMODE,IEFMOIGLOB,EFMODIMG, isgddi, ilay,NGRFMO,MANNOD,
+     *     MASTID, irec0, loadhf, loadm, iodfmo,irmdfmo )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      Parameter(MXFRG=1050,MXDFG=5,MXDPPT=MXFRG*MXDFG*12,MXATM=2000,
+     *     MXEFMOPPTS=60)
+
+      integer hold_nat, loop_atom, frag
+      integer, dimension(*) :: iptlg
+      LOGICAL myjob, isgddi
+
+      INTEGER DDI_WORLD,DDI_GROUP
+      PARAMETER (DDI_WORLD=0,DDI_GROUP=1)
+      PARAMETER (MAXPST=10)
+      DIMENSION NGRFMO(MAXPST,*),MANNOD(*),MASTID(*), loadm(*),
+     *     iodfmo(*)
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *     lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      COMMON /FMCOM / X(1)
+      COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+     *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+     *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+     *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+     *                IMODEFCT,IDIMTYP,iefmo_agrad
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+      DIMENSION FMODE(3,*),IEFMOIGLOB(*),EFMODIMG(3,*)
+
+      hold_nat = natefmo
+
+      call vclr( x(LEFMODIMG), 1, 3*natefmo)
+
+      MXBSFN=0
+      MXMOS=0
+      DO I=1,NFG
+         MXBSFN=MAX(MXBSFN,NBSFN(I))
+         MXMOS=MAX(MXMOS,NMXMO(I))
+      ENDDO
+
+      nocc_tot = 0
+      do i=1,nfg
+         nocc_tot = nocc_tot + nmxmo(i)
+      enddo
+
+      CALL VALFM(LOADFM)
+      Lwrk = LOADFM + 1
+      Lcab = Lwrk + (mxbsfn*mxbsfn+mxbsfn)/2
+      Lcmat = Lcab + mxbsfn*mxbsfn*3
+      lden = Lcmat + mxbsfn*mxbsfn*3
+      lwrk2 = lden + mxbsfn*mxbsfn*10
+      lprovec = lwrk2 + mxbsfn*mxbsfn
+      lctvec = lprovec + mxbsfn*mxmos
+      lfockma = lctvec + mxbsfn*mxbsfn
+      lcoeff = lfockma + mxbsfn
+      LAST = lcoeff + 3*mxbsfn*mxmos
+      NEED = LAST - LOADFM - 1
+      CALL GETFM(NEED)
+
+c$$$ let's see what we get:
+      if(isgddi) call ddi_scope( ddi_world )
+      if(goparr) call ddi_gsumf(2404,x(lefmo_tot_field),3*3*nocc_tot)
+      if(goparr) call ddi_gsumf(2405,x(lefmo_dyndisp),12*nocc_tot)
+      if(goparr) call ddi_gsumf(2406,x(lefmodipder), 3*mxefmoppts*nfg)
+      if(isgddi) call ddi_scope( ddi_group )
+
+c$$$ let's try using multi-level parallelism
+c$$$ this initializes the global task counter
+      if( isgddi ) then
+         call ddi_scope( ddi_group )
+         IF (NGRFMO(1,ILAY).NE.0)
+     *        CALL FMOPRE(ILAY,1,NGRFMO,MANNOD,MASTID,irmdfmo)
+
+         call gddicount(-1, lgroup, myjob)
+      endif
+
+c$$$ start loop over fragments
+      do index_frag=1,nfg
+         
+         frag = index_frag
+         if(loadhf .eq. 1)  frag = loadm(index_frag)
+
+c$$$ parallelization.
+         if( isgddi ) then
+            call gddicount( 0, lgroup, myjob )
+            if( .not. myjob ) cycle
+         endif
+
+
+c$$$ this closes and opens the Dictionary file, so it
+c$$$ can be written to
+         CALL CLOSDA('DELETE')
+         CALL OPENDA(0)
+
+c$$$ puts the stored coordinates and basis set for the fragment into common blocks 
+         CALL MAKEMOL(frag,0,0,ILAY,0,0,0,0,0,0,0,.TRUE.)
+
+         l1 = num
+         l2 = l1*(l1+1)/2
+         l3 = l1*l1
+         IDMREC0I = frag + IREC0
+
+c$$$  get the dipole integrals, since both of the following subroutines need them
+         call dipint(0,0,0,.false.)
+       
+         CALL DAREAD(IDAF,IODA,x(lden),L2,95,0)
+         CALL DAREAD(IDAF,IODA,x(lden+L2),L2,96,0)
+         CALL DAREAD(IDAF,IODA,x(lden+2*L2),L2,97,0)
+
+         call cpytsq(x(lden), x(lcmat), l1, 1 )
+         call cpytsq(x(lden+L2), x(lcmat+l1*l1), l1, 1 )
+         call cpytsq(x(lden+2*L2), x(lcmat+ 2*l1*l1), l1, 1 )
+
+c$$$ use fmo to get the cmo coefficients and orbital energies
+         CALL VCLR(x(lctvec),1,L3+L1)
+         CALL RAREADS(IDAFMO,IODFMO,x(lctvec),L3+L1,IDMREC0I,0)
+
+c$$$ calculates dipole derivatives
+         call efmo_pol_der_pass( x(lefmodipder), x(lefmolmo),
+     *        nfg, mxmos, mxbsfn,
+     *        l1,NMXMO, x(lnefmopts),
+     *        zvlag, iptlg, x(lwrk), x(lcab), x(lcmat),
+     *        x(lden), x(lwrk2),x(lprovec),
+     *        x(lctvec), x(lctvec+L3), frag )
+         
+c$$$  calculates part of the polarizability derivative. It adds the transform derivative
+c$$$  to the right place, calculates the dipole derivative part, and calculates the
+c$$$  coefficient of the second-order response  
+         call efmo_pd_der_pass( x(lcoeff), x(lefmolmo),
+     *        nfg, mxmos, mxbsfn,
+     *        l1,NMXMO, x(lnefmopts),
+     *        zvlag, iptlg, x(lwrk), x(lcab), x(lcmat),
+     *        x(lden), x(lwrk2), x(lprovec),
+     *        x(lctvec), x(lctvec+L3), x(lefmo_tot_field),
+     *        x(lefmo_f_resp), x(lefmo_scphf), iptlg(nfg+1),
+     *        x(lefmo_dyndisp),x(lefmo_scptdhf), frag)
+      
+      enddo
+
+c$$$ finalize global task counter
+      if( isgddi ) call gddicount( 1, lgroup, myjob )
+
+c$$$ fix efmoiglob
+      do loop_atom=1,natfmo
+         iefmoiglob(loop_atom) = loop_atom
+      enddo
+
+      CALL RETFM(NEED)
+      natefmo = natfmo
+
+c$$$ I think we're in group scope right now. sum up efmodimg in each group
+c$$$ and then the maswrk of each group adds to fmode once
+      IF( GOPARR ) CALL DDI_GSUMF(2405,X(LEFMODIMG),3*NATeFMO+3*NBDFG)
+      if(maswrk) CALL EFMODEG(1,FMODE,IEFMOIGLOB,EFMODIMG)
+
+      natefmo = hold_nat
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_PD_DER_PASS
+C>
+C>    @brief Calculates some of the polarizability and dispersion derivative terms
+C>
+C>    @details  This is used in the EFMO polarization gradient.
+C>              This subroutine calculates the following terms for one fragment.
+C>
+C>              This subroutine involves
+C>              the term with the derivative of the EFP polarizability tensor:
+C>              -\frac{1}{2} \sum_{n}^{LMOs in fragment I} \sum_{f,g} \tilde{E^{tot,f}_n}^T
+C>              \left( \frac{\partial \alpha^{fg}_n}{\partial x_{a \in I} } \right)
+C>              E^{tot,g}_n = 2 \sum_{n}^{LMOs in fragment I} \sum_{f,g} \tilde{E^{tot,f}_n}^T
+C>              \frac{\partial }{\partial x_{a \in I} } \left( \sum_{jk}^{occ}
+C>              \sum_i^{vir} T_{nj} T_{nk} U^g_{ij} h_{ik}^f  \right) E^{tot,g}_n
+C>
+C>              The coefficients (T,\tilde{E^{tot,f}, E^{tot,g}, U^g, h_{ik}^f) are
+C>              passed in as variables.
+C>              The term shown above can be split into 3 terms (using the chain rule):
+C>              1) a dipole derivative contribution (using the
+C>              chain rule, this is the term involving the derivative of $h_{ik}^f$),
+C>              which will involve an AO-contribution and a CMO response contribtuion,
+C>              response contribution
+C>              2) a LMO reponse contribution from the term involving the derivative of
+C>              the $T$ terms
+C>              3) a second-order CMO response from the derivative of the $U^g$ term.
+C>              the term is calculated using LMOs.
+C> 
+C>              This subroutine calculates the dipole derivative terms,
+C>              and calculates terms needed to solve the localization and second-  
+C>              order response terms for one fragment.
+C>
+C>              For the dipole derivative term:
+C>              The AO-derivative term is calculated for each fragment and added
+C>              to the EFMO dimer gradient (stored in X(LEFMODIMG) in Common Block
+C>              EFMOPO) by the subroutine efmo_str_deriv.
+C>              The occ-vir part of the coefficient of the CMO response ($U$) is
+C>              added to zvlag(), where FMO stores the Lagrangian. The Z-vector
+C>              equation is solved later using zvlag.
+C>              The occ-occ part of the coefficient of the CMO response ($U$) is
+C>              passed to the subroutine efmo_occ_occ_resp(), which calculates the
+C>              occ-occ response contribution.
+C>              The vir-vir part of the coefficient of the CMO response ($U$) is
+C>              passed to the subroutine efmo_occ_occ_resp() with the proper paramters
+C>              so that it calculates the vir-vir response contribution.
+C>              An extra AO overlap derivative arises from the dipole derivative,
+C>              since one of $U$s was in the wrong order, and
+C>              S^{AO-deriv of a}_{ij} + U_{ij}^a + U_{ji}^a = 0. This AO-derivative
+C>              is also calculated through efmo_str_deriv.
+C>
+C>              For the LMO transform derivative term:
+C>              The coefficient of LMO response ($v$) is passed to the subroutine
+C>              store_cpl_coeff(), which stores the coefficient and uses it
+C>              later when the CPL equation is solved.
+C>
+C>              For the second-order response term:
+C>              The coefficient of the \frac{U^{g}_{ij}}{\partial x_a} term is stored
+C>              in the efmo_scphf() array for later use in the second-order Z- 
+C>              vector equation.
+C>              
+C>    @todo Change the loops into DGEMM calls
+C>
+C>    @author C. Bertoni
+C>
+C>    @param coeff : This is a double array. It's a scratch array
+C>                   which is used to hold the a coefficient term used in
+C>                   the dipole derivative terms.
+C>    @param efmolmo : array holding the LMO coefficients for each
+C>           fragment in the EFMO run 
+C>    @param nfrag : the total number of fragments in the EFMO run
+C>    @param mxmos :  maximum number of occupied MOs of all the
+C>           fragments in the EFMO run
+C>    @param mxbsfn : maximum number of basis functions of all the
+C>           fragments in the EFMO run
+C>    @param num_AO_A : the number of AOs in the fragment
+C>    @param nmxmo : An integer array of (parameter mxfrg) which contains the
+C>                   number of occupied MOs in each fragment
+C>    @param nefmopts : See the description in ::efmo_pol_der_pass 
+C>    @param zvlag : An array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>    @param iptlg : An array that takes the fragment number as an index
+C>                   and returns an index into zvlag which needs to be in
+C>                   this order so that the response-solver in FMO works
+C>                   correctly.
+C>    @param wrk : A double array of ((num_AO_A*num_AO_A+num_AO_A)/2). This is a
+C>                 scratch array.
+C>    @param cab : A double array of (num_AO_A,num_AO_A,3). This is a scratch array
+C>                 that holds the dipole integrals (x,y,and z) for
+C>                 a single fragment. 
+C>    @param cmat : A double array of (num_AO_A,num_AO_A, 3). This is a scratch array
+C>                  that holds the AO dipole integrals  (x,y,and z) for a
+C>                  single fragment.
+C>    @param den : A double array of (num_AO_A,num_AO_A,10). This is a scratch array. 
+C>    @param provec : A double array of (num_AO_A, mxmos). This is a scratch array which
+C>                    is used to store the LMOs in a single fragment. The LMOs are
+C>                    copied into this array from the efmolmo() array.
+C>    @param ctvec : A double array of (num_AO_A,num_AO_A). This array holds
+C>                   the occ and virt CMO coefficients in a single fragment.
+C>    @param fockma : A double array of (num_AO_A). This array holds
+C>                    the occupied diagonal elements of the CMO Fock
+C>                    matrix for a single fragment.
+C>    @param efmo_tot_field : A double array of (3,3,total number of occ MOs in
+C>           all fragments) that holds the term
+C>           \tilde{E^{tot,f}_n} E^{tot,g}_n for each combination of f and g
+C>           for each LMO n in each fragment. E^{tot,g}_n is the total field
+C>           due to the static multipoles and the induced multipoles at LMO
+C>           centroid n.
+C>    @param efmo_f_resp : A double array of (3,13,X), where
+C>           X= \sum_i^{all fragments}(num occ MOs in fragment i)
+C>           * (num vir MOs in fragment i). It holds the responses for the
+C>           static and dynamic polarizability tensors. The first dimension
+C>           is the x,y, or z field. The second dimension distinguishes
+C>           between the static and dynamic polarizability tensors. (3,1,X)
+C>           holds U^g_{ij} is the canonical orbital response to field g. The
+C>           next 12 spots (3,2,X) to (3,13,X) hold the dynamic response vectors,
+C>           Z^g_{ij}(w),where w is one of 12 frequencies.
+C>    @param efmo_scphf : A double array of (nov,3). This holds the coefficient
+C>           of the term needed in the second order response. That is, for
+C>           the term \sum_i^{vir} \sum_j^{occ} \sum_g
+C>           \left( C(ij,g) \frac{\partial U^{g}_{ij}}{\partial x_a} \right),
+C>           this is C().
+C>    @param nov : An integer holding X, where
+C>           X= \sum_i^{all fragments}(num occ MOs in fragment i)
+C>           * (num vir MOs in fragment i).
+C>    @param efmo_dyndisp : A double array of (12,total number of occ MOs in
+C>           all fragments) that holds the term
+C>    @param efmo_scptdhf : A double array of (nov,3,12). This holds the coefficient
+C>           of the term needed in the second order response for the
+C>           dispersion energy. That is, for the term
+C>           \sum_i^{vir} \sum_j^{occ} \sum_g \sum_{\omega}^{12}
+C>           \left( C(ij,g,m) \frac{Z^{g}_{ij}(\omega)}{\partial x_a} \right),
+C>           this is C().
+C>    @param frag : An integer specifying the fragment the values are calculated
+C>           for
+C>
+      subroutine efmo_pd_der_pass( coeff, efmolmo,
+     *     nfrag, mxmos, mxbsfn, num_AO_A, nmxmo,
+     *     nefmopts, zvlag, iptlg, wrk,
+     *     cab, cmat, den,wrk2,
+     *     provec, ctvec, fockma, efmo_tot_field, efmo_f_resp,
+     *     efmo_scphf, nov, efmo_dyndisp, efmo_scptdhf, frag )
+
+      implicit none
+
+      integer, PARAMETER :: MXFRG=1050,MXSH=5000,
+     *      MXGTOT=20000,MXATM=2000
+
+      integer nfrag, frag, mxmos, mxbsfn, ngauss, j,
+     *     iov, i_mo, i_u, j_mo, k,
+     *     nocc, num_AO_A, nvir, atom_index, n,f,g,norb,
+     *     iocc, ivir, occ_index, resp_index, pi, ni, nov,
+     *     ij_ind, ncore, f_ind,j_ind,m, loop_atom, loop_occ,
+     *     loop_frag,i
+
+      double precision occ_vir_contrib,dum,
+     *     x_o, y_o, z_o, x_v, y_v, z_v, g_sum
+
+      integer, dimension(mxfrg) :: nmxmo
+
+      double precision, dimension(3, num_AO_A, mxmos) :: coeff
+      double precision, dimension(nfrag,mxbsfn,MXMOS) :: EFMOLMO
+      integer, dimension(7,nfrag) :: NEFMOPTS
+      double precision, dimension(3,3,*):: efmo_tot_field
+      double precision, dimension(3,13,*):: efmo_f_resp
+      double precision, dimension(nov,3):: efmo_scphf
+      double precision, dimension(nov,3,12):: efmo_scptdhf
+
+      double precision, dimension(12,*):: efmo_dyndisp
+
+      double precision, dimension(num_AO_A,MXMOS) :: provec
+      double precision, dimension(num_AO_A,num_AO_A) :: ctvec
+      double precision, dimension(num_AO_A) :: fockma
+
+      double precision, dimension(num_AO_A, num_AO_A, 3) :: cab
+      double precision, dimension(num_AO_A, num_AO_A, 3) :: cmat
+
+      double precision, dimension((num_AO_A*num_AO_A+num_AO_A)/2) :: wrk
+      double precision, dimension(num_AO_A*num_AO_A) :: wrk2
+
+      double precision, dimension(1) :: zvlag(1)
+      integer, dimension(1) :: iptlg
+
+      double precision, dimension(num_AO_A,num_AO_A,10) :: den
+
+      double precision, PARAMETER :: HALF=0.5D+00,
+     *     zero = 0.0D+00, one = 1.0D+00,two = 2.0D+00,
+     *     three = 3.0D+00
+
+
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      integer :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+      double precision :: ex,cs,cp,cd,cf,cg,ch,ci
+
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      integer :: nat, ich, mul, num, nqmt, ne, na, nb, ian
+      double precision :: zan, c
+      
+
+         call vclr( den, 1, num_AO_A*num_AO_A*10)
+         call vclr( coeff, 1, num_AO_A*mxmos*3)
+         call vclr( cab, 1, num_AO_A*num_AO_A*3)
+
+         nocc = nmxmo(frag)
+         nvir = num_AO_A - nocc
+         resp_index = iptlg(frag)
+         norb = nefmopts(2,frag)
+         ncore = nocc-norb
+
+         occ_index = 1
+
+         do loop_frag=1,(frag-1)
+            do loop_occ = 1, nmxmo(loop_frag)
+               occ_index = occ_index + 1
+            enddo
+         enddo
+
+c$$$  get efmo_trans for A
+         call efmo_retrieve_tran( den(1,1,1), num_AO_A,norb,
+     *        frag )
+
+c$$$ this is a term used in the polarization energy derivative
+c$$$ make intermediate matrices
+         do f=1,3
+            do g=1,3
+
+               do i=1,norb
+                  do j=1,norb
+         cab(j,i,1) = 2*efmo_tot_field(f,g,occ_index-1+j)*den(j,i,1)
+            enddo
+         enddo
+
+      CALL DGEMM('T','N',norb,norb,norb,ONE,cab(1,1,1),
+     *             num_AO_A,den ,num_AO_A,ZERO,den(1,1,f+3*(g-1) + 1),
+     *        num_AO_A)
+
+
+         enddo
+      enddo
+
+         do f=1,3
+            do i=1,norb
+               do j=1,nvir
+                  
+                  do k=ncore+1,nocc
+                     iov = j+(k-1)*nvir
+                     do g=1,3
+
+                        coeff(f,j,i) = coeff(f,j,i)
+     *                       +den(i,k-ncore,g+3*(f-1)+1)
+     *                       *efmo_f_resp(g,1,resp_index-1+iov)
+                  enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+
+      
+c$$$ this is term used in the dispersion energy derivative. it can be added
+c$$$ to the coefficient used in the polarization energy gradient
+         do f=1,3
+            do iocc=1,norb
+               do n=1,norb
+                  do ivir=1,nvir
+                     do m=1,12
+
+                        g_sum = 0
+                        do f_ind=ncore+1,nocc
+                           
+                           iov = ivir+(f_ind-1)*nvir
+
+                           g_sum = g_sum
+     *                          + two/three
+     *                          *efmo_f_resp(f,m+1,resp_index-1+iov)
+     *                          *den(n,f_ind-ncore,1)
+
+                        enddo
+
+                        coeff(f,ivir,iocc) = coeff(f,ivir,iocc)
+     *                    + den(n,iocc,1)*g_sum
+     *                    * efmo_dyndisp(m,occ_index-1+n)
+
+               enddo
+                     enddo
+               enddo
+            enddo
+         enddo
+
+         call vclr( den, 1, num_AO_A*num_AO_A*10)
+
+c$$$ put lmos from efmolmo into a reasonable array
+      do i_u=1,num_AO_A
+         do i_mo=1,norb
+            provec(i_u, i_mo) = efmolmo(frag,i_u,i_mo)
+         enddo
+      enddo
+
+         NGAUSS = KSTART(NSHELL)
+         atom_index = 1
+
+         do loop_frag=1,(frag-1)
+            do loop_atom = 1, nefmopts(1,loop_frag)
+               atom_index = atom_index + 1
+            enddo
+         enddo
+
+         CALL TFSQP(CAB(1,1,1),CMAT(1,1,1),ctvec,
+     *        ctvec,den(1,1,4),num_AO_A,num_AO_A,num_AO_A,num_AO_A,
+     *        num_AO_A,num_AO_A,.false.)
+         CALL TFSQP(CAB(1,1,2),CMAT(1,1,2),ctvec,
+     *        ctvec,den(1,1,4),num_AO_A,num_AO_A,num_AO_A,num_AO_A,
+     *        num_AO_A,num_AO_A,.false.)
+         CALL TFSQP(CAB(1,1,3),CMAT(1,1,3),ctvec,
+     *        ctvec,den(1,1,4),num_AO_A,num_AO_A,num_AO_A,num_AO_A,
+     *        num_AO_A,num_AO_A,.false.)
+
+c$$$  make density for AO derivative. doubled because efmo_str_deriv
+c$$$  only does <du|x|v> (while we want <du|x|v> + <u|x|dv>)
+
+c$$$ move so it's easier to work with
+         do i_mo=1,nvir
+            do j_mo=1,nocc-ncore
+
+               cmat(i_mo,j_mo,1) = coeff(1,i_mo,j_mo)
+               cmat(i_mo,j_mo,2) = coeff(2,i_mo,j_mo)
+               cmat(i_mo,j_mo,3) = coeff(3,i_mo,j_mo)
+            enddo
+         enddo
+
+c$$$ back transform MO -> AO
+         call swbasis( 0,num_AO_A,nocc-ncore,nvir,ctvec(1,ncore+1),
+     *         cmat(1,1,1),num_AO_A,den(1,1,7),num_AO_A,
+     *        den(1,1,4))
+         call swbasis( 0,num_AO_A,nocc-ncore,nvir,ctvec(1,ncore+1),
+     *         cmat(1,1,2),num_AO_A,den(1,1,8),num_AO_A,
+     *        den(1,1,4))
+         call swbasis( 0,num_AO_A,nocc-ncore,nvir,ctvec(1,ncore+1),
+     *         cmat(1,1,3),num_AO_A,den(1,1,9),num_AO_A,
+     *        den(1,1,4))
+
+
+c$$$ since we need double
+         call symtrze_double( den(1,1,7), num_AO_A, num_AO_A )
+         call symtrze_double( den(1,1,8), num_AO_A, num_AO_A )
+         call symtrze_double( den(1,1,9), num_AO_A, num_AO_A )
+
+c$$$  get normal occ-vir coeff term
+c$$$  something with AO-dip and then contract with vir/occ terms
+         CALL VCLR(wrk2,1,num_AO_A*num_AO_A)         
+
+         iov = ncore*nvir
+         do i_mo=ncore+1,nocc
+            do k = 1, nvir
+               occ_vir_contrib = zero
+
+                  x_v = 0
+                  y_v = 0
+                  z_v = 0
+                  x_o = 0
+                  y_o = 0
+                  z_o = 0
+
+               do n=1,nvir
+                  x_v = x_v + coeff( 1,n,i_mo-ncore)
+     *                 * cab(nocc+n,nocc+k,1)
+                  y_v = y_v + coeff( 2,n,i_mo-ncore)
+     *                 * cab(nocc+n,nocc+k,2)
+                  z_v = z_v + coeff( 3,n,i_mo-ncore)
+     *                 * cab(nocc+n,nocc+k,3)
+               enddo
+
+               do n=1+ncore,nocc
+                  x_o = x_o + coeff( 1,k,n-ncore)* cab(i_mo,n,1)
+                  y_o = y_o + coeff( 2,k,n-ncore)* cab(i_mo,n,2)
+                  z_o = z_o + coeff( 3,k,n-ncore)* cab(i_mo,n,3)
+               enddo
+
+               iov = iov + 1
+               wrk2(iov) = x_v+y_v+z_v
+     *              - ( x_o + y_o + z_o )
+
+            enddo
+         enddo
+
+
+         iov = 0
+         do i_mo=1,ncore
+            do k = 1, nvir
+               occ_vir_contrib = zero
+
+                  x_o = 0
+                  y_o = 0
+                  z_o = 0
+
+               do n=1+ncore,nocc
+                  x_o = x_o + coeff( 1,k,n-ncore)* cab(i_mo,n,1)
+                  y_o = y_o + coeff( 2,k,n-ncore)* cab(i_mo,n,2)
+                  z_o = z_o + coeff( 3,k,n-ncore)* cab(i_mo,n,3)
+               enddo
+
+c$$$  stores into the langrangian for the Z-vector method.
+               iov = iov + 1
+               wrk2(iov) = wrk2(iov) - ( x_o + y_o + z_o )
+            enddo
+         enddo
+
+c$$$  stores into the langrangian for the Z-vector method.
+               if(maswrk) call daxpy( nvir*nocc, half*half, wrk2,1,
+     *              zvlag(iptlg(frag)),1 )
+
+
+
+c$$$ get nonsymm occ-occ terms
+
+c$$$ we're done with cmat, so we repurpose it here
+         call vclr( cmat(1,1,1), 1, num_AO_A*num_AO_A*3 )
+
+         call vclr( den(1,1,10), 1, num_AO_A*num_AO_A )
+         do i_mo =1+ncore,nocc
+            do j_mo =1,nocc
+               
+               x_v = 0
+               y_v = 0
+               z_v = 0
+               do n=1,nvir
+                  x_v = x_v + coeff(1,n,i_mo-ncore)*cab(nocc+n,j_mo,1)
+                  y_v = y_v + coeff(2,n,i_mo-ncore)*cab(nocc+n,j_mo,2)
+                  z_v = z_v + coeff(3,n,i_mo-ncore)*cab(nocc+n,j_mo,3)
+               enddo
+
+               den(i_mo, j_mo,10) = den(i_mo, j_mo,10)
+     *              + x_v+y_v+z_v
+
+            enddo
+         enddo
+
+c$$$ get the occ-occ contribution (the cmo occ-occ coeff is in den(1,1,10))
+         if(maswrk) call efmo_occ_occ_resp( den(1,1,10), frag,
+     *        atom_index,num_AO_A,
+     *        cmat, nocc, num_AO_A,ctvec,fockma, wrk, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, mxmos,0, .false.,ncore)
+
+         call vclr( den(1,1,10), 1, num_AO_A*num_AO_A )
+
+         call vclr( cmat(1,1,1), 1, num_AO_A*num_AO_A*3 )
+         call efmo_retrieve_tran( cmat(1,1,1), num_AO_A,norb,
+     *        frag )
+
+c$$$ vir-vir
+         do i_mo =1,nvir
+            do j_mo =1,nvir
+               
+               x_o = 0
+               y_o = 0
+               z_o = 0
+               do n=ncore+1,nocc
+                  x_o = x_o + coeff(1,j_mo,n-ncore)*cab(nocc+i_mo,n,1)
+                  y_o = y_o + coeff(2,j_mo,n-ncore)*cab(nocc+i_mo,n,2)
+                  z_o = z_o + coeff(3,j_mo,n-ncore)*cab(nocc+i_mo,n,3)
+               enddo
+
+               den(nocc+i_mo, nocc+j_mo,10)
+     *              = den(nocc+i_mo, nocc+j_mo,10)
+     *              - (x_o+y_o+z_o)
+
+            enddo
+         enddo
+
+         call vclr( cmat(1,1,1), 1, num_AO_A*num_AO_A*3 )
+c$$$ get the vir-vir contribution (the vir-vir coeff is in den(1,1,10))
+         if(maswrk) call efmo_occ_occ_resp( den(1,1,10), frag,
+     *        atom_index,num_AO_A,
+     *        cmat, nvir, num_AO_A,ctvec,fockma, wrk, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, num_AO_A,nocc, .false.,ncore)
+
+c$$$ extra S(x) term
+         do i_mo =1,nvir
+            do j_mo =1,nvir+nocc
+               
+               x_o = 0
+               y_o = 0
+               z_o = 0
+               do n=ncore+1,nocc
+                  x_o = x_o + coeff(1,i_mo,n-ncore)*cab(j_mo,n,1)
+                  y_o = y_o + coeff(2,i_mo,n-ncore)*cab(j_mo,n,2)
+                  z_o = z_o + coeff(3,i_mo,n-ncore)*cab(j_mo,n,3)
+               enddo
+
+               den( i_mo, j_mo,5 ) = - (x_o+y_o+z_o)
+            enddo
+         enddo
+
+        CALL DGEMM('N','T',NVIR,nvir+nocc,num_AO_A,ONE,den(1,1,5),
+     *             num_AO_A,ctvec,num_AO_A,ZERO,den(1,1,4),num_AO_A)
+
+        CALL DGEMM('N','N',num_AO_A,num_AO_A,NVIR,ONE,ctvec(1,nocc+1),
+     *       num_AO_A,den(1,1,4),num_AO_A,ZERO,den(1,1,5),
+     *       num_AO_A)
+
+         call symtrze_double( den(1,1,5), num_AO_A, num_AO_A )
+
+c$$$  get AO derivatives (the dipole and extra overlap derivs)
+         dum = 0.0D+00
+
+         if(maswrk) then
+         CALL efmo_str_deriv(num_AO_A,num_AO_A,NAT,NAT,
+     *        NGAUSS,NSHELL,EX,CS,
+     *        CP,CD,CF,CG,KSTART,
+     *        KATOM,KTYPE,KNG,KLOC,
+     *        KMIN,KMAX,NGAUSS,NSHELL,
+     *        EX,CS,CP,CD,CF,
+     *        CG,KSTART,KATOM,KTYPE,
+     *        KNG,KLOC,KMIN,KMAX,
+     *        C,C,.true.,.false., .true.,
+     *        atom_index, one, 1, den(1,1,5), dum,
+     *        den(1,1,7), den(1,1,8), den(1,1,9), .false., .false.)
+         endif
+
+c$$$ store cpl part
+c$$$  get efmo_trans for A
+         call vclr( den, 1, num_AO_A*num_AO_A)
+         call vclr( den(1,1,4), 1, num_AO_A*num_AO_A)
+         call efmo_retrieve_tran( den(1,1,1), num_AO_A,norb,
+     *        frag )
+
+         do i_mo=1,norb
+         do j_mo=1,norb
+         do f=1,3
+            do g=1,3
+               do k=ncore+1,nocc
+               do j=1,nvir
+                  pi = j+(j_mo-1)*nvir
+                  ni = j+(i_mo-1)*nvir
+
+                     do j_ind=ncore+1,nocc
+
+                        pi = j+(j_ind-1)*nvir
+                        ni = j+(k-1)*nvir
+
+               den(i_mo,j_mo,4) = den(i_mo,j_mo,4)
+     *                 + 2.0d0*den(i_mo,j_ind-ncore,1)
+     *                       *den(j_mo,k-ncore,1)
+     *                 * efmo_tot_field( g,f,occ_index-1+i_mo)
+     *                 *( cab(nocc+j,k, f) 
+     *                 * efmo_f_resp(g,1,resp_index-1+pi)
+     *                 + cab(nocc+j,j_ind, f)
+     *                       * efmo_f_resp(g,1,resp_index-1+ni))
+
+                     enddo
+
+            enddo
+         enddo
+      enddo
+      enddo
+      enddo
+      enddo
+
+c$$$ store cpl part for dispersion
+         do i_mo=1,norb
+         do j_mo=1,norb
+         do f=1,3
+            do m=1,12
+               do k=ncore+1,nocc
+               do j=1,nvir
+
+                     do j_ind=ncore+1,nocc
+
+                        pi = j+(j_ind-1)*nvir
+                        ni = j+(k-1)*nvir
+
+                        den(i_mo,j_mo,4) = den(i_mo,j_mo,4)
+     *                       + two/three*den(i_mo,j_ind-ncore,1)
+     *                       *den(j_mo,k-ncore,1)
+     *                       * efmo_dyndisp( m,occ_index-1+i_mo)
+     *                 *( cab(nocc+j,k, f)
+     *                       *efmo_f_resp(f,m+1,resp_index-1+pi)
+     *                 + cab(nocc+j,j_ind, f)
+     *                       *efmo_f_resp(f,m+1, resp_index-1+ni) )
+               
+                     enddo
+
+            enddo
+         enddo
+      enddo
+      enddo
+      enddo
+      enddo
+
+      if(maswrk) call efmo_store_cpl_coeff(den(1,1,4),frag,num_AO_A,
+     *     norb) 
+
+c$$$ figure out 2nd order response
+c$$$ let's get the coefficient first
+
+         call vclr( den(1,1,10), 1, num_AO_A*num_AO_A )
+
+         f=1
+         do g=1,3
+         do i_mo =1,nvir
+            do j_mo =1,norb
+               do f=1,3
+                  do k=ncore+1,nocc
+                     do j=1,norb
+                        ij_ind = i_mo+(j_mo+ncore-1)*nvir
+
+c$$$ multiplying by half since CPHF equations multiply by 4, and we want *2
+                        if(maswrk) efmo_scphf(resp_index-1+ij_ind,g)
+     *                       = efmo_scphf(resp_index-1+ij_ind,g)
+     *                       +half*(cab(nocc+i_mo,k, f)
+     *                       * efmo_tot_field( g,f,occ_index-1+j)
+     *                       *den(j,j_mo,1)*den(j,k-ncore,1) )
+
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+
+
+c$$$ figure out 2nd order response for dispersion
+
+         do m=1,12
+         do i_mo =1,nvir
+            do j_mo =1,norb
+               do f=1,3
+                  do k=ncore+1,nocc
+                     do j=1,norb
+c$$$ instead of (vir,occ) in the first index.
+c$$$                        ij_ind = i_mo+(j_mo+ncore-1)*nvir
+                        ij_ind = (j_mo+ncore)+(i_mo-1)*nocc
+
+c$$$ multiplying by 4 (to the original 2/3) since the LHS is multiplied by 4 in PGMRES
+                        if(maswrk) efmo_scptdhf(resp_index-1+ij_ind,f,m)
+     *                       = efmo_scptdhf(resp_index-1+ij_ind,f,m)
+     *                       +two*two*(two/three)*(cab(nocc+i_mo,k, f)
+     *                       * efmo_dyndisp( m,occ_index-1+j)
+     *                       *den(j,j_mo,1)*den(j,k-ncore,1) )
+                        enddo
+                     enddo
+                 enddo
+               enddo
+            enddo
+         enddo
+
+      return
+      end
+
+
+*MODULE EFMOGRAD     *DECK efmo_occ_occ_resp
+C>
+C>    @brief Calculates the occ-occ or vir-vir parts of the response matrix
+C>
+C>    @details This routine calculates
+C>             \sum_{i \in occ} \sum_{j \in occ} U_{ji} D_{ij},
+C>             or the equivalent with vir replacing occ. For this description,
+C>             only the occ part will be described for brevity.
+C>
+C>             That is, it computes the occ-occ block of the canonical response matrix
+C>             U_{occ,occ}. Note that occ = core + val. The term is dealt with
+C>             in two different ways, depending on what block of U is involved:
+C>             U_{core, core}, U_{val, val}, U_{core, val}, or U_{val, core}.
+C>             Some expressions are from "A New Dimension to Quantum Chemistry"
+C>             Y.Yamaguchi, Y.Osamura, J.D.Goddard, H.F.Schaefer Oxford Press,
+C>             NY 1994, Eq. (10.25)
+C>
+C>             First the U_{core, val} and U_{val, core} are replaced using the
+C>             standard canonical occ-occ equation.
+C>             U_{ji} = \frac{1}{( e_i - e_j )} (\sum_{c \in vir}\sum_{k \in occ}
+C>             A_{ji, ck} U^x_{ck} + B^x_{ji} ), where A and B are as in the book
+C>             referenced earlier.
+C>             Then, contracting with D and expanding B:
+C>             \sum_{i \in core} \sum_{j \in val} U_{ji} D_{ij} = 
+C>             \sum_{i \in core} \sum_{j \in val} \frac{1}{( e_i - e_j )}
+C>             (\sum_{c \in vir}\sum_{k \in occ} A_{ji, ck} U^x_{ck} + F^(x)_{ji}
+C>             - S_{ji}^{(x)}e_i
+C>             - \sum_{kl \in occ} S_{kl}^{(x)} (2(ji|kl) -(jk|il))  ) D_{ij} =
+C>
+C>             [ \sum_{i \in core} \sum_{j \in val} (D_{ij} \frac{1}{( e_i - e_j )})
+C>               ( \sum_{c \in vir}\sum_{k \in occ} A_{ji, ck}  U^x_{ck}
+C>               +  F^(x)_{ji}
+C>               - \sum_{kl \in occ} S_{kl}^{(x)} (2(ji|kl) -(jk|il)) ) ]
+C>             { - \sum_{i \in core} \sum_{j \in val} (D_{ij} \frac{1}{( e_i - e_j )})
+C>                S_{ji}^{(x)} e_i }
+C>
+C>             The routine ::efmo_fock_der_pass can be used to calculate the first term
+C>             (the term in square brackets), so the coefficient of those terms
+C>             (D_{ij} \frac{1}{( e_i - e_j )}), back transformed to the AO basis,
+C>             is added to the Fock derivative coefficient by calling ::efmo_store_fock_der
+C>
+C>             The second term (the term in curly brackets) is back transformed to the AO-basis,
+C>             added to the U_{core, core} and U_{val, val} terms (see below),
+C>             and added to the EFMO gradient using ::efmo_str_deriv.
+C>
+C>             Next U_{core, core} and U_{val, val} terms are replaced with
+C>             U_{ji} = (-1/2) S_{ij}^{(x)} [AO-derivative], since the energy
+C>             is invariant to unitary transformations among core-core and val-val orbitals.
+C>             Practically, this is done in the AO-basis, so
+C>             \sum_{I \in core} \sum_{j \in core} U_{ji} D_{ij} = 
+C>             \sum_{I \in core} \sum_{j \in core} (-1/2) S_{ij}^{(x)}  D_{ij} = 
+C>             \sum_{u \in AO} \sum_{v \in AO} \frac{\del <u|v>}{\del x}
+C>             (-1/2) \sum_{I \in core} \sum_{j \in core} c_{ui} c_{vj} D_{ij} 
+C>
+C>             And similarly for val-val. These are added to the EFMO gradient using
+C>             ::efmo_str_deriv
+C>
+C>    @author C. Bertoni
+C>
+C>    @param coeff :: [in] coefficient of U^x_{occ,occ} or U^x_{vir,vir}
+C>           (D_ij} above
+C>    @param frag_true :: [in] fragment index in EFMO fragment list
+C>    @param atom_index :: [in] if adding to EFMO gradient storage (EFMODIMG),
+C>           this denotes the atom to start at in the array
+C>    @param mxbsfn :: [in] maximum number of basis functions of all the
+C>           fragments in the EFMO run. used for dimensioning
+C>    @param cmat :: [in] work array
+C>    @param nocc :: [in] number of occupied orbitals in frag_true
+C>           (or number of virtual terms, if vir-vir is wanted)
+C>    @param num_AO_A :: [in] number of AOs in frag_true
+C>    @param vec :: [in] canonical MO coefficients
+C>    @param fockma :: [in] array holding the diagonal terms of the
+C>           fock matrix for frag_true
+C>    @param wrk :: [in] work array
+C>    @param NAT :: [in] number of atoms
+C>    @param NGAU :: [in] number of primitive gaussians
+C>    @param NSHELL :: [in] total number of shells
+C>    @param EX :: [in] gaussian exponents
+C>    @param CS-CG :: [in] s,p,d,f,g contraction coefficients
+C>    @param KSTART :: [in] location of first exponent in particular shell
+C>    @param KATOM :: [in] gives which atom a shell is location on
+C>    @param KTYPE :: [in] gives shell type (1,2,3,4,5,6,7 for s,p,d,f,g,h,i)
+C>    @param KNG :: [in] number of gaussians in a shell
+C>    @param KLOC :: [in] location of shell in total AO basis
+C>    @param KMIN :: [in] starting index of shell
+C>    @param KMAX :: [in] ending index of shell
+C>    @param prcord :: [in] array with atom coordinates for frag_true
+C>    @param mxmos :: [in]  maximum number of occupied MOs of all the
+C>           fragments in the EFMO run. used for dimensioning
+C>    @param offset :: [in] offsets the orbitals. this is if vir-vir terms
+C>           are wanted
+C>    @param in_de :: [in] flag whether to add to DE in common block GRAD or not
+C>    @param ncore :: [in] number of chemical core orbitals in frag_true
+C>
+      subroutine efmo_occ_occ_resp(coeff,frag_true,atom_index,
+     *     mxbsfn,cmat, nocc, num_AO_A, vec, fockma, wrk,
+     *     NAT,NGAUSS,NSHELL,EX,CS,CP,CD,CF,CG,KSTART,
+     *     KATOM,KTYPE,KNG,KLOC,KMIN,KMAX,PRCORD,mxmos, offset,
+     *     in_de,ncore)
+
+      implicit none
+
+      logical in_de
+
+      integer, PARAMETER ::  MXGEFP=4000,
+     *      MXSHEF=1000, MXFGPT=12000
+      
+      double precision, PARAMETER :: HALF=0.5D+00,
+     *     one = 1.0D+00, zero = 0.0D+00
+
+      integer frag_true, mxmos, mxbsfn, nat, nshell,ngauss,
+     *     i_mo, j_mo, index_AO_A, index2_AO_A,j_ad,i_ad,
+     *     nocc, num_AO_A, atom_index,offset,ncore
+
+      double precision occ_occ_contrib, dval
+
+      double precision dum
+
+      double precision, dimension(mxgefp) :: ex, cs, cp, cd, cf, cg
+      integer, dimension(mxshef) :: kstart, katom, ktype, kng, kloc,
+     *     kmin, kmax
+      double precision, dimension(3,mxfgpt) :: prcord
+
+      double precision, dimension(mxbsfn, mxbsfn, 3) :: cmat
+      double precision, dimension(mxbsfn, mxbsfn) :: coeff
+
+      double precision, dimension((mxbsfn*mxbsfn+mxbsfn)/2) :: wrk
+
+      double precision, dimension(MXBSFN,MXMOS) :: vec
+      double precision, dimension(MXMOS) :: fockma
+
+c$$$      double precision, dimension(1000,1000), save :: save_coeff
+c$$$      logical, save :: first = .true.
+c$$$
+c$$$      if(first) then
+c$$$         write(*,*) 'first', first
+c$$$         call vclr( save_coeff, 1, 1000*1000 )
+c$$$         if( frag_true .eq. 1 .and. offset .gt. 0) then
+c$$$            do i_mo =offset+1,offset+nocc
+c$$$               do j_mo =offset+1,offset+nocc
+c$$$                  save_coeff(i_mo,j_mo) = save_coeff(i_mo,j_mo)
+c$$$     *                 + coeff(i_mo,j_mo)
+c$$$               enddo
+c$$$            enddo
+c$$$            write(*,*) 'save_coeff', first
+c$$$            call prsq( save_coeff, nocc+offset, nocc+offset, 1000 )
+c$$$         endif
+c$$$         first = .false.
+c$$$      else
+c$$$         if( frag_true .eq. 1 .and. offset .gt. 0) then
+c$$$            do i_mo =1+offset,nocc+offset
+c$$$               do j_mo =1+offset,nocc+offset
+c$$$                  save_coeff(i_mo,j_mo) = save_coeff(i_mo,j_mo)
+c$$$     *                 + coeff(i_mo,j_mo)
+c$$$               enddo
+c$$$            enddo
+c$$$            sym = 0
+c$$$            do i_mo =1+ncore+offset,nocc+offset+ncore
+c$$$               do j_mo =1+ncore+offset,nocc+offset+ncore
+c$$$                  sym = sym+ abs(save_coeff(j_mo,i_mo)
+c$$$     *                 - save_coeff(i_mo,j_mo))
+c$$$                  if(i_mo < 3 ) write(*,*) save_coeff(j_mo,i_mo)
+c$$$     *                 - save_coeff(i_mo,j_mo)
+c$$$               enddo
+c$$$            enddo
+c$$$
+c$$$            write(*,*) 'save_coeff', first, sym
+c$$$            call prsq( save_coeff, nocc+offset, nocc+offset, 1000 )
+c$$$            call prsq( coeff, nocc+offset, nocc+offset, mxbsfn )
+c$$$         endif
+c$$$      endif
+
+c$$$ the argument "offset" is for vir-vir terms
+
+c$$$ first part of the routine--this does the U_{core,val}/U_{val,core} part
+c$$$ we're done with cmat, so we repurpose it here
+      call vclr( cmat, 1, mxbsfn*mxbsfn*3 )
+
+      do i_mo =offset+1,nocc+offset
+         do j_mo =offset+1,nocc+offset
+            i_ad = i_mo - offset
+            j_ad = j_mo - offset
+            occ_occ_contrib = 0
+c$$$  commented to test
+            if( (offset .ge. 0) .and.
+     *           ( (i_mo .gt. ncore .and. j_mo .gt. ncore) .or.
+     *           (i_mo .lt. ncore+1 .and. j_mo .lt. ncore+1))) then
+c$$$  nothing               
+            else
+c$$$  comment ends
+               occ_occ_contrib =  coeff(i_mo, j_mo)
+     *              /(fockma(i_mo)
+     *              - fockma(j_mo))
+c$$$  commented to test
+            endif
+            cmat(i_ad,j_ad,1) = cmat(i_ad,j_ad,1)
+     *           + half*occ_occ_contrib
+                  
+            cmat(i_ad,j_ad,2) =
+     *           cmat(i_ad,j_ad,2)
+     *           - (fockma(i_mo)*occ_occ_contrib)
+            
+c$$$  comment ends
+         enddo
+      enddo
+
+c$$$ back transforms
+         CALL DGEMM('N','T',nocc,num_AO_A,nocc,ONE,
+     *        cmat(1,1,1),MXBSFN,vec(1,offset+1),MXBSFN,ZERO,
+     *        cmat(1,1,3),MXBSFN)
+         CALL DGEMM('N','N',num_AO_A,num_AO_A,nocc,ONE,
+     *        vec(1,offset+1),MXBSFN,cmat(1,1,3),MXBSFN,ZERO,
+     *        cmat,MXBSFN)
+
+         CALL DGEMM('N','T',nocc,num_AO_A,nocc,ONE,
+     *        cmat(1,1,2),MXBSFN,vec(1,offset+1),MXBSFN,ZERO,
+     *        cmat(1,1,3),MXBSFN)
+         CALL DGEMM('N','N',num_AO_A,num_AO_A,nocc,ONE,
+     *        vec(1,offset+1),MXBSFN,cmat(1,1,3),MXBSFN,ZERO,
+     *        cmat(1,1,2),MXBSFN)
+
+c$$$ commented out
+
+      call sq2tri( mxbsfn, num_AO_A, cmat(1,1,1), wrk, ONE)
+
+      call efmo_store_fock_der( frag_true, wrk,
+     *     (num_AO_A*num_AO_A+num_AO_A)/2 )
+
+      call symtrze_double( cmat(1,1,2), mxbsfn, num_AO_A )
+
+c$$$ commented out
+      call vclr( cmat, 1, mxbsfn*mxbsfn)
+
+c$$$ second part of the routine--this does the overlap AO-derivative part
+C$$$ it adds the contributions from the U_{core,core}/U_{val,val} part
+c$$$ to those from the U_{core,val}/U_{val,core} part
+
+c$$$ commented to test
+      do i_mo =offset+1,nocc+offset
+         do j_mo =offset+1,nocc+offset
+
+            i_ad = i_mo - offset
+            j_ad = j_mo - offset
+            
+            if( offset .ge. 0 .and.
+     *           ( (i_mo .gt. ncore .and. j_mo .gt. ncore) .or.
+     *           (i_mo .lt. ncore+1 .and. j_mo .lt. ncore+1) )) then
+               cmat( i_ad, j_ad,1 ) =
+     *              cmat( i_ad, j_ad,1 )
+     *              -half*coeff(j_mo,i_mo)
+            endif
+         enddo
+      enddo
+c$$$ back transform
+      CALL DGEMM('N','T',nocc,num_AO_A,nocc,ONE,
+     *     cmat(1,1,1),MXBSFN,vec(1,offset+1),MXBSFN,ZERO,
+     *     cmat(1,1,3),MXBSFN)
+      CALL DGEMM('N','N',num_AO_A,num_AO_A,nocc,ONE,
+     *     vec(1,offset+1),MXBSFN,cmat(1,1,3),MXBSFN,ZERO,
+     *     cmat(1,1,1),MXBSFN)
+c$$$ comment ends
+      do index_AO_A=1,num_AO_A
+         do index2_AO_A=1,index_AO_A
+            dval = cmat( index_AO_A, index2_AO_A,1 )
+     *           + cmat( index2_AO_A, index_AO_A,1 )
+
+            cmat( index_AO_A, index2_AO_A,2 ) =
+     *           cmat( index_AO_A, index2_AO_A,2 ) + dval
+            cmat( index2_AO_A, index_AO_A,2 ) =
+     *           cmat( index2_AO_A, index_AO_A,2 ) + dval
+
+         enddo
+      enddo
+
+c$$$  get AO derivatives (the occ_occ_b overlap derivs)
+      dum = 0.0D+00
+      CALL efmo_str_deriv(mxbsfn,mxbsfn,NAT,NAT,
+     *     NGAUSS,NSHELL,EX,CS,
+     *     CP,CD,CF,CG,KSTART,
+     *     KATOM,KTYPE,KNG,KLOC,
+     *     KMIN,KMAX,NGAUSS,NSHELL,
+     *     EX,CS,CP,CD,CF,
+     *     CG,KSTART,KATOM,KTYPE,
+     *     KNG,KLOC,KMIN,KMAX,
+     *     PRCORD,PRCORD,.true.,.false., .false.,
+     *     atom_index, one, 1, cmat(1,1,2),dum,
+     *     dum, dum, dum, in_de, .true. )
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK CPL_SETUP
+C>
+C>    @brief Solves the Z-CPL equation for a fragment, adds resulting terms to appropriate places 
+C>
+C>    @details  This is used in the EFMO pol, exrep, and disp gradient. This
+C>              subroutine deals with the derivative of Boys Localized Molecular
+C>              Orbitals (LMOs). The derivative of a LMO results in a term with
+C>              the canonical molecular orbital response (the $U$s), and a term
+C>              ($v^x$) involving the derivative of the LMO transform matrix.
+C>              In the EFMO gradient, we can collect all the terms
+C>              involving $v^x$, so we would have one term like $v^x A$ in the
+C>              exrep, polarization, and disp gradients.
+C>              (The term involving the $U^x$ is dealt with in the usual CPHF manner
+C>              (not here).) Then, the $v^x A$ term is replaced with $zC + zDU^x$, using
+C>              the Z-vector method. This subroutine solves for $z$ and adds $zC$ to
+C>              the gradient. It also adds the coefficient of the $U^x$ term (zD) to
+C>              the appropriate places (for the occ-vir part: to the lagrangian vector
+C>              to be dealt with later in the CPHF code, and for the occ-occ part:
+C>              to the efmo_occ_occ_resp() subroutine).
+C>
+C>              To solve for $z$, we use the Z-CPL equation, which is $Kz = A$
+C>              The $K$ comes from the CPL equation (taking the derivative of the
+C>              localization equation), and the $A$ is the same $A$ as above (the
+C>              cofficients of the $v^x$ term in the gradient expression).
+C>              The $K$ is composed of dipole integrals, and is calculated on the
+C>              fly.
+C>              The $A$ are passed in through the parameter "rhs" and were calculated
+C>              previously.
+C>              To solve the Z-CPL equation, the subroutine CPLGMRES is called. This
+C>              subroutine was copied and modified from PGMRES in locpol.src. 
+C>
+C>    @author C. Bertoni
+C>
+C>    @param R : A double array of (X,X,3), where X=num occ MOs - num core MOs.
+C>           It's a scratch array is filled with <a|r|b>, where a and b are active
+C>           occupied MOs, and r=(x,y,z). This is used in constructing $K, C, D$ and other
+C>           terms in the CPL equation.
+C>    @param rhs : A double array of (n (X*(X+1)/2, X=occ-core MOs)). This 
+C>           holds the coefficient of $v^x$ in the gradient expression, and
+C>           is the right hand side of the Z-CPL equation.
+C>    @param sol : A double array of (n (X*(X+1)/2, X=occ-core MOs)). This
+C>           is the solution to the Z-CPL equation ($z$), and is calculated
+C>           in this subroutine. It is then used to add terms to the gradient,
+C>           and form the coefficient of the $U^x$ term.
+C>    @param n : An integer that is the dimension of the RHS and solution
+C>           of the Z-CPL equation. It should be (X*(X+1)/2, where
+C>           X=num occ-num core MOs
+C>    @param im : An integer needed for GMRES solver. The original comment says it's
+C>           the size of the  Krylov subspace, and it shouldn't exceed 50. See
+C>           CPLGMRES or PGMRES for more details.
+C>    @param vv : A double work array used in the GMRES solver. The original
+C>           comment says that it's used to store the arnoli basis. See
+C>           CPLGMRES or PGMRES for more details.
+C>    @param wrk1 : A work array of size (X*X+X)/2, where X is the maximum 
+C>           number of AOs amoung all fragments.
+C>    @param maxits : An integer used in the GMRES solver. The original comment
+C>           says that it's the max number of iterations allowed in the
+C>           solving process.
+C>    @param l1 : An integer containing the number of AOs in the fragment.
+C>    @param di : A double array of (num AOs, num AOs, 4). This is an
+C>           input  array which should be filled as: di(*, *, 1-3) holds
+c>           the <u|r|v>, where
+C>           u and v are AOs for the specified fragment, and r=(x,y,z).
+C>           di(*,*,4) is scratch and holds various terms.
+C>    @param ierr : An error message output from the GMRES solver. 
+C>           See CPLGMRES for more details.
+C>    @param num_occ : An integer containing num occ MOs for the specified
+C>           fragment.
+C>    @param efmolmo : Array holding the LMO coefficients for each
+C>           fragment in the EFMO run 
+C>    @param frag : The specific fragment the CPL equation is solved for.
+C>    @param nfrag : The total number of fragments in the EFMO run.
+C>    @param mxbsfn : maximum number of basis functions of all the
+C>           fragments in the EFMO run
+C>    @param mxmos :  maximum number of occupied MOs of all the
+C>           fragments in the EFMO run
+C>    @param vec : A double array of (num AOs, num occ-num core). This is a
+C>           scratch array that is filled (in this subroutine) with LMOs for
+C>           the specified fragment from the efmolmo array.
+C>    @param ctvec : A double array of (num AOs, num MOs) for the specified
+C>           fragment. This holds the CMOs for the fragment.
+C>    @param nvir : An integer containing the number of virtual orbitals 
+C>                  for the specified fragment.
+C>    @param zvlag : An array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>    @param iptlg : An array that takes the fragment number as an index
+C>                   and returns an index into zvlag which needs to be in
+C>                   this order so that the response-solver in FMO works
+C>                   correctly.
+C>    @param fockma : array holding the occupied diagonal terms of the
+C>           fock matrix for frag
+C>    @param occ_dens : A double array of (num MOs, num MOs). It's a scratch array
+C>           that holds the coefficient of the occ-occ $U^x$ term (the zD term),
+C>           and then passes it to efmo_occ_occ_resp.
+C>    @param Rcanloc : A double work array that gets filled with the
+C>           dipole integrals of (all canonical orbitals | x | LMOs)
+C>           (with y and z as well)
+C>    @param ncore : An integer containing the num core MOs for the specific
+C>           fragment.
+C>
+      subroutine cpl_setup(R, RHS, SOL, N, IM, VV, WRK1,
+     *                   MAXITS, l1,
+     *                   DI, IERR, num_occ, efmolmo, frag,
+     *     nfrag, mxbsfn, mxmos, vec,ctvec,
+     *     nvir,zvlag,iptlg, fockma, occ_dens, Rcanloc,ncore)
+
+      implicit none
+      integer frag, ncore, num_occ, n, im, maxits, l1, ierr,
+     *     nfrag, mxbsfn, mxmos ,in, i_u, index_AO_A, jj, jk,
+     *     k, j, ivir, iocc, iocc2, iov, index2_AO_A, ind_t,
+     *     i_mo, nvir, ngauss, nai
+
+      double precision matrix_element, dum, r1_x,r1_y,r1_z, 
+     *     r_iocc2_j_x, r_iocc2_j_y, r_iocc2_j_z,
+     *     r_iocc2_k_x, r_iocc2_k_y, r_iocc2_k_z,
+     *     r_ivir_j_x, r_ivir_j_y, r_ivir_j_z,
+     *     r_ivir_k_x, r_ivir_k_y, r_ivir_k_z,
+     *     r2_x,r2_y,r2_z
+
+      integer, PARAMETER :: MXATM=2000,MXSH=5000,MXGTOT=20000
+
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      integer :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+      double precision :: ex,cs,cp,cd,cf,cg,ch,ci
+
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      integer :: nat, ich, mul, num, nqmt, ne, na, nb, ian
+      double precision :: zan, c
+
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+
+      double precision, DIMENSION(nfrag,MXBSFN,MXMOS) :: efmolmo
+      double precision, DIMENSION(l1,num_occ-ncore) :: vec
+      double precision, DIMENSION(l1,l1) :: ctvec
+      double precision, dimension(l1,l1,4) :: di
+      double precision, dimension(num_occ-ncore,num_occ-ncore,3) :: R
+      double precision, dimension(n) :: sol
+      double precision, dimension(n,im+1) :: VV
+      double precision, dimension(n) :: rhs
+      double precision, dimension(num_occ) :: fockma
+      double precision, dimension(l1,l1) :: occ_dens
+      double precision, dimension(l1,num_occ-ncore,3) :: Rcanloc
+      double precision, dimension(1) :: zvlag, wrk1
+
+      integer, dimension(1) :: iptlg
+
+      double precision, PARAMETER :: HALF=0.5D+00
+
+      jj=0
+      do in=1,n
+         if( abs(rhs(in)) .gt. 1.0D-10 ) jj=1
+c$$$         write(*,*) 'rhs', rhs(in)
+      enddo
+
+      if( jj .eq. 0 ) then
+         write(*,*)'skipping cpl solving since RHS is 0'
+         return
+      endif
+
+c$$$ contributions from perturbed LMOs
+c$$$ get R somehow. R(i,j) = <i|x|j>
+      
+c$$$ put lmos from efmolmo into a reasonable array
+         do i_u=1,l1
+            do i_mo=1,num_occ-ncore
+               vec(i_u, i_mo) = efmolmo(frag,i_u,i_mo)
+            enddo
+         enddo
+
+         ngauss = kstart(nshell)
+
+      nai = num_occ-ncore
+
+c$$$ contract with the LMO coefficients to get the MO dipole integrals
+c      CALL VCLR(R,1,nai*nai*3)
+      CALL TFSQP(R(1,1,1),di(1,1,1),vec,
+     *     vec,occ_dens,l1,l1,nai,nai,
+     *     nai,nai,.false.)
+      CALL TFSQP(R(1,1,2),di(1,1,2),vec,
+     *     vec,occ_dens,l1,l1,nai,nai,
+     *     nai,nai,.false.)
+      CALL TFSQP(R(1,1,3),di(1,1,3),vec,
+     *     vec,occ_dens,l1,l1,nai,nai,
+     *     nai,nai,.false.)
+
+c$$$ contract the AO dipole with the LMO coefficients and the CMO coefficients
+c$$$ so we can calculate the gradient.
+c      CALL VCLR(Rcanloc,1,l1*nai*3)
+      CALL TFSQP(Rcanloc(1,1,1),di(1,1,1),ctvec,
+     *     vec,occ_dens,l1,l1,l1,nai,
+     *     l1,nai,.false.)
+      CALL TFSQP(Rcanloc(1,1,2),di(1,1,2),ctvec,
+     *     vec,occ_dens,l1,l1,l1,nai,
+     *     l1,nai,.false.)
+      CALL TFSQP(Rcanloc(1,1,3),di(1,1,3),ctvec,
+     *     vec,occ_dens,l1,l1,l1,nai,
+     *     l1,nai,.false.)
+
+
+c$$$ calculate the Z-vector!
+      call CPLGMRES(R, RHS, SOL, N, 45,
+     *     VV, WRK1,maxits,DI(1,1,4), IERR, nai)
+
+
+      if( ierr .eq. 1 ) then
+         write(*,*) 'CPL did not converge', ierr
+         write(*,*) 'CPL result:', ierr, n, nai, num_occ
+         call abrt
+      endif
+
+c$$$
+c$$$      if(ierr .eq. 0) then
+c$$$ ierr=-1 means that the initial guess (0 vector) was the solution.
+c$$$ it means that the RHS is near zero, and thus we probably don't need
+c$$$ the CPL contribution at all.
+c$$$ But, to make this easy to program, we can just let the sol go on
+      if( ierr .eq. 0 .or. ierr .eq. -1 ) then
+c$$$      do index=1,n
+c$$$         write(*,*) 'sol', sol(index)
+c$$$      enddo
+
+c$$$ this checks that CPLGMRES did find a solution.
+c$$$      call cpl_calcax( R, sol, VV, nai)
+c$$$      do index=1,n
+c$$$         if( abs(VV(index,1)-rhs(index)) .gt. 1.0D-10 ) then
+c$$$            write(*,*) 'Something is wrong with the CPL solver',
+c$$$     *           VV(index,1)-rhs(index)
+c$$$            do index2=1,n
+c$$$               write(*,*) 'sol', sol(index2), rhs(index2), vv(index2,1)
+c$$$            enddo
+c$$$            call abrt
+c$$$         endif
+c$$$      enddo
+
+c$$$  get efmo_trans for A
+      call efmo_retrieve_tran( di(1,1,4), l1,nai,
+     *     frag )
+
+c$$$ add sol to CPHF lagrangian
+c$$$ contract Z-vector with B
+      iov=ncore*nvir
+      do iocc=ncore+1,num_occ
+         do ivir=num_occ+1,nvir+num_occ
+
+            jk = 0
+            matrix_element = 0
+            do j=1,num_occ-ncore
+            do k=1,j
+               jk = jk + 1
+
+c$$$ something with ctvec here, so you can get the virtuals
+                  R_ivir_k_x = Rcanloc(ivir,k ,1)
+                  R_ivir_j_x = Rcanloc(ivir,j ,1)
+                  R_ivir_k_y = Rcanloc(ivir,k ,2)
+                  R_ivir_j_y = Rcanloc(ivir,j ,2)
+                  R_ivir_k_z = Rcanloc(ivir,k ,3)
+                  R_ivir_j_z = Rcanloc(ivir,j ,3)
+
+                  ind_t=iocc-ncore
+
+                  if( .not. (j .eq. k) ) then
+
+                  R1_X = (R(j,j,1) - R(k,k,1))
+                  R1_Y = (R(j,j,2) - R(k,k,2))
+                  R1_Z = (R(j,j,3) - R(k,k,3))
+
+                  R2_X = di(j,ind_t,4)*R_ivir_k_x
+     *                 +di(k,ind_t,4)*R_ivir_j_x
+                  R2_Y = di(j,ind_t,4)*R_ivir_k_y
+     *                 +di(k,ind_t,4)*R_ivir_j_y
+                  R2_Z = di(j,ind_t,4)*R_ivir_k_z
+     *                 +di(k,ind_t,4)*R_ivir_j_z
+
+                  matrix_element = matrix_element
+     *                 +(R1_X*R2_X+R1_Y*R2_Y+R1_Z*R2_Z)
+     *                 *sol(jk)
+               
+                  endif
+
+                  R1_X = 2*R(j,k,1)
+                  R1_Y = 2*R(j,k,2)
+                  R1_Z = 2*R(j,k,3)
+
+                  R2_X = R_ivir_j_x*di(j,ind_t,4)
+     *                 -di(k,ind_t,4)*R_ivir_k_x
+                  R2_Y = R_ivir_j_y*di(j,ind_t,4)
+     *                 -di(k,ind_t,4)*R_ivir_k_y
+                  R2_Z = R_ivir_j_z*di(j,ind_t,4)
+     *                 -di(k,ind_t,4)*R_ivir_k_z
+
+                  matrix_element = matrix_element 
+     *                 + (R1_X*R2_X+R1_Y*R2_Y+R1_Z*R2_Z)
+     *                 * sol(jk)
+
+            enddo
+            enddo
+
+            iov =iov+1
+            matrix_element = -half*half*matrix_element
+            if(maswrk) then
+               call daxpy( 1, 1d0, matrix_element, 1,
+     *              zvlag(iptlg(frag)+iov-1),1 )
+
+            endif
+
+         enddo
+      enddo
+
+
+      call vclr( occ_dens, 1, l1*l1)
+c$$$ non-symm occ-occ terms
+
+      do iocc=ncore+1,num_occ
+         do iocc2=1,num_occ
+
+            jk = 0
+            matrix_element = 0
+            do j=1,num_occ-ncore
+            do k=1,j
+               jk = jk + 1
+
+c$$$ something with ctvec here, so you can get the virtuals
+                  R_iocc2_k_x = Rcanloc(iocc2,k,1)
+                  R_iocc2_j_x = Rcanloc(iocc2,j,1)
+                  R_iocc2_k_y = Rcanloc(iocc2,k,2)
+                  R_iocc2_j_y = Rcanloc(iocc2,j,2)
+                  R_iocc2_k_z = Rcanloc(iocc2,k,3)
+                  R_iocc2_j_z = Rcanloc(iocc2,j,3)
+
+                  ind_t=iocc-ncore
+                  if( .not. (j .eq. k) ) then
+
+                  R1_X = (R(j,j,1) - R(k,k,1))
+                  R1_Y = (R(j,j,2) - R(k,k,2))
+                  R1_Z = (R(j,j,3) - R(k,k,3))
+
+                  R2_X = di(j,ind_t,4)*R_iocc2_k_x
+     *                 +di(k,ind_t,4)*R_iocc2_j_x
+                  R2_Y = di(j,ind_t,4)*R_iocc2_k_y
+     *                 +di(k,ind_t,4)*R_iocc2_j_y
+                  R2_Z = di(j,ind_t,4)*R_iocc2_k_z
+     *                 +di(k,ind_t,4)*R_iocc2_j_z
+
+                  matrix_element = matrix_element
+     *                 +(R1_X*R2_X+R1_Y*R2_Y+R1_Z*R2_Z)
+     *                 *sol(jk)
+               
+                  endif
+
+                  R1_X = 2.0D+00*R(j,k,1)
+                  R1_Y = 2.0D+00*R(j,k,2)
+                  R1_Z = 2.0D+00*R(j,k,3)
+
+                  R2_X = R_iocc2_j_x*di(j,ind_t,4)
+     *                 -di(k,ind_t,4)*R_iocc2_k_x
+                  R2_Y = R_iocc2_j_y*di(j,ind_t,4)
+     *                 -di(k,ind_t,4)*R_iocc2_k_y
+                  R2_Z = R_iocc2_j_z*di(j,ind_t,4)
+     *                 -di(k,ind_t,4)*R_iocc2_k_z
+
+                  matrix_element = matrix_element 
+     *                 + (R1_X*R2_X+R1_Y*R2_Y+R1_Z*R2_Z)
+     *                 * sol(jk)
+
+            enddo
+            enddo
+
+            occ_dens(iocc, iocc2) = -matrix_element
+
+         enddo
+      enddo
+
+      call vclr( di,1,l1*l1*4 )
+
+      if(maswrk) then
+         call efmo_occ_occ_resp( occ_dens, frag,0,l1,
+     *        di, num_occ, l1,ctvec,fockma, wrk1, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, num_occ,0, .true.,ncore)
+      endif
+
+c$$$ add rest of terms to derivative
+
+      call vclr( di,1,l1*l1*4 )
+
+      do index_AO_A=1,l1
+         do index2_AO_A=1,l1
+            jk = 0
+            do j=1,num_occ-ncore
+               do k=1,j
+               jk = jk + 1
+
+                  if( .not. (j .eq. k) ) then
+
+                  R1_X = (R(j,j,1) - R(k,k,1))/2
+                  R1_Y = (R(j,j,2) - R(k,k,2))/2
+                  R1_Z = (R(j,j,3) - R(k,k,3))/2
+
+                  di(index_AO_A,index2_AO_A ,1) = 
+     *                 di(index_AO_A,index2_AO_A ,1) - 2*R1_X*sol(jk)
+     *                 *(vec(index_AO_A,j)*vec(index2_AO_A,k)
+     *                 + vec(index_AO_A,k)*vec(index2_AO_A,j))
+                  di(index_AO_A,index2_AO_A ,2) = 
+     *                 di(index_AO_A,index2_AO_A ,2) - 2*R1_Y*sol(jk)
+     *                 *(vec(index_AO_A,j)*vec(index2_AO_A,k)
+     *                 + vec(index_AO_A,k)*vec(index2_AO_A,j))
+                  di(index_AO_A,index2_AO_A ,3) =
+     *                 di(index_AO_A,index2_AO_A ,3) - 2*R1_Z*sol(jk)
+     *                 *(vec(index_AO_A,j)*vec(index2_AO_A,k)
+     *                 + vec(index_AO_A,k)*vec(index2_AO_A,j))
+               
+                  endif
+
+                  R1_X = R(j,k,1)
+                  R1_Y = R(j,k,2)
+                  R1_Z = R(j,k,3)
+
+                  di(index_AO_A,index2_AO_A ,1) = 
+     *                 di(index_AO_A,index2_AO_A ,1) - 2*R1_X*sol(jk)
+     *                 *(vec(index_AO_A,j)*vec(index2_AO_A,j)
+     *                 - vec(index_AO_A,k)*vec(index2_AO_A,k))
+                  di(index_AO_A,index2_AO_A ,2) = 
+     *                 di(index_AO_A,index2_AO_A ,2) - 2*R1_Y*sol(jk)
+     *                 *(vec(index_AO_A,j)*vec(index2_AO_A,j)
+     *                 - vec(index_AO_A,k)*vec(index2_AO_A,k))
+                  di(index_AO_A,index2_AO_A ,3) =
+     *                 di(index_AO_A,index2_AO_A ,3) - 2*R1_Z*sol(jk)
+     *                 *(vec(index_AO_A,j)*vec(index2_AO_A,j)
+     *                 - vec(index_AO_A,k)*vec(index2_AO_A,k))
+
+            enddo
+            enddo
+            enddo
+            enddo
+
+c$$$ put this in DE. Then FMO will take it for me.
+            dum = 0.0D+00
+            if(maswrk) then
+            CALL efmo_str_deriv(l1,l1,NAT,NAT,
+     *        NGAUSS,NSHELL,EX,CS,
+     *        CP,CD,CF,CG,KSTART,
+     *        KATOM,KTYPE,KNG,KLOC,
+     *        KMIN,KMAX,NGAUSS,NSHELL,
+     *        EX,CS,CP,CD,CF,
+     *        CG,KSTART,KATOM,KTYPE,
+     *        KNG,KLOC,KMIN,KMAX,
+     *        C,C,.false.,.false., .true.,
+     *        0, 1.00D+00, 1, dum,
+     *        dum,di(1,1,1),
+     *        di(1,1,2),di(1,1,3), .true.,.false.)
+            endif
+
+      endif
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK CPL_CALCAX
+C>
+C>    @brief Multiplies the CPL matrix by a vector
+C>
+C>    @details  This calculates (CPL)(SOL), where (CPL) is a matrix
+C>              composed of integrals of the form <a|r|b>, where a,b are
+C>              occupied but noncore LMOs. (SOL) is a vector that is passed in.
+C>              
+C>
+C>    @author C. Bertoni
+C>
+C>    @param R : A double array of (X,X,3), where X=num occ MOs - num core MOs.
+C>           It's a scratch array is filled with <a|r|b>, where a and b are active
+C>           occupied MOs, and r=(x,y,z). This is used in constructing the (CPL)
+C>           matrix.
+C>    @param sol : A double array of (n (X*(X+1)/2, X=occ-core MOs)). This
+C>           is multiplied by the (CPL) matrix.
+C>    @param vv : A double array of (n (X*(X+1)/2, X=occ-core MOs)). This
+C>           is the output vector, i.e. (CPL)(SOL) = (VV).
+C>    @param n : An integer containing (X*X+X)/2, where X=occ-core MOs
+C>
+C>
+      subroutine cpl_calcax(R, sol,VV, n )
+
+      implicit none
+
+      integer n, index, i,j,k,z,index2
+
+      double precision matrix_element, inner_sum,
+     *     R1_X, R1_Y, R1_Z, R2_X, R2_Y, R2_Z
+
+      double precision, dimension(n,n,3) :: R
+      double precision, dimension(n*(n+1)/2) :: sol, VV
+
+c$$$ function      
+      double precision delt
+
+      index = 0
+
+      call vclr( VV, 1, n*(n+1)/2 )
+
+      do i=1,n
+         do z=1,i
+            index = index+1
+
+            index2 = 0
+            inner_sum = 0
+            do j=1,n
+               do k=1,j
+                  index2 = index2+ 1
+
+                  matrix_element = 0
+
+                  if( .not. (j .eq. k) ) then
+
+                  R1_X = R(j,j,1) - R(k,k,1)
+                  R1_Y = R(j,j,2) - R(k,k,2)
+                  R1_Z = R(j,j,3) - R(k,k,3)
+
+                  R2_X = delt(j,z)*R(i,k,1) + delt(k,z)*R(i,j,1)
+     *                 - delt(i,j)*R(z,k,1) - delt(k,i)*R(j,z,1)
+                  R2_Y = delt(j,z)*R(i,k,2) + delt(k,z)*R(i,j,2)
+     *                 - delt(i,j)*R(z,k,2) - delt(k,i)*R(j,z,2)
+                  R2_Z = delt(j,z)*R(i,k,3) + delt(k,z)*R(i,j,3)
+     *                 - delt(i,j)*R(z,k,3) - delt(k,i)*R(j,z,3)
+
+                  matrix_element = (R1_X*R2_X+R1_Y*R2_Y+R1_Z*R2_Z)
+
+                  endif
+
+                  R1_X = 2.0D+00*R(j,k,1)
+                  R1_Y = 2.0D+00*R(j,k,2)
+                  R1_Z = 2.0D+00*R(j,k,3)
+
+                  R2_X =  delt(z,j)*R(i,j,1)- delt(z,k)*R(i,k,1)
+     *                 - delt(i,j)*R(z,j,1) +delt(i,k)*R(z,k,1)
+                  R2_Y =  delt(z,j)*R(i,j,2)- delt(z,k)*R(i,k,2)
+     *                 - delt(i,j)*R(z,j,2) +delt(i,k)*R(z,k,2)
+                  R2_Z =  delt(z,j)*R(i,j,3)- delt(z,k)*R(i,k,3)
+     *                 - delt(i,j)*R(z,j,3) +delt(i,k)*R(z,k,3)
+
+                  matrix_element = matrix_element 
+     *                 + (R1_X*R2_X+R1_Y*R2_Y+R1_Z*R2_Z)
+
+                  inner_sum = inner_sum + sol(index2)
+     *                 * matrix_element
+
+               enddo
+            enddo
+
+            VV(index) = inner_sum
+         enddo
+      enddo
+
+      return
+      end
+
+
+      function delt(a,b)
+
+      implicit none
+      double precision delt
+      integer a,b
+
+      if(a .eq. b) then
+         delt=1.0D+00
+      else
+         delt=0.0D+00
+      endif
+
+      return
+      end
+      
+*MODULE EFMOGRAD     *DECK EFMO_STORE_CPL_COEFF
+C>
+C>    @brief Stores part of the cpl coeff for a specific fragment
+C>
+C>    @details Stores an input matrix of contributions to the coefficient of
+C>             the LMO response ($v$) to X(lcpl_coeff) (in the EFMOPO Common
+C>             Block) for a given fragment.
+C>             It passes the input matrix (contrib) and the cpl_coeff
+C>             array to another subroutine, which does the storing.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param contrib : a double array of (n,n) that contains the contribution
+C>           to cpl_coeff in the first (nocc,nocc) spots (nocc should
+C>           always be <= n)
+C>    @param frag : the fragment to store the contribution to the cpl
+C>           coefficient for.
+C>    @param n : the first and second dimension of the contrib array.
+C>           this must be >= nocc, but otherwise this is just for
+C>           dimensioning
+C>    @param nocc : the number of non-core occupied orbitals (or LMOs) in "frag"
+C>
+C>
+      subroutine efmo_store_cpl_coeff( contrib, frag, n, nocc )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      integer frag, n, offset, nocc
+      double precision, dimension(n,n) :: contrib
+
+      Parameter(MXFRG=1050,MXDFG=5,MXDPPT=MXFRG*MXDFG*12)
+
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *                lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /FMCOM / X(1)
+
+c$$$ calculate offset into cpl_coeff
+
+      if( (.not. (nmxmo(frag) .ge. nocc)) .or. (nocc .gt. n) ) then
+         write(*,*) "HORRIBLE PROBLEM! INPUT ISN'T WHAT'S EXPECTED!"
+         call abrt
+      endif
+      offset = 0
+      do i=1, frag-1
+         offset = offset + nmxmo(i)*(nmxmo(i)+1)/2
+      enddo
+
+      call efmo_store_cpl_coeff_m( x(lcpl_coeff), contrib,
+     *     n, offset, nocc )
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_STORE_CPL_COEFF_M
+C>
+C>    @brief Adds one input array to another input array at a certain index
+C>
+C>    @details Adds values from one array (contrib) to another (store).
+C>             The values in contrib are made to be symmetric by adding
+C>             contrib(i,j)+contrib(j,i) to store(ij).
+C>
+C>    @author C. Bertoni
+C>
+C>    @param store : a double array that stores values from contrib
+C>           in it starting at "offset"
+C>    @param contrib : A double array of (n,n) which is
+C>           added to store
+C>    @param n : the first and second dimension of the contrib array.
+C>    @param offset : the offset at which the contrib is added to store.
+C>    @param nocc : the values in contrib from contrib(1,1) to
+C>           contrib(nocc,nocc) are added to store
+C>
+C>
+      subroutine efmo_store_cpl_coeff_m( store, contrib, n, offset,
+     *     nocc)
+
+      implicit none
+      integer n, offset,i,j, nocc, ij
+      double precision, dimension(n,n) :: contrib
+      double precision, dimension(*) :: store
+
+
+c$$$ we have something that is not symmetric.
+c$$$ we need to turn it into a nocc*(nocc+1)/2      
+c$$$ quantity.
+
+      ij = 0
+      do i=1,nocc
+         do j=1,i
+            ij = ij + 1
+            store(offset+ij) = store(offset+ij)
+     *           + contrib(j,i) - contrib(i,j)
+         enddo
+      enddo
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_STORE_TOT_FIELD
+C>
+C>    @brief Stores the total electric field for a specific fragment
+C>
+C>    @details Stores an input total (static and induced) electric field in
+C>             X(lefmo_tot_field) (in the EFMOPO Common Block) for a given
+C>             fragment. It passes the input matrix (efadd) and the efmo_tot_field
+C>             array to another subroutine, which does the storing.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param ipx : an index pointing to the first location in efadd that contains
+C>           information for the input fragment.
+C>    @param frag : the fragment to store the total electric field values for.
+C>           This is used to index in to X(lefmo_tot_field) and store the
+C>           efadd array at the correct location.
+C>    @param efadd : A double array of (6,total number of polarizability
+C>           points, summed over all fragments). It holds, one after another,
+C>           the 6 electric field values for each polarizability point in each
+C>           fragment in the calculation (a dimer if it's a polarization dimer
+C>           energy calculation or all the fragments of it's a total polarization
+C>           energy calculation). "ipx" indexes into the
+C>           second dimension to point to the start of the array that
+C>           contains the total electric field at each polarizability point in
+C>           "frag". This means that starting at index ipx, the next 6*nppts
+C>           elements contain the 6 electric field values at each nppts
+C>           polarizability point.
+C>    @param nppts : the number of polarizability points in frag. this is
+C>           the same as the number of LMOs or the number of non-core MOs.
+C>    @param iefmort : an integer flag that specifies what is being calculated.
+C>           iefmort = 4 means that it's a total polarization calculation.
+C>           otherwise it's a dimer calculation. if it's a dimer, this means
+C>           that the contribution to the gradient is negative (since the dimer
+C>           polarization energy is subtracted from the dimer QM energy).
+C>
+C>
+      subroutine efmo_store_tot_field( ipx, frag,efadd,nppts,iefmort )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *                lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      COMMON /FMCOM / X(1)
+
+      integer ipx, frag, nppts
+      double precision, dimension(6,*) :: efadd
+
+
+      call efmo_store_tot_field_m( x(lefmo_tot_field), x(lnumfrg),
+     *      efadd,frag, ipx, nppts,iefmort )
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK EFMO_STORE_TOT_FIELD_M
+C>
+C>    @brief Adds an input array to another array at a specified index  
+C>
+C>    @details Adds the values in efadd to efmo_tot_field at the correct
+C>             index for fragment frag
+C>
+C>    @author C. Bertoni
+C>
+C>    @param efmo_tot_field : See the description in ::efmo_pd_der_pass
+C>           The values in efadd are adds to efmo_tot_field at the
+C>           index specified by "frag"
+C>    @param numfrag : An integer array of all the fragments. it can be used to find
+C>           the number of occupied orbitals in each fragment.
+C>    @param efadd : An input array which is multiplied and then added to
+C>           efmo_tot_field.
+C>    @param frag : An integer used to find the correct index in to
+C>           efmo_tot_field to store the values in efadd.
+C>    @param ipx : An integer used to find the correct index in to
+C>           efadd to add to efmo_tot_field.
+C>    @param nppts : An integer containing the number of second dimension
+C>           points in efadd to add to efmo_tot_field. (then there are 9
+C>           points to add for each nppts.) 
+C>    @param iefmort : see ::efmo_store_tot_field_m
+C>
+C>
+      subroutine efmo_store_tot_field_m( efmo_tot_field, numfrg, efadd,
+     *     frag, ipx, nppts,iefmort )
+
+      implicit none
+
+      integer ipx, frag, ind, index, array_index,
+     *     nppts,f,g,iefmort
+      double precision, dimension(6,*) :: efadd
+      integer, dimension(*) :: numfrg
+      double precision, dimension(3,3,*) :: efmo_tot_field
+
+c$$$  calculate index of the fragment into efmo_tot_field
+      index = 1
+      do ind=1,frag-1
+         index = index+ ISHFT(NUMFRG(ind),-16)
+      enddo
+
+      do ind=1, nppts
+         array_index = index-1 + ind
+         do f=1,3
+            do g=1,3
+               if(iefmort .eq. 4) then
+                  efmo_tot_field( g,f, array_index)
+     *                 = efmo_tot_field( g,f, array_index)
+     *                 + efadd(f,ipx-1+ind)*efadd(3+g,ipx-1+ind)
+               else
+                  efmo_tot_field( g,f, array_index)
+     *                 = efmo_tot_field( g,f, array_index)
+     *                 - efadd(f,ipx-1+ind)*efadd(3+g,ipx-1+ind)
+               endif
+            enddo
+         enddo
+      enddo
+
+      return
+      end
+
+*MODULE EFMOGRAD    *DECK EFMO_STORE_UG
+C>
+C>    @brief Stores U^g and Z^g(w) for a specific fragment in an EFMO storage array   
+C>
+C>    @details Stores an input response matrix in X(lefmo_f_resp) (in the EFMOPO
+C>             Common Block) for a given fragment.
+C>             It passes the input response matrix (ug or zg(w)) and the efmo_f_resp
+C>             array to another subroutine, which does the storing.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param frag : the fragment the input "ug" matrix corresponds to.
+C>           this is needed to store it in the correct spot in X(lefmo_f_resp)
+C>    @param ug : A double array of (nocc,nvir,3). This is stored in
+C>                X(lefmo_f_resp) at the given fragment (frag)'s index.
+C>    @param nocc : the number of occupied orbitals in frag
+C>    @param nvir : the number of virtual orbitals in frag
+C>    @param nfreq : a flag indicating whether this is a static or dynamic
+C>           response matrix. nfreq=1 is the static polarizability response (ug),
+C>           nfreq=2 to 13 are the 12 dynamic polarizability response matrices (zg(w))
+C>
+C>
+      subroutine efmo_store_ug( frag, ug, nocc,nvir,nfreq )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *                lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /SCZVEC/ IDFZVEC,LIPTZVEC,LIPTLG
+      COMMON /FMCOM / X(1)
+
+      integer nocc, frag, nvir, nfreq
+      double precision, dimension(nocc,nvir,3) :: ug
+
+
+      call efmo_store_ug_m( x(lefmo_f_resp), x(liptlg), 
+     *    ug, nocc, nvir, frag,nfreq )
+
+      return
+      end
+
+*MODULE EFMOGRAD    *DECK EFMO_STORE_UG_M
+C>
+C>    @brief Adds an array to another array at a specific index
+C>
+C>    @details Adds the values in an input array to another input array
+C>             at an input index.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param efmo_f_resp : see ::efmo_pd_der_pass. This has the values in
+C>           "ug" or "zg(w)" added to it at the indices specified by "frag",
+C>           "iptlg", and "nfreq".
+C>    @param iptlg : see ::efmo_es_gradz.
+C>           this is needed to store it in the correct spot in X(lefmo_f_resp)
+C>    @param ug : A double array of (nocc,nvir,3). This is stored in
+C>                efmo_f_resp at the given fragment (frag)'s index.
+C>    @param nocc : the number of occupied orbitals in frag
+C>    @param nvir : the number of virtual orbitals in frag
+C>    @param frag : "ug" is added to "efmo_f_resp" at the position 
+C>           corresponding to this index
+C>    @param nfreq : this is the second index of "efmo_f_resp" where "ug"
+C>           is stored
+C>           
+C>
+      subroutine efmo_store_ug_m( efmo_f_resp, iptlg, ug,
+     *     nocc, nvir, frag,nfreq )
+
+      implicit none
+
+      integer nocc, frag, nvir, ivir,nfreq,
+     *     index, array_index,iocc
+      double precision, dimension(nocc,nvir,3) :: ug
+      integer, dimension(*) :: iptlg
+      double precision, dimension(3,13,*) :: efmo_f_resp
+
+c$$$  calculate index of the fragment into efmo_f_resp
+      index = iptlg(frag)
+
+c$$$ efmo_f_resp is indexed as a 1D version of a 2D matrix (vir,occ).
+
+      do iocc=1,nocc
+         do ivir=1,nvir
+            array_index = index-1 + (iocc-1)*nvir +ivir
+            efmo_f_resp(1, nfreq,array_index )
+     *           = efmo_f_resp(1, nfreq, array_index)
+     *           + ug(iocc,ivir,1)
+            efmo_f_resp(2, nfreq, array_index )
+     *           = efmo_f_resp(2, nfreq, array_index )
+     *           + ug(iocc,ivir,2)
+            efmo_f_resp(3, nfreq, array_index )
+     *           = efmo_f_resp(3, nfreq, array_index )
+     *           + ug(iocc,ivir,3)
+         enddo
+      enddo
+
+      return
+      end
+
+*MODULE EFMOGRAD    *DECK EFMO_RETRIEVE_UG2
+C>
+C>    @brief Copies Z^g(w) for a specific fragment from efmo_f_resp to ug 
+C>
+C>    @details This is used to fill the matrix ug with the electric field
+C>             /frequency response matrix for all field directions and 
+C>             frequencies.
+C>             This differs from ::efmo_retrieve_ug3 in that this is
+C>             only for the frequency-dependendent U^g(w), and that
+C>             ug is stored (occ,vir) here, while it's (vir, occ) in
+C>             ::efmo_retrieve_ug3.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param efmo_f_resp : see the description in ::efmo_pd_der_pass
+C>    @param ug : A double array of (nvir*nocc,3,12) which will hold
+C>           the response matrix for a given fragment
+C>           on exit.
+C>    @param nocc : the number of occupied orbitals in frag
+C>    @param nvir : the number of virtual orbitals in frag
+C>    @param frag : the fragment we want to store the ug for
+C>    @param iptlg : see the description in ::efmo_es_gradz
+C>
+C>
+      subroutine efmo_retrieve_ug2( efmo_f_resp, ug, nocc, nvir,
+     *     frag, iptlg )
+
+      implicit none
+      integer nocc, nvir, frag, m, i, index, im,
+     *     index2, ifreq, ixyz
+
+      integer, dimension(*) :: iptlg
+      double precision, dimension(3,13,*) :: efmo_f_resp
+      double precision, dimension(nvir*nocc,3,12) :: ug
+
+c$$$  calculate index of the fragment into efmo_f_resp
+      index = iptlg(frag)
+
+      call vclr(ug, 1, nvir*nocc*3*12)
+
+      do ixyz=1,3
+         do ifreq=1,12
+            index2 = 0
+            do m=1,nvir
+               do i=1,nocc
+c$$$  index2 is (occ,vir)
+                  im = m+(i-1)*nvir
+                  index2 = index2+1
+                  ug(index2,ixyz,ifreq)
+     *           = efmo_f_resp(ixyz, ifreq+1, index-1+im)
+               enddo
+            enddo
+         enddo
+      enddo
+
+      return
+      end
+
+
+*MODULE EFMOGRAD    *DECK EFMO_RETRIEVE_UG3
+C>
+C>    @brief Copies Z^g(w) or U^g for a specific fragment from efmo_f_resp to ug  
+C>
+C>    @details This is used to fill the matrix ug with the electric field
+C>             and frequency response matrix for the requested fragment.
+C>             The electric field and frequency response matrices were
+C>             calculated previously for each fragment in ::LAPOL and stored
+C>             in efmo_f_resp. The only terms that matter are the occ-vir ones,
+C>             so the occ-occ and vir-vir terms are considered 0.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param efmo_f_resp : see the description in ::efmo_pd_der_pass
+C>    @param ug : A double array of (nvir,nocc,3,12 or 1) which
+C>           will hold the response matrix for a given field direction
+C>           and frequency for fragment frag on exit.
+C>    @param nocc : the number of occupied orbitals in frag
+C>    @param nvir : the number of virtual orbitals in frag
+C>    @param frag : the fragment we want to store the ug for
+C>    @param iptlg : see the description in ::efmo_es_gradz
+C>    @param nfreq : number of frequencies that are copied.
+C>           If this is 1, then we know it's the responses from the first-order
+C>           CPHF field response equation, and there's no offset. 
+C>           If this is 12 (not 1), then we know it's the dynamic responses
+C>           so an offset of 1 is used.
+C>    @param nfield : number of fields that are copied
+C>
+      subroutine efmo_retrieve_ug3( efmo_f_resp, ug, nocc, nvir,
+     *     frag, iptlg, nfreq,nfield )
+
+      implicit none
+      integer nocc, nvir, frag, m, i, index, im,
+     *     ifreq, ixyz, add, nfreq,nfield
+
+      integer, dimension(*) :: iptlg
+      double precision, dimension(3,13,*) :: efmo_f_resp
+      double precision, dimension(nvir,nocc,3,*) :: ug
+
+c$$$  calculate index of the fragment into efmo_f_resp
+      index = iptlg(frag)
+
+      call vclr(ug, 1, nvir*nocc*nfreq*nfield)
+
+      add =0
+      if( nfreq .gt. 1 ) add = 1
+
+      do ixyz=1,nfield
+         do ifreq=1,nfreq
+            do m=1,nvir
+               do i=1,nocc
+                  im = m+(i-1)*nvir
+                  ug(m,i,ixyz,ifreq)
+     *           = efmo_f_resp(ixyz, ifreq+add, index-1+im)
+
+               enddo
+            enddo
+         enddo
+      enddo
+
+
+      return
+      end
+
+
+*MODULE EFMOGRAD    *DECK EFMO_GET_NORB
+C>
+C>    @brief Gets the number of LMOs from the nefmopts array
+C>
+C>    @details  This retrieves the number of LMOs (or equivalently, the
+C>              number of noncore orbitals) from the EFMO nefmopts array
+C>
+C>    @author C. Bertoni
+C>
+C>    @param nefmopts : See the description in ::efmo_pol_der_pass
+C>    @param norb : This subroutine fills this integer with the number of LMOs in
+C>           the fragment "ifg"
+C>    @param ifg : The EFMO fragment we want the number of LMOs from.
+C>    @param nfg : An integer containing the number of EFMO fragments.
+C>
+C>
+      subroutine efmo_get_norb( nefmopts, norb, ifg,nfg )
+      implicit none
+      integer norb, ifg,nfg
+      integer, dimension( 7, nfg) :: nefmopts
+      
+      norb = nefmopts(2,ifg)
+      return
+      end
+
+*MODULE EFMOGRAD    *DECK EFMO_STORE_DYNDISP
+C>
+C>    @brief Stores a coefficient needed in the derivative of the dyn. pol. tensor
+C>
+C>    @details Stores an input array of coefficients of the derivative of a
+C>             dynamic polarizability tensor in the dispersion energy in
+C>             X(lefmo_dyndisp) (in the EFMOPO Common Block) for a given
+C>             fragment. It passes the input matrix (efmo_coeff) and the
+C>             efmo_dyndisp array to another subroutine, which does the storing.
+C>
+C>    @author C. Bertoni
+C>
+C>    @param ipx : an index pointing to the location in X(lefmo_dyndisp)
+C>           where we want to store the efmo_coeff array
+C>    @param frag : the fragment to store the dyn. pol. tensor values for.
+C>           This is used to index in to X(lefmo_dyndisp) and store the
+C>           efmo_coeff array at the correct location.
+C>    @param efmo_coeff : A double array of (mxifrq). It holds the MXIFRQ
+C>           coefficients of the derivative of the dynamic polarizability tensor
+C>           corresponding to each frequency. this is added to X(lefmo_dyndisp)
+C>           at the location specified by ipx and frag.
+C>           
+C>
+      subroutine efmo_store_dyndisp( ipx, frag, efmo_coeff )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      PARAMETER (MXIFRQ=12)
+
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *                lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      COMMON /FMCOM / X(1)
+
+      integer frag, ipx
+      double precision, dimension(MXIFRQ) :: efmo_coeff
+
+
+      call efmo_store_dyndisp_m( x(lefmo_dyndisp), x(lnumfrg),
+     *     efmo_coeff,frag,ipx )
+
+      return
+      end
+
+*MODULE EFMOGRAD    *DECK EFMO_STORE_DYNDISP_M
+C>
+C>    @brief Adds an input array to another array at a specified index  
+C>
+C>    @details Adds the values in efmo_coeff to efmo_dyndisp at the correct
+C>             index for fragment frag and pol point ipx
+C>
+C>    @author C. Bertoni
+C>
+C>    @param efmo_dyndisp : See the description in ::efmo_pd_der_pass
+C>           The values in efmo_coeff are added to efmo_dyndisp at the
+C>           index specified by "frag" and "ipx"
+C>    @param numfrag : An integer array of all the fragments. it can be used to find
+C>           the number of occupied orbitals in each fragment.
+C>    @param efmo_coeff : An input array which is added to
+C>           efmo_dyndisp.
+C>    @param frag : An integer used to find the correct index in
+C>           efmo_dyndisp to store the values in efmo_coeff.
+C>    @param ipx : An integer used to find the correct index in
+C>           efmo_dyndisp to store the values in efmo_coeff.
+C>
+C>
+      subroutine efmo_store_dyndisp_m( efmo_dyndisp, numfrg,
+     *      efmo_coeff,frag, ipx)
+
+      implicit none
+
+      integer ipx, frag, ind, index
+      double precision, dimension(12) :: efmo_coeff
+      integer, dimension(*) :: numfrg
+      double precision, dimension(12,*) :: efmo_dyndisp
+
+c$$$  calculate index of the fragment into efmo_dyndisp
+      index = 1
+      do ind=1,frag-1
+         index = index+ ISHFT(NUMFRG(ind),-16)
+      enddo
+
+      call daxpy( 12, 1.0d0, efmo_coeff, 1,
+     *      efmo_dyndisp(1, index+ipx-1), 1)
+
+      return
+      end
+
+
+*MODULE EFMOGRAD    *DECK efmo_store_second_mult_disp
+C>
+C>    @brief stores three arrays in an input array
+C>
+C>    @details stores three arrays in an input array for easy use later
+C>
+C>    @author C. Bertoni
+C>
+C>    @param za :: [in] z-vector
+C>    @param cont_za :: [in] contracted z-vector
+C>    @param cont_ug :: [in] contracted field response matrix
+C>    @param nxyz :: [in] number of fields--x,y,z
+C>    @param nrot :: [in] nocc*nvir--the number of orbital rotations
+C>    @param freq :: [in] specified frequency
+C>    @param field :: [in] specified field
+C>    @param store_efmo :: [out] output array with reordered input arrays
+C>           store_efmo( vir*occ, field, freq ) = za (zvector)
+C>           store_efmo( vir*occ, field, freq+12 ) = H2*zvector
+C>           store_efmo( vir*occ, field, freq+24 ) = 4*H1*ug (U^g(w))
+C>    @param nocc :: [in] int containing the number of occupied orbitals
+C>    @param nvir :: [in] int containing the number of virtual orbitals
+C>
+      subroutine efmo_store_second_mult_disp( za, cont_za, cont_ug,
+     *      nxyz,nrot,freq,field,store_efmo,nocc,nvir )
+
+      implicit none
+
+      double precision, dimension(nrot) :: za
+      double precision, dimension(nrot) :: cont_za
+      double precision, dimension(nrot) :: cont_ug
+      double precision, dimension(nrot,nxyz,36) :: store_efmo
+      integer index2,nxyz,nrot, freq, nocc, nvir,iocc,ivir,
+     *     index3, field
+
+      index2 = 0
+      do ivir=1,nvir
+         do iocc=1,nocc
+c$$$  index2 is (occ,vir)
+            index2 = index2+1
+c$$$  index3 is (vir,occ)
+            index3 = ivir + (iocc-1)*nvir
+
+            store_efmo( index3,field, freq) = za(index2)
+            store_efmo( index3,field, freq+12) = cont_za(index2)
+            store_efmo( index3,field, freq+24) = cont_ug(index2)
+         enddo
+      enddo
+
+      return
+      end
+
+*MODULE EFMOGRAD    *DECK efmo_aux_add
+C>
+C>    @brief Calculate intermediate term for EFMO disp gradient
+C>
+C>    @details Calculates -2*<b|x,y,z|j> - H1*U^g(w), an
+C>             intermediate term in the contraction of the
+C>             Zvector during the EFMO disperation gradient
+C>
+C>    @author C. Bertoni
+C>
+C>    @param nvir : [in] int containing the number of virtual orbitals
+C>    @param nocc : [in] int containing the number of occupied orbitals
+C>    @param store_efmo : [in/out] in with 4*H1*U^g(w)
+C>           out with holding an intermediate term for the
+C>           zvector contraction:
+C>            -2*<b|x,y,z|j> - H1*U^g(w)
+C>    @param cmat : [in] array of dimension (triangular indexed MOs, 3)
+C>            holds dipole integrals in the MO basis
+C>            < m| x,y,z | n> (m, n are MOs)
+C>    @param l1 : [in] number of AO functions in the specific fragment
+C>    @param nrot : [in] nocc*nvir--the number of orbital rotations
+C>
+C>
+      subroutine efmo_aux_add( nvir,nocc, store_efmo,
+     *     cmat, l1,nrot )
+
+      implicit none
+
+      double precision, dimension(l1*(l1+1)/2,3) :: cmat
+      double precision, dimension(nrot,3,12) :: store_efmo
+      integer nocc, nvir,iocc,ivir,l1,ltpos,
+     *     index3, nrot, index_field, index_freq
+
+
+      do index_freq=1,12
+         do index_field=1,3
+
+      index3 = 0
+      do iocc=1,nocc
+         do ivir=1,nvir
+c$$$  index3 is (vir,occ)
+            index3 = index3 + 1
+c$$$ division by 4 is because store_efmo has 4*H1*U^g in it
+            store_efmo( index3,index_field,index_freq ) =
+     *           -2.0D+00*cmat(LTPOS(nocc+ivir,iocc),index_field)
+     *           - (store_efmo( index3,index_field,index_freq )
+     *           / 4.0D+00)
+         enddo
+      enddo
+      enddo
+      enddo
+
+      return
+      end
+
+
+*MODULE EFMOGRAD    *DECK efmo_zvector_contract_fock_twoe
+C>
+C>    @brief Computes some contracted fock and two e terms for pol/disp deriv
+C>
+C>    @details Used in the EFMO pol and disp gradient to calculate part
+C>             of the contraction of a second order Zvector with the
+C>             "B" term. see ::efmo_zvector_contract
+C>
+C>    Calculates
+C>    \sum_{ab}^{vir} \sum_{ij}^{occ} ( \sum_p^{occ+vir} U^x_{pa} A_{pi,bj} 
+C>    + \sum_p^{occ+vir} U^x_{pi} A_{ap,bj} )
+C>       (\sum_{\beta} D^1_{ai, \beta} D^2_{bj, \beta} )
+C>    = \sum_a^{vir} \sum_{p}^{occ+vir} S^{(x-AO)}_{ap}
+C>        (-\sum_i^{occ}\sum_{\beta} D^1_{ai, \beta} C^{N, \beta}_{pi} )
+C>    + \sum_{ac}^{vir} U^x_{ac}
+C>         (-\sum_i^{occ}\sum_{\beta} D^1_{ai,\beta} C^{N, \beta}_{ci} )
+C>    + \sum_{ik}^{occ} U^{x}_{ki}
+C>         (\sum_a^{vir}\sum_{\beta} D^1_{ai, \beta} C^{N, \beta}_{ak} )
+C>    + \sum_a^{vir}\sum_{k}^{occ} U^{x}_{ak}
+C>          (-\sum_i^{occ}\sum_{\beta} D^1_{ai,\beta} C^{N,\beta}_{ki}
+C>           + \sum_k^{occ}\sum_{\beta} D^1_{ck, \beta} C^{N, \beta}_{ca}
+C> 
+C>    where C^{N, beta} = \sum_{uv}^{AO} N_{uv}^{\beta} ( (pi | uv) - (1/2) (pu | iv) ) 
+C>    D^1_{\beta} and N^{\beta} are input parameters d1 and contracted_d2.
+C>
+C>    For polarization, D^1 and D^2 are Z^{scphf} or U^{\beta}, depending
+C>    and N_{uv}^{\beta} should be set to
+C>    2 * \sum_b^{vir} \sum_j^{occ} ( c_{ub} c_{vj} D^2_{bj, \beta}
+C>                                  + c_{vb} c_{uj} D^2_{bj, \beta} )
+C>
+C>    For the H2 term in dispersion, N is antisymmetric. The if_h2 flag switches this.
+C>
+C>    The occ-occ and vir-vir coefficients for the two e and fock der terms are
+C>    sent to ::efmo_occ_occ_resp, vir-occ coefficients are sent to zvlag,
+C>    and occ-vir are converted into vir-occ, which results in a AO-derivative
+C>    overlap term, which is sent to ::efmo_str_deriv
+C>
+C>    If if_fockder input is .false., the fock der terms are not
+C>    computed. The fock der terms are:
+C>       \sum_{ai,\beta} D^1_{\beta}_{ai} [
+C>          \sum_b ( D^2_{\beta}_{bi} \frac{\del F_{ba}}{\del x} )
+C>          + \sum_j ( D^2_{\beta}_{ja} \frac{\del F_{ji}}{\del x} ) ]
+C>    
+C>    For disp, it computes the analogous terms for field and frequency
+C>    response matrix.
+C>
+C>    The details are described in more detail in Section 2 and 3 of the
+C>    Supporting Info for "Analytic Gradients for the Effective Fragment
+C>    Molecular Orbital Method"
+C>
+C>    @author C. Bertoni
+C>
+C>    @param ixfg :: [in] fragment to calculate the response for
+C>    @param contracted_d2 :: [in] see details above. N^{\beta}
+C>           2*(Zuv + Zvu), where Zuv is the back transformed D^2
+C>    @param d1 :: [in] see details above. D^1_{\beta}
+C>           one of the densities in the expression
+C>    @param L1 :: [in] number of AO functions
+C>    @param L2 :: [in] triangular number of AO functions (L1*L1+L1/2)
+C>    @param SCFFRG :: [in] scf type for the run (UHF or RHF)
+C>    @param cmat :: [in] work array
+C>    @param wrt1 :: [in] work array
+C>    @param wrk1 :: [in] work array
+C>    @param wrk2 :: [in] work array
+C>    @param wrk3 :: [in] work array
+C>    @param nocc :: [in] the number of occupied orbitals in frag
+C>    @param nvir :: [in] the number of virtual orbitals in frag
+C>    @param c_occ :: [in] MO coefficients for input fragment
+C>    @param fockma :: [in] array holding the diagonal terms of the
+C>           fock matrix for frag_true
+C>    @param zvlag :: [in] An array that stores the lagrangian and
+C>           is used to calculate the response.
+C>    @param iptlg :: [in] An array that takes the fragment as an index
+C>           and returns an index into zvlag. It is used to index
+C>           arrays that store matrices of (vir,occ) elements in a 1D format,
+C>           and stores the values for each fragment one after the other.
+C>    @param num_d1 :: [in] total number of perturbations (usually num_field*num_freq)
+C>    @param d2_new :: [in] work array
+C>    @param if_h2 :: [in] flag for whether it's H1 or H2
+C>           (symmetric or antisymmetric density)
+C>    @param if_fockder :: [in] flag for whether or not Fock derivatives are done
+C>           if true, compute fock derivatives
+C>    @param d2 :: [in] if if_fockder is true, this holds the D^2 density
+C>           with being transformed, unlike "contracted_d2".
+C>    @param ncore :: [in] number of core orbitals
+C>
+C>
+      subroutine efmo_zvector_contract_fock_twoe( ixfg, contracted_d2,
+     *     d1, l1, l2, scffrg, cmat,WRT1,WRK1,WRK2,WRK3,
+     *     nocc, nvir,c_occ,fockma, zvlag, iptlg,num_d1, d2_new,
+     *     if_h2,if_fockder,d2,ncore)
+
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXATM=2000,MXSH=5000,MXGTOT=20000,MXAO=8192,MXGSH=30,
+     *           MXG2=MXGSH*MXGSH,MAXL=5)
+      PARAMETER (HALF=0.5D+00,ZERO=0.0D+00,ONE=1.0D+00)
+C
+      LOGICAL DIRSCF,FDIFF,DIRSAV,SCHWRZ,PACK2E,
+     *        LCFLAG,LRINT,LCFLAGS,LRINTS,camflag
+      LOGICAL camflags,if_h2, if_fockder
+      dimension zvlag(1), iptlg(1)
+C
+      DIMENSION SCFFRG(*),KARTEN(0:MAXL-1)
+      DIMENSION c_occ(l1,l1), fockma(l1)
+      DIMENSION WRT1(*),WRK3(l1,l1,num_d1),WRK2(l1,l1,num_d1),
+     *     contracted_d2(l2,num_d1),WRK1(l1,*),
+     *     d2(nvir,nocc,num_d1)
+      DIMENSION d1(nvir,nocc,num_d1), cmat(l1,l1,3),
+     *     d2_new(num_d1,l2)
+      integer :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+      double precision :: ex,cs,cp,cd,cf,cg,ch,ci
+C
+      COMMON /DFTCAM/ ALPHAC,BETAC,CAMMU,CAMVWN,CAMLYP,CAMFLAG
+      COMMON /FMCOM / X(1)
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /INTFIL/ NINTMX,NHEX,NTUPL,PACK2E,INTTYP,IGRDTYP
+C     COMMON /INTOPT/ ISCHWZ,IECP,NECP,IEFLD
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /NLRC  / LCFLAG,LRINT,EMU,EMU2,LRFILE
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+      COMMON /RESTAR/ TIMLIM,IREST,NREC,INTLOC,IST,JST,KST,LST
+      COMMON /SHLEXC/ NORGSH(3),NORGSP(3),IEXCH,NANGM,NGTH(4)
+      DATA KARTEN/1,4,6,10,15/
+      DATA RHF/8HRHF     /
+
+      IFG      = IXFG
+
+      LCFLAGS =  LCFLAG
+      camFLAGS= camFLAG
+      LRINTS  =  LRINT
+      LCFLAG  = .FALSE.
+      camFLAG = .FALSE.
+      LRINT   = .FALSE.
+
+      SCHWRZ = .TRUE.
+C     DO NOT THINK THAT YOU CAN SET SCHWRZ TO .FALSE. AND GET AWAY WITH IT.
+C     SCHWRZ ALSO FORCES INTEGRAL INITIALISATION THAT WILL OTHERWISE NOT BE
+C     DONE.
+C
+      DIRSAV  =  DIRSCF
+      DIRSCF  = .TRUE.
+
+      NSH2 = (NSHELL*NSHELL+NSHELL)/2
+      CALL BASCHK(LMAX)
+      IF(LMAX.GE.5) THEN
+         IF(MASWRK) WRITE(IW,*) 'FMO HAS NOT BEEN REVIEWED FOR H,I'
+         CALL ABRT
+      END IF
+C     FOR SOME REASON GAMESS LIKES TO HANDLE AT LEAST L-SHELLS
+      NANGM=KARTEN(MAX(LMAX,1))
+      MAXG = NANGM**4
+      CALL VALFM(LOADFM)
+C
+      LXINTS= LOADFM + 1
+      LGHOND= LXINTS + NSH2
+      LDSH  = LGHOND + MAXG
+      LDSHB = LDSH   + NSH2
+      LDDIJ = LDSHB  + NSH2
+      LAST  = LDDIJ  + 49*MXG2
+      NEED1 = LAST - LOADFM -1
+      CALL GETFM(NEED1)
+
+      if(scffrg(ifg).eq.rhf) then
+         l2d  = l2
+      else
+         l2d  = l2*2
+      end if
+
+c$$$  make density in wrt2.
+
+      IF(SCHWRZ) THEN
+        DUMMY = 0.0D+00
+        ncursh = 0
+c$$$ rearrange contracted_d2 to send it in the right way.
+        do iuv=1,l2
+           do ixyz=1, num_d1
+              d2_new( ixyz, iuv) = contracted_d2( iuv,ixyz)
+           enddo
+        enddo
+
+        CALL AOSHLD(d2_new,X(LDSH),IA,L1,L2,NSH2,num_d1)
+c$$$        CALL SHLDEN(scffrg(ifg),contracted_d2,contracted_d2,DUMMY,X(LDSH),IA,
+c$$$     *              L1,L2,NSH2,1)
+        ! XINTS IS STORED IN DISK IN THIS CASE (NCURSH IS 0)
+        CALL EXCHNG(X(LXINTS),X(LGHOND),X(LDDIJ),NSH2,MAXG,INTTYP)
+      END IF
+C
+      if(if_h2) then
+c$$$ nxyz = -num_d1 means that we call the dyndisp part
+         NXYZ = -num_d1
+      else
+         nxyz=num_d1
+      endif
+      NINT  =0
+      NSCHWZ=0
+      IST=1
+      JST=1
+      KST=1
+      LST=1
+CZCZ  CALL JANDK
+CZ
+CZ     IN: TRI1 SYMMETRIZED Z-VECTOR
+CZ    OUT: WRK1     FOCK-LIKE MATRIX
+CZ
+       IDUMMY=1
+      CALL VCLR(WRT1,1,L2d*num_d1)
+      CALL TWOEI(scffrg(ifg),DIRSCF,.FALSE.,.FALSE.,.FALSE.,
+     *           INTTYP,SCHWRZ,NINT,NSCHWZ,L1,L2,
+     *           DUMMY,DUMMY,IDUMMY,1,X(LXINTS),NSH2,X(LGHOND),
+     *           MAXG,X(LDDIJ),IA,d2_new,WRT1,dummy2,dummy3,
+     *           X(LDSH),DUMMY,DUMMY,NXYZ)
+      CALL RETFM(NEED1)
+      CALL DSCAL(L2d*num_d1,HALF,WRT1,1)
+      II = 0
+      DO I=1, L1
+        II = II+I
+        IJ = (II-1)*NXYZ+1
+        do J=0,NXYZ-1
+           ija = ij+j
+c$$$ this is in (num_d1,l2) order
+           WRT1(ija) = WRT1(ija) + WRT1(ija)
+        enddo
+      ENDDO
+
+c$$$ vir-vir
+c$$$ so now wrt1 has the triagular version of C^Y.
+c$$$ make it square, into wrk2. note that it's antisymmetric
+
+      call vclr( wrk2, 1, l1*l1*num_d1)
+      call vclr(wrk3, 1, l1*l1*num_d1)
+      call vclr( wrk1, 1, l1*l1)
+
+      do ixyz=1,num_d1
+      ij = 0
+      DO iall = 1,l1
+         DO jall = 1,iall
+            IJ = IJ + 1
+            if( if_h2 ) then
+               wrk2(jall,iall,ixyz) = -wrt1(ixyz+(IJ-1)*num_d1)
+            else
+               wrk2(jall,iall,ixyz) = wrt1(ixyz+(IJ-1)*num_d1)
+            endif
+            wrk2(iall,jall,ixyz) = wrt1(ixyz+(IJ-1)*num_d1)
+
+         enddo
+         if( if_h2 ) then
+            wrk2(iall,iall,ixyz) = ZERO
+         endif
+      enddo
+      enddo
+
+      call vclr(wrk1, 1,l1*l1)
+
+      do ixyz=1,num_d1
+
+         CALL DGEMM('N','N',l1,nocc+nvir,l1,ONE,
+     *              wrk2(1,1,ixyz),l1,c_occ,l1,ZERO,cmat,l1)
+         CALL DGEMM('T','N',nocc+nvir,nocc+nvir,l1,ONE,
+     *              c_occ,l1,cmat,l1,ZERO,wrk3(1,1,ixyz),l1)
+
+
+c$$$ at this point, we should really be able to sum over the freq and field
+c$$$ vir-vir for page 1 and fock derivatives
+         do ivir=1,nvir
+            do jvir=1,nvir
+
+               do iocc=1,nocc
+                  wrk1(nocc+ivir,nocc+jvir)=
+     *                 wrk1(nocc+ivir,nocc+jvir)-d1(jvir,iocc,ixyz)
+     *                 *wrk3(nocc+ivir,iocc,ixyz)
+
+               enddo
+
+               if(if_fockder) then
+c$$$ for the fock derivative
+                  do iocc=1,nocc
+                     if(maswrk) wrk1(nocc+ivir,nocc+jvir)=
+     *                    wrk1(nocc+ivir,nocc+jvir)
+     *                    +d1(jvir,iocc,ixyz)
+     *                    *d2(ivir,iocc,ixyz)
+     *                    *(fockma(nocc+jvir)-fockma(nocc+ivir))
+                  enddo
+
+               endif
+
+
+            enddo
+         enddo
+      enddo
+
+      call vclr( cmat,1,l1*l1*3 )
+
+      call efmo_occ_occ_resp( wrk1, ifg,0,l1,
+     *        cmat, nvir, l1,c_occ,fockma, wrk2, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, l1,nocc, .true.,ncore)
+
+      call vclr( wrk1, 1, l1*l1)
+
+c$$$ occ-occ page 1 and fock derivative
+      do ixyz=1,num_d1
+         do iocc=1,nocc
+            do jocc=1,nocc
+
+               do ivir=1,nvir
+                  wrk1(jocc,iocc)=wrk1(jocc,iocc)+d1(ivir,jocc,ixyz)
+     *                 *wrk3( nocc+ivir, iocc,ixyz)
+               enddo
+
+               if(if_fockder) then
+c$$$ for fock derivative
+                  if(maswrk) then
+                     do ivir=1,nvir
+                           
+c$$$  I flipped the d2 (ug), and flipped the sign.
+                        wrk1(jocc,iocc)=wrk1(jocc,iocc)
+     *                       -d1(ivir,jocc,ixyz)
+     *                       *d2(ivir,iocc,ixyz)
+     *                       *(fockma(iocc)-fockma(jocc))
+                     enddo
+                  endif
+               endif
+
+            enddo
+         enddo
+      enddo
+
+      call vclr( cmat,1,l1*l1*3 )
+
+      call efmo_occ_occ_resp( wrk1, ifg,0,l1,
+     *        cmat, nocc, l1,c_occ,fockma, wrk2, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, nocc,0, .true.,ncore)
+
+      call vclr( wrk1, 1, l1*l1)
+      call vclr( wrt1, 1, l1*l1)
+
+c$$$ vir-occ term page 1 and fock derivatives
+      iov = 0
+      do iocc=1,nocc
+         do ivir=1,nvir
+
+            occ_vir_contrib = 0
+            do ixyz=1,num_d1
+               do jvir=1,nvir
+                  occ_vir_contrib=occ_vir_contrib+d1(jvir,iocc,ixyz)
+     *                 *wrk3( nocc+jvir, nocc+ivir,ixyz)
+               enddo
+
+               do jocc=1,nocc
+                  occ_vir_contrib=occ_vir_contrib
+     *                 -d1(ivir,jocc,ixyz)
+     *                 *wrk3( iocc, jocc,ixyz)
+               enddo
+            enddo
+
+            iov = iov+1
+            wrt1(iov) = occ_vir_contrib
+
+         enddo
+      enddo
+
+      call daxpy( iov, half*half, wrt1,1,
+     *     zvlag(iptlg(ifg)),1 )
+
+c$$$ extra Sx term for page 1
+c$$$ extra S(x) term
+
+      call vclr(cmat,1,l1*l1*3)
+      call vclr(wrk1,1,l1*l1)
+
+c$$$ make coefficient
+      do ixyz=1,num_d1
+         CALL DGEMM('N','T',nocc+nvir,nvir,nocc,-ONE,
+     *        wrk3(1,1,ixyz),l1,d1(1,1,ixyz),nvir,ONE,cmat(1,1,1),l1)
+      enddo
+
+c$$$  back transform
+         CALL DGEMM('N','T',NVIR+NOCC,L1,NVIR,ONE,cmat,L1,
+     *        c_occ(1,nocc+1),L1,ZERO,cmat(1,1,2),L1)
+         CALL DGEMM('N','N',L1,L1,NVIR+NOCC,ONE,c_occ,L1,cmat(1,1,2),
+     *        L1,ONE,wrk1,L1)
+
+
+         if(if_fockder .and. maswrk) then
+
+               call vclr(cmat,1,l1*l1*3)
+         do ixyz=1,num_d1
+c$$$ matrices with occ and vir fock elements
+               do ivir=1,nvir
+                  do kvir=1,nvir
+                     do jocc=1,nocc
+                        cmat(ivir,kvir,1) = cmat(ivir,kvir,1)
+     *                       - d1(ivir,jocc,ixyz)
+     *                       *d2(kvir,jocc,ixyz)
+     *                       *fockma(nocc+kvir)
+                     enddo
+                  enddo
+               enddo
+
+               do jocc=1,nocc
+                  do kocc=1,nocc
+c$$$  we only have d2 (ug) as
+c$$$ (vir,occ), and we previously assume (ooc,ooc) and (vir,vir) are
+c$$$ 0, so I'm changing this to k=1,nocc for now, so it will match.
+c$$$ I also flip the sign, since ug(i,j)=-ug(j,i), and we only have (vir,occ)
+c$$$ but we want (occ,vir)
+                     do ivir=1,nvir
+                        cmat(jocc,kocc,3) = cmat(jocc,kocc,3)
+     *                       + d1(ivir,jocc,ixyz)
+     *                       *d2(ivir,kocc,ixyz)
+     *                       *fockma(jocc)
+                     enddo
+                  enddo
+               enddo
+
+C               CALL DGEMM('T','N',nocc,nocc,nvir,ONE,d1(1,1,ixyz),nvir,
+C     *              d2(1,1,ixyz),nvir,ONE,cmat(1,1,3),l1)
+
+
+            enddo
+c$$$ backtransform, on virtual MO coeffs
+      CALL DGEMM('N','T',NVIR,L1,NVIR,ONE,cmat,L1,
+     *     c_occ(1,nocc+1),L1,ZERO,cmat(1,1,2),L1)
+      CALL DGEMM('N','N',L1,L1,NVIR,ONE,c_occ(1,nocc+1),
+     *     L1,cmat(1,1,2),L1,ONE,wrk1,L1)
+c$$$ backtransform, on occ MO coeffs
+      CALL DGEMM('N','T',NOCC,L1,NOCC,ONE,cmat(1,1,3),L1,
+     *     c_occ,L1,ZERO,cmat(1,1,2),L1)
+      CALL DGEMM('N','N',L1,L1,NOCC,ONE,c_occ,
+     *     L1,cmat(1,1,2),L1,ONE,wrk1,L1)
+
+         endif
+
+      call symtrze_double( wrk1, l1, l1 )
+
+c$$$  get AO derivatives (the extra overlap derivs)
+      dum = 0.0D+00
+         CALL efmo_str_deriv(l1,l1,NAT,NAT,
+     *        NGAUSS,NSHELL,EX,CS,
+     *        CP,CD,CF,CG,KSTART,
+     *        KATOM,KTYPE,KNG,KLOC,
+     *        KMIN,KMAX,NGAUSS,NSHELL,
+     *        EX,CS,CP,CD,CF,
+     *        CG,KSTART,KATOM,KTYPE,
+     *        KNG,KLOC,KMIN,KMAX,
+     *        C,C, .true.,.false.,.false.,
+     *        0, 1.00D+00, 1, wrk1, dum,dum,
+     *        dum, dum, .true., .true.)
+
+      call vclr( wrk1, 1, l1*l1)
+      call vclr( wrk2, 1, l1*l1*num_d1)
+      call vclr( wrk3, 1, l1*l1*num_d1)
+      CALL VCLR(WRT1,1,L2d*num_d1)
+
+
+c$$$ because more things are terrible, we need the derivative of a fock matrix
+
+      if(if_fockder) then
+
+         call vclr(cmat,1,l1*l1*3)
+         do ixyz=1,num_d1
+c$$$ matrices with occ and vir fock elements
+            CALL DGEMM('N','T',nvir,nvir,nocc,ONE,d1(1,1,ixyz),nvir,
+     *           d2(1,1,ixyz),nvir,ONE,cmat(1,1,1),l1)
+
+c$$$  we only have d2 (ug) as
+c$$$ (vir,occ), and we previously assume (ooc,ooc) and (vir,vir) are
+c$$$ 0, so I'm changing this to k=1,nocc for now, so it will match.
+c$$$ I also flip the sign, since ug(i,j)=-ug(j,i), and we only have (vir,occ)
+c$$$ but we want (occ,vir)
+            CALL DGEMM('T','N',nocc,nocc,NVIR,-ONE,d1(1,1,ixyz),nvir,
+     *           d2(1,1,ixyz),nvir,ONE,cmat(1,1,3),l1)
+         enddo
+
+c$$$ backtransform--virt MOs
+         CALL DGEMM('N','T',NVIR,L1,NVIR,ONE,cmat,L1,
+     *        c_occ(1,nocc+1),L1,ZERO,cmat(1,1,2),L1)
+         CALL DGEMM('N','N',L1,L1,NVIR,ONE,c_occ(1,nocc+1),
+     *        L1,cmat(1,1,2),L1,ZERO,wrk2,L1)
+c$$$  backtransform--occ MOs
+         CALL DGEMM('N','T',NOCC,L1,NOCC,ONE,cmat(1,1,3),L1,
+     *        c_occ,L1,ZERO,cmat(1,1,2),L1)
+         CALL DGEMM('N','N',L1,L1,NOCC,ONE,c_occ,
+     *        L1,cmat(1,1,2),L1,ONE,wrk2,L1)
+
+         CALL SQ2TRI(L1,L1,wrk2,wrt1,HALF)
+         if(maswrk) call efmo_store_fock_der( ifg, wrt1, (l1*l1+l1)/2)
+
+      endif
+
+      DIRSCF = DIRSAV
+      LCFLAG = LCFLAGS
+      camFLAG=camFLAGS
+      LRINT  = LRINTS
+
+      return
+      end
+
+
+C*MODULE EFMOGRAD *DECK efmo_zvector_contract
+C>
+C>
+C>    @brief Contracts zvector with "B" matrix for response contribution for a fragment
+C>
+C>    @details This is used in the EFMO pol and disp gradient. This subroutine
+C>             takes an input Zvector and calculates the response contribution.
+C>             Based on ::ESDCPHF. Note that this is a second-order response.
+C>
+C>             For polarization,
+C>             This calculates \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai} B_{ai}^{\beta, x}
+C>             for an input Zvector. The "B" here is the B which results from the nuclear 
+C>             derivative of the field derivative of the Fock matrix.
+C>             See Appendix A4 in "Analytic Gradients for the Effective Fragment
+C>             Molecular Orbital Method" for a derivation of "B".
+C>
+C>             \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai} B_{ia}^{\beta, x}
+C>              = \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai}
+C>              [ \frac{ \del <a|\beta|i> }{\del x}
+C>              + \sum_b ( U^{\beta}_{bi} \frac{\del F_{ba}}{\del x} )
+C>              + \sum_j ( U^{\beta}_{ja} \frac{\del F_{ji}}{\del x} )
+C>              + \sum_{bj} ( U^{\beta}_{bj} \frac{\del A_{ai, bj} }{\del x} ) ]
+C>
+C>             where A is defined as in "A New Dimension to Quantum Chemistry"
+C>             \sum_{ai} Z^{scphf}_{\beta}_{ai} B_{ai}^{\beta, x} is split into
+C>             a dipole derivative part, a fock derivative part, and a two-electron
+C>             derivative part. For each derivative, there will be AO-derivative and
+C>             MO-derivative terms, where the MO-derivative terms lead to nuclear
+C>             response matricies.
+C>             
+C>             The dipole derivative terms and two-electron AO-derivative term
+C>             are handled in this routine, and the Fock derivative
+C>             terms and two-electron derivative terms are done in
+C>             ::efmo_zvector_contract_fock_twoe
+C>             The dipole derivative term is:
+C>             \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai} \frac{ \del <a|\beta|i> }{\del x}
+C>             = \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai} 
+C>               [ \sum_m^{occ+vir} (U^x_{ma}<m|g|i> + U^x_{mi}<m|g|a>)
+C>                  + \sum_{uv}^AO c_{ua} c_{vi} \frac{ \del <u|g|v> } {\del x} ]
+C>             
+C>             The response terms are split into U_{occ-occ, vir-vir, and vir-occ}
+C>             (the U_{occ-vir} contribution is changed into S^(x) + U_{vir-occ}).
+C>             occ-occ and vir-vir are sent to ::efmo_occ_occ_resp, vir-occ is added to
+C>             the langrangian in zvlag, and S^(x) and the dipole overlap are sent to
+C>             ::efmo_str_deriv. 
+C>
+C>             The two electron derivative term (last in the initial equation)
+C>              \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai}
+C>                \sum_{bj} ( U^{\beta}_{bj} \frac{\del A_{ai, bj} }{\del x} )
+C>              = \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai}
+C>               \sum_{bj} U^{\beta}_{bj} [ A^{(x-AO deriv)}_{ai, bj}
+C>              + \sum_p^{occ+vir} U^x_{pa} A_{pi,bj} + \sum_p^{occ+vir} U^x_{pi} A_{ap,bj}
+C>              + \sum_p^{occ+vir} U^x_{pb} A_{ai,pj} + \sum_p^{occ+vir} U^x_{pj} A_{ai,bp}  ]
+C>              
+C>             The two-electron AO-derivative is computed with ::ESD2DER. The
+C>             other terms with nuclear response matrices are calculated by sending
+C>             densities to ::efmo_zvector_contract_fock_twoe. 
+C>
+C>             For dispersion, it is the same, but it in includes looping over
+C>             frequency in the appropriate places, and it takes in Z^{scptdhf}
+C>             This is described in more detail in Sections 2 and 3 of Supporting Info for
+C>             "Analytic Gradients for the Effective Fragment Molecular Orbital
+C>              Method"
+C> 
+C>    @todo put the dipole contribution in a separate routine
+C>
+C>    @author C. Bertoni
+C>
+C>    @param ixfg :: [in] fragment to calculate the response for
+C>    @param zvec_c :: [in] back transformed zvector 
+C>    @param zvec :: [in] input zvector
+C>    @param L1 :: [in] number of AO functions
+C>    @param L2 :: [in] triangular number of AO functions (L1*L1+L1/2)
+C>    @param fmode:: [in/out] array of (3,number of atoms in the entire FMO calculation).
+C>           The first index is whether the derivative is with respect to x,y, or
+C>           z, and the second index is which atom the derivative is with respect
+C>           to. It holds FMO gradient values for dimer contributions that will be
+C>           printed out, and used in MD calculations.
+C>    @param SCFFRG :: [in] scf type for the run (UHF or RHF)
+C>    @param WRT1 :: [in] work array
+C>    @param WRK1 :: [in] work array
+C>    @param WRK2 :: [in] work array
+C>    @param dipole_ints :: [in] the dipole integrals <i|g|j>
+C>           where g=x,y,z in triangular form. written over during the routine
+C>    @param nocc :: [in] the number of occupied orbitals in frag
+C>    @param nvir :: [in] the number of virtual orbitals in frag
+C>    @param c_occ :: [in] MO coefficients for input fragment
+C>    @param fockma :: [in] array holding the diagonal terms of the
+C>           fock matrix for frag_true
+C>    @param cmat :: [in] work array
+C>    @param zvlag :: [in] An array that stores the lagrangian and
+C>           is used to calculate the response.
+C>    @param iptlg :: [in] An array that takes the fragment as an index
+C>           and returns an index into zvlag. It is used to index
+C>           arrays that store matrices of (vir,occ) elements in a 1D format,
+C>           and stores the values for each fragment one after the other.
+C>    @param ug :: [in] work space that is filled with the nvir*nocc*3 field responses
+C>    @param efmo_f_resp :: [in] see the description in ::efmo_pd_der_pass
+C>    @param WRT2 :: [in] work array
+C>    @param num_freq :: [in] number of frequencies (can flag disp vs. pol,
+C>           since disp has 12 and pol has 1)
+C>    @param num_field :: [in] number of field perturbations
+C>    @param num_d1 :: [in] total number of perturbations (usually num_field*num_freq)
+C>    @param d1_new :: [in] work array
+C>    @param ncore :: [in] number of core orbitals
+C>
+      SUBROUTINE efmo_zvector_contract(IXFG,zvec_c,zvec,L1,L2,FMODE,
+     *                   SCFFRG,
+     *     WRT1,WRK1,WRK2,dipole_ints,
+     *     nocc, nvir, c_occ, fockma, cmat, zvlag, iptlg,
+     *     ug, efmo_f_resp, WRT2,num_freq, num_field, num_d1,
+     *     d1_new,ncore)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXATM=2000,MXSH=5000,MXGTOT=20000)
+      PARAMETER (HALF=0.5D+00,ONE=1.0D+00,two=2.0D+00)
+C
+      LOGICAL DIRSCF,FDIFF,DIRSAV,
+     *        LCFLAG,LRINT,LCFLAGS,LRINTS,camflag
+      LOGICAL camflags
+      logical schwrz
+      dimension zvlag(1), iptlg(1)
+      double precision, dimension(nvir,nocc, num_d1) :: ug
+C
+      DIMENSION SCFFRG(*)
+      DIMENSION c_occ(l1,l1), fockma(l1), WRT2(l2,num_d1)
+      DIMENSION WRK1(l1,*),WRK2(l1,l1,num_d1),
+     *     d1_new(num_d1*l2),
+     *     zvec_c(l1,l1,num_d1),dipole_ints(l2,num_d1),
+     *     wrt1(num_d1, l2)
+      DIMENSION FMODE(3,*), zvec(nvir,nocc,num_d1),
+     *     cmat(l1,l1,3)
+      integer :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+      double precision :: ex,cs,cp,cd,cf,cg,ch,ci
+C
+      COMMON /DFTCAM/ ALPHAC,BETAC,CAMMU,CAMVWN,CAMLYP,CAMFLAG
+      COMMON /GRAD  / DE(3,MXATM)
+      COMMON /FMCOM / X(1)
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /NLRC  / LCFLAG,LRINT,EMU,EMU2,LRFILE
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+      double precision, dimension(3,13,*) :: efmo_f_resp
+      double precision mult
+CZ
+CZ    common /ppcpnt/ lddijpot,lzppcpot,lvipot,lgrdtest
+cz
+C
+      DATA UHF/8HUHF     /
+CZ
+CZ    THIS ROUTINE COMPUTES THE RESPONSE TERMS IN FMO.
+CZ
+C     PARSTAT: GROUPFULL/GROUPNONE
+C
+      IFG      = IXFG
+C
+      IF(IFG.EQ.0) RETURN
+C
+      LCFLAGS =  LCFLAG
+      camFLAGS= camFLAG
+      LRINTS  =  LRINT
+      LCFLAG  = .FALSE.
+      camFLAG = .FALSE.
+      LRINT   = .FALSE.
+
+      CALL DERCHK(NDER)
+CZ
+CZ    IESDPPC=1 AVOIDS ADDITION OF FMO/PCM REDUNDANT GRADIENTS IN SUBROUTINE FMODEG
+CZ    this hopefully would already be off, since it it a variable that, in conjunction
+c$$$  with other conditions, adds additional PCM-related terms to the gradient when FMODEG
+c$$$  is called.
+      IESDPPC = 1
+c$$$      BSSEDIM=NBSSE.EQ.2.AND.IFMOSTP.EQ.5
+C
+C     SCHWRZ = ISCHWZ.GT.0
+C      SCHWRZ = .TRUE.
+C     DO NOT THINK THAT YOU CAN SET SCHWRZ TO .FALSE. AND GET AWAY WITH IT.
+C     SCHWRZ ALSO FORCES INTEGRAL INITIALISATION THAT WILL OTHERWISE NOT BE
+C     DONE.
+C
+      DIRSAV  =  DIRSCF
+      DIRSCF  = .TRUE.
+CZ
+CZ    CLEAR DE FIRST FOR INTERNAL CONTRIBUTIONS
+CZ
+      CALL VCLR(DE,1,NAT*3)
+
+      ngauss = kstart(nshell)
+
+c$$$ for disp (flagged by num_freq > 1), we need a factor of 2
+      mult = one
+      if( num_freq .gt. 1) mult = two
+
+c$$$ code for dipole derivative:
+
+      CALL VCLR(wrk2,1,l1*l1*num_field)
+      call vclr(wrk1, 1, l1*l1)
+
+c$$$ this calculates the occ-occ contribution and stores it in occ_occ_resp
+c$$$ \sum_{ij}^{occ} U^x_{ij} (\sum_g \sum_a^{vir} Z^g_{ai} <a|g|j>)
+      do ixyz=1,num_field
+         do ifreq=1,num_freq
+            do iocc=1,nocc
+               do jocc=1,nocc
+                  do ivir=1,nvir
+                     wrk1(jocc,iocc)=wrk1(jocc,iocc)
+     *                    +zvec(ivir,jocc,ixyz+(ifreq-1)*num_field)
+     *                    *dipole_ints( LTPOS(nocc+ivir,iocc),ixyz)*mult
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+
+      call vclr( cmat,1,l1*l1*3 )
+
+      if(maswrk) call efmo_occ_occ_resp( wrk1, ifg,0,l1,
+     *        cmat, nocc, l1,c_occ,fockma, wrk2, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, nocc,0, .true.,ncore)
+      call vclr( wrk1, 1, l1*l1)
+
+c$$$ this calculates the vir-vir contribution and stores it in occ_occ_resp
+c$$$ \sum_{ab}^{vir} U^x_{ab} (\sum_g \sum_i^{occ} Z^g_{bi} <a|g|i>)
+      do ixyz=1,num_field
+         do ifreq=1,num_freq
+         do ivir=1,nvir
+            do jvir=1,nvir
+               do iocc=1,nocc
+               wrk1(nocc+ivir,nocc+jvir)=wrk1(nocc+ivir,nocc+jvir)
+     *                 -zvec(jvir,iocc,ixyz+(ifreq-1)*num_field)
+     *                 *dipole_ints( LTPOS(nocc+ivir,iocc),ixyz)*mult
+            enddo
+         enddo
+      enddo
+         enddo
+      enddo
+      if(maswrk) call efmo_occ_occ_resp( wrk1, ifg,0,l1,
+     *        cmat, nvir, l1,c_occ,fockma, wrk2, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, l1,nocc, .true.,ncore)
+
+
+c$$$ this calculates the vir-occ contribution and stores it in zvlag
+c$$$ \sum_{ai} U^x_{ai} ( \sum_g ( - \sum_j^{occ} Z^g_{aj} <i|g|j> + \sum_b^{vir} Z^g_{bi} <b|g|a> ) )
+      iov = 0
+      do iocc=1,nocc
+         do ivir=1,nvir
+
+            occ_vir_contrib = 0
+      do ixyz=1,num_field
+         do ifreq=1,num_freq
+
+            do jvir=1,nvir
+               occ_vir_contrib=occ_vir_contrib
+     *              +zvec(jvir,iocc,ixyz+(ifreq-1)*num_field)
+     *              *dipole_ints(LTPOS(nocc+jvir,nocc+ivir),ixyz)*mult
+            enddo
+
+            do jocc=1,nocc
+               occ_vir_contrib=occ_vir_contrib
+     *              -zvec(ivir,jocc,ixyz+(ifreq-1)*num_field)
+     *              *dipole_ints( LTPOS(jocc,iocc),ixyz)*mult
+            enddo
+            enddo
+         enddo
+
+            iov = iov+1
+
+            occ_vir_contrib = half*half*occ_vir_contrib
+
+            if(maswrk) call daxpy( 1, 1d0,occ_vir_contrib,
+     *                    1, zvlag(iptlg(ifg)+iov-1),1 )
+
+         enddo
+      enddo
+
+c$$$ extra S(x) term from turning occ-vir into vir-occ
+c$$$ \sum_{m}^{occ+vir} \sum_{a} S^(x)_{am} ( - \sum_g \sum_j^{occ} Z^g_{aj} <m|g|j> )
+c$$$ makes the density to pass to efmo_str_deriv with the dipole AO derivative
+c$$$ contribution below
+
+      call vclr(cmat,1,l1*l1*3)
+      call vclr(wrk1,1,l1*l1)
+
+      do ixyz=1,num_field
+         do ifreq=1,num_freq
+      do iall=1,nvir+nocc
+         do jvir=1,nvir
+            do iocc=1,nocc
+               cmat(iall, jvir,1)
+     *              = cmat(iall, jvir,1)
+     *              - zvec(jvir,iocc,ixyz+(ifreq-1)*num_field)
+     *              *dipole_ints(LTPOS(iall,iocc),ixyz)*mult
+            enddo
+         enddo
+      enddo
+         enddo
+      enddo
+
+c$$$  back transform
+      CALL DGEMM('N','T',NVIR+NOCC,L1,NVIR,ONE,cmat,L1,
+     *     c_occ(1,nocc+1),L1,ZERO,cmat(1,1,2),L1)
+      CALL DGEMM('N','N',L1,L1,NVIR+NOCC,ONE,c_occ,L1,cmat(1,1,2),L1,
+     *     ONE,wrk1,L1)
+
+      call symtrze_double( wrk1, l1, l1 )
+
+      call vclr(cmat, 1, l1*l1*2)
+
+
+c$$$ this calculates the dipole AO derivative term
+c$$$ \sum_{uv} (\sum_{ia} c_{ui}c_{vj} \sum_g Z^g_{ia} \frac{\del <u|g|v>}{\del x}
+      call vclr(wrk2, 1, l1*l1*num_field)
+
+      do indf=1,num_freq
+         do ixyz=1,num_field
+            do i=1,l1
+               do j=1,l1
+                  inde = ixyz+(indf-1)*num_field
+                  wrk2(i,j,ixyz) = wrk2(i,j,ixyz)
+     *                 + mult*(zvec_c(i,j,inde)
+     *                 + zvec_c(j,i,inde))
+               enddo
+            enddo
+         enddo
+      enddo
+
+
+c$$$  compute AO derivatives (the extra overlap derivs and dipole derivatives)
+      dum = 0.0D+00
+      if(maswrk) CALL efmo_str_deriv(l1,l1,NAT,NAT,
+     *     NGAUSS,NSHELL,EX,CS,
+     *     CP,CD,CF,CG,KSTART,
+     *     KATOM,KTYPE,KNG,KLOC,
+     *     KMIN,KMAX,NGAUSS,NSHELL,
+     *     EX,CS,CP,CD,CF,
+     *     CG,KSTART,KATOM,KTYPE,
+     *     KNG,KLOC,KMIN,KMAX,
+     *     C,C, .true.,.false.,.true.,
+     *     0, 1.00D+00, 1, wrk1, dum,wrk2(1,1,1),
+     *     wrk2(1,1,2),wrk2(1,1,3),.true., .false.)
+
+c$$$ we've finished the dipole contribution.
+
+      call vclr(wrk2, 1, l1*l1*num_field)
+c$$$  make density. the P_uv is zec_c, but we need to add to the inverse
+      do ixyz=1,num_d1
+         CALL SQ2TRI(L1,L1,zvec_c(1,1,ixyz),wrt2(1,ixyz),TWO)
+      enddo
+
+c$$$  get the ugs
+         call efmo_retrieve_ug3( efmo_f_resp, ug,
+     *        nocc, nvir, ifg, iptlg, num_freq, num_field )
+
+c$$$ calculates 
+c$$$ \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai}  \sum_{bj} U^{\beta}_{bj}
+c$$$ ( \sum_p^{occ+vir} U^x_{pb} A_{ai,pj} + \sum_p^{occ+vir} U^x_{pj} A_{ai,bp} )
+c$$$ =
+c$$$ \sum_{ab}^{vir}\sum_{ij}^{occ} (\sum_{\beta} U^{\beta}_{ai} Z^{scphf}_{\beta}_{bj})
+c$$$ (\sum_p^{occ+vir} U^x_{pa} A_{pi,bj} + \sum_p^{occ+vir} U^x_{pi} A_{ap,bj} )
+      call efmo_zvector_contract_fock_twoe( IXFG,wrt2,
+     *        ug,
+     *        L1,L2,SCFFRG,cmat,wrt1,
+     *        wrk1,wrk2,dipole_ints,
+     *        nocc, nvir, c_occ, fockma,
+     *        ZVLAG, IPTLG,num_d1,d1_new, .false.,.false.,
+     *        0.0D+00,ncore)
+
+c$$$  make density.
+      do ixyz=1,num_d1
+         CALL SWBASIS(0,L1,NOCC,NVIR,c_occ,ug(1,1,ixyz),NVIR,
+     *        wrk2(1,1,ixyz),L1,wrk1)
+      enddo
+
+      do ixyz=1,num_d1
+         CALL SQ2TRI(L1,L1,wrk2(1,1,ixyz),wrt2(1,ixyz),TWO)
+      enddo
+
+c$$$ everything else except for esd2der. difference from aobve is index of Z and U^\beta
+c$$$ calculates
+c$$$ \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai}  \sum_{bj} U^{\beta}_{bj}
+c$$$ (\sum_p^{occ+vir} U^x_{pa} A_{pi,bj} + \sum_p^{occ+vir} U^x_{pi} A_{ap,bj} )
+c$$$ = 
+c$$$ \sum_{ab}^{vir}\sum_{ij}^{occ} (\sum_{\beta} Z^{scphf}_{\beta}_{ai} U^{\beta}_{bj})
+c$$$ (\sum_p^{occ+vir} U^x_{pa} A_{pi,bj} + \sum_p^{occ+vir} U^x_{pi} A_{ap,bj} )
+c$$$ and the fock derivative terms
+      call efmo_zvector_contract_fock_twoe( IXFG,wrt2,
+     *     zvec,
+     *     L1,L2,SCFFRG,cmat,wrt1,
+     *     wrk1,wrk2,dipole_ints,
+     *     nocc, nvir, c_occ, fockma,
+     *     ZVLAG, IPTLG,num_d1,d1_new, .false.,.true.,
+     *     ug,ncore)
+
+
+c$$$ calculates the AO-deriv of the two-electron term with esd2der
+      do ixyz=1,num_d1
+         CALL SQ2TRI(L1,L1,zvec_c(1,1,ixyz),d1_new(1 +(ixyz-1)*l2),
+     *        ONE)
+      enddo
+
+      call dscal( l2*num_d1, half, wrt2, 1)
+
+      input = -6
+      if( num_freq .gt. 1) then
+         input = -5
+      endif
+
+      call efmo_flip( wrt1, d1_new, num_d1, l2 )
+      call efmo_flip( dipole_ints, wrt2, num_d1, l2 )
+
+      SCHWRZ = .true.
+      IF(SCHWRZ) LFMOBUF(3) = 0 ! READ IN XINTS FROM A FILE
+      if(scffrg(ifg).ne.uhf) CALL ESD2DER(wrt1,dipole_ints,input)
+
+C
+CZ
+CZ    SUM UP DE
+CZ
+      IF (GOPARR) CALL DDI_GSUMF(5418,DE,NAT*3)
+CZ
+CZ    THE COLLECTED DE IS NOW COPIED TO FMODE
+CZ
+      IF (MASWRK) THEN
+         CALL FMODEG(1,FMODE,X(LFMOPG),X(LIAGLOB))
+      ENDIF
+
+C
+C     IT IS IMPORTANT TO RESET NCURSH SO THAT 2E INTEGRALS WITHIN THE MONOMER
+C     (DIMER) DURING THE FOLLOWING SCF ARE COMPUTED PROPERLY.
+      NCURSH = 0  ! NEED TO RESET
+      DIRSCF = DIRSAV
+      LCFLAG = LCFLAGS
+      camFLAG=camFLAGS
+      LRINT  = LRINTS
+
+c$$$ this is a call to save or restore the monomer basis. it sets the second
+c$$$ set of parameters (spots 12 through 22) equal to the first set of parameters
+c$$$ (spots 1 through 11). that is, nat = nat0 in this case. 
+c$$$ it's not needed in the EFMO response
+
+c$$$CZ
+c$$$CZ    RESTORE THE CALCULATION (11/24/09).
+c$$$CZ
+c$$$      CALL MONBSR(NAT0,ICH0,MUL0,NUM0,NQMT0,NE0,NA0,NB0,NCURSH,NGAU0,
+c$$$     *           ENUCR0,NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,NSHELL,NGAU,ENUCR)
+c$$$C     CALL DCOPY(NATFMO*3,X(LFMODEST),1,FMODE,1)
+c$$$C
+      call vclr( wrk1, 1, l1*l1)
+      call vclr( wrk2, 1, l1*l1*num_d1)
+      call vclr(dipole_ints, 1, l1*l1*num_d1)
+      CALL VCLR(WRT1,1,(l1*l1+l1)/2*num_d1)
+      CALL VCLR(WRT2,1,(l1*l1+l1)/2*num_d1)
+
+
+      RETURN
+      END
+
+*MODULE EFMOGRAD    *DECK efmo_fill_work_array
+C>
+C>    @brief Pulls out a section of one array and puts it into another
+C>
+C>    @details pulls out the appropriate section of efmo_rhs
+C>             and puts it into an output array by an offset
+C>
+C>    @author C. Bertoni
+C>
+C>    @param nocc :: [in] int containing the number of occupied orbitals
+C>    @param nvir :: [in] int containing the number of virtual orbitals
+C>    @param num_field :: [in] number of fields (x,y,z) (3)
+C>    @param num_freq :: [in] number of dynamic frequencies (12)
+C>    @param cont_b_c :: [out] output array filled with rearranged efmo_rhs
+C>    @param efmo_rhs :: [in] input array to rearrange
+C>    @param offset :: [in] pointer into efmo_rhs at the appropriate fragment
+C>           (nocc*nvir) summed for all fragments preceeding
+C>           the current one
+C>    @param nrot_tot :: [in] nocc*nvir summed for each fragment 
+C>
+      subroutine efmo_fill_work_array( nocc, nvir, num_field, num_freq,
+     *     cont_b_c, efmo_rhs, offset, nrot_tot)
+
+      implicit none
+      integer j, k, nocc, nvir, num_field, num_freq,
+     *     offset, index, nrot_tot
+
+      double precision, dimension( nocc*nvir, num_field, num_freq)
+     *     :: cont_b_c
+      double precision, dimension( nrot_tot, num_field, num_freq)
+     *     :: efmo_rhs
+
+      do index=1,nocc*nvir
+         do j =1, num_field
+            do k =1, num_freq
+               cont_b_c(index,j,k) =
+     *              efmo_rhs( offset + index-1, j, k)
+            enddo
+         enddo
+      enddo
+
+
+      return
+      end
+
+*MODULE EFMOGRAD     *DECK efmo_calc_zvector_coeffs
+C>
+C>    @brief calculates and stores contracted responses
+C>
+C>    @details calculates and stores contracted z-vector
+C>             and field response for EFMO disp gradient
+C>             Stores Zvector, H2*Zvector(g,w), and 4*H1*Ug(w).
+C>             H2 and H1 are defined in
+C>             I.Adamovic, M.S.Gordon  Mol.Phys. 103, 379-387(2005)
+C>
+C>    @author C. Bertoni
+C>
+C>    @param store_coeffs :: [out] array where Zvector, H2*Zvector(g,w),
+C>           and H1*Ug(w) are stored
+C>           store_coeffs( vir*occ, field, freq ) = za (zvector)
+C>           store_coeffs( vir*occ, field, freq+12 ) = H2*zvector
+C>           store_coeffs( vir*occ, field, freq+24 ) = 4*H1*ug (U^g(w))
+C>    @param H1 :: [in] work space for the H1/H2 arrays in ::calcaxs
+C>    @param nft16 :: [in] file index for H1
+C>    @param nfth2 :: [in] file index for H2
+C>    @param ug :: [in] field and frequency response matrix 
+C>    @param nrot :: [in] nocc*nvir--the number of orbital rotations
+C>    @param nwidth :: [in] blocking for reading H1 or H2 array from disk
+C>    @param nocc :: [in] int containing the number of occupied orbitals
+C>    @param nvir :: [in] int containing the number of virtual orbitals
+C>    @param num_field :: [in] number of fields (x,y,z) (3)
+C>    @param num_freq :: [in] number of dynamic frequencies (12)
+C>    @param wrk :: [in] work array
+C>    @param za :: [in] z-vector (*, field, freq)
+C>
+      subroutine efmo_calc_zvector_coeffs( store_coeffs, H1, nft16,
+     *     nfth2, ug, nrot, nwidth, nocc, nvir, num_field,
+     *     num_freq, wrk, za )
+      
+      implicit none
+      integer field, num_field, num_freq, nrot, nwidth, freq, nocc,
+     *     nvir, nft16, nfth2
+      double precision, parameter :: one = 1.D+00
+      double precision, dimension(nrot, nwidth) :: H1
+      double precision, dimension(nrot,2) :: wrk
+      double precision, dimension(nrot, num_field, num_freq) :: za
+      double precision, dimension(nrot,num_field,num_freq) :: ug
+      double precision, dimension(nrot,num_field,num_freq*3)
+     *     :: store_coeffs
+
+      do freq=1,num_freq
+         do field=1,num_field
+c$$$  we're going to try to calculate h2*Z^g(w)
+            call calcaxs( H1, za(1,field,freq), wrk(1,1),.false.,
+     *           nrot,nwidth, .false.,nft16,nfth2 )
+            call dscal(nrot,-one,wrk(1,1),1)
+c$$$  we're going to try to calculate h1*dyn_resp
+            call calcaxs( H1,ug(1,field,freq),wrk(1,2),.false.,
+     *           nrot,nwidth, .true.,nft16,nfth2 )
+c$$$  store in store_efmo
+            call efmo_store_second_mult_disp(za(1,field, freq),
+     *           wrk(1,1),wrk(1,2), num_field,nrot,freq,field,
+     *           store_coeffs,nocc,nvir)
+         enddo
+      enddo
+      return
+      end
+
+C*MODULE EFMOGRAD *DECK efmo_flip
+C>
+C>    @brief Flip the dimensions of a matrix
+C>
+C>    @details  Takes in a matrix and output the matrix after flipping the
+C>              indices
+C>
+C>    @author C. Bertoni
+C>
+C>    @param new :: output matrix
+C>    @param old :: input matrx
+C>    @param index1 :: dimension of matrices
+C>    @param index2 :: dimension of matrices
+C>
+      subroutine efmo_flip( new, old, index1, index2 )
+      implicit none
+      double precision, dimension(index1, index2) :: new
+      double precision, dimension(index2, index1) :: old
+
+      integer index1,index2, i, j
+
+c$$$ maybe this will help speed things up a bit
+      do j=1,index1
+         do i=1,index2
+            new( j, i ) = old( i, j )
+         enddo
+      enddo
+
+      return
+      end
+
+C*MODULE EFMOGRAD *DECK efmo_str_deriv
+C>
+C>    @brief Overlap, kinetic, dipole AO-derivatives for EFMO grad
+C>
+C>    @details Depending on input flags, calculates the overlap, kinetic, and centroid
+C>             x, y, and z derivatives between two sets of basis functions with
+C>             input densities. The calculations and sums are in the AO basis, without
+C>             response contributions. Showing just the x-derivatives:
+C>
+C>             Overlap:
+C>             \sum_{u \in frag1} \sum_{v \in frag2}
+C>              [  D^s_{uv} < \frac{\partial u}{\partial x} | v > ]
+C>
+C>             where D^s_{uv} is dnew_density_s (input parameter)
+C>
+C>             Kinetic:
+C>             \sum_{u \in frag1} \sum_{v \in frag2}
+C>              [ D^t_{uv} < \frac{\partial u}{\partial x} | T | v > ]
+C>
+C>             where D^t_{uv} is dnew_density_t (input parameter)
+C>
+C>             Centroids:
+C>             \sum_{u \in frag1} \sum_{v \in frag2}
+C>             D^x_{uv} < \frac{\partial u}{\partial x} | x | v > +
+C>             D^y_{uv} < \frac{\partial u}{\partial x} | y | v > +
+C>             D^z_{uv} < \frac{\partial u}{\partial x} | z | v >
+C>
+C>             where D^x_{uv} is dnew_density_drx, and similar for
+C>             D^y_{uv} (dnew_density_dry) and D^z_{uv} (dnew_density_drz)
+C>             (input parameters)
+C>
+C>    @author C. Bertoni
+C>
+C>    @param L1 :: [in] max number of basis functions for fragment 1
+C>           (used in dimensioning)
+C>    @param L1CO :: [in] max number of basis functions for fragment 2
+C>           (used in dimensioning)
+C>    @param NATM :: [in] number of atoms for fragment 1
+C>    @param NATMCO :: [in] number of atoms for fragment 2
+C>    @param NGAU :: [in] number of primitive gaussians in fragment 1
+C>    @param NSHL :: [in] total number of shells for fragment 1
+C>    @param EX :: [in] gaussian exponents for fragment 1
+C>    @param CS-CG :: [in] s,p,d,f,g contraction coefficients for fragment 1
+C>    @param KSTART :: [in] location of first exponent in particular shell for
+C>           fragment 1
+C>    @param KATOM :: [in] gives which atom a shell is location on in fragment 1
+C>    @param KTYPE :: [in] gives shell type for fragment 1's shells
+C>           (1,2,3,4,5,6,7 for s,p,d,f,g,h,i)
+C>    @param KNG :: [in] number of gaussians in a shell for fragment 1
+C>    @param KLOC :: [in] location of shell in total AO basis for frag 1
+C>    @param KMIN :: [in] starting index of shell for frag 1
+C>    @param KMAX :: [in] ending index of shell for frag 1
+C>    @param NGAUCO :: [in] primitive gaussians in fragment 2
+C>    @param NSHLCO :: [in] total number of shells for fragment 2
+C>    @param EXCO :: [in] gaussian exponents for fragment 2
+C>    @param CSCO-CGCO :: [in] s,p,d,f,g contraction coefficients for fragment 2
+C>    @param KSTRCO :: [in]  location of first exponent in particular shell for
+C>           fragment 2
+C>    @param KATMCO :: [in] gives which atom a shell is location on in fragment 2
+C>    @param KTYPCO :: [in]gives shell type for fragment 2
+C>           (1,2,3,4,5,6,7 for s,p,d,f,g,h,i)
+C>    @param KNGCO :: [in] number of gaussians in a shell for fragment 2
+C>    @param KLOCCO :: [in] location of shell in total AO basis for frag 2
+C>    @param KMINCO :: [in] starting index of shell for frag 2
+C>    @param KMAXCO :: [in] ending index of shell for frag 2
+C>    @param C :: [in] atom coordinates of fragment 1
+C>    @param CCO :: [in] atom coordinates of fragment 2
+C>    @param calc_overlap :: [in] flag for whether to calculate overlap deriv
+C>    @param calc_kinetic :: [in] flag for whether to calculate kinetic deriv
+C>    @param calc_centroid :: [in] flag for whether to calculate centroid derivs
+C>    @param initial_atom :: [in] if adding to EFMO gradient storage (EFMODIMG),
+C>           this denotes the atom to start at in the array
+C>    @param SWF :: [in] multiplicative switching function
+C>    @param MCOEFF :: [in] multiplicative constant
+C>    @param dnew_density_s :: [in] density array for overlap deriv (see details)
+C>    @param dnew_density_t :: [in] density array for kinetic deriv (see details)
+C>    @param dnew_density_drx :: [in] density array for <du|x|v> (see details)
+C>    @param dnew_density_dry :: [in] density array for <du|y|v> (see details)
+C>    @param dnew_density_drz :: [in] density array for <du|z|v> (see details)
+C>    @param de_run :: [in] flag for whether to add the contribution to DE in
+C>           the GRAD common block
+C>    @param symmetric :: [in] flag for whether to assume the contribution is
+C>           symmetric
+C>
+      SUBROUTINE efmo_str_deriv(L1,L1CO,NATM,NATMCO,
+     *                 NGAU,NSHL,EX,CS,CP,CD,CF,CG,
+     *                 KSTART,KATOM,KTYPE,KNG,KLOC,KMIN,KMAX,
+     *                 NGAUCO,NSHLCO,EXCO,CSCO,CPCO,CDCO,CFCO,CGCO,
+     *                 KSTRCO,KATMCO,KTYPCO,KNGCO,KLOCCO,KMINCO,
+     *                 KMAXCO,C,CCO, calc_overlap,
+     *     calc_kinetic,calc_centroid,initial_atom, SWF,MCOEFF,
+     *     dnew_density_s, dnew_density_t, dnew_density_drx,
+     *     dnew_density_dry, dnew_density_drz, de_run, symmetric)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      LOGICAL NORM, calc_centroid, calc_kinetic, calc_overlap,
+     *     de_run, symmetric
+C
+      PARAMETER (MXATM=2000)
+C
+      DIMENSION 
+     *          EX(NGAU),CS(NGAU),CP(NGAU),CD(NGAU),
+     *          CF(NGAU),CG(NGAU),KSTART(NSHL),KATOM(NSHL),
+     *          KTYPE(NSHL),KNG(NSHL),KLOC(NSHL),KMIN(NSHL),KMAX(NSHL),
+     *          EXCO(NGAUCO),CSCO(NGAUCO),CPCO(NGAUCO),CDCO(NGAUCO),
+     *          CFCO(NGAUCO),CGCO(NGAUCO),KSTRCO(NSHLCO),KATMCO(NSHLCO),
+     *          KTYPCO(NSHLCO),KNGCO(NSHLCO),KLOCCO(NSHLCO),
+     *          KMINCO(NSHLCO),KMAXCO(NSHLCO),
+     *          C(3,NATM),CCO(3,NATMCO),dnew_density_s(l1,l1co),
+     *     dnew_density_t(l1,l1co), dnew_density_drx(l1,l1co),
+     *     dnew_density_dry(l1,l1co), dnew_density_drz(l1,l1co)
+
+      DIMENSION DIJ(225), IJX(35), IJY(35),IJZ(35),
+     *           XS(6,7), YS(6,7), ZS(6,7), XT(6,5), YT(6,5), ZT(6,5),
+     *          DXS(5,5),DYS(5,5),DZS(5,5),DXT(5,5),DYT(5,5),DZT(5,5)
+      DIMENSION XX(6,6),YY(6,6),ZZ(6,6),
+     *          DXXDI(6,6),DYYDI(6,6),DZZDI(6,6),
+     *          DXSDI(6,6),DYSDI(6,6),DZSDI(6,6),
+     *          XYZINT(3,2)
+C
+      COMMON /STV  / XINT,YINT,ZINT,T,X0,Y0,Z0,XI,YI,ZI,
+     *                XJ,YJ,ZJ,NI,NJ
+      COMMON /GRAD  / DE(3,MXATM)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+
+C
+      PARAMETER (SQRT3=1.73205080756888D+00)
+      PARAMETER (SQRT5=2.23606797749979D+00, SQRT7=2.64575131106459D+00)
+      PARAMETER (ONE=1.0D+00, ZERO=0.0D+00)
+      PARAMETER (RLN10=2.30258D+00)
+C
+      DATA IJX / 1, 2, 1, 1, 3, 1, 1, 2, 2, 1,
+     *           4, 1, 1, 3, 3, 2, 1, 2, 1, 2,
+     *           5, 1, 1, 4, 4, 2, 1, 2, 1, 3,
+     *           3, 1, 3, 2, 2/
+      DATA IJY / 1, 1, 2, 1, 1, 3, 1, 2, 1, 2,
+     *           1, 4, 1, 2, 1, 3, 3, 1, 2, 2,
+     *           1, 5, 1, 2, 1, 4, 4, 1, 2, 3,
+     *           1, 3, 2, 3, 2/
+      DATA IJZ / 1, 1, 1, 2, 1, 1, 3, 1, 2, 2,
+     *           1, 1, 4, 1, 2, 1, 2, 3, 3, 2,
+     *           1, 1, 5, 1, 2, 1, 2, 4, 4, 1,
+     *           3, 3, 2, 2, 3/
+C
+      TOL = RLN10*ITOL
+      NORM = NORMF .NE. 1 .OR. NORMP .NE. 1
+c$$$ set the shells to loop over first
+      num_shells_to_loop = nshl
+C
+C     ----- I SHELL
+C
+      DO 780 II = 1,NSHLCO
+C
+      IAT = KATMCO(II)
+      XI = CCO(1,IAT)
+      YI = CCO(2,IAT)
+      ZI = CCO(3,IAT)
+      I1 = KSTRCO(II)
+      I2 = I1+KNGCO(II)-1
+      LIT = KTYPCO(II)
+      MINI = KMINCO(II)
+      MAXI = KMAXCO(II)
+      LOCI = KLOCCO(II)-MINI
+      LITDER = LIT+1
+C
+C     ----- J SHELL
+C
+      if( symmetric ) num_shells_to_loop = ii
+      DO 760 JJ = 1,num_shells_to_loop
+C
+      x_contrib = zero
+      y_contrib = zero
+      z_contrib = zero
+      JAT = KATOM(JJ)
+      XJ = C(1,JAT)
+      YJ = C(2,JAT)
+      ZJ = C(3,JAT)
+      J1 = KSTART(JJ)
+      J2 = J1+KNG(JJ)-1
+      LJT = KTYPE(JJ)
+      MINJ = KMIN(JJ)
+      MAXJ = KMAX(JJ)
+      LOCJ = KLOC(JJ)-MINJ
+      LJTMOD = LJT+2
+      RR = (XI-XJ)**2+(YI-YJ)**2+(ZI-ZJ)**2
+      IF(symmetric .and. II.EQ.JJ) GO TO 760
+C
+C     ----- I PRIMITIVE
+C
+      DO 640 IG = I1,I2
+        AI = EXCO(IG)
+        ARRI = AI*RR
+        AXI = AI*XI
+        AYI = AI*YI
+        AZI = AI*ZI
+        CSI=CSCO(IG)
+        CPI=CPCO(IG)
+        CDI=CDCO(IG)
+        CFI=CFCO(IG)
+        CGI=CGCO(IG)
+C
+C     ----- J PRIMITIVE
+C
+        DO 620 JG = J1,J2
+          AJ = EX(JG)
+          AA = AI+AJ
+          AA1 = ONE/AA
+          DUM = AJ*ARRI*AA1
+          IF(DUM .GT. TOL) GO TO 620
+          FAC = EXP(-DUM)
+          CSJ = CS(JG)
+          CPJ = CP(JG)
+          CDJ = CD(JG)
+          CFJ = CF(JG)
+          CGJ = CG(JG)
+          AX = (AXI+AJ*XJ)*AA1
+          AY = (AYI+AJ*YJ)*AA1
+          AZ = (AZI+AJ*ZJ)*AA1
+C
+C     ----- DENSITY FACTOR
+C
+          IJ = 0
+          DO 580 I = MINI,MAXI
+            IF(I.EQ.1) DUM1=CSI*FAC
+            IF(I.EQ.2) DUM1=CPI*FAC
+            IF(I.EQ.5) DUM1=CDI*FAC
+            IF(I.EQ.8.AND.NORM) DUM1=DUM1*SQRT3
+            IF(I.EQ.11) DUM1=CFI*FAC
+            IF(I.EQ.14.AND.NORM) DUM1=DUM1*SQRT5
+            IF(I.EQ.20.AND.NORM) DUM1=DUM1*SQRT3
+            IF(I.EQ.21) DUM1=CGI*FAC
+            IF(I.EQ.24.AND.NORM) DUM1=DUM1*SQRT7
+            IF(I.EQ.30.AND.NORM) DUM1=DUM1*SQRT5/SQRT3
+            IF(I.EQ.33.AND.NORM) DUM1=DUM1*SQRT3
+            DO 570 J = MINJ,MAXJ
+              IF(J.EQ.1) DUM2=DUM1*CSJ
+              IF(J.EQ.2) DUM2=DUM1*CPJ
+              IF(J.EQ.5) DUM2=DUM1*CDJ
+              IF(J.EQ.8.AND.NORM) DUM2=DUM2*SQRT3
+              IF(J.EQ.11) DUM2=DUM1*CFJ
+              IF(J.EQ.14.AND.NORM) DUM2=DUM2*SQRT5
+              IF(J.EQ.20.AND.NORM) DUM2=DUM2*SQRT3
+              IF(J.EQ.21) DUM2=DUM1*CGJ
+              IF(J.EQ.24.AND.NORM) DUM2=DUM2*SQRT7
+              IF(J.EQ.30.AND.NORM) DUM2=DUM2*SQRT5/SQRT3
+              IF(J.EQ.33.AND.NORM) DUM2=DUM2*SQRT3
+              IJ=IJ+1
+              DIJ(IJ) = DUM2
+  570       CONTINUE
+  580     CONTINUE
+C
+C     ----- OVERLAP
+C
+      T = SQRT(AA)
+      T1 = SQRT(AA1)
+      X0 = AX
+      Y0 = AY
+      Z0 = AZ
+      DO 590 J = 1,LJTMOD
+        NJ = J
+        DO 590 I = 1,LITDER
+          NI = I
+          XCC=zero
+          YCC=zero
+          ZCC=zero
+          CALL FLDXYZ(XCC,YCC,ZCC,XYZINT,1)
+          XS(I,J)=XINT*T1
+          YS(I,J)=YINT*T1
+          ZS(I,J)=ZINT*T1
+          XX(I,J)=XYZINT(1,1)*T1
+          YY(I,J)=XYZINT(2,1)*T1
+          ZZ(I,J)=XYZINT(3,1)*T1
+
+  590 CONTINUE
+C
+      if( calc_kinetic ) then
+         CALL DTXYZ(XT,YT,ZT,XS,YS,ZS,LITDER,LJT,AJ)
+         CALL DERI(DXT,DYT,DZT,XT,YT,ZT,LIT,LJT,AI)
+      endif
+      if( calc_overlap ) CALL DERI(DXS,DYS,DZS,XS,YS,ZS,LIT,LJT,AI)
+      if( calc_centroid ) then
+         CALL DERIOLI(DXSDI,DYSDI,DZSDI,XS,YS,ZS,LIT,LJT,AI)
+         CALL DERIOLI(DXXDI,DYYDI,DZZDI,XX,YY,ZZ,LIT,LJT,AI)
+      endif
+C
+      IJ=0
+      DO 600 I=MINI,MAXI
+        IX=IJX(I)
+        IY=IJY(I)
+        IZ=IJZ(I)
+        LI=LOCI+I
+        DO 600 J=MINJ,MAXJ
+          JX=IJX(J)
+          JY=IJY(J)
+          JZ=IJZ(J)
+          DUMX=DXS(IX,JX)* YS(IY,JY)* ZS(IZ,JZ)
+          DUMY= XS(IX,JX)*DYS(IY,JY)* ZS(IZ,JZ)
+          DUMZ= XS(IX,JX)* YS(IY,JY)*DZS(IZ,JZ)
+C
+          if( calc_kinetic ) then
+             DUMX2=DXT(IX,JX)* YS(IY,JY)* ZS(IZ,JZ)
+     *            +DXS(IX,JX)* YT(IY,JY)* ZS(IZ,JZ)
+     *            +DXS(IX,JX)* YS(IY,JY)* ZT(IZ,JZ)
+             DUMY2= XT(IX,JX)*DYS(IY,JY)* ZS(IZ,JZ)
+     *            + XS(IX,JX)*DYT(IY,JY)* ZS(IZ,JZ)
+     *            + XS(IX,JX)*DYS(IY,JY)* ZT(IZ,JZ)
+             DUMZ2= XT(IX,JX)* YS(IY,JY)*DZS(IZ,JZ)
+     *            + XS(IX,JX)* YT(IY,JY)*DZS(IZ,JZ)
+     *            + XS(IX,JX)* YS(IY,JY)*DZT(IZ,JZ)
+          endif
+C
+          if( calc_centroid ) then
+             DUMXX=DXXDI(IX,JX)*   YS(IY,JY)*   ZS(IZ,JZ)
+             DUMXY=   XX(IX,JX)*DYSDI(IY,JY)*   ZS(IZ,JZ)
+             DUMXZ=   XX(IX,JX)*   YS(IY,JY)*DZSDI(IZ,JZ)
+             DUMYX=DXSDI(IX,JX)*   YY(IY,JY)*   ZS(IZ,JZ)
+             DUMYY=   XS(IX,JX)*DYYDI(IY,JY)*   ZS(IZ,JZ)
+             DUMYZ=   XS(IX,JX)*   YY(IY,JY)*DZSDI(IZ,JZ)
+             DUMZX=DXSDI(IX,JX)*   YS(IY,JY)*   ZZ(IZ,JZ)
+             DUMZY=   XS(IX,JX)*DYSDI(IY,JY)*   ZZ(IZ,JZ)
+             DUMZZ=   XS(IX,JX)*   YS(IY,JY)*DZZDI(IZ,JZ)
+          endif
+
+          IJ=IJ+1
+          LJ=LOCJ+J
+          DIJIJ=DIJ(IJ)
+
+C     contributions from LMO centroid derivative
+
+          if( calc_centroid) then
+             centroidx = DIJIJ* (dnew_density_drx(li,lj) * DUMXX +
+     *            dnew_density_dry(li,lj) *DUMYX
+     *            + dnew_density_drz(li,lj)*DUMZX )
+                
+             centroidy = DIJIJ* (dnew_density_drx(li,lj) * DUMXY +
+     *            dnew_density_dry(li,lj) *DUMYY
+     *            + dnew_density_drz(li,lj)*DUMZY )
+
+             centroidz = DIJIJ* (dnew_density_drx(li,lj) * DUMXZ +
+     *            dnew_density_dry(li,lj) *DUMYZ 
+     *            + dnew_density_drz(li,lj)*DUMZZ )
+
+             x_contrib = x_contrib+centroidx
+             y_contrib = y_contrib+centroidy
+             z_contrib = z_contrib+centroidz
+          endif
+
+          if( calc_overlap ) then
+             x_contrib = x_contrib + dnew_density_s(li,lj)
+     *            * DUMX*DIJIJ
+             y_contrib = y_contrib + dnew_density_s(li,lj)
+     *            * DUMY*DIJIJ
+             z_contrib = z_contrib + dnew_density_s(li,lj)
+     *            * DUMZ*DIJIJ
+          endif
+
+          if( calc_kinetic ) then
+             x_contrib = x_contrib + dnew_density_t(li,lj)
+     *            * DUMX2*DIJIJ
+             y_contrib = y_contrib + dnew_density_t(li,lj)
+     *            * DUMY2*DIJIJ
+             z_contrib = z_contrib + dnew_density_t(li,lj)
+     *            * DUMZ2*DIJIJ
+          endif
+c
+  600 CONTINUE
+
+  620 CONTINUE
+  640 CONTINUE
+C
+C     ----- END OF PRIMITIVE LOOPS -----
+C
+      if( de_run ) then
+         DE(1,IAT)=DE(1,IAT)+ x_contrib
+         DE(2,IAT)=DE(2,IAT)+ y_contrib
+         DE(3,IAT)=DE(3,IAT)+ z_contrib
+         if( symmetric ) then
+            DE(1,JAT)=DE(1,JAT)- x_contrib
+            DE(2,JAT)=DE(2,JAT)- y_contrib
+            DE(3,JAT)=DE(3,JAT)- z_contrib
+         endif
+      endif
+
+c$$$      atom may change now
+      if(initial_atom .gt. 0) then
+
+         index_atom = initial_atom + iat - 1
+         call efmoesgm( z1, z2, 0, index_atom,
+     *        SWF*MCOEFF*x_contrib,SWF*MCOEFF*y_contrib,
+     *        SWF*MCOEFF*z_contrib,z3,z4,z5,z6,z7,z8, ZERO, ONE, 3 )
+
+         if( symmetric ) then
+            index_atom = initial_atom + jat - 1
+            call efmoesgm( z1, z2, 0, index_atom,
+     *           -SWF*MCOEFF*x_contrib,-SWF*MCOEFF*y_contrib,
+     *           -SWF*MCOEFF*z_contrib,z3,z4,z5,z6,z7,z8, ZERO, ONE,
+     *           3 )
+         endif
+
+      end if
+
+  760 CONTINUE
+
+  780 CONTINUE
+C
+C     ----- END OF SHELL LOOPS -----
+C
+      RETURN
+C
+      END
+
+C*MODULE EFMOGRAD *DECK ANTISQ2TRI
+C>
+C>    @brief Anti-symmetrizes a square matrix and makes it trangular
+C>
+C>    @details  Anti-symmetrizes a square matrix and makes it trangular
+C>
+C>    @author C. Bertoni
+C>
+C>    @param lda : dimension of the square matrix passed in
+C>    @param sq : square matrix to antisymmetrize and make tringular
+C>    @param tri : output triangular matrix 
+C>    @param fac : factor to multiply the output triangular matrix by
+C>    @param nxyz : last dimension of the square matrix
+C>
+      SUBROUTINE ANTISQ2TRI(LDA,SQ,TRI,FAC,nxyz)
+C
+      implicit none
+      integer lda, nxyz, i, j, ic, ixyz
+      double precision fac, tmp
+      double precision, dimension(lda, lda, nxyz) :: sq
+      double precision, dimension(lda*(lda+1)/2,nxyz) :: tri
+C
+c$$$ this antisymmetrizes a matrix, and stores the lower half of it
+c$$$ this means that if you want values in the upper half, you need
+c$$$ to multiply by -1.
+      do ixyz=1,nxyz
+      IC = 0
+      DO I = 1, LDA
+        DO J = 1, I
+          IC = IC + 1
+          TMP = SQ(I,J,ixyz) - SQ(J,I,ixyz)
+          TRI(IC,ixyz) = TMP * FAC
+        END DO
+      END DO
+      enddo
+C
+      RETURN
+      END

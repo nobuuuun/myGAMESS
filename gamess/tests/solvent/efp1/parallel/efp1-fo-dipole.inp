@@ -1,0 +1,51 @@
+!    a five EFP water cluster, doing Albert's EFP dipole analysis.
+!
+!            --------------------------------------
+!            FRAGMENT-FRAGMENT INTERACTION ENERGIES
+!            --------------------------------------
+!            CHARGE-CHARGE         =   -.0316606214
+!            CHARGE-DIPOLE         =   -.0104843467
+!            CHARGE-QUADRUPOLE     =   -.0083996809
+!            CHARGE-OCTUPOLE       =    .0000963468
+!            DIPOLE-DIPOLE         =   -.0013454826
+!            DIPOLE-QUADRUPOLE     =   -.0016205213
+!            QUADRUPOLE-QUADRUPOLE =   -.0013979404
+!            OVERLAP PEN. ENERGY   =    .0000000000
+!                                    --------------
+!            ELECTROSTATIC ENERGY  =   -.0548122464
+!            REPULSION ENERGY      =    .0224825546
+!            POLARIZATION ENERGY   =   -.0082702937
+!            --------------------------------------
+!            FINAL EFP ENERGY      =   -.0405999856
+!    system total dipole= (4.153398, 2.451353, 2.139172), norm= 5.275974 Debye
+!
+!    this run takes 0 seconds on 2.66 GHz CLoverton (7 Aug 2011)
+!
+ $CONTRL coord=fragonly $END
+ $EFRAG
+COORD=CART
+FRAGNAME=H2ODFT  !1
+O1                 0.1092200000   -0.2641400000    0.0704900000 
+H2                 1.0280500000   -0.0686000000   -0.0211300000 
+H3                -0.2427000000    0.3653600000    0.6793900000 
+FRAGNAME=H2ODFT  !2
+O1                -1.4318700000    1.2356200000    1.9946100000 
+H2                -2.2180800000    1.0950300000    1.4916300000 
+H3                -1.5409700000    0.7653100000    2.8056500000 
+FRAGNAME=H2ODFT  !3
+O1                -2.2683100000   -0.5654300000   -1.2163700000 
+H2                -1.4480400000   -0.6416600000   -0.7557100000 
+H3                -2.9088400000   -0.2802700000   -0.5844800000 
+FRAGNAME=H2ODFT  !4
+O1                -0.5209700000   -2.1706100000    1.9771800000 
+H2                -0.1728400000   -1.4826900000    1.4327200000 
+H3                 0.1785800000   -2.4446500000    2.5485100000 
+FRAGNAME=H2ODFT  !5
+O1                 2.6405900000    0.3512500000   -0.6333700000 
+H2                 2.7566500000    1.1549900000   -1.1144200000 
+H3                 3.3656600000   -0.2084100000   -0.8612600000 
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

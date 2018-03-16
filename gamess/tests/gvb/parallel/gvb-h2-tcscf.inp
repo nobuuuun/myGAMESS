@@ -1,0 +1,54 @@
+!  TCSCF H2, using near-Hartree-Fock basis set, at R=1.4 bohr.
+!  Test to ensure the GVB code can handle the absence of cores.
+!  Note that initial Huckel guess is normally not a good idea.
+!  This basis is from my thesis, and has 40 AOs.
+!
+!  NSERCH:   0  E= -1.1521311117, R.M.S.=  0.0053312
+!  NSERCH:   1  E= -1.1522385785, R.M.S.=  0.0015191
+!  NSERCH:   2  E= -1.1522488933, R.M.S.=  0.0000677
+!  NSERCH:   3  E= -1.1522489134, R.M.S.=  0.0000009
+!  At the final geometry, FREQ=4228.31 with no intensity.
+!  no significant change in answers since 2001.
+!
+!  This run takes 1 seconds on 2.66 GHz Cloverton (10 Sep 2013)
+!
+ $contrl scftyp=gvb runtyp=optimize units=bohr $end
+ $statpt opttol=0.00001 hssend=.true. $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+!   TCSCF via GVB code:
+ $scf    nco=0 nseto=0 npair=1 $end
+!   TCSCF via MCSCF code:
+--- $contrl scftyp=mcscf $end
+--- $det    ncore=0 nact=2 nels=2 $ned
+--- $force  method=numeric nvib=2 $end
+ $data
+H2 molecule...duplicating my thesis...(10s,3p,1d)/[5s,3p,1d]
+Dnh 4
+
+H 1.0  0.0 0.0 0.70
+  s 10
+     1      .07482946 1.95156267E-01
+     2      .19371702 4.53965418E-01
+     3      .50149074 3.05762078E-01
+     4     1.29824919 1.26532678E-01
+     5     3.36088154 4.32010073E-02
+     6     8.70058290 1.39530055E-02
+     7    22.52389501 4.13000009E-03
+     8    58.30940893 1.46823856E-03
+     9   150.95023164 2.52253630E-04
+    10   390.77694067 2.32656775E-04
+  s 1 ; 1   .07482946 1.0
+  s 1 ; 1   .19371702 1.0
+  s 1 ; 1   .50149074 1.0
+  s 1 ; 1  1.29824919 1.0
+  p 1 ; 1  0.3 1.0
+  p 1 ; 1  1.2 1.0
+  p 1 ; 1  5.4 1.0
+  d 1 ; 1 1.96 1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

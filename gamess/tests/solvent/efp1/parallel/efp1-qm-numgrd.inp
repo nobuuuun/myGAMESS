@@ -1,0 +1,44 @@
+!  One QM water plus two EFP waters...test of numerical gradients
+!
+!   analytic result:    R.S GRADIENT =    0.009227506
+! UNITS ARE HARTREE/BOHR    E'X               E'Y               E'Z
+!    1 O                0.015241893       0.012301486       0.024082261
+!    2 H                0.008919672      -0.005301607      -0.012673068
+!    3 H               -0.017515853      -0.003548656      -0.011688382
+!      TOTALS           0.006645711       0.003451223      -0.000279189
+!      TORQUE           0.009325613      -0.015397372       0.016472000
+!
+!   numerical result:   RMS GRADIENT =    0.009227935
+! UNITS ARE HARTREE/BOHR    E'X               E'Y               E'Z
+!    1 O                 .015243313        .012300676        .024083809
+!    2 H                 .008920235       -.005301740       -.012673965
+!    3 H                -.017516667       -.003549649       -.011688204
+!      TOTALS            .006646880        .003449287       -.000278361
+!      TORQUE            .009320858       -.015405836        .016461105
+!
+!  This run takes 62 seconds on 2.66 GHz Cloverton (26 Oct 2015)
+!
+ $CONTRL SCFTYP=RHF dfttyp=b3lyp runtyp=gradient numgrd=.true. $END
+ $SYSTEM MWORDS=2 $END
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 NPFUNC=1 $END
+ $DATA
+one QM-style DFT water plus two DFT-style EFP water
+C1
+O           8.0   1.1867148663   0.0880119548  -0.6883350559
+H           1.0   0.5364359282   0.3510489893  -0.0465420781
+H           1.0   2.0393740291   0.2141589462  -0.3072633248
+ $END
+ $EFRAG
+
+ FRAGNAME=H2ODFT
+O1    -1.2945443020   0.0507734292   0.7942183451
+H2    -2.0546747762   0.6073861517   0.7627712414
+H3    -1.4611519555  -0.6936505513   0.2267299487
+ FRAGNAME=H2ODFT
+O1    -0.8541986554  -1.8633213069  -1.3198986625
+H2    -0.0104934932  -1.4313997122  -1.3906135622
+H3    -0.7281716414  -2.7799379008  -1.4990868517
+ $END
+
+! TRAVIS-CI SMALL
+

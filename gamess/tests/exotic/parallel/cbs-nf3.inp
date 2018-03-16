@@ -1,0 +1,95 @@
+!    NF3...using cc-pVxZ, where x=D,T,Q,5,6 contains d,f,g,h,i as top L.
+!    Using MP2 tests the virtual space, where most of g,h,i AOs live.
+!    But this basis gets very big, so we settle for SCF energy only.
+!                                    #Cart.  #MOs   a1  a2   e
+!        cc-pVDZ is 3s2p1d              60     56   16   4  18
+!        cc-pVTZ is 4s3p2d1f           140    120   31  11  39
+!        cc-pVQZ is 5s4p3d2f1g         280    220   53  23  72
+!        cc-pV5Z is 6s5p4d3f2g1h       504    364   83  41 120
+!        cc-pV6Z is 7s6p5d4f3g2h1i     840    560  123  67 185
+!
+!    CC6 run has FINAL E= -352.7217102622, 15 iters, dipole= 0.225325
+!    CC6 run takes 3514 seconds on 2.66 GHz Cloverton (8 Jan 2013)
+!    CC6 run generates a 113,977,838,016 byte integral file.
+!
+!    results for all basis sets follow:
+!
+!    nf3.gms.dz.log: F.NAL RHF ENERGY IS     -352.558 016 225 6
+!    nf3.nw.dz.log:     Total SCF energy =   -352.558 016 225 262
+!    nf3.mlp.dz.log: !RHF STATE 1.1 Energy   -352.558 016 221 804
+!
+!    nf3.gms.tz.log: F.NAL RHF ENERGY IS     -352.683 206 938 2
+!    nf3.nw.tz.log:     Total SCF energy =   -352.683 206 938 230
+!    nf3.mlp.tz.log: !RHF STATE 1.1 Energy   -352.683 206 934 542
+!
+!    nf3.gms.qz.log: F.NAL RHF ENERGY IS     -352.712 756 368 9
+!    nf3.nw.qz.log:     Total SCF energy =   -352.712 756 367 614
+!    nf3.mlp.qz.log: !RHF STATE 1.1 Energy   -352.712 756 365 855
+!
+!    nf3.gms.5z.log: F.NAL RHF ENERGY IS     -352.720 858 815 4
+!    nf3.nw.5z.log:     Total SCF energy =   -352.720 858 814 694
+!    nf3.mlp.5z.log: !RHF STATE 1.1 Energy   -352.720 858 812 216
+!
+!    nf3.gms.6z.log: F.NAL RHF ENERGY IS     -352.721 710 262 2
+!    nf3.mlp.6z.log: !RHF STATE 1.1 Energy   -352.721 710 262 160
+!
+!    there is some hessian data at the end.
+!
+ $contrl scftyp=rhf mplevl=0 runtyp=energy units=bohr ispher=1 $end
+ $system mwords=100 memddi=10 $end
+ $guess  guess=huckel $end
+
+!   next are being careful about accuracy for possible near linear dependence
+ $contrl icut=11 qmttol=1d-9 $end
+ $scf    conv=1d-8 $end
+ $mp2    cutoff=1d-11 $end
+
+!      Step the basis: CCD, CCT, CCQ, CC5, CC6.
+ $basis  gbasis=cc6 $end
+ $scf    dirscf=.t. $end
+ $data
+NF3 at RHF/CCT geometry (given in Bohr units, from MOLPRO's log file)
+Cnv 3
+
+N       7.00    0.000000000    0.000000000   -0.235297775
+F       9.00    2.250408128    0.000000000    0.834323044
+ $end
+
+!  The hessian code now runs up to spdfg functions, ie tops out at CCQ.
+!  Each basis set is computed at its own minimum energy structure:
+!      RHF/CCD energy is -352.5580753140 at this geometry:
+N   7.0   0.0000000000   0.0000000000  -0.1267675391
+F   9.0   1.1944235372   0.0000000000   0.4422558767
+!      RHF/CCT energy is -352.6832069382 at this geometry:
+N   7.0   0.0000000000   0.0000000000  -0.1245142293
+F   9.0   1.1908647828   0.0000000000   0.4415047734
+!      RHF/CCQ energy is -352.7127594681 at this geometry:
+N   7.0   0.0000000000   0.0000000000  -0.1240685784
+F   9.0   1.1900340279   0.0000000000   0.4413562231
+!               the above are in Angstroms!
+!
+!    cc-pVDZ residual FREK:     0.99, 0.58, 0.58, 0.01, 1.19, 1.19
+!    cc-pVDZ   actual FREK: 587.66, 587.66, 759.13, 1181.76, 1181.76, 1214.36
+!    cc-pVTZ residual FREK:     0.71, 0.63, 0.63, 0.01, 1.42, 1.42
+!    cc-pVTZ   actual FREK: 594.33, 594.33, 771.78, 1210.63, 1210.63, 1242.52
+!    cc-pVQZ residual FREQ:     0.76, 0.69, 0.69, 0.01, 1.20, 1.20
+!    cc-pVQZ   actual FREQ: 593.89, 593.89, 771.63, 1204.87, 1204.87, 1240.10
+!    cc-pVQZ semi-num:      593.90, 593.90, 771.64, 1204.88, 1204.89, 1240.09
+!                and these IR data for the genuine modes (e,a1,e,a1):
+!    cc-pVDZ intencity: 0.00756, 0.00756, 0.19575, 5.70753, 5.70753, 1.23231
+!    cc-pVTZ intencity: 0.00501, 0.00501, 0.15699, 5.71040, 5.71040, 1.02493
+!    cc-pVQZ intensity: 0.00389, 0.00389, 0.14311, 5.51249, 5.51249, 0.91474
+!    cc-pVQZ semi-num:  0.00391, 0.00390, 0.14316, 5.51312, 5.51312, 0.91456
+!
+!    timing for CCQ basis set: (serial, integrals on disk):
+!      C3v AO integral list       12.21
+!      RHF iterations             27.52 (15 iters)
+!      C1 AO integral list        59.65
+!      1e- integral derivatives    0.38
+!      2e- integral derivatives   60.28
+!      response iterations       439.27  (9 iters)
+!                                ------
+!      job total                 599.8  CPU sekonds
+
+! TRAVIS-CI LARGE
+

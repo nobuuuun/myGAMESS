@@ -1,0 +1,51 @@
+{
+  "parse_header" : "PCM",
+  "parse_group" : [
+   {
+     "regex_string" : "^ FREE ENERGY IN SOLVENT = <PSI\\| H\\(0\\)\\+V/2 \\|PSI>       =.*$",
+     "parse_name"   : "FREE ENERGY IN SOLVENT - PCM",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ INTERNAL ENERGY IN SOLVENT = <PSI\\| H\\(0\\) \\|PSI>       =.*$",
+     "parse_name"   : "INTERNAL ENERGY IN SOLVENT - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ DELTA INTERNAL ENERGY =  <D-PSI\\| H\\(0\\) \\|D-PSI>       =.*$",
+     "parse_name"   : "DELTA INTERNAL ENERGY - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ ELECTROSTATIC INTERACTION                           =.*$",
+     "parse_name"   : "ELECTROSTATIC INTERACTION ENERGY - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ PIEROTTI CAVITATION ENERGY                          =.*$",
+     "parse_name"   : "PIEROTTI CAVITATION ENERGY - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ DISPERSION FREE ENERGY                              =.*$",
+     "parse_name"   : "DISPERSION FREE ENERGY - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ REPULSION FREE ENERGY                               =.*$",
+     "parse_name"   : "REPULSION FREE ENERGY - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ TOTAL INTERACTION \\(DELTA \\+ ES \\+ CAV \\+ DISP \\+ REP\\)   =.*$",
+     "parse_name"   : "TOTAL INTERACTION ENERGY - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ TOTAL FREE ENERGY IN SOLVENT                        =.*$",
+     "parse_name"   : "TOTAL FREE ENERGY IN SOLVENT - PCM",
+     "parse_recipe" : "lastinstance_firstindex"
+   }
+  ]
+}

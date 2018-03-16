@@ -1,0 +1,109 @@
+!   MP2 level static polarizabilities by finite field computation.
+!   sample system is water.  Test must be from Henry Kurtz, c.1992
+!
+!   more digits are printed in the polarizabilities than can be
+!   justified - no experiment can measure this, and because the
+!   values are are 1st, 2nd, 3rd and 4th derivatives of the energy,
+!   evaluated numerically(!), there digits change with small changes
+!   in the wavefunction's convergence/accuracy.
+!   The dipole results are blanked out since this run did not add
+!   the time consuming MP2PRP=.TRUE. keyword to evaluate dipoles.
+!
+!                       ----ENERGY BASED RESULTS----
+!     DIPOLE #        X                  Y                  Z   (A.U.)
+!     ###################################################################
+!            #   0.0000000E+00      0.0000000E+00      7.2062114E-01
+!
+!      ALPHA #        X                  Y                  Z   (A.U.)
+!     ###################################################################
+!       X    #   9.4546319E+00      0.0000000E+00      0.0000000E+00
+!       Y    #   0.0000000E+00      9.8422814E+00      0.0000000E+00
+!       Z    #   0.0000000E+00      0.0000000E+00      9.5606798E+00
+!
+!      BETA  #        X                  Y                  Z   (A.U.)
+!     ###################################################################
+!      XX    #   0.0000000E+00      1.8332003E-03     -2.0343691E+00
+!      YY    #  -1.2505552E-03      6.3948846E-04     -9.6956967E+00
+!      ZZ    #   0.0000000E+00      2.2737368E-04     -8.2345650E+00
+!
+!      GAMMA #        XX                 YY                 ZZ   (A.U.)
+!     ###################################################################
+!      XX    #   2.6192311E+03      2.1657343E+02      8.9630703E+02
+!      YY    #   2.1657343E+02      5.0829385E+02      3.6914116E+02
+!      ZZ    #   8.9630703E+02      3.6914116E+02      1.4205170E+03
+!
+!
+!   This run takes 17 seconds on 2.66 GHz Cloverton (30 Apr 2014)
+!   the results have not changed since 2005.
+!
+ $mp2 code=ddi $end
+ $contrl scftyp=rhf mplevl=2 ispher=+1 units=bohr $end
+ $system mwords=1 memddi=10 $end
+
+!          this test is finite differencing
+ $contrl runtyp=ffield $end
+ $ffcalc $end
+!          closed shell SCF can do the same tensors analytically
+--- $contrl runtyp=tdhf nosym=1 mplevl=0 ispher=0 $end
+--- $tdhf   inib=2 inig=2 $end
+
+ $GUESS  GUESS=HUCKEL $END
+ $SCF    NCONV=7 $END
+ $DATA
+H2O finite field polarizability calculation...basis set=???
+Cnv  2
+
+OXYGEN      8.0      0.0                  0.000000         0.021507
+    S   5
+1    10662.285     0.000799
+2     1599.7097    0.006153
+3      364.72526   0.031157
+4      103.65179   0.115596
+5       33.905805  0.301552
+    S   2
+1       12.287469  0.444870
+2        4.756805  0.243172
+    S   1
+1        1.004271  1.000000
+    S   1
+1        0.300686  1.000000
+    S   1
+1        0.090030  1.000000
+    P   4
+1       34.856463  0.015648
+2        7.843131  0.098197
+3        2.306249  0.307768
+4        0.723164  0.492470
+    P   1
+1        0.214882  1.000000
+    P   1
+1        0.063850  1.000000
+    D   2
+1        2.306200  0.202700
+2        0.723200  0.579100
+    D   2
+1        0.214900  0.785450
+2        0.063900  0.533870
+
+HYDROGEN    1.0       0.0        -1.4243044     1.0986197
+    S   4
+1       33.865014  0.006068
+2        5.094788  0.045316
+3        1.158786  0.202846
+4        0.325840  0.503709
+    S   1
+1        0.102741  1.000000
+    S   1
+1        0.032400  1.000000
+    P   2
+1        1.158800  0.188440
+2        0.325800  0.882420
+    P   2
+1        0.102700  0.117800
+2        0.032400  0.004200
+
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

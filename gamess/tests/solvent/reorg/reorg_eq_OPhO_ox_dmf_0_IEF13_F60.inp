@@ -1,0 +1,81 @@
+! This is the inputfile for the calculation of equilibrium surface charges
+! corresponding to IEF=13 model. The purpose of this calculation is 2-fold: 
+! 1) to obtain the equilibrium solution phase energy 2) to calculate the 
+! inertial and non-inertial surface charges, which should be printed in the 
+! final .dat file under $SRFCHG section. The final result as printed in the 
+! .log file is given below:
+! -----------------------------------------------------------------------------
+!  
+! FREE ENERGY IN SOLVENT = <PSI| H(0)+V/2 |PSI>       =     -381.2584075067 A.U.
+! INTERNAL ENERGY IN SOLVENT = <PSI| H(0) |PSI>       =     -381.2485193416 A.U.
+! DELTA INTERNAL ENERGY =  <D-PSI| H(0) |D-PSI>       =        0.0000000000 A.U.
+! ELECTROSTATIC INTERACTION                           =       -0.0098881650 A.U.
+! PIEROTTI CAVITATION ENERGY                          =        0.0000000000 A.U.
+! DISPERSION FREE ENERGY                              =        0.0000000000 A.U.
+! REPULSION FREE ENERGY                               =        0.0000000000 A.U.
+! TOTAL INTERACTION (DELTA + ES + CAV + DISP + REP)   =       -0.0098881650 A.U.
+! TOTAL FREE ENERGY IN SOLVENT                        =     -381.2584075067 A.U.
+! INERTIAL COMPONENT OF SOLUTE-SOLVENT INTERACTION    =       -0.0053090008 A.U.
+! NON-INERTIAL COMPONENT OF SOLUTE-SOLVENT INTERACTION=       -0.0045791643 A.U.
+!
+! FREE ENERGY IN SOLVENT       =     -239243.29 KCAL/MOL
+! INTERNAL ENERGY IN SOLVENT   =     -239237.08 KCAL/MOL
+! DELTA INTERNAL ENERGY        =           0.00 KCAL/MOL
+! ELECTROSTATIC INTERACTION    =          -6.20 KCAL/MOL
+! PIEROTTI CAVITATION ENERGY   =           0.00 KCAL/MOL
+! DISPERSION FREE ENERGY       =           0.00 KCAL/MOL
+! REPULSION FREE ENERGY        =           0.00 KCAL/MOL
+! TOTAL INTERACTION            =          -6.20 KCAL/MOL
+! TOTAL FREE ENERGY IN SOLVENT =     -239243.29 KCAL/MOL
+! INERTIAL COMPONENT           =          -3.33 KCAL/MOL
+! NON-INERTIAL COMPONENT       =          -2.87 KCAL/MOL
+!
+!           -----  ENERGY CHANGE FROM GAS PHASE TO SOLVENT  -----
+!              ELEC          ELEC+CAV    ELEC+CAV+DIS+REP
+!            -5.432            -5.432              -5.432 KCAL/MOL
+! -----------------------------------------------------------------------------
+! Also see the instructions in the GAMESS manual to find out how to calculate
+! solvent reorganization energy using the equilibrium surface charges and
+! equilibrium solution phase energy
+!
+!
+!
+ $CONTRL
+ COORD=UNIQUE UNITS=ANGS
+ ISPHER=-1 MAXIT=200
+ ICHARG=0 MULT=1 RUNTYP=ENERGY EXETYP=RUN
+ SCFTYP=RHF DFTTYP=B3LYPV3 NPRINT=9
+ $END
+ $SYSTEM MWORDS=1000 $END
+ $SCF DIIS=.T. DAMP=.T. DIRSCF=.T. $END
+ $GUESS GUESS=HUCKEL $END
+ $BASIS GBASIS=N31 NGAUSS=6 NDFUNC=1 NPFUNC=1 $END
+ $PCM IEF=13 SOLVNT=DMSO EPS=37.219 EPSINF=2.046 $END
+ $TESCAV MTHALL=4 NTSALL=60 $END
+ $PCMCAV RADII=VANDW $END
+ $REORG 
+ LAMDA=2 IPCHG=1 
+ RADCAT=4.0 
+ DISM=0.1 EPSOHP=18.6095 
+ $END
+ $DATA
+USING DIGEION 
+ C1
+C    6.0    -0.62400  -0.02800  -0.34790 
+C    6.0     0.71910  -0.02690  -0.34810 
+C    6.0     1.49200   1.24330  -0.34830 
+C    6.0     0.71700   2.51230  -0.34810 
+C    6.0    -0.62610   2.51120  -0.34790 
+H    1.0    -1.21110  -0.94200  -0.34770 
+H    1.0     1.30760  -0.94000  -0.34830 
+H    1.0     1.30410   3.42630  -0.34830 
+H    1.0    -1.21460   3.42430  -0.34770 
+C    6.0    -1.39900   1.24100  -0.34770 
+O    8.0    -2.62410   1.24000  -0.34740 
+O    8.0     2.71710   1.24440  -0.34860 
+$END
+
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

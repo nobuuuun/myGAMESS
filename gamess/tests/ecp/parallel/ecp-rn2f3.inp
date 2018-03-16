@@ -1,0 +1,42 @@
+!   collinear F-Rn-F-Rn-F...from Jerry in 2008
+!   uses LMAX=4 potential on Rn, and there are f AOs in the F-atom basis
+!
+!   FINAL E= -327.2889308246, 13 iters, RMS grad= 0.000001228
+!
+!   This run takes 12 seconds on 2.66 GHz Cloverton ( 6 Apr 2015)
+!
+!   this was part of the last ECP integral bug fix, in 2008:
+! pre-4/08: E= -327.2889303141    Vnn= 118.0537388580, RM.=0.000000361
+!   GAMESS: E= -327.2889308246    Vnn= 118.0537388580, R.S=0.000000639
+!   NWchem: E= -327.288929846863, Vnn= 118.053738858681
+!   there is a matching NWchem input file for this run.
+!
+ $CONTRL scftyp=rhf RUNTYP=gradient icut=11 pp=read ispher=1 icharg=+1 $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+ $scf    diis=.true. conv=2.5e-07 $end
+--- $statpt nstep=80 opttol=0.00001 $end
+ $ecp 
+f-ecp  none
+rn-ecp sbkjc
+rn-ecp 
+f-ecp  none
+f-ecp  none
+ $end
+ $DATA
+RHF/aug-cc-pvtz-pp(Rn):acct(F) [F-Rn-F-Rn-F]+, D-inf-h
+Dnh 4
+
+F           9.0   0.0000000000   0.0000000000   0.0000000000
+  acct
+
+Rn         86.0   0.0000000000   0.0000000000   2.2522258404
+  sbkjc
+
+F           9.0   0.0000000000   0.0000000000   4.1909308114
+  acct
+
+ $END
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,69 @@
+{
+  "name": "ch2-soc.log",
+  "validation": [
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -3",
+      "value": "-38.412132282",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-38.369349075",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-38.474570463",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -5",
+      "value": "-13703.839",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -4",
+      "value": "-13703.830",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -3",
+      "value": "-13703.830",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -2",
+      "value": "0.009",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -1",
+      "value": "9389.988",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    }
+  ]
+}

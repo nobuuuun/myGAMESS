@@ -1,0 +1,30 @@
+!  CH2: CCSD(T)/STO-2G optimization by numerical gradients
+!
+!  results with parallel CCSD(T) will differ slightly from the below:
+!     NSERCH:   0  E= -37.2886608474  R.M.S.=  0.0381351
+!     NSERCH:   1  E= -37.2983730585  R.M.S.=  0.0112912
+!     NSERCH:   2  E= -37.2993164775  R.M.S.=  0.0018124
+!     NSERCH:   3  E= -37.2993732038  R.M.S.=  0.0015240
+!     NSERCH:   4  E= -37.2993959396  R.M.S.=  0.0000701
+!     NSERCH:   5  E= -37.2993959742  R.M.S.=  0.0000029
+!
+!  This test takes 0 seconds on 2.66 GHz Cloverton (14 Apr 2015)
+!
+ $CONTRL SCFTYP=RHF cctyp=ccsd(t) RUNTYP=optimize numgrd=.t. COORD=ZMT $END
+ $SYSTEM TIMLIM=1 mwords=5 memddi=5 $END
+ $BASIS  GBASIS=STO NGAUSS=2 $END
+ $GUESS  GUESS=HUCKEL $END
+ $DATA
+Methylene...1-A-1 state...RHF/STO-2G
+Cnv  2
+
+C
+H  1 rCH
+H  1 rCH  2 aHCH
+
+rCH=1.09
+aHCH=110.0
+ $END
+
+! TRAVIS-CI SMALL
+

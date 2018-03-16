@@ -1,0 +1,69 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : CR-EOM",
+  "parse_group" : [
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IA  TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) IA  ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IB  TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) IB  ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IC  TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) IC  ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IB  TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) ID  ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IIA TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) IIA ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IIB TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) IIB ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IIC TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) IIC ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ CR-EOMCCSD\\(T\\)IID TOTAL ENERGY(\\s*)[-]{0,1}[0-9]+\\.[0-9]+[E]{0,1}[-]{0,1}[+]{0,1}[0-9]+(\\s*)HARTREE.*$",
+     "parse_name"   : "ES CR-EOMCCSD(T) IID ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   }
+  ]
+}

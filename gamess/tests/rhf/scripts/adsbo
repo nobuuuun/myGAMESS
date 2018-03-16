@@ -1,0 +1,28 @@
+#!/bin/bash
+
+rhf0=-6642.1898265043
+freq0=3444.34
+
+rhf=`grep "FINAL RHF ENERGY " $1 | tail -n 1 | awk '{print $5}'`
+freq=`grep "FREQUENCY:" $1 | tail -n 1 | awk '{print $2}'`
+
+tolE0=$tolE
+tolFreq0=$tolFREQ
+
+error=0
+
+#rhf energy
+diffrhf=`$chkabs $rhf $rhf0 $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+#frequency
+difffreq=`$chkabs $freq $freq0 $tolFreq0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+
+printf "RHF=%12.8f; FREQ=%12.8f\n" $diffrhf $difffreq
+exit $error

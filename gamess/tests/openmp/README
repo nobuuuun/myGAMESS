@@ -1,0 +1,4 @@
+When coparing to sequential GAMESS some numerical errors (typically <1.0d-9) are
+possible. The reason is a specific combination of integral quadratures that is
+used in OpenMP code (shells with lmax<=3 - rotated axis, all other - Rys). It
+could be avoided by tuning cutoffs.

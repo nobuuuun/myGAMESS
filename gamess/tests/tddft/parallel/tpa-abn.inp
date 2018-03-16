@@ -1,0 +1,81 @@
+!   two photon absorption spectrum of para-amino-cyano-benzene
+!   CAMB3LYP as the functional...31 AOs in 6-31G basis
+!
+!      the energy values here are NOT the point of this test case:
+!   FINAL R-CAMB3LYP E= -379.5386815543, 21 iters
+!   STATE             ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+!   0  A         -379.5386815543    0.000
+!   1  A         -379.3522426467    5.073     0.0000  0.0000 -0.4353    0.024
+!   2  A         -379.3397182183    5.414     0.0274  1.8681  0.0000    0.463
+!   3  A         -379.2916517174    6.722     0.0000  0.0000 -1.2287    0.249
+!   4  A         -379.2899540499    6.768     0.0000  0.0000  0.1145    0.002
+!   5  A         -379.2793099427    7.058     0.0862 -0.1564  0.0000    0.006
+!
+!   ------ the first state prints
+!  TPA TRANSITION (SYMMETRIC) TENSOR ELEMENTS (A.U.):
+!               S(1,1) =     0.0000
+!               S(2,1) =     0.0000
+!               S(2,2) =    -0.0001
+!               S(3,1) =    -0.1836
+!               S(3,2) =    -0.1743
+!               S(3,3) =     0.0000
+!     DF = (SUM_{I,J} S(I,I)*S(J,J))/30 =        0.0000 (A.U.)
+!     DG = (SUM_{I,J} S(I,J)*S(I,J))/30 =        0.0043 (A.U.)
+!     D (LINEAR POLARIZATION)   =  2*DF+4*DG =         0.0171 (A.U.)
+!     D (CIRCULAR POLARIZATION) = -2*DF+6*DG =         0.0256 (A.U.)
+!     R (POLARIZATION RATIO) = (-DF+3*DG)/(DF+2*DG) =         1.5000
+!
+!   ------ the fifth state prints
+!  TPA TRANSITION (SYMMETRIC) TENSOR ELEMENTS (A.U.):
+!               S(1,1) =     0.6024
+!               S(2,1) =    -2.9278
+!               S(2,2) =    19.2101
+!               S(3,1) =     0.0000
+!               S(3,2) =     0.0000
+!               S(3,3) =    -1.9134
+!     DF = (SUM_{I,J} S(I,I)*S(J,J))/30 =       10.6793 (A.U.)
+!     DG = (SUM_{I,J} S(I,J)*S(I,J))/30 =       13.0066 (A.U.)
+!     D (LINEAR POLARIZATION)   =  2*DF+4*DG =        73.3849 (A.U.)
+!     D (CIRCULAR POLARIZATION) = -2*DF+6*DG =        56.6807 (A.U.)
+!     R (POLARIZATION RATIO) = (-DF+3*DG)/(DF+2*DG) =         0.7724
+!
+!   for comparison, Dalton prints D (linear polarization) as
+!          root  Dalton 2011  old Dalton    GAMESS
+!           1     0.0168      0.0112        0.0171
+!           2   326.        324.0         326.2915
+!           3     4.88        4.530         4.8804
+!           4     0.182       0.1780        0.1826
+!           5    73.2        73.80         73.3849
+!   so there is good agreement between GAMESS and the current Dalton.
+!
+!   this run takes 3295 seconds on 2.66 GHz Cloverton (9 Apr 2012)
+!     just 230 s.conds to complete TD-DFT excitations energies!
+!
+ $CONTRL SCFTYP=RHF tddft=excite DFTTYP=camb3lyp RUNTYP=energy $END
+ $SYSTEM MWORDS=4  $END
+ $SCF    DIRSCF=.T. $end
+ $tddft  nstate=5 tpa=.true. iroot=1  $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=0 NPFUNC=0 DIFFSP=.F. $END
+ $DATA
+abn b3lyp/6-311+G(d,p) geom
+C1
+C     6.0    -0.00144600    -1.71439397     0.00000000
+C     6.0    -0.00301000    -0.99575698     1.20910096
+C     6.0    -0.00301000    -0.99575698    -1.20910096
+C     6.0    -0.00301000     0.38846001     1.20861197
+C     6.0    -0.00301000     0.38846001    -1.20861197
+C     6.0    -0.00243600     1.10310900     0.00000000
+N     7.0    -0.04986400    -3.09672809     0.00000000
+N     7.0     0.00234500     3.68678904     0.00000000
+C     6.0    -0.00029400     2.52987695     0.00000000
+H     1.0     0.22504100    -3.57242608     0.84505200
+H     1.0     0.22504100    -3.57242608    -0.84505200
+H     1.0    -0.00758900    -1.53301001     2.15154195
+H     1.0    -0.00248600     0.92822599     2.14777207
+H     1.0    -0.00758900    -1.53301001    -2.15154195
+H     1.0    -0.00248600     0.92822599    -2.14777207
+ $end
+
+! TRAVIS-CI LARGE
+! TRAVIS-CI SKIP
+

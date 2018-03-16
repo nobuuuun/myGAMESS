@@ -1,0 +1,165 @@
+{
+  "name": "ethene_ethyne_grad_tt.log",
+  "validation": [
+    {
+      "header": "GRADIENT",
+      "name": "MAXIMUM GRADIENT",
+      "value": "0.063284322",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "GRADIENT",
+      "name": "RMS GRADIENT",
+      "value": "0.031707200",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "2.498419",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "EFP2",
+      "name": "EFP2 INDUCED DIPOLE X(IND)",
+      "value": "-0.76673",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP2",
+      "name": "EFP2 INDUCED DIPOLE Y(IND)",
+      "value": "1.22275",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP2",
+      "name": "EFP2 INDUCED DIPOLE Z(IND)",
+      "value": "-2.02977",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-CHARGE",
+      "value": "-0.0218928458",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-DIPOLE",
+      "value": "0.0129162520",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-QUADRUPOLE",
+      "value": "-0.0154158342",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "DIPOLE-DIPOLE",
+      "value": "-0.0020611789",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "DIPOLE-QUADRUPOLE",
+      "value": "0.0029593430",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "QUADRUPOLE-QUADRUPOLE",
+      "value": "-0.0006991418",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "OVERLAP PEN. ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "ELECTROSTATIC ENERGY",
+      "value": "-0.0277157784",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "REPULSION ENERGY",
+      "value": "0.0934841241",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "POLARIZATION ENERGY",
+      "value": "-0.0095927568",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "E7 DISPERSION ENERGY",
+      "value": "0.0004237465",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "E6 DISPERSION ENERGY",
+      "value": "-0.0051647692",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE TRANSFER ENERGY",
+      "value": "-0.0046137064",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "FINAL EFP ENERGY",
+      "value": "0.0450992701",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+!   An example for RHF/6-31+G(d,p) water follows (29 AOs):
+!
+!   HIGH-ORDER SCREENING (IFTTYP=3) 
+!   AND EXP(-aR)(1+aR/2) CHARGE-CHARGE SCREENING (IFTTYP=4)
+!   THE LATTER DOES NOT DEPEND ON RMIN
+!
+!   the high-order exponential fit is 
+!     O=1.9383, H=2.1349, midpoints=4.2280
+!   EXP(-ALP*R)*(1+ALP*R/2) AS DAMPING FUNCTION:
+!     O=2.4726, H=3.1164, midpoints=8.9126
+!
+!   This run takes 2 seconds on 2.66 GHz Cloverton ( 6 Oct 2015)
+!   answers unchanged since March 2008
+!
+ $contrl units=bohr runtyp=makefp scftyp=rhf $end
+ $system mwords=2 $end
+ $basis  gbasis=n31 ngauss=6 npfunc=1 ndfunc=1 diffsp=.true. $end
+
+ $makefp frag=h2o screen=.true. $end
+ $damp   ifttyp(1)=3,4 $end
+ $dampgs
+H3=H2
+bo31=bo21
+ $end
+ $pdc  vdwscl=0.8 $end
+
+ $data
+Water - Jan's geom
+C1
+O1 8.0    .0845021753  -2.7438627586    .0000000000
+H2 1.0   -.5862594155  -3.5602398631   1.4351447172
+H3 1.0   -.5887431148  -3.5632627482  -1.4322560819
+ $END
+
+! TRAVIS-CI SMALL
+

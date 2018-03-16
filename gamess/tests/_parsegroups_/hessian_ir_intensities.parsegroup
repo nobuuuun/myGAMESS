@@ -1,0 +1,15 @@
+{
+  "parse_header" : "HESSIAN",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)IR INTENSITY:.*$",
+     "parse_name"   : "",
+     "parse_precision" : 5,
+     "parse_multiple_indexes" : 5,
+     "parse_multiple_label" : "IR INTENSITY",
+     "parse_instance" : 1,
+     "parse_tolerance" : 0.25,
+     "parse_required" : true
+   }
+  ]
+}

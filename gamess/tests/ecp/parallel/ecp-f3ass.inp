@@ -1,0 +1,42 @@
+!  J.Breidung, W.Thiel, A.Komornicki  Chem.Phys.Lett.  1988, 153, 76.
+!  W.Schneider, W.Thiel, A.Komornicki  J.Phys.Chem.  1990, 94, 2810.
+!
+!  FINAL E= -314.2474076304 after 11 iters
+!  FREQ=220.97(e), 311.73(e), 366.01(a1), 578.06(a1), 839.89(e), 846.87(a1)
+!  INTENS=0.17365,  0.57054,   1.38032,     1.26187,   2.67054,   4.05549
+!  note that 2*2.67078*42.255= 225.7 km/mole, compare lit. value=226
+!  lit. FREQ=221(e), 312(e), 366(a1), 578(a1), 840(e), 847(a1)
+!
+!  This run takes 6 seconds on a 2.66 GHz Cloverton ( 6 Apr 2015)
+!  results haven't changed since 2005
+!
+ $contrl scftyp=rhf runtyp=hessian coord=unique pp=read $end
+ $system memory=5000000 $end
+ $guess  guess=huckel $end
+ $data
+F3AsS...Komornicki's ECP test case
+Cnv  3
+
+As         33.0   0.0000000000   0.0000000000  -0.1081834002
+   HW
+   d 1 ; 1 0.35 1.0
+       
+S          16.0   0.0000000000   0.0000000000   1.8812962146
+   HW
+   D 1 ; 1 0.65 1.0
+       
+F           9.0   1.4419992354   0.0000000000  -0.9126874642
+   N31 6
+   D 1 ; 1 0.80 1.0
+       
+ $end      
+ $ecp
+As-ecp HW
+S-ecp  HW
+F-ecp  none
+F-ecp  none
+F-ecp  none
+ $end
+
+! TRAVIS-CI SMALL
+

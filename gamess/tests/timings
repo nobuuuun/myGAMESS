@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for logfile in `find . -type f -name *.log`
+do
+
+  timing=`grep --text "TOTAL WALL CLOCK TIME" $logfile | tail -n 1 | tr -s ' ' | cut -d ' ' -f 6 `
+
+  echo $logfile, $timing
+
+done

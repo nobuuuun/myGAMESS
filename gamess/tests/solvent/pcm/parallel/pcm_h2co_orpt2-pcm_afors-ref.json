@@ -1,0 +1,325 @@
+{
+  "name": "pcm_h2co_orpt2-pcm_afors-ref.log",
+  "validation": [
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-216.7008435785",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "71.7287112393",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "30.9648085331",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-114.0073238061",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "30.9648085331",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "71.7287112393",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-330.6263197946",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-227.9328000222",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL KINETIC ENERGY",
+      "value": "113.9254762162",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "2.0007184310",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-114.0123201246",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -5",
+      "value": "-114.0072508344",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -4",
+      "value": "-114.0073238061",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -3",
+      "value": "-114.0073238061",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-114.0123201246",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-114.0123201246",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.041846",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "PCM",
+      "name": "FREE ENERGY IN SOLVENT - PCM",
+      "value": "-114.1970837117",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "INTERNAL ENERGY IN SOLVENT - PCM",
+      "value": "-114.1910612672",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "DELTA INTERNAL ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "ELECTROSTATIC INTERACTION ENERGY - PCM",
+      "value": "-0.0060224445",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "PIEROTTI CAVITATION ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "DISPERSION FREE ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "REPULSION FREE ENERGY - PCM",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "TOTAL INTERACTION ENERGY - PCM",
+      "value": "-0.0060224445",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "PCM",
+      "name": "TOTAL FREE ENERGY IN SOLVENT - PCM",
+      "value": "-114.1970837117",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "2ND ORDER ENERGY CORRECTION",
+      "value": "-0.1847635871",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "TOTAL MRPT2",
+      "value": "-114.1970837117",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "V -> A  : E(2) COMPONENT",
+      "value": "0.000000000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "V -> E  : E(2) COMPONENT",
+      "value": "0.000000000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "A -> E  : E(2) COMPONENT",
+      "value": "-0.072811139",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "VV -> AA : E(2) COMPONENT",
+      "value": "0.000000000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "VV -> AE : E(2) COMPONENT",
+      "value": "0.000000000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "VA -> AE : E(2) COMPONENT",
+      "value": "0.000000000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "VV -> EE : E(2) COMPONENT",
+      "value": "0.000000000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "VA -> EE : E(2) COMPONENT",
+      "value": "0.000000000",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "AA -> EE : E(2) COMPONENT",
+      "value": "-0.109387333",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "INTERNAL CCAS : E(2) COMPONENT",
+      "value": "-0.002565116",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "ORMAS PT2",
+      "name": "TOTAL : E(2) COMPONENT",
+      "value": "-0.184763587",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-08
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+! Ga(N3)3, KOC and Ralf Haiges by way of Jerry Boatz, April 2007.
+!
+! The large number of diffuse functions in a small volume lead to
+! a need to be careful about some of the numerical tolerances.
+! There are three S eigenvalues below 1d-5, but we don't need to
+! drop any of the basis to get good results, with careful inputs.
+! The C3h group is a bit tricky, so orbital restriction helps.
+!
+! FINAL E= -344.0442673838, 21 its, E(MP2)= -345.8023960143, RMS= 0.000003132
+!
+! this test takes 357 seconds on 2.66 GHz Cloverton ( 1 Apr 2015)
+!
+ $contrl scftyp=rhf runtyp=gradient mplevl=2 ispher=1
+         pp=SBKJC maxit=50 nzvar=24 icut=11 $end
+
+x$system parall=.f. mwords=500 memddi=0  $end
+ $system mwords=3   memddi=40 $end
+
+ $basis  gbasis=SBKJC ndfunc=1 diffsp=.t. $end
+ $guess  guess=huckel $end
+ $scf    rstrct=.true. dirscf=.true. fdiff=.false. conv=2.5d-7 $end
+ $mp2    code=ddi nacore=4 cutoff=1d-11 $end
+
+ $zmat   auto=.t. dlc=.t. $end
+
+ $DATA
+Ga(N3)3, MP2/SBKJC+(D)
+Cnh 3
+
+Ga         31.0    .0000000000    .0000000000    .0000000000
+N           7.0   1.6431945714    .8302215532    .0000000000
+N           7.0   2.6849241987    .1138606323    .0000000000
+N           7.0   3.7515810757   -.4311098714    .0000000000
+ $END
+
+! TRAVIS-CI SMALL
+! TRAVIS-CI SKIP
+! ACCURACY BETWEEN INTEL AND GNU DOES NOT MATCH
+

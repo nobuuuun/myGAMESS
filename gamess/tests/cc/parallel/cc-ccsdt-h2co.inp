@@ -1,0 +1,46 @@
+!    frozen core CCSD(T) calculation on H2CO...cc-pVTZ basis
+!    There are 100 AOs, 88 MOs: 2 core, 6 correlated, 80 external
+!    The standard input executes the serial CCSD(T) program.
+!
+!    FINAL RHF E= -113.9108006987, 12 iters
+!    MBPT(2) ENERGY:     -114.3069217411
+!    CCSD    ENERGY:     -114.3169914353, 17 CCSD iters
+!    CCSD[T] ENERGY:     -114.3347603626
+!    CCSD(T) ENERGY:     -114.3336903108   <--- highest level
+!    The T1 diagnostic is 0.01564958
+!    The largest T1 amplitude is -0.033749 for 7->9 (pi->pi*)
+!    The largest T2 amplitude is -0.109702 for 7,7 -> 9,9
+!
+!    This run takes 48 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!    results are unchanged from August 2006
+!    serial code uses about 900 MBytes of disk space, .F72 is 790 MBytes.
+!
+!    a parallel run takes 280 secs on 1.2 GHz Power4+ (10 Aug 2006),
+!    running on two processors in a single node.
+!    disk files 70 (2MB), 71 (1 MB), 73 (18MB), 74 (4MB) are created.
+!    This run takes 72 secs using p=2 on SGI XE210 blade (3 Mar 2007).
+!
+ $contrl scftyp=rhf cctyp=ccsd(t) runtyp=energy ispher=1 $end
+
+!    this memory covers both serial and parallel execution:
+ $system mwords=8 memddi=8 parall=.false. $end
+
+!    nword can be set to test the minimal memory methods.
+!      serial runs should set this to 4,600,000 words to go minimal
+!    parallel runs should set this to 1,600,000 words to go node-based
+!    parallel runs should set this to 2,200,000 words to go process-based
+-------- $ccinp  nword=1600000 $end
+
+ $basis  gbasis=cct $end
+ $data
+COH2 cc-pVTZ, R(CO) = equilibrium value
+Cnv  2     
+
+Oxygen         8.       0.00000000    0.00000000     0.0000000 
+Carbon         6.       0.00000000    0.00000000    -1.208 
+Hydrogen       1.       0.00000000    0.94848024537 -1.79608266777 
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

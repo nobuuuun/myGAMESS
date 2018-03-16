@@ -1,0 +1,29 @@
+!   P2Mg3 prism...MVO type altered virtuals...test created 4/2015
+!   6-311G(3df) basis means 245 AOs, generating 215 MOs
+!   not using positive number of electrons means that instead
+!   we are removing one electron from every valence orbital.
+!        HOMO is #33, while first unoccupied is MO #34
+!   
+!   SCF E= -1280.3285237314 in 13 iters,
+!   but the point of this run is to check eigenvalues,
+!         31         32         33         34         35               
+!       -0.2513    -0.2513    -0.2394    -1.7273    -1.6538
+!         E''        E''        A2"        A1'        E'
+!
+!   This test takes 14 seconds on 2.66 GHz Cloverton (29 Apr 2015)
+!
+ $contrl scftyp=rhf runtyp=energy ispher=1 $end
+ $system mwords=3 $end
+ $basis  gbasis=n311 ngauss=6 ndfunc=3 nffunc=1 $end
+ $guess  guess=huckel $end
+ $scf    mvoq=-1 $end
+ $data
+Kaori Noto's P2Mg3 prism...RHF/6-311G(3df) geometry
+Dnh 3
+
+MG         12.0   1.5844539831   0.0000000000   0.0000000000
+P          15.0   0.0000000000   0.0000000000   1.9436784063
+ $end
+
+! TRAVIS-CI SMALL
+

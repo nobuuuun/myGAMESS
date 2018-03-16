@@ -1,0 +1,45 @@
+{
+  "name": "cc-ip-n3.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-163.3014204472",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 1",
+      "value": "0.0803551789",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 1",
+      "value": "-163.7508674466",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SPIN",
+      "name": "S-SQUARED",
+      "value": "-0.000",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

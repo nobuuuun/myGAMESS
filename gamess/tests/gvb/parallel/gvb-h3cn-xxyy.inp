@@ -1,0 +1,27 @@
+!  The xx-yy component of a 1-E state from e**2 configuration.
+!  Spherical harmonics are in use: 45 AOs, 43 MOs
+!  Note that DIIS may fail to converge this calculation
+!
+!  NSERCH= 0: FINAL E=-93.9349418104, 10 iters, RMS grad=0.0043151
+!  NSERCH= 7: FINAL E=-93.9351407919,  2 iters, RMS grad=0.0000026
+!
+!  This run takes 4 seconds on a 2.66 GHz Cloverton (10 Sep 2013)
+!
+ $contrl scftyp=gvb mult=1 runtyp=optimize ispher=1 nosym=1 $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+ $statpt opttol=0.00001 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $scf    nco=7 nseto=0 npair=1 cicoef(1)=0.7,-0.7 $end
+ $data
+H3CN...3-A-2 ROHF/6-31G** starting geometry
+Cnv  3
+
+CARBON      6.0    .0000000000    .0000000000    .0859766812
+NITROGEN    7.0    .0000000000    .0000000000   1.5214006190
+HYDROGEN    1.0   1.0204763376    .0000000000   -.2885202335
+ $end      
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

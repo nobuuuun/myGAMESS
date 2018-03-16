@@ -1,0 +1,49 @@
+{
+  "parse_header" : "IRC",
+  "parse_group" : [
+   {
+     "regex_string" : "^[0-9]+(\\s*)POINT(\\s*)[0-9]+(\\s*)ON THE REACTION PATH",
+     "parse_name"   : "TOTAL ENERGY",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 3,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "IRC POINT"
+   },
+   {
+     "regex_string" : "^(\\s*)AT PATH DISTANCE STOTAL.*$",
+     "parse_name"   : "PATH DISTANCE STOTAL : IRC",
+     "parse_precision" : 5,
+     "parse_line_offset" : 0
+   },
+   {
+     "regex_string" : "^ THE NUCLEAR REPULSION AT THE IRC POINT IS.*$",
+     "parse_name"   : "NUCLEAR REPULSION : IRC",
+     "parse_line_offset" : 0
+   },
+   {
+     "regex_string" : "^ CURRENT OPTIMIZATION POINT :.*$",
+     "parse_name"   : "ENERGY : IRC",
+     "parse_precision" : 7,
+     "parse_line_offset" : 1
+   },
+   {
+     "regex_string" : "^ CURRENT OPTIMIZATION POINT :.*$",
+     "parse_name"   : "MASS WEIGHTED TANGENT GRAD. NORM : IRC",
+     "parse_precision" : 7,
+     "parse_line_offset" : 2
+   },
+   {
+     "regex_string" : "^ CURRENT OPTIMIZATION POINT :.*$",
+     "parse_name"   : "NEXT GEOMETRY STEP PREDICTED ANGLE : IRC",
+     "parse_precision" : 3,
+     "parse_line_offset" : 3
+   },
+   {
+     "regex_string" : "^ CURRENT OPTIMIZATION POINT :.*$",
+     "parse_name"   : "NEXT CARTESIAN RMS DISPLACEMENT : IRC",
+     "parse_precision" : 7,
+     "parse_line_offset" : 4
+   }
+  ]
+}

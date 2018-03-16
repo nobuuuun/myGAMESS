@@ -1,0 +1,61 @@
+{
+  "name": "cc-multiref.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-152.6951541172",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   A ENERGY",
+      "value": "-153.2296074435",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   B ENERGY",
+      "value": "-153.2242515372",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   C ENERGY",
+      "value": "-153.2339992072",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   D ENERGY",
+      "value": "-153.2325133741",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SPIN",
+      "name": "S-SQUARED",
+      "value": "0.000",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "7.641395",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

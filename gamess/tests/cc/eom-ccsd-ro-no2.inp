@@ -1,0 +1,65 @@
+!  NO2...aug-cc-pVDZ has 75 AOs, 69 MOs (3 core), with 12/11 alpha/beta spins.
+!  augmented basis set gives us a prayer of a chance at picking up Rydbergs.
+!
+!  ROHF config= (5a1)2,(1a2)2,(4b2)2,  (6a1)1,  (b1)0, (a1)0, b2(0),...
+!  2-A-1 ground state: FINAL E= -204.0623922627, CCSD= -204.6176632176
+!
+!  Many of the excited states arise from filled --> SOMO excitations.
+!  Some trial and error shows what NSTATE gets all states < 0.35 Hartree:
+!            EXCITATION EXCITATION      TOTAL            orbital and
+! SYMMETRY   ENERGY (H) ENERGY (EV)     ENERGY (H)     spin character
+!    A1       .26799424    7.292      -204.34966898    12->14  a->a
+!    A1       .34740269    9.453      -204.27026053     9->12  b->b
+!    A2       .16007872    4.356      -204.45758449    10->12  b->b
+!    A2       .20918925    5.692      -204.40847397    11->13  b->b
+!    A2       .23308628    6.343      -204.38457694    11->13  a->a
+!    B1       .11156767    3.036      -204.50609555    12->13  a->a
+!    B1       .36045748    9.809      -204.25720574     7->12  b->b  <- !!!
+!    B1       .32099015    8.735      -204.29667307    12->17  a->a
+!    B2       .14436150    3.928      -204.47330171    11->12  b->b
+!    B2       .20552640    5.593      -204.41213682    10->13  a->a & b->b
+!    B2       .30964007    8.426      -204.30802315    10->13  b->b & a->a
+!  note that in the B1 symmetry, the CIS guess is in the wrong order,
+!  so we have to converge an extra state to get the true 2nd 2-B-1!
+!
+!  this run takes 632 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!  results have not changed since 2011
+!
+!  ---------------------------------------------------------------------------
+!  by the way, TDDFT with PBE0 predicts
+!      STATE      ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!                HARTREE          EV         X       Y       Z     STRENGTH
+!      0     -204.8974851167    0.000
+!      1     -204.7879204420    2.981     0.0554  0.0000  0.0000    0.000
+!      2     -204.7524269672    3.947     0.0000  0.3219  0.0000    0.010
+!      3     -204.7333777312    4.466     0.0000  0.0000  0.0000    0.000
+!      4     -204.7079665867    5.157     0.0000 -0.0876  0.0000    0.001
+!      5     -204.6957306247    5.490     0.0000  0.0000  0.0000    0.000
+!      6     -204.6609781300    6.436     0.0000  0.0000  0.0000    0.000
+!      7     -204.6309817770    7.252     0.0000  0.0000  0.0368    0.000
+!      8     -204.5888905520    8.397     0.0000  0.1613 -0.0001    0.005
+!      9     -204.5879029453    8.424     0.0000  0.0000  0.6274    0.081
+!     10     -204.5816146708    8.595     0.3489  0.0000  0.0000    0.026
+!     11     -204.5743396890    8.793     0.0000 -0.7963  0.0000    0.137
+!     12     -204.5532322867    9.368     0.0000  0.0000 -0.2429    0.014
+!     13     -204.5438683744    9.622     0.0000  0.2064  0.0000    0.010
+!     14     -204.5377662593    9.788     0.1622  0.0000  0.0000    0.006
+!     15     -204.5288211695   10.032     0.0000  0.6971  0.0000    0.119
+!
+ $contrl scftyp=rohf mult=2 cctyp=eom-ccsd runtyp=energy nzvar=3 ispher=1 $end
+---$contrl scftyp=uhf cctyp=none tddft=excite dfttyp=pbe0 $end
+---$tddft  nstate=15 $end
+ $system mwords=25 $end
+ $basis  gbasis=accd $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  2,2,1,3 $end
+ $eominp nstate(1)=2,3,3,3 iroot(1)=3,1 $end
+ $data
+NO2...2-A-1 ground state...geometry from ROHF/cc-pVDZ
+Cnv 2
+
+N 7.0   0.0 0.0000000000  0.0061345031
+O 8.0   0.0 1.0748439792  0.4323147121
+ $end
+
+! TRAVIS-CI MEDIUM
+

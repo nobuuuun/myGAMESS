@@ -1,0 +1,77 @@
+{
+  "name": "h2o-opt-numgrd.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-76.0084322242",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "MBPT(2) ENERGY",
+      "value": "-76.1939481726",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD    ENERGY",
+      "value": "-76.2031991516",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD[T] ENERGY",
+      "value": "-76.2050710503",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD(T) ENERGY",
+      "value": "-76.2049834607",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "T1 DIAGNOSTIC",
+      "value": "0.00581319",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T1 VECTOR",
+      "value": "0.01644218",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T2 VECTOR",
+      "value": "0.21671080",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "2.239378",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

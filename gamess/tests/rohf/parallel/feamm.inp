@@ -1,0 +1,87 @@
+!  Jan's Fe(NH3)4 +3 ion, 
+!  in which the 5 unpaired electrons half fill the d shell of the iron.
+!  The energy is slighly lower in D2 than in Td point group, perhaps
+!  just an artifact of the very small basis set.
+!
+!  FINAL E= -1479.0547311366, 16 its, FREQ= 46.40(a), 73.04(b1), ...3823.05(b3)
+!
+!  This run takes 16 seconds on 2.66 GHz (31 Mar 2015)
+!
+!  ------------------------------------------------------------------
+!  some data from around January 2011 (MO-driven responses):
+!  optimized:  -1479.054719 in Td, one imaginary mode,  w(i)=31i
+!  optimized:  -1479.054720 in T,  one imaginary mode,  w(i)=30i
+!  optimized:  -1479.054731 in D2, positive definite, w(min)=47
+!  D2 fr.quencies= FR.Q= 47.18(a), 72.85(b3), 73.15(b1), ... 3823.06(b3)
+!
+!  in 2014, the D2 geometry below has the same energy as just above,
+!  but small changes from using AO-driven response equation. 
+!
+!  the Td electronic configuration is (e)2(t2)3, but since this is
+!  high spin-coupled, I think the term symbol must be totally
+!  symmetric, and this is probably not a Jahn-Teller distortion.
+!  The very small basis set may be to blame for this not being Td?
+!
+ $contrl scftyp=rohf icharg=3 mult=6 runtyp=hessian molplt=.true. $END
+ $system mwords=3 $end
+ $guess  guess=huckel $end
+ $BASIS  GBASIS=mini $END
+
+!            MO-driven hessian code need not be direct mode.
+x$cphf   cphf=mo $end
+!            AO-driven code is the default, and must be forced direct by user.
+ $cphf   cphf=ao $end
+ $scf    dirscf=.true. $end
+
+ $DATA 
+Fe(NH3)4 +3 ion...d5 high spin electronic state
+Dn 2
+
+FE         26.0   0.0000000000   0.0000000000   0.0000000000
+N           7.0   1.1298679824   1.1301830225   1.1295573364
+H           1.0   0.6186868767   1.6471403419   1.8832200160
+H           1.0   1.8837057501   0.6191792218   1.6464342662
+H           1.0   1.6465732266   1.8838482502   0.6181220951
+ $end
+
+     Jan's original geometry, not yet optimized.
+C1
+FE 26.0   -.037572  -.050549   .058229   
+N 7.0    -1.253798  1.328219  -.877185   
+N 7.0     1.321630   .933549  1.257885   
+N 7.0      .971862 -1.153236 -1.363190   
+N 7.0    -1.190029 -1.310795  1.215381   
+H 1.0     -.716419  1.888474 -1.509521   
+H 1.0     1.973031   .280662  1.647685   
+H 1.0      .846479  1.400811  2.005158   
+H 1.0      .322665 -1.564201 -2.005158   
+H 1.0     1.497226 -1.883335  -.923473   
+H 1.0    -1.792717 -1.858256   .632803   
+H 1.0     -.603035 -1.927282  1.742434   
+H 1.0    -1.973031   .859531 -1.392393   
+H 1.0    -1.681015  1.927282  -.198191   
+H 1.0    -1.751432  -.777969  1.850452   
+H 1.0     1.601146  -.564495 -1.872828   
+H 1.0     1.826234  1.612122   .721784  
+
+--- D2 geometry:
+FE         26.0   0.0000000000   0.0000000000   0.0000000000
+N           7.0   1.1298679824   1.1301830225   1.1295573364
+H           1.0   0.6186868767   1.6471403419   1.8832200160
+H           1.0   1.8837057501   0.6191792218   1.6464342662
+H           1.0   1.6465732266   1.8838482502   0.6181220951
+
+--- T geometry:
+FE         26.0   0.0000000000   0.0000000000   0.0000000000
+N           7.0   1.1298692921   1.1298692921   1.1298692921
+H           1.0   1.7510367313   1.7911271500   0.6069711219
+
+--- Td geometry:
+FE         26.0   0.0000000000   0.0000000000   0.0000000000
+N           7.0   1.1298704775   1.1298704775   1.1298704775
+H           1.0   1.7712564783   1.7712564783   0.6066297703
+
+
+! TRAVIS-CI SMALL
+! USE GAMESS LEGACY INTEGRAL CODE DURING OMP RUNS
+ $INTGRL INTOMP=0 $END

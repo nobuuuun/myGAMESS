@@ -1,0 +1,27 @@
+!   SbH3...MCP geometry optimization with analytical gradients
+!
+!   NSERCH:   0  E=      -83.5923797348, 10 iters, R.M.S.=  0.0172012
+!   NSERCH:   1  E=      -83.6054675937,  8 iters, R.M.S.=  0.0138116
+!   NSERCH:   2  E=      -83.6161873875,  8 iters, R.M.S.=  0.0086362
+!   NSERCH:   3  E=      -83.6190429435,  8 iters, R.M.S.=  0.0029859
+!   NSERCH:   4  E=      -83.6192168919,  8 iters, R.M.S.=  0.0002443
+!   NSERCH:   5  E=      -83.6192180675,  6 iters, R.M.S.=  0.0000028
+!
+!   This run takes 2 seconds on 2.66 GHz Cloverton (13 May 2013)
+!       no significant change in results since 2008.
+!
+ $contrl scftyp=rhf runtyp=optimize units=bohr pp=mcp ispher=1 $end
+ $system mwords=5 $end
+ $basis  gbasis=mcp-dzp $end
+ $statpt opttol=1.0d-5 $end
+ $data
+SbH3
+Cnv 3
+
+Sb  51.0      .0000000000         .0000000000         .0000000000
+H    1.0     3.1613280069         .0000000000        1.2554893838
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

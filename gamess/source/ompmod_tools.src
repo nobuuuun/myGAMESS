@@ -1,0 +1,394 @@
+!#define OMP_HINT_ENABLED
+!------------------------------------------------------------
+!------------------------------------------------------------
+!------------------------------------------------------------
+
+!*MODULE OMPMOD_TOOLS
+!>    @author  Vladimir Mironov
+!
+!>    @brief   Helper subroutines for the OpenMP HF method
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+MODULE ompmod_tools
+
+    USE omp_lib
+    USE prec
+
+    IMPLICIT NONE
+
+    INTEGER(KIND=OMP_lock_kind), &
+    ALLOCATABLE :: &
+        mtx(:) !< Mutex array for columns of the Fock matrix
+!dir$ attributes align:64::mtx
+
+    PRIVATE
+
+    PUBLIC  ompmod_tools_update_fock_with_locks, &
+            ompmod_tools_fock_lock_init, &
+            ompmod_tools_fock_lock_destroy, &
+            ompmod_tools_col_reduce, &
+            ompmod_dirfck_rhf
+CONTAINS
+
+!>    @brief   Updates block-column of the Fock matrix with OpenMP locks
+!>    @remark  Currently not used anywhere in the code
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+!     PARAMETERS:
+!>    @param[in]     fsq(:,:)    Fock matrix in square form
+!>    @param[in]     fi(:,:)     Partial Fock matrix, block-column of the shell `ish`
+!>    @param[in]     ish         Shell index of the partial Fock matrix
+!>    @param[in]     ish_first   Index of the first basis function of the shell `ish`
+!>    @param[in]     width       Number of basis functions in shell `ish`
+!
+  SUBROUTINE ompmod_tools_update_fock_with_locks(fsq, fi, ish, ish_first, width)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        fsq(:,:)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        fi(:,:)
+
+    INTEGER, INTENT(IN) :: &
+        ish, ish_first, width
+
+    CALL OMP_set_lock(mtx(ish))
+
+    fsq(:,ish_first:ish_first+width-1) = fsq(:,ish_first:ish_first+width-1) + &
+                                         fi(:,1:width)
+    fi(:,1:width) = 0.0_fp
+
+    CALL OMP_unset_lock(mtx(ish))
+
+  END SUBROUTINE ompmod_tools_update_fock_with_locks
+
+!------------------------------------------------------------
+
+!>    @brief   Initializes locks for the Fock matrix
+!>    @remark  Currently not used anywhere in the code
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+!     PARAMETERS:
+!>    @param[in]     nsh      Number of shells in basis set
+!
+  SUBROUTINE ompmod_tools_fock_lock_init(nsh)
+
+    INTEGER, INTENT(IN) :: &
+        nsh
+
+    INTEGER :: &
+        i
+
+    allocate(mtx(nsh))
+
+    DO i = 1, nsh
+#ifdef OMP_HINT_ENABLED
+        CALL OMP_init_lock_with_hint(mtx(i),omp_lock_hint_speculative)
+#else
+        CALL OMP_init_lock(mtx(i))
+#endif
+    END DO
+
+  END SUBROUTINE ompmod_tools_fock_lock_init
+
+!------------------------------------------------------------
+
+!>    @brief   Destroys all locks for the Fock matrix
+!>    @remark  Currently not used anywhere in the code
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+!     PARAMETERS:
+!     This subroutine has no parameters
+!
+  SUBROUTINE ompmod_tools_fock_lock_destroy
+
+    INTEGER :: &
+        i
+
+    DO i = 1, size(mtx)
+        CALL OMP_destroy_lock(mtx(i))
+    END DO
+
+    deallocate(mtx)
+
+  END SUBROUTINE ompmod_tools_fock_lock_destroy
+
+!------------------------------------------------------------
+
+!>    @brief   Reduction of the partial Fock matrices into the full Fock matrix
+!>
+!>    @details Sums up the contribution from the column-block Fock matrices
+!>             related to different threads and add it to the full Fock matrix.
+!>             The column-block corresponds to all basis functions of a given shell.
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+!     PARAMETERS:
+!
+!>    @param[in]     nbf         Number of basis functions in shell (number of relevant
+!>                               columns in `Fi`)
+!>    @param[in]     col         Index of the first basis function,
+!>                               corresponding to the shell
+!>    @param[in,out] fi(:,:,:)   Thread-local contributions to the
+!>                               Fock matrix column-block from all threads.
+!>                               Dimensions: `fi(nbftot,mxbfsh,nthreads)`,
+!>                               where nbftot - total number of basis functions,
+!>                               mxbfsh - Max.No.BF./shell
+!>    @param[in,out] f(:,:)      Square Fock matrix for alpha electrons.
+!>                               Dimensions: `f(nbftot,nfbtot)`
+!
+  SUBROUTINE ompmod_tools_col_reduce(nbf, col, ithread, nthreads, fi, f)
+
+
+    REAL(KIND=fp), ALLOCATABLE, INTENT(INOUT) :: &
+        fi(:,:,:)
+
+    REAL(KIND=fp), ALLOCATABLE, INTENT(INOUT) :: &
+        f(:,:)
+
+    INTEGER, INTENT(IN) :: &
+        nbf, col, ithread, nthreads
+
+    INTEGER :: &
+        i, j, k, l1, ndim, length, id0, id1
+
+    INTEGER, PARAMETER :: &
+        chunksize = 16
+    INTEGER :: &
+        nchunks, nchunkspt
+
+    l1 = size(f,1)
+
+    ndim = 1
+    length = l1*nbf
+
+    !$omp barrier
+
+!DIR$ ASSUME_ALIGNED fi: 64
+!DIR$ ASSUME_ALIGNED f : 64
+!    !$omp master
+
+!   find out matrix slice for reduction for current thread
+    nchunks   = (l1-1)/chunksize+1   ! total number of chunks
+    nchunkspt = nchunks/nthreads     ! number of chunks per thread
+
+    id0 = nchunks/nthreads * chunksize * ithread     + 1   ! lower index
+    id1 = nchunks/nthreads * chunksize * (ithread+1)       ! upper index
+
+    if (ithread.eq.nthreads-1) id1 = l1   ! for the last thread upper index = matrix dimension
+
+    IF (id0<=l1) then  ! may be needed for small problem size and several threads
+    DO WHILE (ndim<nthreads)
+        DO i = 0, (nthreads-ndim)-1, ndim*2
+            do j = 1, nbf
+                do k = id0, id1
+                    fi(k,j,i) = fi(k,j,i) + fi(k,j,i+ndim)
+                end do
+            end do
+        END DO
+        ndim = 2*ndim
+    END DO
+    DO i = 1, nbf
+        do j = id0, id1
+            f(j, col+i-1) = f(j, col+i-1) + fi(j,i,0)
+        end do
+    END DO
+    end if
+
+    !$omp barrier
+
+    fi(:,1:nbf,ithread) = 0
+
+  END SUBROUTINE ompmod_tools_col_reduce
+
+!------------------------------------------------------------
+
+!>    @brief   Modified version of DIRFCK_RHF subroutine for
+!>             shared Fock matrix algorithm
+!>
+!>    @details Adds contribution of the ERI shell quartet
+!>             to the closed-shell Fock matrix. Based on the
+!>             DIRFCK_RHF subroutine (scflib.src).
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+!     PARAMETERS:
+!
+!>    @param[in]     ish         I shell index
+!>    @param[in]     jsh         J shell index
+!>    @param[in]     ksh         K shell index
+!>    @param[in]     lsh         L shell index
+!>    @param[in]     ghondo(:)   Array of ERIs over shell quartet \f$ (ish,jsh|ksh,lsh) \f$
+!>    @param[in]     hfscal      DFT scaling factor of the HF exact exchange
+!>    @param[in]     cscalt      DFT scaling factor of the long-range corrected functionals
+!>    @param[in]     cutoff      Cutoff for integral screening
+!>    @param[in,out] nint        Number of calculated ERIs
+!>    @param[in]     ia(:)       Index array, contains "triangular numbers"
+!>    @param[in]     daomp(:,:)  Square density matrix for alpha electrons
+!>    @param[in,out] fi(:,:)     ISH column block of the Fock matrix (local to thread)
+!>    @param[in,out] fj(:,:)     JSH column block of the Fock matrix (local to thread)
+!>    @param[in,out] faomp(:,:)  Square Fock matrix for alpha
+!>                               electrons (shared among threads)
+!
+SUBROUTINE ompmod_dirfck_rhf(ish,jsh,ksh,lsh,ghondo, &
+                             hfscal,cscalt,cutoff, &
+                             nint,ia,daomp, &
+                             fi, fj, faomp)
+
+    IMPLICIT NONE
+    INTEGER, PARAMETER :: &
+        mxsh=5000, mxgtot=20000
+
+    COMMON /NSHEL / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot), &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot), &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh), &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+
+    COMMON /eriout/ inw,jnw,knw,lnw,istride,jstride,kstride,lstride
+          INTEGER :: inw,jnw,knw,lnw,istride,jstride,kstride,lstride
+!$omp threadprivate(/eriout/)
+
+    INTEGER, INTENT(IN) :: &
+        ia(:), ish,jsh,ksh,lsh
+    INTEGER, INTENT(INOUT) :: &
+        nint
+
+    REAL(KIND=fp), INTENT(IN) :: &
+        hfscal, cscalt, cutoff
+
+    REAL(KIND=fp), ALLOCATABLE, INTENT(IN) :: &
+        ghondo(:), daomp(:,:)
+
+    REAL(KIND=fp), ALLOCATABLE, INTENT(INOUT) :: &
+        faomp(:,:)
+
+    REAL(KIND=fp), CONTIGUOUS, INTENT(INOUT) :: &
+        fi(:,:), fj(:,:)
+
+    LOGICAL :: &
+        iandj,kandl,same
+
+    INTEGER :: &
+        mini, minj, mink, minl, maxi, maxj, maxk, maxl, &
+        loci, locj, lock, locl, i,j,k,l, ii,jj,kk,ll, &
+        i_index, ij_index, ijk_index, ijkl_index, &
+        itmp, nkl, nij, maxj2, maxl2, &
+        ibf, jbf
+
+    REAL(KIND=fp) :: &
+        xval1, xval4, val
+
+
+    same  = ish.EQ.ksh.AND.jsh.EQ.lsh
+    iandj = ish.EQ.jsh
+    kandl = ksh.EQ.lsh
+
+    mini = kmin(ish)
+    minj = kmin(jsh)
+    mink = kmin(ksh)
+    minl = kmin(lsh)
+    maxi = kmax(ish)
+    maxj = kmax(jsh)
+    maxk = kmax(ksh)
+    maxl = kmax(lsh)
+    loci = kloc(ish) - mini
+    locj = kloc(jsh) - minj
+    lock = kloc(ksh) - mink
+    locl = kloc(lsh) - minl
+
+    xval1 = hfscal
+    xval4 = 4*cscalt
+
+    nij = 0
+    maxj2 = maxj
+    i_index = 1
+    DO i = mini,maxi
+        IF (iandj) maxj2 = i
+
+        ii = i+loci
+        ibf = i-mini+1
+
+        ij_index = i_index
+        i_index = i_index + istride
+
+        DO j = minj,maxj2
+            nij = nij+1
+            maxl2 = maxl
+
+            jj = j+locj
+
+            jbf = j-minj+1
+
+            ijk_index = ij_index
+            ij_index = ij_index + jstride
+
+            nkl = nij
+
+            DO k =  mink,maxk
+                IF (kandl) maxl2 = k
+
+                kk = k + lock
+
+                IF(same) THEN ! account for non-unique permutations
+                    itmp = min(maxl2-minl+1,nkl)
+                    IF (itmp.EQ.0) EXIT
+                    maxl2 = minl + itmp - 1
+                    nkl = nkl - itmp
+                ENDIF
+
+                ijkl_index = ijk_index
+                ijk_index = ijk_index + kstride
+
+                DO l=minl,maxl2
+
+                   val = ghondo( ijkl_index )
+                   ijkl_index = ijkl_index + lstride
+                   IF(ABS(val).LT.cutoff) CYCLE
+                   nint = nint + 1
+
+                   ll = l + locl
+
+                   IF(ii.EQ.jj) val = val/2
+                   IF(kk.EQ.ll) val = val/2
+                   IF(ii.EQ.kk.AND.jj.EQ.ll) val = val/2
+
+                   fi(jj,ibf) = fi(jj,ibf) + val * xval4 * daomp(ll,kk)
+                   fi(kk,ibf) = fi(kk,ibf) - val * xval1 * daomp(ll,jj)
+                   fi(ll,ibf) = fi(ll,ibf) - val * xval1 * daomp(kk,jj)
+
+                   fj(ll,jbf) = fj(ll,jbf) - val * xval1 * daomp(kk,ii)
+                   fj(kk,jbf) = fj(kk,jbf) - val * xval1 * daomp(ll,ii)
+
+!                   faomp(ll,kk) = faomp(ll,kk) + val * xval4 * daomp(jj,ii)
+                   ! reduce false sharing between threads
+                   faomp(kk,ll) = faomp(kk,ll) + val * xval4 * daomp(ii,jj)
+
+                ENDDO !end loop L
+            ENDDO !end loop K
+        ENDDO !end loop J
+    ENDDO !end loop I
+
+END SUBROUTINE ompmod_dirfck_rhf
+
+END MODULE ompmod_tools

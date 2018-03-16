@@ -1,0 +1,31 @@
+! MODULE PREC
+!>    @author  Vladimir Mironov
+!>
+!>    @brief   Contains constants for floating
+!>             point number precision
+!
+!     REVISION HISTORY:
+!>    @date _May, 2016_ Initial release
+!
+MODULE prec
+
+    IMPLICIT NONE
+
+    PUBLIC
+
+    INTEGER, PARAMETER :: &
+
+!       Single precision:
+        sp = selected_real_kind(6, 37),     &
+
+!       Double precision:
+!       dp = 8, &
+        dp = selected_real_kind(15, 307),   &
+
+!       Quad precision:
+        qp = selected_real_kind(33, 4931),  &
+
+!       Default floating point precision:
+        fp = dp
+
+END MODULE prec

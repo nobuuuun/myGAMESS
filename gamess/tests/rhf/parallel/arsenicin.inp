@@ -1,0 +1,69 @@
+!   (S)-Arsenicin A...vibrational analysis of the RHF/6-31G* structure
+!   Point group is C2, 6-31G(d) has 242 basis functions, 90 occupied MOs.
+!
+!   This molecule is isolated in trace amounts from a New Caledonian sponge.
+!   It is the first natural product found with more than one As atom, and its
+!   a beaut.  Note the similarity to inorganic As4O6.  From ANU in Canberra.
+!          D.Lu, A.D.Rae, G.Salem, M.L.Weir, A.C.Willis, S.B.Wild
+!                   Organometallics 29, 32-33(2010)
+!
+!   The natural product is (S)-arsenicin A.  Here is how to make it:
+!   Take adamantine skeleton, substitute 4 As's and 3 O's in the C10 cage.
+!   The symmetry axis passes through a C and O in this structure, which
+!   has two As that that are bonded to 2O,C, and two As bonded to 2C,O.
+!   The two possible stereoisomers depend on how these As atoms are
+!   arranged, with both being identical in energy.
+!
+!   FINAL E= -9277.3606409942, 12 iters, RMS grad= 0.000001776
+!
+!   This run took 85 seconds on a 2.66 GHz Cloverton (17 Mar 2015)
+!   results have not changed substantially since 2009.
+!
+ $contrl scftyp=rhf runtyp=gradient $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $data
+arsenicin A
+Cn 2
+
+AS    33.0    -.7643707796        1.5335110742       -1.1735401714
+AS    33.0    1.3789019769         .8558296535        1.1842833909
+O      8.0     .0000000000         .0000000000        1.9055468218
+O      8.0     .5603663649        1.8624191085        -.0171319061
+C      6.0     .0000000000         .0000000000       -2.1444159975
+C      6.0   -2.0271296901         .5706818466        -.0051752881
+H      1.0     .7783578042         .3886854628       -2.7949290274
+H      1.0   -2.5191850393        1.3109954203         .6178833561
+H      1.0   -2.7929118262         .1355658905        -.6426913023
+ $end
+
+Only after doing separate geometry optimizations, and then the
+principal axis transformaion, and keeping as unique all atoms 
+with +y coordinates in (S), and with -x in (R), it is clear how 
+to stereomutate (S) into (R).
+Change the sign of x and z but not y, then exchange x and y.
+
+The following is the C2 geometry of (S)-arsenicin:
+AS    33.0    -.7643707796        1.5335110742       -1.1735401714
+AS    33.0    1.3789019769         .8558296535        1.1842833909
+O      8.0     .0000000000         .0000000000        1.9055468218
+O      8.0     .5603663649        1.8624191085        -.0171319061
+C      6.0     .0000000000         .0000000000       -2.1444159975
+C      6.0   -2.0271296901         .5706818466        -.0051752881
+H      1.0     .7783578042         .3886854628       -2.7949290274
+H      1.0   -2.5191850393        1.3109954203         .6178833561
+H      1.0   -2.7929118262         .1355658905        -.6426913023
+
+The following is the C2 geometry of (R)-arsenicin:
+AS    33.0   -1.5336075964        -.7641975244        1.1735504391
+AS    33.0    -.8556645153        1.3790066822       -1.1842727814
+O      8.0     .0000000000         .0000000000       -1.9055540629
+O      8.0   -1.8623607011         .5605929975         .0171381726
+C      6.0     .0000000000         .0000000000        2.1444366946
+C      6.0    -.5710250036       -2.0270410281         .0050696119
+H      1.0    -.3886326442         .7783745689        2.7949570376
+H      1.0   -1.3114735223       -2.5187181301        -.6181274503
+H      1.0    -.1362264403       -2.7931173298         .6424484388
+
+! TRAVIS-CI SMALL
+

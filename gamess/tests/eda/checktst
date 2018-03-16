@@ -1,0 +1,65 @@
+#!/bin/csh
+#
+# Compare the results of GAMESS sample jobs to pre-stored correct values.
+# Prior to executing this script, change directory to where the log files are,
+# Execute this script by typing a full path name,
+#       chdir /to/where/logs/are
+#       ~/gamess/tests/eda/checktst
+# In case the tests are in the same directory as 'checktst', just do
+#       ./checktst
+#
+#   LOGPATH points to the location of the output files,
+# CHECKPATH points to the directory of scripts that check for correct results.
+#
+set CHECKPATH=$0:h
+#
+#         'chkabs' is a helper script needed to subtracting two values
+#         to see if they agree to a desired level of accuracy.
+setenv chkabs $CHECKPATH/../standard/scripts/chkabs
+#
+if(! -e $chkabs) then
+   echo Run this script by two commands: 
+   echo "    cd ~/gamess/tests"
+   echo "       (or wherever else the output files might be)"
+   echo "and then"
+   echo "    ~/gamess/tests/eda/checktst"
+   echo "If script and log files are in same directory, type just"
+   echo "    ./checktst"
+   exit
+endif
+#
+#  The outputs are assumed to be .log files present in the current
+#  directory from which this script is launched.
+#
+set LOGPATH=.
+set ext=log
+#
+set testlist=(eda-ac-wat eda-c2h6-zapt eda-cu-wat eda-n-n-ump2 \
+              eda-wat2-ccsdt \
+              eda-wat2-rblyp eda-wat2-roblyp eda-wat2-ublyp \
+              moro-wat2 moro-wat3 rvs-f-wat3)
+#
+set nfailed=0
+set npassed=0
+#
+foreach test ($testlist)
+   echo -n "${test}: "
+   $CHECKPATH/scripts/$test $test.$ext
+   if($status != 0 ) then
+      echo "  FAILED."
+      @ nfailed++
+   else
+      echo "  Passed."
+      @ npassed++
+   endif 
+end
+#
+if ($nfailed == 0) then
+   echo " "
+   echo "All $npassed EDA tests seem to be correct."
+else
+   echo " "
+   echo "Only  $npassed tests seem to be correct."
+   echo "Check $nfailed failing tests carefully."
+endif
+exit

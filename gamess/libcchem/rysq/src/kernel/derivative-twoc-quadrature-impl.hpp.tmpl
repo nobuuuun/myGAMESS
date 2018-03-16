@@ -1,0 +1,237 @@
+/**  ## -*- C++-Cheetah -*-
+#compiler-settings 
+directiveStartToken = %
+commentStartToken = ///
+#end compiler-settings
+ @file 
+ @warning Automatically Generated
+*/
+%include "global.tmpl"
+%from shell import Shell
+%from shell import Shell2
+%from shell import Shell1
+
+#ifndef LIBCCHEM_RYSQ_SRC_KERNEL_DERIVATIVE_TWOC_QUADRATURE_IMPL_HPP_
+#define LIBCCHEM_RYSQ_SRC_KERNEL_DERIVATIVE_TWOC_QUADRATURE_IMPL_HPP_
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <math.h>
+#include "meta.hpp"
+#include "kernel/forward.hpp"
+
+%set fps = [ ("double", "", 8) ]
+
+namespace rysq {
+namespace kernel {
+namespace twoc_derivative_quadrature {
+
+
+%for shell in Shell.range(last = $LMAX+1)
+%for (i,j,k) in Shell.unique_orbitals(shell.L)
+#define RI_RYSQ_NORMAL_$(i)$(j)$(k) $Shell.orbital_norm($i,$j,$k) /**< @brief ($i $j $k) normalization constant */ 
+%end for
+%end for
+
+%set index = ", ".join([str(shell.first) for shell in Shell.range(last = $LMAX+2)])
+%set normals = []
+
+%for shell in Shell.range(last = $LMAX+1)
+%for part in shell.partition()
+%silent normals += [", ".join(["RI_RYSQ_NORMAL_%i%i%i" %tuple(sorted(orb, reverse = True)) for orb  in part])]
+%end for
+%end for
+
+const double NORMALIZE[] = {
+%echo "\t" + ",\n\t".join(normals)
+};
+
+
+
+
+//unrolled bras
+#define Ix(a,i) (Ix[(a) + (i)*NT])
+#define Iy(a,i) (Iy[(a) + (i)*NT])
+#define Iz(a,i) (Iz[(a) + (i)*NT])
+
+/// need array for offsetting normalization constant
+%set $offsetArray = [0,1,4,10,20,35,56] 
+
+%for A in Shell.range(last=$LMAX+1, sp = $SP)
+%set ASHELL_SIZE = len(A)
+%set ASHELL = Shell1(A,3)
+///
+%for (fp,fp_suffix,fp_size) in fps
+///
+/** 
+    @brief <$(A)| shell quadrature
+    @param normalize
+    @param tol tolerance
+    @param K number of contractions
+    @param C contraction coefficients
+    @param dim2d 2-D integrals dimensions
+    @param Ix 2-D integral, Ix(N,Li,Lj,K,Lk,Ll)
+    @param Iy 2-D integral, Iy(N,Li,Lj,K,Lk,Ll)
+    @param Iz 2-D integral, Iz(N,Li,Lj,K,Lk,Ll)
+    @param scale scale factor
+    @param alpha exponent of bra gaussian
+    @param[out] I integral batch
+    @return number of screened integrals
+*/
+%set typeA = "rysq::%s" % (A.upper())
+%set bra = "meta::OneCenterState<%s>" % (typeA)
+
+template<>
+struct impl< $(bra) > {
+
+    template<typename T>
+    struct aligned {
+#if (defined(__GNUC__) && ((__GNUC__ < 4) || (__GNUG__ == 4 && __GNUC_MINOR__ < 3)))
+#warning "alignment not implemented for GNUC < 4.3"
+	typedef T type;
+#else
+	typedef T type __attribute__((aligned (16)));
+#endif
+    };
+
+    template<size_t N, typename T, size_t NT>
+    static size_t apply(bool normalize,
+			double tol, int K,
+			const double *__restrict C,
+			int dim2d,
+			const typename aligned<T>::type *__restrict Ix,
+			const typename aligned<T>::type *__restrict Iy, 
+			const typename aligned<T>::type *__restrict Iz, 
+			double scale,
+                        const double alpha,
+			double *__restrict I);// __attribute__((pure));
+};
+
+template<size_t N, typename T, size_t NT>
+size_t impl< $(bra) >::apply(bool normalize,
+			     double tol, int K,
+			     const double *__restrict C,
+			     int dim2d,
+			     const typename aligned<T>::type *__restrict Ix,
+			     const typename aligned<T>::type *__restrict Iy, 
+			     const typename aligned<T>::type *__restrict Iz, 
+			     double scale,
+			     const double alpha,
+			     double *__restrict I) {
+
+%set nspij = 1<<(int(A.sp))
+    const int Li1 = $(A.L + 1);
+    
+    int num = 0;
+    
+    /// first function in block 
+%set ifb = 0  
+    
+    /// function block
+%for fb in ASHELL.partition(block = 10)
+    
+#ifdef __GNUG__
+     asm("#begin vector loop");
+#endif
+
+    for(int k = 0; k < K*$(nspij); k += $(nspij)) {
+	double C_[$(nspij)];
+	for (int i = 0; i < $(nspij); ++ i) C_[i] = C[k + i];
+
+
+        // function registers
+%for i in range(ifb, len(fb)+ifb)
+	T q$(i) = 0.0$(fp_suffix);
+%end for
+    
+#if defined (__INTEL_COMPILER) 
+#pragma vector aligned
+#endif // alignment attribute
+
+	for (int a = 0; a < int(N); ++a) {
+%for ii, (fi) in enumerate(fb) 
+///
+%set i = ii + ifb
+%set (ix,iy,iz) = fi[0:3]
+///
+%if i < ASHELL_SIZE
+///
+%if $ix > 0
+	    q$(i) += 2*alpha*Ix(a,$(ix+1))*Iy(a,$(iy))*Iz(a,$(iz)) - $(ix)*Ix(a,$(ix-1))*Iy(a,$(iy))*Iz(a,$(iz)); 
+%else
+	    q$(i) += 2*alpha*Ix(a,$(ix+1))*Iy(a,$(iy))*Iz(a,$(iz)); 
+%end if
+///
+%else if i < ASHELL_SIZE*2
+///
+%if $iy > 0
+	    q$(i) += 2*alpha*Ix(a,$(ix))*Iy(a,$(iy+1))*Iz(a,$(iz)) - $(iy)*Ix(a,$(ix))*Iy(a,$(iy-1))*Iz(a,$(iz)); 
+%else
+	    q$(i) += 2*alpha*Ix(a,$(ix))*Iy(a,$(iy+1))*Iz(a,$(iz)); 
+%end if
+///
+%else if i < ASHELL_SIZE*3
+///
+%if $iz > 0
+	    q$(i) += 2*alpha*Ix(a,$(ix))*Iy(a,$(iy))*Iz(a,$(iz+1)) - $(iz)*Ix(a,$(ix))*Iy(a,$(iy))*Iz(a,$(iz-1)); 
+%else
+	    q$(i) += 2*alpha*Ix(a,$(ix))*Iy(a,$(iy))*Iz(a,$(iz+1)); 
+%end if
+///
+%end if
+///
+%end for
+	    /// end for functions in block
+	}//a
+	    
+	//contraction coefficients and normalize
+%for ii in range(0, len(fb)) 
+%set i = ii + ifb  
+%set k = int(A.sp and (i % len(A)) > 0)
+	I[$(i)] += q$(i)*C_[$(k)]*NORMALIZE[$( (i%len(A)) + offsetArray[A.L])];
+%end for 
+
+	Ix += 3*dim2d;
+	Iy += 3*dim2d;
+	Iz += 3*dim2d;
+	
+    }//k
+    Ix = Ix - 3*dim2d*K;
+    Iy = Iy - 3*dim2d*K;
+    Iz = Iz - 3*dim2d*K;
+    
+/// advance function index
+%set ifb += len(fb) 
+/// function block
+%end for 
+    
+    return num;
+}//apply
+
+
+%end for
+///end overloading precision
+
+///%end for
+///end for roots
+%end for
+///end for A
+///%end for
+///end for B
+
+
+#undef Ix
+#undef Iy
+#undef Iz
+
+
+} // namespace rysq
+} // namespace kernel
+} // namespace twoc_derivative_quadrature
+
+
+
+#endif // LIBCCHEM_RYSQ_SRC_KERNEL_DERIVATIVE_TWOC_QUADRATURE_IMPL_HPP_
+

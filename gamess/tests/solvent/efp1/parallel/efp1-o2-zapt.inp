@@ -1,0 +1,74 @@
+!  O2 by ZAPT with 8 DFT-level EFP1 waters..30 AOs and 28 MOs.
+!
+!  Starting structure is a cube of waters, with one face opened to
+!  insert the O2 into it.  The z component of the first O atom
+!  has been tweaked from -0.876... to -0.850... to induce some
+!  steps in a re-optimization.  Untweaked energy= -150.1394424225
+!
+!  Although the energy gain is small, the geometry steps are numerous:
+!      NSERCH:   0  E=     -150.1392501532  R.M.S.=  0.0030782
+!      NSERCH:   1  E=     -150.1384365977  R.M.S.=  0.0047121
+!      NSERCH:   2  E=     -150.1392390276  R.M.S.=  0.0009593
+!      NSERCH:   3  E=     -150.1382983885  R.M.S.=  0.0052997
+!      NSERCH:   4  E=     -150.1392993318  R.M.S.=  0.0016205
+!      NSERCH:   5  E=     -150.1392943844  R.M.S.=  0.0009810
+!                 ...snipped...
+!      NSERCH:  39  E=     -150.1394417154  R.M.S.=  0.0000416
+!      NSERCH:  40  E=     -150.1394342672  R.M.S.=  0.0001371
+!      NSERCH:  41  E=     -150.1394424198  R.M.S.=  0.0000114
+!      NSERCH:  42  E=     -150.1394421198  R.M.S.=  0.0000275
+!      NSERCH:  43  E=     -150.1394424691  R.M.S.=  0.0000027
+!
+!  this run takes 126 seconds on 2.66 GHz Cloverton (26 Oct 2015)
+!
+ $contrl scftyp=rohf mult=3 mplevl=2 runtyp=optimize ispher=1 $end 
+ $system mwords=5 memddi=5 $end
+ $statpt opttol=1d-5 nstep=200 $end
+ $mp2    ospt=zapt code=ddi $end
+ $scf    diis=.true. $end
+ $basis  gbasis=ccd $end
+ $data
+oxygen molecule plus 8 waters...Z of first atom is tweaked.
+C1
+O   8.0  -0.2777755181   0.7406604893  -0.8500063465
+O   8.0   0.7916968998   0.7434712551  -0.2546079723
+ $end
+
+ $efrag                                                                         
+coord=cart
+FRAGNAME=H2Odft
+O1                1.5609423427  -0.9774976017  -2.3750199987
+H2                1.7276255105  -1.5266078182  -3.1244018411
+H3                0.8451319787  -1.3723455098  -1.9032264990
+FRAGNAME=H2Odft
+O1                3.2526252557  -0.4595703571  -0.4058483217
+H2                2.7736897308  -0.5946610764  -1.2078768216
+H3                3.5263363463   0.4437276572  -0.4021890287
+FRAGNAME=H2Odft
+O1               -0.1318704024  -2.0262335306  -0.6718850050
+H2               -0.9888529805  -1.6792774648  -0.4819355290
+H3                0.3697593993  -1.9614853352   0.1250175406
+FRAGNAME=H2Odft
+O1                1.5636664359  -1.3940134602   1.3757820162
+H2                1.9721779004  -1.9806039172   1.9921491740
+H3                2.2560290156  -1.0312803268   0.8466911108
+FRAGNAME=H2Odft
+O1               -2.3781299936  -0.8395268152   0.4395612823
+H2               -3.0741804929  -1.3622729877   0.8044291976
+H3               -1.8275994237  -0.5793737910   1.1607512362
+FRAGNAME=H2Odft
+O1               -2.8134429846   1.6332855553  -0.5100690485
+H2               -2.7649049068   0.7110675836  -0.3150395080
+H3               -2.6768021340   1.7215039612  -1.4398137688
+FRAGNAME=H2Odft
+O1               -0.6051508947   0.0401748428   2.0834191614
+H2                0.2510502564  -0.3225152591   1.9213885072
+H3               -0.5421801281   0.9676960477   1.9202702995
+FRAGNAME=H2Odft
+O1               -0.9619080888   2.5361967306   1.2001909593
+H2               -1.2456032692   3.2763220299   1.7126458745
+H3               -1.6398839705   2.3702943072   0.5648142649
+ $end
+
+! TRAVIS-CI SMALL
+

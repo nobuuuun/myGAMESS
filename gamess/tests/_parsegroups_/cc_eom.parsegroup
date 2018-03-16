@@ -1,0 +1,13 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : EOM",
+  "parse_group" : [
+   {
+     "regex_string" : "^ THE TOTAL ENERGY OF ROOT(\\s*)[0-9]+ IS E\\(EOM-CCSD\\) =.*$",
+     "parse_name"   : "EOM-CCSD ENERGY",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : 5,
+     "parse_multiple_label" : "STATE"
+   }
+  ]
+}

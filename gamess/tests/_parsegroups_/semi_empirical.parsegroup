@@ -1,0 +1,17 @@
+{
+  "parse_header" : "parse_header",
+  "parse_group" : [
+   {
+     "regex_string" : "^ FINAL (U|R)-(PM3|AM1|MNDO) ENERGY IS.*$",
+     "parse_name"   : "SEMI-EMPIRICAL ENERGY",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : -1
+   },
+   {
+     "regex_string" : "^ HEAT OF FORMATION IS.*$",
+     "parse_name"   : "HEAT OF FORMATION",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_precision" : 5
+   }
+  ]
+}

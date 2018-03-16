@@ -1,0 +1,165 @@
+{
+  "name": "nacl-rmdf.log",
+  "validation": [
+    {
+      "header": "QUANPOL MD",
+      "name": "BOND STRETCHING ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "DIHEDRAL ROTATION ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "DIHEDRAL BENDING ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "CMAP ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "WAGGING ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "LJ REPULSION ENERGY - QUANPOL MD",
+      "value": "0.0308125358",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "LJ DISPERSION ENERGY - QUANPOL MD",
+      "value": "-0.1016739606",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "CHARGE ENERGY - QUANPOL MD",
+      "value": "-84.0667682728",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "INDUCED DIPOLE ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "SPHSOL ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "FIXSOL ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "QM CENTER ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "SPHERE ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "POTENTIAL ENERGY - QUANPOL MD",
+      "value": "-84.1376296976",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "KINETIC ENERGY - QUANPOL MD",
+      "value": "0.2962428278",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "TOTAL ENERGY - QUANPOL MD",
+      "value": "-83.8413868698",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE POTENTIAL ENERGY - QUANPOL MD",
+      "value": "-106.5096483549",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE TOTAL ENERGY - QUANPOL MD",
+      "value": "0.2960579506",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE TEMPERATURE - QUANPOL MD",
+      "value": "297.9639325432",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE PRESSURE - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

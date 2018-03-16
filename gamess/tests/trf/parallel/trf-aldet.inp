@@ -1,0 +1,24 @@
+!    Be2 at R=2.5: near its equilibrium distance...CCT has 70 AOs, 60 MOs.
+!    full CI using Joe's program...346,485 determinants
+!
+!    FINAL E= -29.1348106604
+!    CI EIGENSTATE   1 TOTAL ENERGY = -29.2397717842
+!
+!    This run takes 67 seconds on 2.66 GHz Cloverton (15 Apr 2015)
+!        p=4 needed 31
+!
+ $contrl scftyp=rhf cityp=aldet runtyp=energy ispher=1 $end
+ $system parall=.true. mwords=15 memddi=10 $end
+ $basis  gbasis=cct $end
+ $guess  guess=huckel $end
+ $cidet  group=D2h stsym=ag ncore=2 nact=58 nels=4 $end
+ $trans  dirtrf=.true. $end
+ $data
+beryllium dimer...the revised cc-pVTZ basis set
+Dnh 2
+
+Be   4.0   0.0 0.0 2.5/2
+ $end
+
+! TRAVIS-CI SMALL
+

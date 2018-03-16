@@ -1,0 +1,28 @@
+#!/bin/bash
+
+rhf0=-90152.1292044624
+num2e0=776908122
+
+rhf=`grep "FINAL RHF ENERGY " $1 | tail -n 1 | awk '{print $5}'`
+num2e=`grep "NONZERO TWO-ELECTRON" $1 | tail -n 1 | awk '{print $8}'`
+
+tolE0=0.0000005
+tol2e0=0.0
+
+error=0
+
+#rhf energy
+diffrhf=`$chkabs $rhf $rhf0 $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+#2 electron integrals
+diff2e=`$chkabs $num2e $num2e0 $tol2e0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+
+printf "RHF=%12.8f; 2-e integrals = %s\n" $diffrhf $diff2e
+exit $error

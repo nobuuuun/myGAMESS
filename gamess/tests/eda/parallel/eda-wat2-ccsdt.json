@@ -1,0 +1,181 @@
+{
+  "name": "eda-wat2-ccsdt.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-152.0623726244",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "MBPT(2) ENERGY",
+      "value": "-152.4686185487",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD    ENERGY",
+      "value": "-152.4869262018",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD[T] ENERGY",
+      "value": "-152.4935670417",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD(T) ENERGY",
+      "value": "-152.4933595294",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "T1 DIAGNOSTIC",
+      "value": "0.00662055",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T1 VECTOR",
+      "value": "0.02648221",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T2 VECTOR",
+      "value": "0.30546900",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "CMOEDA",
+      "name": "ES ENERGY OWN - CMOEDA",
+      "value": "-0.012769",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "EX ENERGY OWN - CMOEDA",
+      "value": "-0.009887",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "REP ENERGY OWN - CMOEDA",
+      "value": "0.018877",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "POL ENERGY OWN - CMOEDA",
+      "value": "-0.005443",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "DISP ENERGY OWN - CMOEDA",
+      "value": "-0.002509",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (HF/DFT) OWN - CMOEDA",
+      "value": "-0.009222",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (MP2) OWN - CMOEDA",
+      "value": "-0.011731",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "ES ENERGY ALL - CMOEDA",
+      "value": "-0.014623",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "EX ENERGY ALL - CMOEDA",
+      "value": "-0.015375",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "REP ENERGY ALL - CMOEDA",
+      "value": "0.027461",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "POL ENERGY ALL - CMOEDA",
+      "value": "-0.003401",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "DISP ENERGY ALL - CMOEDA",
+      "value": "-0.000407",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (HF/DFT) ALL - CMOEDA",
+      "value": "-0.005938",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (MP2) ALL - CMOEDA",
+      "value": "-0.006345",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

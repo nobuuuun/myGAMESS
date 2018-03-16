@@ -1,0 +1,35 @@
+!   RO-B3LYP calculation on triplet HCCOO anion.
+!
+!   Peifeng and Hui's Table 3.  The individual components of
+!   the gradient will match what is shown in the table.
+!
+!   FINAL RO-B3LYP E= -227.1442178702, 17 iters, RMS= 0.020157353
+!   This will optimize to -227.1472558360 in 7 steps, grad= 0.0000167
+!
+!   This run takes 23 seconds on a 2.66 GHz Cloverton ( 2 Oct 2015)
+!   results unchanged since 2008
+!
+ $contrl scftyp=rohf runtyp=gradient dfttyp=b3lyp
+         icharg=-1 nzvar=9 mult=3 $end
+ $system mwords=3 $end
+ $zmat   auto=.t. dlc=.t. $end
+ $basis  gbasis=N31 NGAUSS=6 NDFUNC=1 $end
+ $guess  guess=huckel $end
+ $statpt nstep=50 $end
+
+ $pcm solvnt=water $end
+ $pcmcav radii=suahf $end
+
+ $DATA
+HCCOO anion...Peifeng and Hui's table 3...optimized gas phase geometry
+C1
+C           6.0  -0.1847866797   0.0868907501  -1.3376180312
+C           6.0   0.0743092744   0.0120146684   0.1551815615
+O           8.0   1.2536484097  -0.0330443083   0.5062588462
+O           8.0  -0.9610800549   0.0064934308   0.8291516613
+H           1.0  -1.1354765406   0.1337316735  -1.8492154786
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

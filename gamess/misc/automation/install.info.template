@@ -1,0 +1,26 @@
+#!/bin/csh
+#   compilation configuration for GAMESS
+#   generated on docker
+#   generated at Mon Jan 16 23:04:54 UTC 2017
+setenv GMS_PATH            TEMPLATE_GMS_PATH
+setenv GMS_BUILD_DIR       TEMPLATE_GMS_BUILD_DIR
+#         machine type
+setenv GMS_TARGET          TEMPLATE_GMS_TARGET
+#         FORTRAN compiler setup
+setenv GMS_FORTRAN         TEMPLATE_GMS_FORTRAN
+setenv GMS_GFORTRAN_VERNO  TEMPLATE_GMS_GFORTRAN_VERNO
+#         mathematical library setup
+setenv GMS_MATHLIB         TEMPLATE_GMS_MATHLIB
+setenv GMS_MATHLIB_PATH    TEMPLATE_GMS_MATHLIB_PATH
+#         parallel message passing model setup
+setenv GMS_DDI_COMM        TEMPLATE_GMS_DDI_COMM
+setenv GMS_MPI_LIB         TEMPLATE_GMS_MPI_LIB
+setenv GMS_MPI_PATH        TEMPLATE_GMS_MPI_PATH
+#         LIBCCHEM CPU/GPU code interface
+setenv GMS_LIBCCHEM        TEMPLATE_GMS_LIBCCHEM
+#         Intel Xeon Phi build: true/false
+setenv GMS_PHI             TEMPLATE_GMS_PHI
+#         Shared memory type: sysv/posix
+setenv GMS_SHMTYPE         TEMPLATE_GMS_SHMTYPE
+#         SC17 SCF OpenMP support: true/false
+setenv GMS_OPENMP          TEMPLATE_GMS_OPENMP

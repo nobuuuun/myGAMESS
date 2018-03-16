@@ -1,0 +1,38 @@
+!  methoxy radical, 2-E ground state, arising from e**3 configuration.
+!  illustration of spin and/or space symmetry breaking in deg. el. state
+!
+!    FINAL  GVB E= -114.4230544274, 10 iters.                2-E
+!    F.NAL ROHF E= -114.4242155619, 14 iters.                2-"E"
+!    F.NAL  UHF E= -114.4288508477, 13 iters, <S**2>=0.759  "2"-"E"
+!
+!  There is apparently a bit more energy in spin symmetry breaking than
+!  in spatial symmetry breaking.  No number is computed to assess how
+!  much spatial symmetry is lost, unlike the spin expectation value
+!  telling how far you are from doublet (<S**2>=0.75).  We can see that
+!  the dipole vector of the ROHF is (-.090394, .067285, -2.113131), so
+!  it is not parallel to the CO bond.  GVB dipole is (0, 0, -2.109165).
+!
+!  This run takes 0 seconds on 2.66 GHz Cloverton (10 Sep 2013)
+!
+ $contrl scftyp=gvb runtyp=energy mult=2 $end
+--- $contrl scftyp=rohf runtyp=energy mult=2 nosym=1 $end
+--- $contrl scftyp=uhf runtyp=energy mult=2 nosym=1 $end
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 diffsp=.true. $end
+ $guess  guess=huckel $end
+ $scf    nco=7 nseto=1 no(1)=2 couple=.t.
+             f(1)= 1.0,  0.75
+         alpha(1)= 2.0,  1.50,  1.0
+          beta(1)=-1.0, -0.75, -0.5  $end
+ $data
+methoxy radical...optimized GVB/6-31+G(d,p) geometry
+Cnv 3
+
+O           8.0    .0000000000    .0000000000   1.4093834591
+C           6.0    .0000000000    .0000000000    .0203338590
+H           1.0   1.0227493958    .0000000000   -.3432391060
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

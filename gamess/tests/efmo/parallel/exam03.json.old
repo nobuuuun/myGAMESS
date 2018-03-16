@@ -1,0 +1,293 @@
+{
+  "name": "exam03.log",
+  "validation": [
+    {
+      "header": "SYSTEM PROPERTIES",
+      "name": "TOTAL NUMBER OF ATOMS",
+      "value": "9",
+      "type": "integer",
+      "precision": 0,
+      "tolerance": 0
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-367.1134426703",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "142.2075679606",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "-0.0000016499",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-224.9058763597",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "-0.0000016499",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "142.2075679606",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-590.8802013707",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-448.6726350601",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL KINETIC ENERGY",
+      "value": "223.7667587004",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "2.0050906474",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-74.9629282451",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "FMO",
+      "name": "TOTAL ENERGY OF MOLECULE - FMO",
+      "value": "-224.905876360",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "FMO",
+      "name": "DIPOLE MOMENT D(XYZ) - FMO",
+      "value": "1.0269346",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "ORBITAL LOCALIZATION",
+      "name": "ORBITAL LOCALIZATION",
+      "value": "273.105827",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "ORBITAL LOCALIZATION",
+      "name": "ORBITAL LOCALIZATION",
+      "value": "269.678900",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "1.427540",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "MEAN ALPHA POLARIZABILITY",
+      "value": "0.000271463",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP2",
+      "name": "EFP2 INDUCED DIPOLE X(IND)",
+      "value": "0.00039",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP2",
+      "name": "EFP2 INDUCED DIPOLE Y(IND)",
+      "value": "0.00213",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP2",
+      "name": "EFP2 INDUCED DIPOLE Z(IND)",
+      "value": "0.00884",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-CHARGE",
+      "value": "-0.0023868650",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-DIPOLE",
+      "value": "-0.0019068180",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE-QUADRUPOLE",
+      "value": "-0.0004609198",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "DIPOLE-DIPOLE",
+      "value": "-0.0004104079",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "DIPOLE-QUADRUPOLE",
+      "value": "-0.0001206006",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "QUADRUPOLE-QUADRUPOLE",
+      "value": "-0.0000620797",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "OVERLAP PEN. ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "ELECTROSTATIC ENERGY",
+      "value": "-0.0053476909",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "REPULSION ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "POLARIZATION ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "E7 DISPERSION ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "E6 DISPERSION ENERGY",
+      "value": "-0.0002182607",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "CHARGE TRANSFER ENERGY",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "FINAL EFP ENERGY",
+      "value": "-0.0056387052",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

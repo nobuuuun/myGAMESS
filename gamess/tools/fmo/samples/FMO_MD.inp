@@ -1,0 +1,37 @@
+!    water trimer...illustration of FMO method on clusters
+! A sample FMO/MD input (FMO2-RHF/STO-3G, NVE 1.5 fs MD).
+! Various options are used to reduce I/O.
+! The final section of the output is:
+!*** AT T=          1.50 FSEC, THIS RUN'S STEP NO.=       5
+!    POT  ENERGY      =     -1.411367178E+05 KCAL/MOL
+!    TRANS    KE      =           8.04967680 KCAL/MOL
+!    ROT      KE      =           0.00000000 KCAL/MOL
+!    TOT      KE      =           8.04967680 KCAL/MOL
+!    TOT  ENERGY      =     -1.411286681E+05 KCAL/MOL  0.00000000
+!    TEMPERATURE      =         300.05412365 K
+!
+ $contrl scftyp=rhf runtyp=md nprint=-5 $end
+ $system MWORDS=10 memddi=10 BALTYP=NXTVAL modio=383 mem10=100000 $end
+ $basis  gbasis=sto ngauss=3 $end
+ $MD dt=3.0d-16 MBT=.t. MBR=.t. nsteps=5 JEVERY=1 KEVERY=2 $END 
+ $scf dirscf=.t. npunch=0 $end
+ $gddi ngroup=1 $end
+ $fmo nfrag=3 nacut=3 modgrd=42 modesp=0 $end
+ $fmoprp nprint=3 $end
+ $fmoxyz
+O  O        .000000     .000000     .000000
+H  H        .000000     .000000     .957200
+H  H        .926627     .000000    -.239987
+O  O       2.542027     .893763   -1.001593
+H  H       1.991815    1.623962   -1.284979
+H  H       2.958433     .581215   -1.804806
+O  O        .162059    2.462918   -1.477183
+H  H       -.189749    1.755643    -.936605
+H  H       -.375542    2.449889   -2.269046
+ $end
+ $data
+Basis set input, with no atomic coordinates
+C1
+h-1 1
+o-1 8
+ $end

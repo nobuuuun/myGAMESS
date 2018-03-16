@@ -1,0 +1,43 @@
+!   methanol in water...SMD/C-PCM...FIXPVA tesselation
+!   R-DFT level geometry optimization using R-M06-2x.
+!
+!   the steps are monotonically decreasing:
+!       NSERCH:   0  E=     -115.6598015357  R.M.S.=  0.0094960
+!       NSERCH:   1  E=     -115.6607041127  R.M.S.=  0.0033794
+!       NSERCH:   2  E=     -115.6609342161  R.M.S.=  0.0005651
+!       NSERCH:   3  E=     -115.6609407831  R.M.S.=  0.0003314
+!       NSERCH:   4  E=     -115.6609425397  R.M.S.=  0.0000883
+!       NSERCH:   5  E=     -115.6609430486  R.M.S.=  0.0000849
+!       NSERCH:   6  E=     -115.6609468375  R.M.S.=  0.0001457
+!       NSERCH:   7  E=     -115.6609494555  R.M.S.=  0.0001883
+!       NSERCH:   8  E=     -115.6609516590  R.M.S.=  0.0001573
+!       NSERCH:   9  E=     -115.6609524211  R.M.S.=  0.0000660
+!       NSERCH:  10  E=     -115.6609525572  R.M.S.=  0.0000082
+!       NSERCH:  11  E=     -115.6609525601  R.M.S.=  0.0000010
+!
+!   This run takes 254 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!
+ $CONTRL SCFTYP=RHF dfttyp=m06-2x RUNTYP=OPTIMIZE nzvar=12 $end
+ $system mwords=1 $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+
+ $PCM    SOLVNT=WATER SMD=.T. $END
+
+ $statpt opttol=1d-5 $end
+ $ZMAT   IZMAT(1)=1,1,2,  1,2,3,  1,3,4,  1,3,5,  1,3,6,
+              2,1,2,3,  2,2,3,4,  2,2,3,5,  2,2,3,6,
+              3,1,2,3,4,  3,1,2,3,5,  3,1,2,3,6 $END
+ $DATA
+SMD/M06-2X/6-31G(d) optimization - methanol in water                    
+Cs
+
+H 1.0   -1.0616171503   0.8036449245   0.0000000000
+O 8.0   -0.6870131482  -0.0653470836   0.0000000000
+C 6.0    0.7093551399   0.0291827007   0.0000000000
+H 1.0    1.0836641283   0.5408321444   0.8835398105
+H 1.0    1.0975386849  -0.9797829903   0.0000000000
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

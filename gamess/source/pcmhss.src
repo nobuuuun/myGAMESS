@@ -1,0 +1,2025 @@
+C 18 Apr 16 - HN  - NEW MODULE FOR PCM HESSIANS
+C
+C*MODULE PCM     *DECK HSSCCM
+C>    @brief Second order derivatiev for PCM Hessian 
+C>
+C>    @details  Main driver
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>
+      SUBROUTINE HSSCCM
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      COMMON /FMCOM / X(1)
+      COMMON /PCMDIM/ MXSP,MXTS,MEMPCM1,MEMPCM2,NTS
+      COMMON /PCMPNT/ LXYZRE,LSSFE,LLIST,LALPCM,LRINPCM,LINAPCM,LINFPCM,
+     *                LINIPCM,LMEPCM,LAXYZCT,LXYZCT2,LNVERT,LQSN,LQSE,
+     *                LQFS,LQIND,LISPHE,LVAD,LQOR,LVECMUL,LAIPRJ,LFIPRJ,
+     *                LPEL,LPCMCDR,LDAI,LIDDAI,LQSND,LQSED,LEPSPCM
+C
+      CALL HSSCCMX(X(LAXYZCT),X(LAXYZCT+MXTS),X(LAXYZCT+MXTS*2),
+     *             X(LAXYZCT+MXTS*3),X(LQSN),X(LQSE),
+     *             X(LQSND),X(LQSED),X(LQFS),X(LQIND),
+     *             X(LQIND+MXTS),X(LXYZRE),X(LXYZRE+MXSP),
+     *             X(LXYZRE+MXSP*2),X(LXYZRE+MXSP*3),X(LISPHE),
+     *             X(LPCMCDR))
+      RETURN
+      END
+C*MODULE PCMCV2  *DECK DERCCMX
+C>    @brief Second order derivatiev for PCM Hessian 
+C>
+C>    @details  Main driver
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param   XCTS    x coordinate for teserae
+C>   @param   YCTS    y coordinate for teserae
+C>   @param   ZCTS    z coordinate for teserae
+C>   @param   AS      Areae surface charge
+C>   @param   QSN     nuclear charge
+C>   @param   QSE     electronic charge
+C>   @param   QSND    ASC for het
+C>   @param   QSED    ASC for het
+C>   @param   Q_FS    ASC
+C>   @param   Q_IND   ASC for induction
+C>   @param   Q2      ASC
+C>   @param   XE      Solute geometry informtion  
+C>   @param   YE      Solute geometry informtion
+C>   @param   ZE      Solute geometry informtion
+C>   @param   RE      Solute geometry informtion
+C>   @param   ISPHE   Indice for atom
+C>   @param   PCMCDR  Derivative of coordinate
+C>
+      SUBROUTINE HSSCCMX(XCTS,YCTS,ZCTS,AS,QSN,QSE,QSND,QSED,
+     *                   Q_FS,Q_IND,Q2,
+     *                   XE,YE,ZE,RE,ISPHE,PCMCDR)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (MXATM=2000)
+C
+      LOGICAL GOPARR, DSKWRK, MASWRK
+c    , TDDFT, MP2PCM
+      LOGICAL DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+C
+      DIMENSION XCTS(*),YCTS(*),ZCTS(*),AS(*),QSN(*),QSE(*),
+     *          QSND(*),QSED(*),Q_FS(*),
+     *          Q_IND(*),Q2(*),XE(*),YE(*),ZE(*),RE(*),ISPHE(*),
+     *          PCMCDR(3,*)
+C
+      COMMON /DFTB  / DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+      COMMON /FMCOM / XX(1)
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      COMMON /FMOPNT/ LICHFG,LMULFG,LIDMREC,LFRGNAM,LLAYFRG,LINDAT,
+     *                LNCBS,LFMOZAN,LFMOC,LFMOMAS,LIZBAS,LIAGLOB,LIBDGH,
+     *                LIABDFG,LJABDFG,LNCAO,LIDXCAO,LIAPRJO,LJAPRJO,
+     *                LCOREAO,LOCCCOR,LSHIFTB,LIODFMO,LFMODA,LFMODB,
+     *                LFMOESPA,LFMOESPB,LLOCFMO,LSCFFRG,LFMOSCF,LRIJ,
+     *                LPOPMUL,LPOPMAT,LIALOC,LINDBD,LIATFRG,LINDFRG,
+     *                LINDGFRG,LNATFRG,LNAT0FRG,LIANFRG,LZANFRG,LCFRG,
+     *                LLIBISH,LLIBNSH,LLIBNG,LINDATG,LFMOBUF(3),LFMODE,
+     *                LNUMFRG,LLOCTAT,LIAOGLOB,LLOADM,LFMOGE,LDGRID,
+     *                LIODCFMO,LJOB2GRP,LFMOPG,LEMOCDR,LUNTXYZ,LUNTROT,
+     *                LSTONEP,LMAPSU,LFRGMUL,LCLMO,LIALMO,LINDLMO,
+     *                LATCLMO,LLMOBDF,LFGFLMO,LNFGLMO,LLFGLMO,LPFGLMO,
+     *                LPOPDMAT,LIDMPNT,LIDDPNT,LIVMPNT,LIACTFG,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+c     COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+c    *                NPPTS(MXFRG),NPTTPT,IEFP,
+c    *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+c    *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+c    *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /MACHIN/ NWDVAR,MAXFM,MAXSM,LIMFM,LIMSM
+c     COMMON /MLTFMO/ Q_MUL,IMLTFMO,ISWPFD,ISWNEW1
+c     COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PCMDIM/ MXSP,MXTS,MEMPCM1,MEMPCM2,NTS
+c     COMMON /PCMITR/ RCUT(2),THRES,IPCMIT,IMUL,MXDIIS,NREG,MXITR1,
+c    *                MXITR2,MODPAP
+      COMMON /PCMOPT/ RABI,RASC,REFPOL,THRSLS,DENSLS,WB,WA,ETA2,GD,EVAC,
+     *                RHOW,PM,AREATL,AREAKP,BONDRY,OMEGA,RET,FRO,EPSINF,
+     *                EPS,DR,RSOLV,VMOL,TCE,STEN,DSTEN,CMF,TABS,IDIRCT,
+     *                IPCDER,IDP,ICOMP,IFIELD,ICAV,IDISP,IPRINT,IRETCAV,
+     *                ICENT,IFAST,NEVAL,IEFPOL,KEEPSM,IMGABI,IMGASC,NADD
+      COMMON /PCMPAR/ IPCM,NFT26,NFT27,IKREP,IEF,IP_F,NFMOPCM,IHET
+      COMMON /PCMPNT/ LXYZRE,LSSFE,LLIST,LALPCM,LRINPCM,LINAPCM,LINFPCM,
+     *                LINIPCM,LMEPCM,LAXYZCT,LXYZCT2,LNVERT,LQSN,LQSE,
+     *                LQFS,LQIND,LISPHE,LVAD,LQOR,LVECMUL,LAIPRJ,LFIPRJ,
+     *                LPEL,LPCMCDR,LDAI,LIDDAI,LQSND,LQSED,LEPSPCM
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+c     COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+c    *                MPLEVL,MPCTYP
+C
+      DATA CHECK/8HCHECK   /
+c     data excite,spnflp/8HEXCITE  ,8HSPNFLP  /
+C
+C     ----- C-PCM AND IEF-PCM GRADIENT CORRECTIONS -----
+C
+c     TDDFT=.FALSE.
+c     MP2PCM=.false.
+c     IF(TDDFTYP.NE.RNONE) TDDFT=.TRUE.
+c     MP2PCM=MPLEVL.EQ.2
+c     IF (ISWNEW1.EQ.1) MP2PCM = .FALSE.
+c     L1 = NUM
+      L2 = (NUM*NUM+NUM)/2
+C
+C
+      LFIXPV = 0
+      IF(IPCDER.EQ.3) LFIXPV = 3*20*MXTS
+      LFIXPV2 = 0
+      IF(IPCDER.EQ.3) LFIXPV2= 21*MXTS/NWDVAR + 1
+C
+C
+      CALL VALFM(LOADFM)
+      LD     = LOADFM + 1
+      LSCR   = LD     + L2
+      LFLD   = LSCR   + L2
+      LFLW   = LFLD   + 3*L2
+      LSOLQM = LFLW   + 3*225
+c     LSOLQM = LSOLEF + 6*NFRG
+C   For gradient/hess/FD
+      LEH    = LSOLQM + 3 * NAT
+      LFEQ   = LEH    + 9 * (NAT*NAT+NAT)/2
+      LFEQWRK= LFEQ   + 3 * NAT*NTS
+      LFD    = LFEQWRK+ 9 * (NAT*NAT+NAT)/2
+      LEHQ   = LFD    + 3 * NAT*L2
+      LFDQ   = LEHQ   + 9 * (NAT*NAT+NAT)/2
+      IMAP   = LFDQ   + 3 * NAT*L2
+      LQT    = IMAP   + NAT + 1
+C
+      NAT2   = (NAT*NAT+NAT)/2
+C      
+C
+      LVECTMP= LQT    + NTS
+      LAST   = LVECTMP+ NTS
+c     No efp currently
+c     LAST   = LFFRGQ + 6*NFRG*NTS
+C
+c     LTA    = LAST
+c     LV1    = LAST
+      LQSEXY = LAST
+      LQSEMN = LAST
+c     LPMP   = LAST
+      LQSEMP = LAST
+      IF(NFMOPCM.EQ.0) THEN
+C       ELSE ALREADY ALLOCATED IN PCMMEM2
+        LDAI   = LAST
+        LIDDAI = LDAI   + LFIXPV
+        LAST   = LIDDAI + LFIXPV2
+      ENDIF
+      IF(DFTBFL) THEN
+         LZAN  = LAST
+         LAST  = LZAN   + NAT
+      END IF
+      NEED   = LAST   - LOADFM -1
+      CALL GETFM(NEED)
+      IF(EXETYP.EQ.CHECK) GO TO 600
+C
+      ICOUNT=0
+      IAT   =1
+      NLEN  =0
+      NINI  =1
+      call ixstor(xx(IMAP),1,1)
+      DO ITS=1,NTS
+       IF(IAT.EQ.ISPHE(ITS)) ICOUNT=ICOUNT+1
+       IF(IAT.NE.ISPHE(ITS)) THEN
+          NLEN=MAX(NLEN,ICOUNT)
+          NINI  =NINI + ICOUNT
+c         write(6,'("Check=",3I4)') IAT,NINI,ICOUNT
+          call ixstor(xx(IMAP),IAT+1,NINI)
+          IAT=IAT+1
+          ICOUNT=1
+       END IF
+      END DO
+      call ixstor(xx(IMAP),NAT+1,NTS+1)
+c     write(6,'("Dimension=",3I4)') NTS,NAT,NLEN
+C
+C
+      IF(IPCDER.EQ.2.OR.IPCDER.EQ.3) THEN
+        LEXT1=LAST
+        LEXT2=LAST
+C       LFMOPG AND LIAGLOB ARE ONLY DEFINED FOR FMO!
+        IF(NFG.NE.0) THEN
+         LEXT1=LFMOPG
+         LEXT2=LIAGLOB
+        ENDIF
+C
+        IF(IPCDER.EQ.3.AND.NFMOPCM.EQ.0) THEN
+         CALL DAREAD(IDAF,IODA,XX(LDAI),LFIXPV,334,0)
+         CALL DAREAD(IDAF,IODA,XX(LIDDAI),LFIXPV2,335,1)
+        ENDIF
+c
+C
+        IF(DFTBFL) CALL DFTB_GET_ZAN(0,NAT,XX(LZAN),ZAN)
+        CALL CCMBEMH(XX(LD),XX(LSOLQM),XX(LFEQ),XX(LQT),XX(LVECTMP),
+     *              L2,NAT,XCTS,YCTS,ZCTS,AS,QSN,QSE,QSND,QSED,Q_FS,
+     *              Q_IND,Q2,XE,YE,ZE,RE,ISPHE,
+     *              PCMCDR,XX(LEXT1),XX(LEXT2),XX(LDAI),XX(LIDDAI),
+     *              XX(LQSEXY),XX(LQSEMN),XX(LFEQWRK),
+     *              XX(LQSEMP),XX(LEH),XX(LFD),XX(LEHQ),
+     *              XX(LFDQ),nat2,xx(IMAP),XX(LZAN))
+        IF(DFTBFL) CALL DFTB_GET_ZAN(1,NAT,XX(LZAN),ZAN)
+      END IF
+C
+  600 CONTINUE
+      CALL RETFM(NEED)
+C
+      IF(MASWRK) WRITE(IW,*)
+     *      '.... DONE WITH PCM CONTRIBUTION TO HESSIAN ....'
+C
+      CALL TIMIT(1)
+      RETURN
+      END
+C
+C*MODULE PCM     *DECK HSSCCM
+C>    @brief Second order derivatiev for PCM Hessian 
+C>
+C>    @details  Main solver for Hessian
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>
+C
+C>   @param   XCTS    x coordinate for teserae
+C>   @param   YCTS    y coordinate for teserae
+C>   @param   ZCTS    z coordinate for teserae
+C>   @param   AS      Areae surface charge
+C>   @param   QSN     nuclear charge
+C>   @param   QSE     electronic charge
+C>   @param   QSND    ASC for het
+C>   @param   QSED    ASC for het
+C>   @param   Q_FS    ASC
+C>   @param   Q_IND   ASC for induction
+C>   @param   Q2      ASC
+C>   @param   XE      Solute geometry informtion  
+C>   @param   YE      Solute geometry informtion
+C>   @param   ZE      Solute geometry informtion
+C>   @param   RE      Solute geometry informtion
+C>   @param   ISPHE   Indice for atom
+C>   @param   PCMCDR 
+
+C>   @param   DEN     Density matrix
+C>   @param   DSOLQM  Derivative of coordinate
+C>   @param   FEQ     Grdient elements for coordinate
+C>   @param   QT      total charge
+C>   @param   VECTMP  potential
+C>   @param   L2      number of triangular marix
+C>   @param   NATM    number of atom
+C>   @param   XCTS    x coordinate for teserae
+C>   @param   YCTS    y coordinate for teserae
+C>   @param   ZCTS    z coordinate for teserae
+C>   @param   AS      Surface charge
+C>   @param   QSN     nuclear charge
+C>   @param   QSE     electronic charge
+C>   @param   QSND    ASC for het
+C>   @param   QSED    ASC for het
+C>   @param   Q_FS    ASC
+C>   @param   Q_IND   ASC for induction
+C>   @param   Q2      ASC
+C>   @param   XE      Solute geometry informtion  
+C>   @param   YE      Solute geometry informtion
+C>   @param   ZE      Solute geometry informtion
+C>   @param   RE      Solute geometry informtion
+C>   @param   ISPHE   Indice for atom
+C>   @param   PCMCDR  Grdient
+C>   @param   FMOPG   FMO gradient
+C>   @param   IAGLOB  global indice
+C>   @param   DAI     PCM parameter
+C>   @param   IDDAI   PCM parameter indice
+C>   @param   QSEXY   FMO charge
+C>   @param   QSEMN   FMO charge
+C>   @param   FEQWRK  Work for derivative
+C>   @param   QSEMP   FMO  charge
+C>   @param   EH      Hessian
+C>   @param   FD      Fock derivative
+C>   @param   EHQ     work for hessian
+C>   @param   FDQ     work for derivative
+C>   @param   nat2    triangular matrix
+C>   @param   MAP     map indice
+C>   @param   ZANTMP  temp
+      SUBROUTINE CCMBEMH(DEN,DSOLQM,FEQ,QT,VECTMP,
+     *           L2,NATM,XCTS,YCTS,ZCTS,AS,QSN,QSE,QSND,QSED,Q_FS,
+     *           Q_IND,Q2,XE,YE,ZE,RE,ISPHE,
+     *           PCMCDR,FMOPG,IAGLOB,DAI,IDDAI,
+     *           QSEXY,QSEMN,FEQWRK,QSEMP,
+     *           EH,FD,EHQ,FDQ,nat2,MAP,ZANTMP)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (MXATM=2000) 
+      PARAMETER (MXSPE=10)
+c     MXFRG=1050, MXDFG=5, MXDPPT=MXFRG*MXDFG*12)
+      PARAMETER (ONE=1.0D+00)
+C
+      LOGICAL GOPARR, DSKWRK, MASWRK
+      LOGICAL ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+c     LOGICAL SAVGOP
+c          MOPAC
+      LOGICAL LFMOPCM1
+      LOGICAL DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+C
+      DIMENSION DEN(L2),DSOLQM(3,NATM),
+     *          FEQ(3,NATM,*),QT(NTS),VECTMP(*),
+     *          XCTS(*),YCTS(*),ZCTS(*),AS(*),QSN(*),QSE(*),
+     *          QSND(*),QSED(*),Q_FS(*),
+     *          Q_IND(*),Q2(*),XE(*),YE(*),ZE(*),RE(*),ISPHE(*),
+     *          PCMCDR(3,*),FMOPG(3,*),IAGLOB(*),
+     *          QSEXY(*),QSEMN(*),FEQWRK(9,*),QSEMP(*),
+     *          EH(9,*),FD(L2,3,natm),
+     *          EHQ(9,nat2),FDQ(L2,3,natm,*),MAP(*),ZANTMP(*)
+      DIMENSION DAI(3,20,MXTS),IDDAI(21,MXTS)
+C
+      COMMON /DFTB  / DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /FMCOM / XX(1)
+c     COMMON /CORE/ TORE(107)
+c     COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+c    *                NPPTS(MXFRG),NPTTPT,IEFP,
+c    *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+c    *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+c    *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+c     COMMON /FMOOPT/ ESPSCA(9),RESPAP(2),RESPPC(2),RESDIM,RESTRI(4),
+c    *                RCORSD,RESPCT,CONVFG,CNVDMP,COROFF,RFLMO(4),
+c    *                ORSHFT,ORSHFT2,CNVAFO,ASCREEN(4),IXESP,MXITFG,
+c    *                NGUESS,NBSSE,MODORB,MODPAR,IRSTSTP,IRSTLAY,NPRFMO,
+c    *                NFMOPAL,MODPRP,MAXL1C,IPIEDA,MODGRD,MODESP,IVMUL,
+c    *                MODLMO,NOPDEN,MOFOCK,MODFD,modfmm,ncentm,ndualb
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /MLTFMO/ Q_MUL,IMLTFMO,ISWPFD,ISWNEW1
+      COMMON /MLTPNT/ LDELEPOT,LDELQSE,LQSETMP,LFZVEC,LMAPCMFD,LQBL2FD
+c     COMMON /MOLKST/ NUMAT,NATMPC(MXATM),NFIRST(MXATM),NMIDLE(MXATM),
+c    *                NLAST(MXATM), NORBS, NELECS,NALPHA,NBETA,
+c    *                NCLOSE,NOPEN,NDUMY,FRACT
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PCMDIM/ MXSP,MXTS,MEMPCM1,MEMPCM2,NTS
+c     COMMON /PCMOPT/ RABI,RASC,REFPOL,THRSLS,DENSLS,WB,WA,ETA2,GD,EVAC,
+c    *                RHOW,PM,AREATL,AREAKP,BONDRY,OMEGA,RET,FRO,EPSINF,
+c    *                EPS,DR,RSOLV,VMOL,TCE,STEN,DSTEN,CMF,TABS,IDIRCT,
+c    *                IPCDER,IDP,ICOMP,IFIELD,ICAV,IDISP,IPRINT,IRETCAV,
+c    *                ICENT,IFAST,NEVAL,IEFPOL,KEEPSM,IMGABI,IMGASC,NADD
+      COMMON /PCMPAR/ IPCM,NFT26,NFT27,IKREP,IEF,IP_F,NFMOPCM,IHET
+c     COMMON /PCMPLY/ STOT,VOL,CCX,CCY,CCZ,RDIF,NESF,NESFP,NESFF,I_NESF,
+c    *                L_AST
+c     COMMON /PCMTMP/ IDSP(MXATM+MXFRG*5),DPCMFRG(6,MXFRG),
+c    *                EGPCM(3,MXATM)
+c     COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+c    *                MPLEVL,MPCTYP
+C
+      DATA ZERO/0.0D+00/
+c     DATA RHF,UHF,ROHF,GVB/8HRHF     ,8HUHF     ,8HROHF    ,8HGVB     /
+c     DATA NONE,RNONE/4HNONE,8HNONE    /
+c     data excite,spnflp/8HEXCITE  ,8HSPNFLP  /
+C---------------------------------------------------------------------
+C     COMPUTE THE C-PCM AND IEF-PCM Hessian 
+C---------------------------------------------------------------------
+C
+C     IN AN QM/EFP/PCM RUN, AN EFP(EFPA) AND ITS
+C     ASC(ASCA) EXPERIENCE THE FOLLOWING FORCES/TORQUES:
+C        EFPA <-- OTHER ASC
+C        ASCA <-- OTHER ASC, OTHER EFP, QM ATOMS
+C     FOR AN QM ATOM(ATOMB) AND ITS ASC(ASCB):
+C        ATOMB <-- OTHER ASC
+C        ASCB  <-- OTHER ASC, OTHER QM ATOMS, EFP
+C     ***********************************************
+C
+C
+C     ISWPFD=1: FOR FMO/PCM<1> COMPLETELY ANALYTIC GRADIENT
+C               NOTE THAT ONLY FMO/CPCM[1] COMPLETELY ANALYTIC GRADIENT
+C                         IS CURRENTLY AVAILABLE.
+      if(nat.eq.0) write(6,*) "PCMCDR=",PCMCDR(1,1)
+C
+      LFMOPCM1 = ISWPFD.EQ.1
+      LFMOPCM1 = .false.
+c     IF (ISWNEW1.EQ.1) MP2PCM = .FALSE.
+c     IF (LFMOPCM1) LTMPTMP = LQSETMP - 1
+C
+      IF(NFMOPCM.NE.0) CALL VCLR(FMOPG,1,3*NATFMO)
+C     -- READ GRAD. HESS. and Fock^a 
+c     CALL DAREAD(IDAF,IODA,DSOLQM,NEGH,67,0)
+c     write(6,*) "Check val0"
+c     CALL EGOUT(DSOLQM,NAT)
+      L1   = NUM
+      L3   = L1*L1
+      NEGH = 3*NAT + 9*(NAT*NAT+NAT)/2
+      CALL VCLR(DSOLQM,1,NEGH)
+      CALL VCLR(FD,1,3*NAT*L2)
+C
+C
+C     -- READ DENSITY MATRIX
+C
+      IF(NAT.GT.0) THEN
+         CALL DAREAD(IDAF,IODA,DEN,L2,16,0)
+c        IF(SCFTYP.EQ.ROHF .OR. SCFTYP.EQ.UHF
+c    *                     .OR. SCFTYP.EQ.GVB) THEN
+c           CALL VALFM(LOADFM)
+c           LDENB = LOADFM + 1
+c           LAST  = LDENB  + L2
+c           NEED  = LAST - LOADFM - 1
+c           CALL GETFM(NEED)
+c           CALL DENDD1(DEN,XX(LDENB),L2)
+c           CALL RETFM(NEED)
+c        END IF
+      END IF
+C
+c     -- COMBINE THE SURFACE CHARGES
+c     write(6,'("Check charge")')
+c     write(6,'("VAL="4F12.7)') 
+c    *     (QSE(III),QSN(III),Q_FS(III),Q_IND(III),iii=1,nts)
+C
+      DO ITS=1,NTS
+         QT(ITS)=QSE(ITS)+QSN(ITS)+Q_FS(ITS)+Q_IND(ITS)
+      ENDDO
+C
+C     -- ZERO OUT Q2 FOR IEF=10
+C
+      IF(IEF.EQ.10) THEN
+         DO ITS=1,NTS
+            Q2(ITS)=ZERO
+         END DO
+      END IF
+C
+c     DO ITS=1,nts
+c       write(6,*) "ISP=",ITS,ISPHE(its)
+c     END DO
+C
+      IF (DFTBFL) THEN
+        CALL VALFM(LOADFM)
+        LWRK = LOADFM + 1
+        LAST = LWRK   + NAT
+        NEED = LAST   - LOADFM -1
+        CALL GETFM(NEED)
+        CALL DAREAD(IDAF,IODA,XX(LWRK),NAT,556,0)
+        CALL DAXPY(NAT,-1.0D+00,XX(LWRK),1,ZAN,1)
+      END IF
+C
+      DO IAT=1,NAT
+       NINITS=MAP(IAT)
+       NENDTS=MAP(IAT+1)
+       NLEN  =NENDTS-NINITS
+c      write(6,'("CHK DIM=",3I4)') NINITS,NENDTS,NLEN
+C
+       CALL VCLR(FEQ,1,3*NAT)
+       CALL VCLR(EHQ,1,9*nat2)
+       CALL VCLR(FEQWRK,1,9*nat2)
+       CALL VCLR(FDQ,1,3*L2*NAT)
+C      TVD! One-Electron interaction
+       IF (.NOT.DFTBFL)
+     * CALL PCMTVDSPD(FEQ,EHQ,DEN,FDQ,XCTS(NINITS),YCTS(NINITS),
+     *      ZCTS(NINITS),NLEN,QT(NINITS))
+C      NUCLEAR REPULSION
+       CALL PCMNUCHSS(FEQ,EHQ,XCTS(NINITS),YCTS(NINITS),
+     *      ZCTS(NINITS),NLEN,QT(NINITS),IAT)
+C      Translation invraiance is used
+       CALL TRANINVHSS(IAT,NAT,FEQ,FDQ,EHQ,DSOLQM,FD,EH,FEQWRK,L2,nat2)
+C
+      END DO
+      IF (DFTBFL) THEN
+        CALL DAXPY(NAT,1.0D+00,XX(LWRK),1,ZAN,1)
+        CALL RETFM(NEED)
+      END IF
+C     check
+c     CALL VCLR(FD,1,3*NAT*L2)
+c     do i = 1,nat
+c      do j=1,3
+c       val = TRACEP(DEN,FD(1,j,i),num) 
+c       write(*,'("gradient ="2I4,F10.7)') i,j,val
+c      end do
+c     end do
+c     write(6,*) "check grd."
+c     CALL EGOUT(DSOLQM,NAT)
+C
+C
+      CALL VALFM(LOADFM)
+      NDASC = 0
+      LFPNT = LOADFM
+      NTSPAR=(NTS-1)/npglob+1
+      CALL INDQPROD(0,NTSPAR,LFPNT,NDASC,DUM,DUM,DUM,0)
+      LQTMP   = LFPNT   + NDASC  + 1
+      LWRK    = LQTMP   + nts    
+      LFCMTMP = LWRK    + L2
+      LAST    = LFCMTMP + nat * nat * 9
+      NEEDW   = LAST    - LOADFM    - 1
+      CALL GETFM(NEEDW)
+C
+C     V^a * C^{-1} * V^b ||  V(ij) * C^{-1} V^a (Derivative of W)
+c     CALL VCLR(FEQ,1,3*NAT*nts)
+      IF (LFMOPCM1) THEN
+        CALL FELECQ(DEN,XX(LQSETMP),FEQ,L2,XCTS,YCTS,ZCTS)
+      ELSE
+        call dacopy(nts,one,VECTMP,1)
+        CALL FELECQ(DEN,VECTMP,FEQ,L2,XCTS,YCTS,ZCTS)
+        CALL FNUCNT(FEQ,XCTS,YCTS,ZCTS,NTS,ISPHE)
+      END IF
+C
+c     SAVGOP=GOPARR
+c     GOPARR=.false.
+C
+      IF(GOPARR) THEN
+        CALL DSCAL(NAT*3,ONE/NPROC,DSOLQM,1)
+        CALL DSCAL(NAT*3*NTS,ONE/NPROC,FEQ,1)
+      END IF
+C     C^ab
+      IF (DFTBFL) CALL DFTB_GET_ZAN(1,NAT,ZANTMP,ZAN)
+      CALL QCHESS(NATM,0,FEQWRK,QT,VECTMP,XCTS,YCTS,ZCTS,
+     *            AS,QSN,QSE,QSND,QSED,Q_FS,Q_IND,Q2,XE,YE,ZE,
+     *            RE,ISPHE,DAI,IDDAI,XX(LQSETMP),QSEMP,QSEXY,QSEMN,
+     *            DSOLQM,LFMOPCM1,IAGLOB,XX(LFCMTMP),FEQ)
+      IF (DFTBFL) CALL DCOPY(NAT,ZREF,1,ZAN,1)
+c
+C     - SUM UP -
+      IF(GOPARR) THEN 
+        CALL DDI_GSUMF(2461,DSOLQM,3*NAT)
+        CALL DDI_GSUMF(2462,XX(LFCMTMP),9*NAT*NAT)
+        CALL DDI_GSUMF(2463,FEQ,NAT*3*NTS)
+      END IF
+C
+c     GOPARR=SAVGOP
+C     - C^{-1} * V^a
+c     call pcmaddhss(EH,XX(LFCMTMP),NAT)
+c     CALL VCLR(xx(lfcmtmp),1,9*nat*nat)
+C
+      if (dftbfl) go to 100
+      do iat=1,nat
+       do ixyz=1,3
+C        FEQ --> VECTMP
+         DO ITS=1,NTS
+          VECTMP(ITS)=FEQ(ixyz,iat,its)
+         END DO
+         ITER0 = 1
+c        write(6,*) "www get q^a"
+         CALL INDQPROD(ITER0,NTSPAR,LFPNT,NDASC,VECTMP,
+     *                 XX(LQTMP),XX(LQTMP),1)
+C        Fock derivative terms
+         CALL PCMPOT(XX(lwrk),XX(lwrk),NTS,XX(LQTMP),XCTS,L2,1,.false.)
+         CALL DAXPY(L2,1.0D+00,xx(lwrk),1,FD(1,ixyz,iat),1)
+c        Complete HSS cont
+         CALL PCMCMPHSS(XX(LFCMTMP),NTS,XX(LQTMP),FEQ,NAT,iat,ixyz)
+       end do
+      end do
+c     call prsq(xx(lfcmtmp),nat*3,nat*3,nat*3)
+  100 continue
+      call pcmaddhss(EH,XX(LFCMTMP),NAT)
+C
+C     check
+c     do i = 1,nat
+c      do j=1,3
+c       val=0.0D+00
+c       do its=1,nts
+c         val = val + FEQ(j,i,its)*QT(its)
+c       end do
+c       write(*,'("gradient ="2I4,F10.7)') i,j,val
+c      end do
+c     end do
+C
+      CALL RETFM(NEEDW)
+C
+C     Save gradient and Hessian
+      IF (.NOT.DFTBFL) CALL DAREAD(IDAF,IODA,FEQ,NEGH,67,0)
+      IF (.NOT.DFTBFL) CALL DAXPY(NEGH,1.0D+00,FEQ,1,DSOLQM,1)
+      CALL DAWRIT(IDAF,IODA,DSOLQM,NEGH,67,0)
+      IF (DFTBFL)  RETURN
+C     Save Fock derivative
+      CALL VALFM(LOADFM)
+      LVEC  = LOADFM
+      LWRK1 = LVEC   + L3
+      LWRK2 = LWRK1  + L3
+      LWRK3 = LWRK2  + L3
+      LAST  = LWRK3  + L3
+      NEED  = LAST   - LOADFM - 1
+      CALL GETFM(NEED)
+C
+      CALL DAREAD(IDAF,IODA,XX(LVEC),L3,15,0)
+C
+      NFT18 = 18
+c     NXYZ  = NAT * 3
+      CALL SEQREW(NFT18)
+      DO IAT=1,NAT
+       DO IXYZ=1,3
+        CALL TFTRI(XX(LWRK1),FD(1,IXYZ,IAT),XX(LVEC),XX(LWRK2),L1,L1,L1)
+        CALL SQREAD(NFT18,XX(LWRK3),L2)
+        CALL VADD(XX(LWRK3),1,XX(LWRK1),1,FD(1,IXYZ,IAT),1,L2)
+       END DO
+      END DO
+      CALL SEQREW(NFT18)
+      DO IAT=1,NAT
+       DO IXYZ=1,3
+         CALL SQWRIT(NFT18,FD(1,IXYZ,IAT),L2)
+       END DO
+      END DO
+C
+      CALL RETFM(NEED)
+c     write(6,*) "Check final grad."
+c     CALL EGOUT(DSOLQM,NAT)
+C
+      RETURN
+      END
+C
+C
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  Derivative of Wuv
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>
+C>   @param   EG      gradient
+C>   @param   EH      Hessian
+C>   @param   DAB     Density matrix
+C>   @param   FD      Fock derivative
+C>   @param   XCTS    x coordinate for teserae
+C>   @param   YCTS    y coordinate for teserae
+C>   @param   ZCTS    z coordinate for teserae
+C>   @param   NTS     number of tesserae
+C>   @param   QT      total charge
+      SUBROUTINE PCMTVDSPD(EG,EH,DAB,FD,XCTS,YCTS,ZCTS,NTS,QT)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DOUBLE PRECISION FOE(36,9)
+C
+      LOGICAL DBUG,OUT,GOPARR,DSKWRK,MASWRK,NXT
+      LOGICAL FIRST,SECND,CPHF,BOTH,MFIRST,MSECND,MCPHF,BFDD
+C
+      DIMENSION EG(3,*),EH(9,*),DAB(*),FD(*)
+      DIMENSION DIJ10( 78),DIJ11(169),DIJ20(132),
+     1          FFT10( 78),FFT11(169),FFT20(132),
+     2          GIJ10( 78),GIJ11(169),GIJ20(132),
+     3          XIN(   80),YIN(   80),ZIN(   80)
+      DIMENSION DF(3),DS(9,2),DOE(108)
+      DIMENSION XCTS(*),YCTS(*),ZCTS(*),QT(*)
+C
+      PARAMETER (MXGTOT=20000, MXSH=5000, MXGSH=30, MXATM=2000)
+C
+      COMMON /HSSPAR/ FIRST,SECND,CPHF,BOTH,MFIRST,MSECND,MCPHF
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /RESTAR/ TIMLIM,NREST,NREC,INTLOC,IST,JST,KST,LST
+      COMMON /ROOT  / XX,U(13),W(13),NROOTS
+      COMMON /SHLOED/ LIT,LJT,LKT,LLT,LOCI,LOCJ,LOCK,LOCL,
+     *                MINI,MINJ,MINK,MINL,MAXI,MAXJ,MAXK,MAXL,
+     *                NIJ,IJD,KLD,IJ,KL
+      COMMON /XYZDER/ XINT,YINT,ZINT,T,X0,Y0,Z0,XI,YI,ZI,XJ,YJ,ZJ,
+     *                NI,NJ,CX,CY,CZ
+      COMMON /INFOED/ GA(MXGSH),CSA(MXGSH),CPA(MXGSH),CDA(MXGSH),
+     *                GB(MXGSH),CSB(MXGSH),CPB(MXGSH),CDB(MXGSH),
+     *                GC(MXGSH),CSC(MXGSH),CPC(MXGSH),CDC(MXGSH),
+     *                GD(MXGSH),CSD(MXGSH),CPD(MXGSH),CDD(MXGSH),
+     *                XA,YA,ZA,XB,YB,ZB,RR,XC,YC,ZC,XD,YD,ZD,RRC,
+     *                NGA,NGB,NGC,NGD
+      COMMON /DIJOED/ NADIJ1( 78),NADIJ2(169),NADIJ3(132)
+      COMMON /IJXOED/ NPIJX1( 78),NPIJX2(169),NPIJX3(132)
+      COMMON /IJYOED/ NPIJY1( 78),NPIJY2(169),NPIJY3(132)
+      COMMON /IJZOED/ NPIJZ1( 78),NPIJZ2(169),NPIJZ3(132)
+C
+C     COSMO INFORMATION
+C
+c     PARAMETER (MAXDEN=25*MXATM, MXABC=6000)
+c     LOGICAL ISEPS,USEPS
+c     COMMON /ISEPS / ISEPS,USEPS
+c     LOGICAL COSBUG,COSWRT,DCOSMO,PRFCND,IOUTCH
+c     COMMON /COSDAT/ SE2,SECORR,QVCOSMO,ELAST,EMP2COS,EMP2LAST,
+c    *                COSVOL,COSSAR,EDIEL,EOC1,DEOC_RS,SUMQSC,
+c    *                SUMQSCOLD,ZSUM,ZSUM2,ZSUM3,FEPSI,RDS,DISEX2,
+c    *                EPSI,COSRAD,DISEX,OUTCHG,EDIEL_SAVE,
+c    *                MAXNPS,ICORR,ITRIP,NQS,MP2TRIP,MP2ITER,
+c    *                ICFREQ,NSPA,NSPH,NPSD,NPS,NPS2,NDEN,NPSPHER,
+c    *                COSBUG,COSWRT,DCOSMO,PRFCND,IOUTCH
+c     COMMON /COSVCE/ QSCNET(MXABC),CORZAN(3,MXABC),
+c    *                QDEN(MAXDEN),QSCNET_SAVE(MXABC),IATSP(MXABC+1)
+C
+      DATA PI212 /1.1283791670955D+00/
+      DATA ZERO,ONE,TWO /0.0D+00,1.0D+00,2.0D+00/
+      DATA RLN10 /2.30258D+00/
+      DATA NFDIJ1,NFDIJ2,NFDIJ3,NW / 78,169,132, 80/
+C
+      OUT =.FALSE.
+      BFDD=.FALSE.
+      DBUG=.FALSE. .AND. MASWRK
+      IF (OUT  .AND.  MASWRK) WRITE (IW,9008)
+      TOL = RLN10*ITOL
+      NRD=0
+      IF(MFIRST) NRD = 1
+      IF(MSECND) NRD = 2
+      L2=(NUM*(NUM+1))/2
+C
+c     write(6,*) "Check=",MFIRST,MSECND,MCPHF
+C
+      CALL STVJDD
+C
+C INITIALIZE PARALLEL
+C
+      NXT = IBTYP.EQ.1
+      IPCOUNT = ME - 1
+      NEXT = -1
+      MINE = -1
+C
+C     ----- I SHELL -----
+C
+      DO 1060 II = 1,NSHELL
+C
+C     ----- GO PARALLEL! -----
+C
+      IF (NXT .AND. GOPARR) THEN
+         MINE = MINE + 1
+         IF (MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+         IF (NEXT.NE.MINE) GO TO 1060
+      END IF
+C
+      IAT = KATOM(II)
+      IFDX  = 3*L2*(IAT-1)
+      IFDY  = IFDX + L2
+      IFDZ  = IFDY + L2
+      XI = C(1,IAT)
+      YI = C(2,IAT)
+      ZI = C(3,IAT)
+      XA = XI
+      YA = YI
+      ZA = ZI
+      I1 = KSTART(II)
+      I2 = I1+KNG(II)-1
+      LIT = KTYPE(II) + NRD
+      MINI = KMIN(II)
+      MAXI = KMAX(II)
+      LOCI = KLOC(II)-MINI
+      NGA = 0
+      DO 10 I = I1,I2
+      NGA = NGA + 1
+      GA( NGA) = EX(I)
+      CSA(NGA) = CS(I)
+      CPA(NGA) = CP(I)
+      CDA(NGA) = CD(I)
+   10 CONTINUE
+C
+C     ----- J SHELL -----
+C
+      DO 1040 JJ = 1,NSHELL
+C
+C           GO PARALLEL!
+C
+      IF ((.NOT.NXT) .AND. GOPARR) THEN
+         IPCOUNT = IPCOUNT + 1
+         IF (MOD(IPCOUNT,NPROC).NE.0) GO TO 1040
+      END IF
+C
+      JAT = KATOM(JJ)
+      XJ = C(1,JAT)
+      YJ = C(2,JAT)
+      ZJ = C(3,JAT)
+      XB = XJ
+      YB = YJ
+      ZB = ZJ
+      J1 = KSTART(JJ)
+      J2 = J1+KNG(JJ)-1
+      LJT = KTYPE(JJ)
+      IF(MSECND) LJT = LJT + 1
+      MINJ = KMIN(JJ)
+      MAXJ = KMAX(JJ)
+      LOCJ = KLOC(JJ)-MINJ
+      NGB = 0
+      DO 20 J = J1,J2
+      NGB = NGB + 1
+      GB( NGB) = EX(J)
+      CSB(NGB) = CS(J)
+      CPB(NGB) = CP(J)
+      CDB(NGB) = CD(J)
+   20 CONTINUE
+      IF(MFIRST) NROOTS = (LIT+LJT-2  )/2 + 1
+      IF(MSECND) NROOTS = (LIT+LJT-2  )/2 + 1
+      RR = (XI-XJ)**2+(YI-YJ)**2+(ZI-ZJ)**2
+C
+C     ----- PREPARE INDICES FOR PAIRS OF (I,J) FUNCTIONS
+C
+      CALL STVIDX(0)
+C
+      CALL VCLR(GIJ10,1,NFDIJ1)
+      CALL VCLR(GIJ11,1,NFDIJ2)
+      CALL VCLR(GIJ20,1,NFDIJ3)
+C
+C     ----- I PRIMITIVE
+C
+      IIG = 0
+      DO 840 IG = I1,I2
+      IIG = IIG + 1
+      AI = EX(IG)
+      ARRI = AI*RR
+      AXI = AI*XI
+      AYI = AI*YI
+      AZI = AI*ZI
+      DUM = AI+AI
+C
+C     ----- J PRIMITIVE
+C
+      JJG = 0
+      DO 820 JG = J1,J2
+      JJG = JJG + 1
+      AJ = EX(JG)
+      AA = AI+AJ
+      AA1 = ONE/AA
+      DUM = AJ*ARRI*AA1
+      IF (DUM .GT. TOL) GO TO 820
+C
+      AX = (AXI+AJ*XJ)*AA1
+      AY = (AYI+AJ*YJ)*AA1
+      AZ = (AZI+AJ*ZJ)*AA1
+C
+C     ----- DENSITY FACTOR
+C
+      CALL STVDIJ(0,IIG,JJG,NIJ10,NIJ11,NIJ20,
+     1            DIJ10,DIJ11,DIJ20,FFT10,FFT11,FFT20,
+     2            NFDIJ1,NFDIJ2,NFDIJ3)
+C
+C
+C     ----- NUCLEAR ATTRACTION -----
+C
+      DUM = PI212*AA1
+      IF(MFIRST) THEN
+         DO 50 I = 1,NIJ10
+   50    DIJ10(I) = DIJ10(I) * DUM
+      END IF
+      IF(MSECND) THEN
+         DO 51 I = 1,NIJ11
+   51    DIJ11(I) = DIJ11(I) * DUM
+         DO 52 I = 1,NIJ20
+   52    DIJ20(I) = DIJ20(I) * DUM
+      END IF
+C
+      AAX = AA*AX
+      AAY = AA*AY
+      AAZ = AA*AZ
+C
+c     ICMAX = NAT
+c     IF(ISEPS) ICMAX=NAT+NPS
+C
+      DO 800 IC = 1,NTS
+C     COSMO PARTIAL CHARGES
+      ZNUC = -QT(IC)
+      CX   = XCTS(IC)
+      CY   = YCTS(IC)
+      CZ   = ZCTS(IC)
+C
+      XX = AA*((AX-CX)**2+(AY-CY)**2+(AZ-CZ)**2)
+      IF(NROOTS .LE. 3) CALL RT123
+      IF(NROOTS .EQ. 4) CALL ROOT4
+      MM = 0
+      DO 740 K = 1,NROOTS
+      UU = AA*U(K)
+      WW = W(K)*ZNUC
+      TT = ONE/(AA+UU)
+      T =  SQRT(TT)
+      X0 = (AAX+UU*CX)*TT
+      Y0 = (AAY+UU*CY)*TT
+      Z0 = (AAZ+UU*CZ)*TT
+      IN = -4+MM
+      DO 720 I = 1,LIT
+      IN = IN+4
+      NI = I
+      DO 720 J = 1,LJT
+      JN = IN+J
+      NJ = J
+      CALL DERXYZ(0)
+      XIN(JN) = XINT
+      YIN(JN) = YINT
+      ZIN(JN) = ZINT*WW
+  720 CONTINUE
+  740 MM = MM+20
+C
+      IF(MFIRST) THEN
+         DO 60 I = 1,NIJ10
+            N  = NADIJ1(I)
+            NX = NPIJX1(I)
+            NY = NPIJY1(I)
+            NZ = NPIJZ1(I)
+            DUM = ZERO
+            MM  = 0
+            DO 61 K = 1,NROOTS
+               DUM = DUM+XIN(NX+MM)*YIN(NY+MM)*ZIN(NZ+MM)
+               MM = MM+20
+   61       CONTINUE
+            GIJ10(N) = GIJ10(N) + DUM*DIJ10(I)
+   60    CONTINUE
+      END IF
+C
+      IF(MSECND) THEN
+         IF(JJ .GT. II ) GO TO 790
+         DO 62 I =1,NIJ11
+            N  = NADIJ2(I)
+            NX = NPIJX2(I)
+            NY = NPIJY2(I)
+            NZ = NPIJZ2(I)
+            DUM = ZERO
+            MM  = 0
+            DO K = 1,NROOTS
+               DUM = DUM+XIN(NX+MM)*YIN(NY+MM)*ZIN(NZ+MM)
+               MM = MM+20
+            ENDDO
+            GIJ11(N) = GIJ11(N) + DUM*DIJ11(I)
+   62    CONTINUE
+  790    CONTINUE
+         DO 64 I =1,NIJ20
+            N  = NADIJ3(I)
+            NX = NPIJX3(I)
+            NY = NPIJY3(I)
+            NZ = NPIJZ3(I)
+            DUM = ZERO
+            MM  = 0
+            DO 65 K = 1,NROOTS
+               DUM = DUM+XIN(NX+MM)*YIN(NY+MM)*ZIN(NZ+MM)
+               MM = MM+20
+   65       CONTINUE
+            GIJ20(N) = GIJ20(N) + DUM*DIJ20(I)
+   64    CONTINUE
+      END IF
+  800 CONTINUE
+C
+C     ----- END OF PRIMITIVE LOOPS -----
+C
+  820 CONTINUE
+  840 CONTINUE
+C
+C     ----- FORM INTEGRALS OVER DERIVATIVES -----
+C
+      DO 70 I = 1,9
+   70 DS(I,2) = ZERO
+      CALL TVFSIJ(GIJ10,GIJ20,DF,DS(1,1),DOE,NFDIJ1,NFDIJ3,DAB,FOE)
+      IF(.NOT.MCPHF) GO TO 846
+      N = -3
+      DO 75 J = MINJ,MAXJ
+      NJ = LOCJ + J
+      DO 75 I = MINI,MAXI
+      NI = LOCI + I
+      IF(NI .GE. NJ) GO TO 842
+      NIJ = NJ * (NJ-1)/2 + NI
+      GO TO 844
+  842 NIJ = NI * (NI-1)/2 + NJ
+  844 N = N + 3
+      FAC = ONE
+      IF(NI .EQ. NJ) FAC = TWO
+      FD(IFDX+NIJ) = FD(IFDX+NIJ) + FAC * DOE(N+1)
+      FD(IFDY+NIJ) = FD(IFDY+NIJ) + FAC * DOE(N+2)
+      FD(IFDZ+NIJ) = FD(IFDZ+NIJ) + FAC * DOE(N+3)
+   75 CONTINUE
+  846 CONTINUE
+      IAT = KATOM(II)
+      JAT = KATOM(JJ)
+      FAC = ONE
+      IF(IAT .EQ. JAT .AND. II .NE. JJ) FAC = TWO
+      IF(BFDD) CALL ADDFOE(FDD,IAT,IAT,FOE,ONE,TWO)
+C
+      IF(.NOT.MSECND .OR. JJ .GT. II) GO TO 850
+         CALL TVFIFJ(GIJ11,DS(1,2),XIN,YIN,ZIN,NW,NFDIJ2,DAB,FOE)
+         IF(BFDD) CALL ADDFOE(FDD,IAT,JAT,FOE,FAC,TWO)
+  850 CONTINUE
+C
+C     ----- CALCULATE CONTRIBUTION TO GRADIENT AND FORCE CONSTANTS -----
+C
+      IAT = KATOM(II)
+      JAT = KATOM(JJ)
+      FAC = ONE
+      IF(IAT .EQ. JAT .AND. II .NE. JJ) FAC = TWO
+      IF(JAT .GT. IAT) GO TO 860
+      IIAT = IAT*(IAT-1)/2 + IAT
+      IJAT = IAT*(IAT-1)/2 + JAT
+      GO TO 865
+  860 IIAT = IAT*(IAT-1)/2 + IAT
+      IJAT = JAT*(JAT-1)/2 + IAT
+  865 CONTINUE
+      DO 80 I = 1,3
+   80 EG(I, IAT) = EG(I, IAT) + DF(I)
+      IF(MSECND) THEN
+         DO 81 I = 1,9
+            EH(I,IIAT) = EH(I,IIAT) + DS(I,1)
+            EH(I,IJAT) = EH(I,IJAT) + DS(I,2) * FAC
+   81    CONTINUE
+         IF(DBUG) WRITE(IW,9028) II,JJ
+         IF(DBUG) CALL HSSPRT(NAT,EG,EH)
+      END IF
+ 1040 CONTINUE
+ 1060 CONTINUE
+C
+C     ----- END OF SHELL LOOPS -----
+C
+      IF (GOPARR) THEN
+        IF(NXT) CALL DDI_DLBRESET
+        CALL DDI_GSUMF(1605,FD,3*NAT*L2)
+        CALL DDI_GSUMF(1624,EG,NAT*3)
+        CALL DDI_GSUMF(1625,EH,9*(NAT*(NAT+1))/2)
+      END IF
+C
+      IF(MSECND) THEN
+         DO 1080 IAT = 1,NAT
+            IIAT = ( IAT * (IAT-1) ) / 2 + IAT
+            FAC  = ( EH(2,IIAT) + EH(4,IIAT) ) / TWO
+            EH(2,IIAT) = FAC
+            EH(4,IIAT) = FAC
+            FAC  = ( EH(3,IIAT) + EH(7,IIAT) ) / TWO
+            EH(3,IIAT) = FAC
+            EH(7,IIAT) = FAC
+            FAC  = ( EH(6,IIAT) + EH(8,IIAT) ) / TWO
+            EH(6,IIAT) = FAC
+            EH(8,IIAT) = FAC
+ 1080    CONTINUE
+      END IF
+C
+C     ----- PRINTING SECTION -----
+C
+      IF(OUT) THEN
+         NEGH = 3*NAT+9*(NAT*(NAT+1))/2
+         IF(GOPARR) CALL DDI_GSUMF(1624,EG,NEGH)
+         IF(MASWRK) THEN
+            WRITE(IW,9058)
+            CALL HSSPRT(NAT,EG,EH)
+         END IF
+         IF(GOPARR) CALL DSCAL(NEGH,ONE/NPROC,EG,1)
+C
+         IF(MCPHF) THEN
+            IF(MASWRK) WRITE(IW,9068)
+            DO 1100 IC=1,NAT
+               IF (MASWRK) WRITE(IW,9048) IC
+               IFDX=3*L2*(IC-1)+1
+               IFDY=IFDX+L2
+               IFDZ=IFDY+L2
+               CALL PRTRI(FD(IFDX),NUM)
+               CALL PRTRI(FD(IFDY),NUM)
+               CALL PRTRI(FD(IFDZ),NUM)
+ 1100       CONTINUE
+         END IF
+      END IF
+C
+C     ----- SET UP RESTART -----
+C
+      NREST = 4
+      IST = 1
+      JST = 1
+      KST = 1
+      LST = 1
+      RETURN
+C
+ 9008 FORMAT(/5X,50(1H-)/
+     *        5X,'1E- INTEGRAL CONTRIBUTIONS TO GRADIENT AND HESSIAN'/
+     *        5X,50(1H-))
+ 9028 FORMAT(' SHELLS II,JJ = ',2I5)
+ 9048 FORMAT(1X,'CONTRIBUTION TO FOCK DERIVATIVE MATRIX, ATOM= ',I5)
+ 9058 FORMAT(/1X,'GRADIENT AND HESSIAN AFTER -TVDSPD-')
+ 9068 FORMAT(/1X,'FOCK DERIVATIVES AFTER -TVDSPD-')
+      END
+C
+C
+C
+C
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  Translation invariance for hessian
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param   NCNTR   center of atom
+C>   @param   NAT     number of atom
+C>   @param   FEQ     derivatives
+C>   @param   FDQ     Work for Fock derivative elements
+C>   @param   EHQ     Work for Hessian
+C>   @param   DSOLQM  gradient
+C>   @param   FD      Fock derivative 
+C>   @param   EH      Hessian
+C>   @param   FEQWRK  Derivative elements
+C>   @param   L2      triangular matrix for orbital
+C>   @param   nat2    triangular matrix for atom
+      SUBROUTINE TRANINVHSS(NCNTR,NAT,FEQ,FDQ,EHQ,DSOLQM,FD,EH,
+     *           FEQWRK,L2,nat2)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION FEQ(3,NAT),FDQ(L2,3,nat),EHQ(9,*)
+      DIMENSION DSOLQM(3,NAT),FD(L2,3,nat),EH(9,*)
+      DIMENSION FEQWRK(9,*)
+      PARAMETER (ONE=1.0D+00)
+C
+      DO JAT=1,NAT
+       DO IXYZ=1,3
+        IF(NCNTR.NE.JAT) THEN
+C       for gradient
+         DSOLQM(IXYZ,JAT)  =DSOLQM(IXYZ,JAT)   + FEQ(IXYZ,JAT)
+         DSOLQM(IXYZ,NCNTR)=DSOLQM(IXYZ,NCNTR) - FEQ(IXYZ,JAT)
+C       for hessian
+         CALL DAXPY(L2, ONE,FDQ(1,IXYZ,JAT),1,FD(1,IXYZ,JAT),1)
+         CALL DAXPY(L2,-ONE,FDQ(1,IXYZ,JAT),1,FD(1,IXYZ,NCNTR),1)
+        END IF
+       END DO
+      END DO
+
+C     W^{ab} 
+C       1. Normal terms
+      DO 700 JATM=1,NAT
+        IF(JATM.EQ.NCNTR) GOTO 700
+        DO 710 KATM=1,JATM
+         IF(KATM.EQ.NCNTR) GOTO 710
+         JKAT=(JATM*JATM-JATM)/2 +  KATM
+         CALL DAXPY(9,ONE,EHQ(1,JKAT),1,EH(1,JKAT),1)
+ 710    CONTINUE
+ 700  CONTINUE
+ 
+C     2. Translation invariance for term 5
+      DO 720 JATM=1,NAT
+        IF (JATM.EQ.NCNTR) GOTO 720
+        DO 730  KATM=1,NAT
+         IF (KATM.EQ.NCNTR) GOTO 730
+         IF(JATM.GT.NCNTR) THEN
+           NCNT2 = (JATM *JATM  - JATM )/ 2 + NCNTR
+           IF(JATM.GT.KATM) THEN
+             JKAT=(JATM*JATM-JATM)/2 +  KATM
+             FEQWRK(1,NCNT2)=FEQWRK(1,NCNT2)-EHQ(1,JKAT)
+             FEQWRK(2,NCNT2)=FEQWRK(2,NCNT2)-EHQ(2,JKAT)
+             FEQWRK(3,NCNT2)=FEQWRK(3,NCNT2)-EHQ(3,JKAT)
+             FEQWRK(4,NCNT2)=FEQWRK(4,NCNT2)-EHQ(4,JKAT)
+             FEQWRK(5,NCNT2)=FEQWRK(5,NCNT2)-EHQ(5,JKAT)
+             FEQWRK(6,NCNT2)=FEQWRK(6,NCNT2)-EHQ(6,JKAT)
+             FEQWRK(7,NCNT2)=FEQWRK(7,NCNT2)-EHQ(7,JKAT)
+             FEQWRK(8,NCNT2)=FEQWRK(8,NCNT2)-EHQ(8,JKAT)
+             FEQWRK(9,NCNT2)=FEQWRK(9,NCNT2)-EHQ(9,JKAT)
+           END IF
+           IF(KATM.GE.JATM) THEN
+             JKAT=(KATM*KATM-KATM)/2 + JATM
+             FEQWRK(1,NCNT2)=FEQWRK(1,NCNT2)-EHQ(1,JKAT)
+             FEQWRK(2,NCNT2)=FEQWRK(2,NCNT2)-EHQ(4,JKAT)
+             FEQWRK(3,NCNT2)=FEQWRK(3,NCNT2)-EHQ(7,JKAT)
+             FEQWRK(4,NCNT2)=FEQWRK(4,NCNT2)-EHQ(2,JKAT)
+             FEQWRK(5,NCNT2)=FEQWRK(5,NCNT2)-EHQ(5,JKAT)
+             FEQWRK(6,NCNT2)=FEQWRK(6,NCNT2)-EHQ(8,JKAT)
+             FEQWRK(7,NCNT2)=FEQWRK(7,NCNT2)-EHQ(3,JKAT)
+             FEQWRK(8,NCNT2)=FEQWRK(8,NCNT2)-EHQ(6,JKAT)
+             FEQWRK(9,NCNT2)=FEQWRK(9,NCNT2)-EHQ(9,JKAT)
+           END IF
+         END IF
+         IF(JATM.LT.NCNTR) THEN
+           NCNT2 = (NCNTR*NCNTR - NCNTR)/ 2 + JATM 
+           IF(KATM.GE.JATM) THEN
+             JKAT=(KATM*KATM-KATM)/2 + JATM
+             FEQWRK(1,NCNT2)=FEQWRK(1,NCNT2)-EHQ(1,JKAT)
+             FEQWRK(2,NCNT2)=FEQWRK(2,NCNT2)-EHQ(2,JKAT)
+             FEQWRK(3,NCNT2)=FEQWRK(3,NCNT2)-EHQ(3,JKAT)
+             FEQWRK(4,NCNT2)=FEQWRK(4,NCNT2)-EHQ(4,JKAT)
+             FEQWRK(5,NCNT2)=FEQWRK(5,NCNT2)-EHQ(5,JKAT)
+             FEQWRK(6,NCNT2)=FEQWRK(6,NCNT2)-EHQ(6,JKAT)
+             FEQWRK(7,NCNT2)=FEQWRK(7,NCNT2)-EHQ(7,JKAT)
+             FEQWRK(8,NCNT2)=FEQWRK(8,NCNT2)-EHQ(8,JKAT)
+             FEQWRK(9,NCNT2)=FEQWRK(9,NCNT2)-EHQ(9,JKAT)
+           END IF
+           IF(JATM.GT.KATM) THEN
+             JKAT=(JATM*JATM-JATM)/2 + KATM
+             FEQWRK(1,NCNT2)=FEQWRK(1,NCNT2)-EHQ(1,JKAT)
+             FEQWRK(2,NCNT2)=FEQWRK(2,NCNT2)-EHQ(4,JKAT)
+             FEQWRK(3,NCNT2)=FEQWRK(3,NCNT2)-EHQ(7,JKAT)
+             FEQWRK(4,NCNT2)=FEQWRK(4,NCNT2)-EHQ(2,JKAT)
+             FEQWRK(5,NCNT2)=FEQWRK(5,NCNT2)-EHQ(5,JKAT)
+             FEQWRK(6,NCNT2)=FEQWRK(6,NCNT2)-EHQ(8,JKAT)
+             FEQWRK(7,NCNT2)=FEQWRK(7,NCNT2)-EHQ(3,JKAT)
+             FEQWRK(8,NCNT2)=FEQWRK(8,NCNT2)-EHQ(6,JKAT)
+             FEQWRK(9,NCNT2)=FEQWRK(9,NCNT2)-EHQ(9,JKAT)
+           END IF
+         END IF
+ 730    CONTINUE
+ 720  CONTINUE
+      NCNT2 = (NCNTR *NCNTR -NCNTR)/2 + NCNTR
+      DO JATM=1,NAT
+        IF (JATM.NE.NCNTR) THEN
+          IF(JATM.GT.NCNTR) THEN
+           JNAT2 = (JATM*JATM-JATM)/2   +NCNTR
+           FEQWRK(1,NCNT2)=FEQWRK(1,NCNT2)-FEQWRK(1,JNAT2)
+           FEQWRK(2,NCNT2)=FEQWRK(2,NCNT2)-FEQWRK(4,JNAT2)
+           FEQWRK(3,NCNT2)=FEQWRK(3,NCNT2)-FEQWRK(7,JNAT2)
+           FEQWRK(4,NCNT2)=FEQWRK(4,NCNT2)-FEQWRK(2,JNAT2)
+           FEQWRK(5,NCNT2)=FEQWRK(5,NCNT2)-FEQWRK(5,JNAT2)
+           FEQWRK(6,NCNT2)=FEQWRK(6,NCNT2)-FEQWRK(8,JNAT2)
+           FEQWRK(7,NCNT2)=FEQWRK(7,NCNT2)-FEQWRK(3,JNAT2)
+           FEQWRK(8,NCNT2)=FEQWRK(8,NCNT2)-FEQWRK(6,JNAT2)
+           FEQWRK(9,NCNT2)=FEQWRK(9,NCNT2)-FEQWRK(9,JNAT2)
+          ELSE IF(NCNTR.GT.JATM) THEN
+           JNAT2 = (NCNTR*NCNTR-NCNTR)/2+JATM 
+           FEQWRK(1,NCNT2)=FEQWRK(1,NCNT2)-FEQWRK(1,JNAT2)
+           FEQWRK(2,NCNT2)=FEQWRK(2,NCNT2)-FEQWRK(2,JNAT2)
+           FEQWRK(3,NCNT2)=FEQWRK(3,NCNT2)-FEQWRK(3,JNAT2)
+           FEQWRK(4,NCNT2)=FEQWRK(4,NCNT2)-FEQWRK(4,JNAT2)
+           FEQWRK(5,NCNT2)=FEQWRK(5,NCNT2)-FEQWRK(5,JNAT2)
+           FEQWRK(6,NCNT2)=FEQWRK(6,NCNT2)-FEQWRK(6,JNAT2)
+           FEQWRK(7,NCNT2)=FEQWRK(7,NCNT2)-FEQWRK(7,JNAT2)
+           FEQWRK(8,NCNT2)=FEQWRK(8,NCNT2)-FEQWRK(8,JNAT2)
+           FEQWRK(9,NCNT2)=FEQWRK(9,NCNT2)-FEQWRK(9,JNAT2)
+          END IF
+        END IF 
+      END DO
+      CALL DAXPY(NAT2*9,ONE,FEQWRK,1,EH,1)
+C
+
+
+      RETURN
+      END
+C
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  Nuclear interaction derivative 
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param   FEQ    derivative element
+C>   @param   EHQ    Work for Hessian 
+C>   @param   XCTS    x coordinate for teserae
+C>   @param   YCTS    y coordinate for teserae
+C>   @param   ZCTS    z coordinate for teserae
+C>   @param   NTS     number of teserae
+C>   @param   QT      total charge
+C>   @param   IAT     number of atom
+      SUBROUTINE PCMNUCHSS(FEQ,EHQ,XCTS,YCTS,ZCTS,NTS,QT,IAT)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION FEQ(3,*),EHQ(9,*),QT(*)
+      DIMENSION XCTS(*),YCTS(*),ZCTS(*)
+C
+      PARAMETER (MXATM=2000)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+
+      DO ITS = 1, NTS
+       DO JAT = 1, NAT
+        IF(JAT.NE.IAT) THEN
+C         - OTHER NUCLEI -
+          XI = XCTS(ITS)
+          YI = YCTS(ITS)
+          ZI = ZCTS(ITS)
+          XN = C(1,JAT)
+          YN = C(2,JAT)
+          ZN = C(3,JAT)
+          R2 = (XN-XI)**2+(YN-YI)**2+(ZN-ZI)**2
+          R  = SQRT(R2)
+          R3 = R*R2
+          Z  = ZAN(JAT)
+C
+          DUM = Z*QT(ITS)/R3
+c         gradient
+          FEQ(1,JAT)=FEQ(1,JAT) - DUM*(XN-XI) 
+          FEQ(2,JAT)=FEQ(2,JAT) - DUM*(YN-YI)
+          FEQ(3,JAT)=FEQ(3,JAT) - DUM*(ZN-ZI)
+c         hessian
+          SCAL1=3.0D+00
+          SCAL2=1.0D+00
+C
+          DUMXX=SCAL1*DUM*(XN-XI)*(XN-XI)/R2 - SCAL2*DUM 
+          DUMXY=SCAL1*DUM*(XN-XI)*(YN-YI)/R2 
+          DUMXZ=SCAL1*DUM*(XN-XI)*(ZN-ZI)/R2
+          DUMYX=SCAL1*DUM*(YN-YI)*(XN-XI)/R2 
+          DUMYY=SCAL1*DUM*(YN-YI)*(YN-YI)/R2 - SCAL2*DUM 
+          DUMYZ=SCAL1*DUM*(YN-YI)*(ZN-ZI)/R2
+          DUMZX=SCAL1*DUM*(ZN-ZI)*(XN-XI)/R2 
+          DUMZY=SCAL1*DUM*(ZN-ZI)*(YN-YI)/R2
+          DUMZZ=SCAL1*DUM*(ZN-ZI)*(ZN-ZI)/R2 - SCAL2*DUM 
+C
+          JAT2 = (JAT *JAT - JAT)/2 + JAT
+          EHQ(1,JAT2) = EHQ(1,JAT2) + DUMXX
+          EHQ(2,JAT2) = EHQ(2,JAT2) + DUMXY
+          EHQ(3,JAT2) = EHQ(3,JAT2) + DUMXZ
+          EHQ(4,JAT2) = EHQ(4,JAT2) + DUMYX
+          EHQ(5,JAT2) = EHQ(5,JAT2) + DUMYY
+          EHQ(6,JAT2) = EHQ(6,JAT2) + DUMYZ
+          EHQ(7,JAT2) = EHQ(7,JAT2) + DUMZX
+          EHQ(8,JAT2) = EHQ(8,JAT2) + DUMZY
+          EHQ(9,JAT2) = EHQ(9,JAT2) + DUMZZ
+          
+        END IF
+       END DO
+      END DO
+
+
+      RETURN
+      END
+
+
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  Nuclear interaction derivative for each tessere
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param   FEQ   derivative element
+C>   @param   XCTS  x coordinate for teserae
+C>   @param   YCTS  y coordinate for teserae
+C>   @param   ZCTS  z coordinate for teserae
+C>   @param   NTS   number of tesserae
+C>   @param   ISPHE indice for atom
+C>
+      SUBROUTINE FNUCNT(FEQ,XCTS,YCTS,ZCTS,NTS,ISPHE)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION FEQ(3,nat,*)
+      DIMENSION XCTS(*),YCTS(*),ZCTS(*)
+      DIMENSION ISPHE(*)
+C
+      PARAMETER (MXATM=2000)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+
+C
+C
+      DO ITS = 1, NTS
+       IAT = ISPHE(ITS)
+       DO JAT = 1, NAT
+        IF(JAT.NE.IAT) THEN
+C         - OTHER NUCLEI -
+          XI = XCTS(ITS)
+          YI = YCTS(ITS)
+          ZI = ZCTS(ITS)
+          XN = C(1,JAT)
+          YN = C(2,JAT)
+          ZN = C(3,JAT)
+          R2 = (XN-XI)**2+(YN-YI)**2+(ZN-ZI)**2
+          R  = SQRT(R2)
+          R3 = R*R2
+          Z  = ZAN(JAT)
+C
+          DUM = Z/R3
+c         gradient
+          FEQ(1,JAT,ITS)=FEQ(1,JAT,ITS) - DUM*(XN-XI) 
+          FEQ(2,JAT,ITS)=FEQ(2,JAT,ITS) - DUM*(YN-YI)
+          FEQ(3,JAT,ITS)=FEQ(3,JAT,ITS) - DUM*(ZN-ZI)
+          
+        END IF
+       END DO
+C      Translation invraiance
+       CALL VCLR(FEQ(1,IAT,ITS),1,3)
+       DO JAT=1,NAT
+        IF(JAT.NE.IAT) THEN
+         FEQ(1,IAT,ITS)=FEQ(1,IAT,ITS)-FEQ(1,JAT,ITS)
+         FEQ(2,IAT,ITS)=FEQ(2,IAT,ITS)-FEQ(2,JAT,ITS)
+         FEQ(3,IAT,ITS)=FEQ(3,IAT,ITS)-FEQ(3,JAT,ITS)
+        END IF   
+       END DO
+      END DO
+
+
+      RETURN
+      END
+C
+c
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  Sum up hessian contribution
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param   FCM   force constant
+C>   @param   NTS   number of tesserae
+C>   @param   QA    charge
+C>   @param   FEQ   derivative element
+C>   @param   NAT   number of atom
+C>   @param   ICURATM indice for atom
+C>   @param   ICURXYZ indice for xyz
+C>
+      SUBROUTINE PCMCMPHSS(FCM,NTS,QA,FEQ,NAT,ICURATM,ICURXYZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION FCM(nat*3,nat*3),QA(*),FEQ(3,nat,*)
+C
+      jxyz   = (ICURATM-1) * 3 + ICURXYZ
+C
+      DO IATM=1,NAT
+        DO IXYZ=1,3
+          iixyz= (IATM-1) * 3 + IXYZ
+          DO ITS=1,NTS
+           FCM(iixyz,jxyz)=FCM(iixyz,jxyz)+ QA(ITS)*FEQ(ixyz,IATM,ITS) 
+          END DO
+        END DO
+      END DO
+C
+C
+      RETURN
+      END
+C
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  add hessian to fc matrix 
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param EH   Hessian
+C>   @param FCM   Force constant matrix
+C>   @param NAT   Number of atoms
+      subroutine pcmaddhss(EH,FCM,NAT)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION EH(9,*),FCM(nat*3,nat*3)
+C
+      DO IAT=1,NAT
+        iix=(IAT-1)*3+1
+        iiy=(IAT-1)*3+2
+        iiz=(IAT-1)*3+3
+        DO JAT=1,IAT
+         jjx=(JAT-1)*3+1
+         jjy=(JAT-1)*3+2
+         jjz=(JAT-1)*3+3
+C
+         IIAT = IAT*(IAT-1)/2 + JAT
+         EH(1,IIAT) = EH(1,IIAT) + FCM(iix,jjx)
+         EH(2,IIAT) = EH(2,IIAT) + FCM(iix,jjy)
+         EH(3,IIAT) = EH(3,IIAT) + FCM(iix,jjz)
+         EH(4,IIAT) = EH(4,IIAT) + FCM(iiy,jjx)
+         EH(5,IIAT) = EH(5,IIAT) + FCM(iiy,jjy)
+         EH(6,IIAT) = EH(6,IIAT) + FCM(iiy,jjz)
+         EH(7,IIAT) = EH(7,IIAT) + FCM(iiz,jjx)
+         EH(8,IIAT) = EH(8,IIAT) + FCM(iiz,jjy)
+         EH(9,IIAT) = EH(9,IIAT) + FCM(iiz,jjz)
+        END DO
+      END DO
+C
+      RETURN
+      END
+C
+C
+c     SUBROUTINE CHKGRD(DEN,VPOT,NTS,QA,XCTS,YCTS,ZCTS)
+c     IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+c     DIMENSION DEN(*),VPOT(*),QA(*),XCTS(*),YCTS(*),ZCTS(*)
+c     PARAMETER (MXATM=2000)
+c     COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+c    *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+c
+c     val=TRACEP(den,vpot,num)
+c     DO ITS = 1, NTS
+c      DO JAT = 1, NAT
+c         XI  = XCTS(ITS)
+c         YI  = YCTS(ITS)
+c         ZI  = ZCTS(ITS)
+c         XN  = C(1,JAT)
+c         YN  = C(2,JAT)
+c         ZN  = C(3,JAT)
+c         R2  = (XN-XI)**2+(YN-YI)**2+(ZN-ZI)**2
+c         R   = SQRT(R2)
+c         Z   = ZAN(JAT)
+C
+c         val = val + Z*QA(ITS)/R
+c      END DO
+c     END DO
+c     write(6,'("val=",F10.7)') val
+c
+c     RETURN
+c     END
+C
+C
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  add  orbital hessian to CPHF
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param PMN   Density matrix
+C>   @param FCM   Fock derivative matrix
+C>   @param  L1   Number of orbital
+C>   @param NAT   Number of triangular matrix
+C>   @param NXYZ  Number of xyz elements
+      SUBROUTINE AOORBHSSCP(PMN,FMN,L1,L2,NXYZ) 
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+C
+      COMMON /FMCOM / X(1)
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      COMMON /PCMDIM/ MXSP,MXTS,MEMPCM1,MEMPCM2,NTS
+      COMMON /PCMPNT/ LXYZRE,LSSFE,LLIST,LALPCM,LRINPCM,LINAPCM,LINFPCM,
+     *                LINIPCM,LMEPCM,LAXYZCT,LXYZCT2,LNVERT,LQSN,LQSE,
+     *                LQFS,LQIND,LISPHE,LVAD,LQOR,LVECMUL,LAIPRJ,LFIPRJ,
+     *                LPEL,LPCMCDR,LDAI,LIDDAI,LQSND,LQSED,LEPSPCM
+C
+      DIMENSION PMN(NXYZ,*),FMN(NXYZ,*)
+C
+      if(L1.EQ.0) write(6,*) "wwwww"
+C
+      CALL VALFM(LOADFM)
+      NDASC = 0
+      LFPNT = LOADFM
+      NTSPAR=(NTS-1)/npglob+1
+      CALL INDQPROD(0,NTSPAR,LFPNT,NDASC,DUM,DUM,DUM,0)
+      LQTMP   = LFPNT   + NDASC  + 1
+      LEPOT   = LQTMP   + nts    
+      LWRK    = LEPOT   + nts    
+      LAST    = LWRK    + L2 
+      NEEDW   = LAST    - LOADFM    - 1
+      CALL GETFM(NEEDW)
+C
+      CALL ORBHSSCPX(nts,X(LAXYZCT),X(LAXYZCT+MXTS),X(LAXYZCT+MXTS*2),
+     *     X(LQTMP),X(LEPOT),X(LWRK),NTSPAR,LFPNT,NDASC,L2,NXYZ,
+     *     PMN,FMN)
+C
+      CALL RETFM(NEEDW)
+C
+      RETURN
+      END
+C
+C
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  construct orbital hessian to CPHF
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine writte
+C>   @param nts    number of tesserae
+C>   @param XCTS    X coordinate 
+C>   @param YCTS    Y coordinate
+C>   @param ZCTS    Z coordinate
+C>   @param QTMP    temporary charge
+C>   @param EPOT    electronic potential
+C>   @param WRK     work
+C>   @param NTSPAR  ntesserae for parallel
+C>   @param LFPNT   start point
+C>   @param NDASC   size for PCM memory 
+C>   @param L2      number of triangular matrix
+C>   @param NXYZ    number of xyz coordinate
+C>   @param PMN     Density like  matrix
+C>   @param FMN     Fock    like  matrix
+      SUBROUTINE ORBHSSCPX(nts,XCTS,YCTS,ZCTS,QTMP,EPOT,WRK,
+     *           NTSPAR,LFPNT,NDASC,L2,NXYZ,PMN,FMN)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION XCTS(*),YCTS(*),ZCTS(*),QTMP(*),EPOT(*),WRK(*)
+      DIMENSION PMN(NXYZ,*),FMN(NXYZ,*)
+
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+      PARAMETER(ONE=1.0D+00)
+
+c     call dacopy(nts,one,QTMP,1)
+      do ixyz=1,nxyz
+       do iloop=1,L2
+          WRK(iloop)=PMN(ixyz,iloop)
+       end do
+       CALL VCLR(EPOT,1,nts)
+       call EPOTEN(-one,XCTS,YCTS,ZCTS,EPOT,wrk,NTS,L2)
+       if(GOPARR) call ddi_gsumf(2418,EPOT,NTS)
+c
+       ITER0 = 1
+       CALL INDQPROD(ITER0,NTSPAR,LFPNT,NDASC,EPOT,QTMP,QTMP,1)
+C      Fock derivative terms
+       CALL PCMPOT(wrk,wrk,NTS,QTMP,XCTS,L2,1,.false.)
+c
+       do iloop=1,L2
+          FMN(ixyz,iloop)=FMN(ixyz,iloop) + WRK(iloop) 
+       end do
+      end do
+ 
+      RETURN
+      END
+
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  Derivative of  C
+C>
+C>    @author Hiroya Nakata
+C>
+C>   @pram  NATM     number of atom
+C>   @pram  IMODE    mode
+C>   @pram  FEQWRK   derivative element
+C>   @pram  QT       total charge
+C>   @pram  VECTMP   potential
+C>   @pram  XCTS     x coordinate for teserae
+C>   @pram  YCTS     y coordinate for teserae
+C>   @pram  ZCTS     z coordinate for teserae
+C>   @pram  AS       area surface charge
+C>   @pram  QSN      nuclear charge
+C>   @pram  QSE      electronic charge
+C>   @pram  QSND     ASC for het
+C>   @pram  QSED     ASC for het
+C>   @pram  Q_FS     ASC
+C>   @pram  Q_IND    ASC for induction
+C>   @pram  Q2       ASC
+C>   @pram  XE       Solute geometry informtion  
+C>   @pram  YE       Solute geometry informtion
+C>   @pram  ZE       Solute geometry informtion
+C>   @pram  RE       Solute geometry informtion
+C>   @pram  ISPHE    indice for sphere
+C>   @pram  DAI      parameter for PCM
+C>   @pram  IDDAI    indice for DAI
+C>   @pram  QSETMP   FMO  charge
+C>   @pram  QSEMP    MP charge
+C>   @pram  QSEXY    PCM charge
+C>   @pram  QSEMN    PCM charge
+C>   @pram  DSOLQM   PCM charge
+C>   @pram  LFMOPCM1 logic for PCM
+C>   @pram  IAGLOB   global atom indice
+C>   @pram  FCM      force constnt matrix
+C>   @pram  FEQ      derivative element
+      SUBROUTINE QCHESS(NATM,IMODE,FEQWRK,QT,VECTMP,
+     *     XCTS,YCTS,ZCTS,AS,QSN,QSE,QSND,QSED,Q_FS,Q_IND,Q2,
+     *     XE,YE,ZE,RE,ISPHE,DAI,IDDAI,QSETMP,QSEMP,QSEXY,QSEMN,
+     *     DSOLQM,LFMOPCM1,IAGLOB,FCM,FEQ)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (MXATM=2000)
+C
+      LOGICAL   LFMOPCM1
+C
+      COMMON /FMCOM / X(1)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /MACHIN/ NWDVAR,MAXFM,MAXSM,LIMFM,LIMSM
+      COMMON /PCMDIM/ MXSP,MXTS,MEMPCM1,MEMPCM2,NTS
+      COMMON /PCMOPT/ RABI,RASC,REFPOL,THRSLS,DENSLS,WB,WA,ETA2,GD,EVAC,
+     *                RHOW,PM,AREATL,AREAKP,BONDRY,OMEGA,RET,FRO,EPSINF,
+     *                EPS,DR,RSOLV,VMOL,TCE,STEN,DSTEN,CMF,TABS,IDIRCT,
+     *                IPCDER,IDP,ICOMP,IFIELD,ICAV,IDISP,IPRINT,IRETCAV,
+     *                ICENT,IFAST,NEVAL,IEFPOL,KEEPSM,IMGABI,IMGASC,NADD
+      COMMON /PCMPAR/ IPCM,NFT26,NFT27,IKREP,IEF,IP_F,NFMOPCM,IHET
+      COMMON /PCMPNT/ LXYZRE,LSSFE,LLIST,LALPCM,LRINPCM,LINAPCM,LINFPCM,
+     *                LINIPCM,LMEPCM,LAXYZCT,LXYZCT2,LNVERT,LQSN,LQSE,
+     *                LQFS,LQIND,LISPHE,LVAD,LQOR,LVECMUL,LAIPRJ,LFIPRJ,
+     *                LPEL,LPCMCDR,LDAI,LIDDAI,LQSND,LQSED,LEPSPCM
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+C
+      DIMENSION FEQ(3,NATM,*),QT(*),VECTMP(*),XCTS(*),YCTS(*),ZCTS(*)
+      DIMENSION AS(*),QSN(*),QSE(*),QSND(*),QSED(*) 
+      DIMENSION Q_FS(*),Q_IND(*),Q2(*),XE(*),YE(*),ZE(*),RE(*),ISPHE(*)
+      DIMENSION DAI(3,20,MXTS),IDDAI(21,MXTS),QSETMP(*),QSEMP(*)
+      DIMENSION QSEXY(*),QSEMN(*),DSOLQM(3,*)
+      DIMENSION IAGLOB(*)
+      DIMENSION D(2),FCM(natm*3,natm*3)
+      DIMENSION FEQWRK(3,NATM)
+C
+      if(imode.ne.0) write(6,*) "PCM HESS"
+      NPRSAV = NPRINT
+      NPRINT = 817
+C
+      NVIB   =  2 
+      VIBSIZ =  0.000001D+00
+c     VIBSIZ =  0.00001D+00
+      D(1)   =  VIBSIZ
+      D(2)   = -VIBSIZ
+      LFIXPV = 0
+      IF(IPCDER.EQ.3) LFIXPV = 3*20*MXTS
+      LFIXPV2 = 0
+      IF(IPCDER.EQ.3) LFIXPV2= 21*MXTS/NWDVAR + 1
+C     Numerical derivatives of dC/da  :  (d^2 C/da db) 
+c     write(6,*) "wwww begin numerical"
+      DO 390 IVIB = 1,NVIB
+        DO 380 IAT = 1,NAT
+          DO 370 IXYZ = 1,3
+C
+           JXYZ       = IAT * 3 - 3 + IXYZ
+           C(IXYZ,IAT)= C(IXYZ,IAT) + D(IVIB)
+C
+           CALL MAKCVM
+           CALL TESIN(NATM,XE,YE,ZE,X(LALPCM),X(LRINPCM),X(LINIPCM),
+     *                X(LMEPCM))
+c          write(6,*) "enter pedram"
+           CALL PEDRAM
+           IF(IPCDER.EQ.3.AND.NFMOPCM.EQ.0) THEN
+            CALL DAREAD(IDAF,IODA,DAI,LFIXPV,334,0)
+            CALL DAREAD(IDAF,IODA,IDDAI,LFIXPV2,335,1)
+           ENDIF
+C
+           CALL VCLR(FEQWRK,1,3*NAT)
+           DUM=0
+c          It seems that the call below will not work with EFP.
+           CALL QCDERQ(NAT,NATM,NTS,0,FEQWRK,DUM,QT,VECTMP,XCTS,YCTS,
+     *          ZCTS,AS,QSN,QSE,QSND,QSED,Q_FS,Q_IND,Q2,XE,YE,ZE,
+     *          RE,ISPHE,DAI,IDDAI,QSETMP,QSEMP,QSEXY,QSEMN,
+     *          FEQWRK,DUM,.false.,.false.,LFMOPCM1,IAGLOB,X(LEPSPCM))
+
+           IF(IVIB.EQ.1) CALL DCOPY(nat*3,FEQWRK,1,FCM(1,JXYZ),1)
+           IF(IVIB.EQ.2) 
+     *       CALL DAXPY(3*NAT,-1.0D+00,FEQWRK,1,FCM(1,JXYZ),1)
+
+           C(IXYZ,IAT)= C(IXYZ,IAT) - D(IVIB)
+C
+ 370      CONTINUE
+ 380    CONTINUE
+ 390  CONTINUE
+C
+      DUM = 1.0D+00/(VIBSIZ*NVIB)
+      DO 140 IAT = 1,NAT*3
+         DO 130 JAT = 1,NAT*3
+            FCM(IAT,JAT) = DUM*FCM(IAT,JAT)
+  130    CONTINUE
+  140 CONTINUE
+      DO 590 IAT = 2,NAT*3
+         DO 580 JAT = 1,IAT-1
+            AVE = (FCM(IAT,JAT)+FCM(JAT,IAT))*0.5D+00
+            FCM(JAT,IAT) = AVE
+            FCM(IAT,JAT) = AVE
+  580    CONTINUE
+  590 CONTINUE
+C
+c     write(6,*) "wwww end numerical"
+C
+      CALL MAKCVM
+      CALL TESIN(NATM,XE,YE,ZE,X(LALPCM),X(LRINPCM),X(LINIPCM),
+     *           X(LMEPCM))
+      CALL PEDRAM
+      IF(IPCDER.EQ.3.AND.NFMOPCM.EQ.0) THEN
+       CALL DAREAD(IDAF,IODA,DAI,LFIXPV,334,0)
+       CALL DAREAD(IDAF,IODA,IDDAI,LFIXPV2,335,1)
+      ENDIF
+c
+c     write(6,*) "begin qcdfck"
+c
+      CALL QCDFCK(NAT,NATM,NTS,FEQ,QT,XCTS,YCTS,ZCTS,
+     *           AS,QSN,QSE,QSND,QSED,Q_FS,Q_IND,
+     *           ISPHE,DAI,IDDAI,QSETMP,QSEMP,QSEXY,QSEMN,
+     *           DSOLQM,.false.,.false.,LFMOPCM1,IAGLOB,X(LEPSPCM))
+C
+C
+c     write(6,*) "end qcdfck"
+c     call prsq(fcm,nat*3,nat*3,nat*3)
+C
+      NPRINT = NPRSAV
+c
+      RETURN
+      END
+
+C*MODULE PCMCV2  *DECK QCDERQ
+C>    @brief Second order derivatiev for PCM 
+C>
+C>    @details  Derivative of  C
+C>
+C>    @author Hiroya Nakata
+C>
+C>   @param  NATA    number of atom
+C>   @param  NATM    number of atom
+C>   @param  NTS     number of tesserae
+C>   @param  FEQ     derivative of elements
+C>   @param  QT      total charge
+C>   @param  XCTS    x coordinate for teserae 
+C>   @param  YCTS    y coordinate for teserae
+C>   @param  ZCTS    z coordinate for teserae
+C>   @param  AS      area charge
+C>   @param  QSN     nuclear charge
+C>   @param  QSE     electronic charge
+C>   @param  QSND    ASC for het
+C>   @param  QSED    ASC for het
+C>   @param  Q_FS    ASC
+C>   @param  Q_IND   ASC for induction
+C>   @param  ISPHE   ASC indice
+C>   @param  DAI     PCM parameter
+C>   @param  IDDAI   PCM parameter indice
+C>   @param  QSETMP  ASC charge
+C>   @param  QSEMP   ASC charge
+C>   @param  QSEXY   ASC charge
+C>   @param  QSEMN   ASC charge
+C>   @param  DSOLQM  derivative
+C>   @param  MP2PCM  MP2 logical
+C>   @param  TDDFT   TDDFT logical
+C>   @param  LFMOPCM1 FMO logical
+C>   @param  IAGLOB   indice for global atm
+C>   @param  EPSHET   epsilon
+C>
+      SUBROUTINE QCDFCK(NATA,NATM,NTS,FEQ,QT,XCTS,YCTS,ZCTS,
+     *                  AS,QSN,QSE,QSND,QSED,Q_FS,Q_IND,
+     *                  ISPHE,DAI,IDDAI,QSETMP,QSEMP,QSEXY,QSEMN,
+     *                  DSOLQM,MP2PCM,TDDFT,LFMOPCM1,IAGLOB,EPSHET)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (MXATM=2000)
+c     PARAMETER (MXATM=2000, MXFRG=1050, MXFGPT=12000)
+C
+      LOGICAL GOPARR, DSKWRK, MASWRK, TDDFT, MP2PCM
+      LOGICAL LFMOPCM1
+C
+      DIMENSION FEQ(3,NATM,NTS)
+      DIMENSION XCTS(1),YCTS(1),ZCTS(1),AS(1)
+      DIMENSION QT(1),QSN(1),QSE(1),QSND(1),QSED(1),QSEMP(1),
+     *          QSETMP(1),Q_FS(1),Q_IND(1),QSEXY(1),QSEMN(1)
+      DIMENSION ISPHE(1),DSOLQM(3,*),DAI(3,20,*),IDDAI(21,*)
+      DIMENSION IAGLOB(1)
+      DIMENSION EPSHET(*)
+
+c     COMMON /FGRAD / DEF(3,MXFGPT),DEFT(3,MXFRG),TORQ(3,MXFRG),
+c    *                EFCENT(3,MXFRG),FRGMAS(MXFRG),FRGMI(6,MXFRG),
+c    *                ATORQ(3,MXFRG)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+c     COMMON /PCMEPS/ EPSHET(MXATM),IHET
+      COMMON /PCMOPT/ RABI,RASC,REFPOL,THRSLS,DENSLS,WB,WA,ETA2,GD,EVAC,
+     *                RHOW,PM,AREATL,AREAKP,BONDRY,OMEGA,RET,FRO,EPSINF,
+     *                EPS,DR,RSOLV,VMOL,TCE,STEN,DSTEN,CMF,TABS,IDIRCT,
+     *                IPCDER,IDP,ICOMP,IFIELD,ICAV,IDISP,IPRINT,IRETCAV,
+     *                ICENT,IFAST,NEVAL,IEFPOL,KEEPSM,IMGABI,IMGASC,NADD
+      COMMON /PCMPAR/ IPCM,NFT26,NFT27,IKREP,IEF,IP_F,NFMOPCM,IHET
+      COMMON /PCMPLY/ STOT,VOL,CCX,CCY,CCZ,RDIF,NESF,NESFP,NESFF,I_NESF,
+     *                L_AST
+c     COMMON /PCMPNT/ LXYZRE,LSSFE,LLIST,LALPCM,LRINPCM,LINAPCM,LINFPCM,
+c    *                LINIPCM,LMEPCM,LAXYZCT,LXYZCT2,LNVERT,LQSN,LQSE,
+c    *                LQFS,LQIND,LISPHE,LVAD,LQOR,LVECMUL,LAIPRJ,LFIPRJ,
+c    *                LPEL,LPCMCDR,LDAI,LIDDAI,LQSND,LQSED,LEPSPCM
+c     COMMON /PCMTMP/ IDSP(MXATM+MXFRG*5),DPCMFRG(6,MXFRG),
+c    *                EGPCM(3,MXATM)
+
+      DATA ZERO, ONE /0.0D+00, 1.0D+00/
+      DATA PT5/0.5D+00/
+c     DATA FPI/12.56637062D+00/
+C
+C     CALCULATE -1/2*Q*DC/DA*Q
+C     -- COMPUTE THE VECTOR A^(-1)*S*A^(-1)*Q2 STORE IN VECTMP
+c     write(6,*) "IEF=",IEF,IPCDER
+C
+C     - INITIALIZE PARALLEL -
+C
+      IPCOUNT = ME - 1
+C
+      DO 100 IAT = 1, NATA
+C        GO PARALLEL!
+         IF(GOPARR) THEN
+           IPCOUNT = IPCOUNT + 1
+           IF(MOD(IPCOUNT,NPROC).NE.0) GO TO 100
+         END IF
+C
+         IATGLB = IAT
+         IF(NFMOPCM.GT.0) IATGLB = IAGLOB(IAT)
+         IF (IAN(IAT).NE.1.AND.ABS(ZAN(IAT)-ONE).LT.1.0D-08) GOTO 100
+C
+C        TERM 2.A FORCE IMPOSED ON ASC(IAT) BY OTHER ASC
+C
+         FQQX  = ZERO
+         FQQY  = ZERO
+         FQQZ  = ZERO
+         IF(NESFP.EQ.0)THEN
+         DO ITS = 1, NTS
+            IF(ISPHE(ITS).EQ.IATGLB) THEN
+               XI = XCTS(ITS)
+               YI = YCTS(ITS)
+               ZI = ZCTS(ITS)
+               DO JTS = 1, NTS
+                  IF(ISPHE(JTS).NE.IATGLB) THEN
+                     XJ = XCTS(JTS)
+                     YJ = YCTS(JTS)
+                     ZJ = ZCTS(JTS)
+                     R2 = (XJ-XI)**2+(YJ-YI)**2+(ZJ-ZI)**2
+                     R  = SQRT(R2)
+                     R3 = R*R2
+                     IF(IEF.EQ.10) THEN
+                        EI=EPSHET(ISPHE(ITS))/(EPSHET(ISPHE(ITS))-ONE)
+                        EJ=EPSHET(ISPHE(JTS))/(EPSHET(ISPHE(JTS))-ONE)
+                        QTIJTS=QSE(JTS)+QSE(JTS)-QSED(JTS)
+     *                        +QSN(JTS)+QSN(JTS)-QSND(JTS)
+     *                                            +Q_FS(JTS)+Q_IND(JTS)
+                        QTIITS=QSE(ITS)+QSE(ITS)-QSED(ITS)
+     *                        +QSN(ITS)+QSN(ITS)-QSND(ITS)
+     *                                            +Q_FS(ITS)+Q_IND(ITS)
+                        IF (LFMOPCM1) THEN
+                         QTDJTS=QSETMP(JTS)
+                         QTDITS=QSETMP(ITS)
+                         FT = (QTDITS*EJ*QTIJTS+QTIITS*EI*QTDJTS)/R3
+                        ELSE
+                         QTDJTS=QSED(JTS)+QSND(JTS)+Q_FS(JTS)+Q_IND(JTS)
+                         QTDITS=QSED(ITS)+QSND(ITS)+Q_FS(ITS)+Q_IND(ITS)
+                         FT = PT5*(QTDITS*EJ*QTIJTS+QTIITS*EI*QTDJTS)/R3
+c                        write(6,'("QI=",2F12.8)') QTDITS,QTIITS
+c                        write(6,'("EPS=",2F12.8)') EI,EJ
+                         QITS  = EI*QTIJTS/R3
+                         QJTS  = EJ*QTIITS/R3
+C
+                        END IF
+C
+                        IF(TDDFT) THEN
+                           SCALE = EPS/(EPS-ONE)
+                           FT=FT+SCALE*(2.0D+00*QSEXY(ITS)*QSEXY(JTS)/R3
+     *                                + QTIJTS*QSEMN(ITS)/R3
+     *                                + QTIITS*QSEMN(JTS)/R3)
+                        END IF
+                        IF(MP2PCM)THEN
+                           SCALE = EPS/(EPS-ONE)
+                           FT=FT+SCALE*(QTIJTS*QSEMP(ITS)/R3
+     *                                + QTIITS*QSEMP(JTS)/R3)
+                        END IF
+C
+C                           ALL IEF OTHER THAN CPCM:
+                     ELSE
+                        IF (LFMOPCM1) THEN
+                          ! MAYBE THIS IS WRONG
+                          FT = QT(ITS)*QSETMP(JTS)/R3
+                        ELSE
+                          FT = QT(ITS)*QT(JTS)/R3
+                        END IF
+                     END IF
+C
+                     FQQX = FQQX - (XI-XJ)*FT
+                     FQQY = FQQY - (YI-YJ)*FT
+                     FQQZ = FQQZ - (ZI-ZJ)*FT
+C
+                     FEQ(1,IAT,ITS)= FEQ(1,IAT,ITS) - (XI-XJ)*QITS
+                     FEQ(2,IAT,ITS)= FEQ(2,IAT,ITS) - (YI-YJ)*QITS
+                     FEQ(3,IAT,ITS)= FEQ(3,IAT,ITS) - (ZI-ZJ)*QITS
+                     FEQ(1,IAT,JTS)= FEQ(1,IAT,JTS) - (XI-XJ)*QJTS
+                     FEQ(2,IAT,JTS)= FEQ(2,IAT,JTS) - (YI-YJ)*QJTS
+                     FEQ(3,IAT,JTS)= FEQ(3,IAT,JTS) - (ZI-ZJ)*QJTS
+C
+                  END IF
+               END DO
+            END IF
+         END DO
+         END IF
+C
+C
+C        TERM 5. FORCE DUE TO TESSARA AREA CHANGE (FIXPVA)
+C
+         FAX = ZERO
+         FAY = ZERO
+         FAZ = ZERO
+         IF(IPCDER.EQ.3 .AND. NESFP.EQ.0) THEN
+         SQRTPI = SQRT(3.1415926535897932D+00)
+         DO ITS = 1, NTS
+            DO III = 1, IDDAI(21,ITS)
+               IF(IATGLB.EQ.IDDAI(III,ITS)) THEN
+                  IF(IEF.EQ.10) THEN
+                     QTIITS=QSE(ITS)+QSE(ITS)-QSED(ITS)
+     *                     +QSN(ITS)+QSN(ITS)-QSND(ITS)
+     *                                         +Q_FS(ITS)+Q_IND(ITS)
+                     IF (LFMOPCM1) THEN
+                       ! THIS PART SHOULD BE FIXED?
+                       QTDITS=QSETMP(ITS)
+                       DUM=-1.07D+00*SQRTPI/SQRT(AS(ITS)**3)*
+     *                      QTDITS*QTIITS
+                     ELSE
+                       QTDITS=QSED(ITS)+QSND(ITS)+Q_FS(ITS)+Q_IND(ITS)
+                       DUM =-1.07D+00*SQRTPI/SQRT(AS(ITS)**3)*
+     *                      0.5D+00*QTDITS*QTIITS
+                       DUM2=-1.07D+00*SQRTPI/SQRT(AS(ITS)**3)*QTDITS
+                     END IF
+C
+                     IF(TDDFT) THEN
+                        DUM = DUM -1.07D+00*SQRTPI/SQRT(AS(ITS)**3)*
+     *                     (QSEXY(ITS)*QSEXY(ITS)+QTIITS*QSEMN(ITS))
+                     END IF
+                     IF(MP2PCM)THEN
+                        DUM = DUM -1.07D+00*SQRTPI/SQRT(AS(ITS)**3)*
+     *                     (QTIITS*QSEMP(ITS))
+                     END IF
+C
+                     SCALE=EPSHET(ISPHE(ITS))/(EPSHET(ISPHE(ITS))-ONE)
+                     FAX=FAX+DUM*DAI(1,III,ITS)*SCALE
+                     FAY=FAY+DUM*DAI(2,III,ITS)*SCALE
+                     FAZ=FAZ+DUM*DAI(3,III,ITS)*SCALE
+C
+                     FX = DUM2*DAI(1,III,ITS)*SCALE 
+                     FY = DUM2*DAI(2,III,ITS)*SCALE
+                     FZ = DUM2*DAI(3,III,ITS)*SCALE
+                     FEQ(1,IAT,ITS)= FEQ(1,IAT,ITS) + FX
+                     FEQ(2,IAT,ITS)= FEQ(2,IAT,ITS) + FY
+                     FEQ(3,IAT,ITS)= FEQ(3,IAT,ITS) + FZ
+C
+                  ELSE
+                     IF (LFMOPCM1) THEN
+                       DUM=-1.07D+00*SQRTPI/SQRT(AS(ITS)**3)*
+     *                      QSETMP(ITS)*QT(ITS)
+                     ELSE
+                       DUM=-1.07D+00*SQRTPI/SQRT(AS(ITS)**3)*
+     *                      0.5D+00*QT(ITS)*QT(ITS)
+                     END IF
+                     FAX=FAX+DUM*DAI(1,III,ITS)
+                     FAY=FAY+DUM*DAI(2,III,ITS)
+                     FAZ=FAZ+DUM*DAI(3,III,ITS)
+                  ENDIF
+               END IF
+            ENDDO
+         ENDDO
+         END IF
+C
+C
+C        COMBINE THE FORCES
+c        GX = FQQX   +  FAX
+c        GY = FQQY   +  FAY
+c        GZ = FQQZ   +  FAZ
+c        write(6,'("CHK1=",3F12.8)') GX,GY,GZ
+C
+C
+         DSOLQM(1,IAT) = DSOLQM(1,IAT)+ FQQX   +  FAX
+         DSOLQM(2,IAT) = DSOLQM(2,IAT)+ FQQY   +  FAY
+         DSOLQM(3,IAT) = DSOLQM(3,IAT)+ FQQZ   +  FAZ
+ 100  CONTINUE
+C
+c     DO IAT=1,NAT
+c       valx=0.0D+00
+c       valy=0.0D+00
+c       valz=0.0D+00
+c       DO ITS=1,NTS
+c         valx=valx+0.5D+00*QT(ITS)*FEQ(1,IAT,ITS)
+c         valy=valy+0.5D+00*QT(ITS)*FEQ(2,IAT,ITS)
+c         valz=valz+0.5D+00*QT(ITS)*FEQ(3,IAT,ITS)
+c       END DO
+c       write(6,'("CHK2=",3F12.8)') valx,valy,valz
+c     END DO
+C
+      RETURN
+      END

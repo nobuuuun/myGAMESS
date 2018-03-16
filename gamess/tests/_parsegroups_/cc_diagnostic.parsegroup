@@ -1,0 +1,27 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : DIAGNOSTIC",
+  "parse_group" : [
+   {
+     "regex_string" : "^ T1 DIAGNOSTIC        =.*$",
+     "parse_name"   : "T1 DIAGNOSTIC",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required" : true,
+     "parse_tolerance" : 1e-7
+   },
+   {
+     "regex_string" : "^ NORM OF THE T1 VECTOR=.*$",
+     "parse_name"   : "NORM OF THE T1 VECTOR",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : 1e-7
+   },
+   {
+     "regex_string" : "^ NORM OF THE T2 VECTOR=.*$",
+     "parse_name"   : "NORM OF THE T2 VECTOR",
+     "parse_precision" : 8,
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : 1e-7
+   }
+  ]
+}

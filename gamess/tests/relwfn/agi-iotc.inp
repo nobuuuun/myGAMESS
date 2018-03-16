@@ -1,0 +1,31 @@
+!    AgI...infinite order two component scalar relativity...DFT force constants
+!    This is to show that just about any WFN, including DFT,
+!    can be given scalar relativity quite easily.
+!
+!    Note that one has to pay a bit of attention to the heavy atom's
+!    radial grid, due to very large exponents in their basis set.
+!
+!    FINAL R-REVTPSS E= -12431.9521215284, 20 iters, FREQ=214.64
+!
+!    This run takes 928 seconds on 2.66 GHz Cloverton (10 Aug 2015)
+!
+!    ----------------------------------------------------------------
+!    experiment has R= 2.544621, omega= 206.5 (Huber/Herzberg)
+!
+ $contrl scftyp=rhf dfttyp=revTPSS relwfn=iotc runtyp=hessian ispher=1 $end
+ $system mwords=5 $end
+ $basis  gbasis=SPKrDZP $end
+ $guess  guess=huckel $end
+ $relwfn modeqr=1 $end
+ $dft    nrad=150 nrad0=99 $end
+ $data
+silver iodide
+Cnv 4
+
+Ag  47.0
+I   53.0    0  0  2.5839748
+ $end
+
+! TRAVIS-CI MEDIUM
+! TRAVIS-CI SKIP
+! ACCURACY ON INTEL AND GCC DOES NOT MATCH

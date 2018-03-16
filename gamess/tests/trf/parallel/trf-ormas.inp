@@ -1,0 +1,35 @@
+!   single reference CI-SD on CH3OH, using ORMAS' CI-X option.
+!          counting: 2 core, 7 valence, 38 total MOs
+!          the resulting CI-SD has 30,204 Sz=0 A' determinants
+!
+!   E(RHF) = -115.0354183229, 11 iters
+!                    33 Davidson iterations find three roots:
+!   STATE   1  ENERGY= -115.3422833026  S=   .00  SZ= .00  SPACE SYM=A'
+!   STATE   2  ENERGY= -114.7566246917  S=  1.00  SZ= .00  SPACE SYM=A'
+!   STATE   3  ENERGY= -114.7298875187  S=   .00  SZ= .00  SPACE SYM=A'
+!
+!   This run takes 27 seconds on a 2.66 GHz Cloverton (15 Apr 2015)
+!        p=4 needed 8
+!       answers have not changed since March 2006
+!
+ $contrl scftyp=rhf cityp=ormas runtyp=energy $end
+ $system parall=.true. mwords=8 memddi=5 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $cidet  group=Cs istsym=1 ncore=2 nact=36 nels=14 nstate=3 $end
+ $ormas  nspace=2 mstart(1)=3,10 mine(1)=12,0
+                                 maxe(1)=14,2 $end
+ $data
+Methanol...full valence space CI...RHF/6-31G(d) geometry
+Cs
+
+H     1.0  -1.0616171503   0.8036449245   0.0000000000
+O     8.0  -0.6870131482  -0.0653470836   0.0000000000
+C     6.0   0.7093551399   0.0291827007   0.0000000000
+H     1.0   1.0836641283   0.5408321444   0.8835398105
+H     1.0   1.0975386849  -0.9797829903   0.0000000000
+ $end
+
+! TRAVIS-CI SMALL
+

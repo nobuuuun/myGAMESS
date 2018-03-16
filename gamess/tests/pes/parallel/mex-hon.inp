@@ -1,0 +1,63 @@
+!   MP2 minimum energy crossing...HON's famous 1A' and 3A'' surfaces
+!
+!   The PBE0 seam crossing should find the MEX in 9 steps,
+!      NSERCH=  9                   ACTUAL    THRESHOLD
+!      ------------------------------------   ---------
+!      ENERGY OF FIRST STATE  = -130.242334
+!      ENERGY OF 2nd    STATE = -130.242340
+!      ENERGY DIFFERENCE =         0.000006    0.000010
+!      MAX EFFECTIVE GRADIENT =    0.000034    0.000500
+!      RMS EFFECTIVE GRADIENT =    0.000016    0.000300
+!      MAX CHANGE OF X =           0.000209    0.002000
+!      RMS CHANGE OF X =           0.000087    0.001500
+!
+!   This run takes 81 seconds on 2.66 GHz Cloverton (29 Apr 2015)
+!
+!   ---------------------------------------------------------------
+!   For HON, 1A' and 3A'', all starting at the same geometry,
+!                          #steps   NO     OH   a(HON)
+!       RHF  ROHF             33   1.159  1.208  118.1
+!       RHF  ROHF  + B3LYP     7   1.047  1.240  118.0
+!       RHF  ROHF  + MPLEVL    8   1.171  1.214  117.7
+!       RHF  UHF              13   0.964  1.108  117.2
+!       RHF  UHF   + B3LYP     9   1.047  1.240  118.0
+!       RHF  UHF   + MPLEVL    9   1.173  1.221  117.6
+!   with this test doing the 3rd line of that table.
+!
+!   MCSCF, with active space being all valence orbitals starts off
+!   bringing E's together, but then goes many steps, to atomization.
+!   Determinants act exactly the same, as they should.
+!   This probably means restarting after 5 or so steps
+!   because H dissociation might make sense, but why long NO?
+--- $mex    scf1=mcscf mult1=1  scf2=mcscf mult2=3
+---         nstep=40 nrdmos=3 nmos1=35 nmos2=35 $end
+--- $mcscf  cistep=guga $end
+--- $drt1   group=Cs fors=.t. istsym=1 nmcc=2 ndoc=6 nalp=0 nval=3 $end
+--- $drt2   group=Cs fors=.t. istsym=2 nmcc=2 ndoc=5 nalp=2 nval=2 $end
+!
+--- $contrl runtyp=mex mplevl=2 $end
+--- $system mwords=1 memddi=5 $end
+--- $mex    scf1=rhf mult1=1  scf2=rohf mult2=3
+---         nstep=40 nrdmos=0 nmos2=0 $end
+
+ $contrl runtyp=mex mplevl=0 dfttyp=pbe0 $end
+ $system mwords=1 $end
+ $mex    scf1=rhf mult1=1  scf2=uhf mult2=3
+         nstep=40 nrdmos=0 nmos2=0 $end
+
+
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $guess  guess=huckel $end
+ $scf    diis=.true.  $end
+ $data
+MEX on HON ... 6-31G(d,p)
+Cs
+
+N           7.0  -1.1811755449    .3396407839    .0
+O           8.0   -.1382168417   -.4840755244    .0
+H           1.0   1.1896457970    .1696165890    .0
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

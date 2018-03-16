@@ -1,0 +1,23 @@
+!  test of MP2 gradient for an ECP basis set...yellow PbI2
+!
+!  FINAL E= -25.9389456564, E(MP2)= -26.2010728692, RMS grad=0.000533522
+!
+!  This run takes a second on almost anything ( 9 Nov 2005)
+!
+ $contrl scftyp=rhf runtyp=gradient mplevl=2 pp=sbkjc nzvar=3 $end
+ $system mwords=1 $end
+ $basis  gbasis=sbkjc ndfunc=1 $end
+ $guess  guess=huckel $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  2,2,1,3 $end
+ $mp2    code=ims $end
+ $data
+PbI2
+Cnv 2
+
+PB         82.0    .0000000000    .0000000000    .0060323984
+I          53.0   2.1641182880    .0000000000   1.7969838008
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

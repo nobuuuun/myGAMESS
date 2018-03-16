@@ -1,0 +1,42 @@
+!  Stone's distributed multipole analysis for 6-31G* water
+!
+!    to test OpenMP parallelization: run this in serial and in parallel to spot
+!    changes specific to OpenMP as opposed to general newly-introduced bugs
+!    Compare the following output parameters:
+!    first moments at points, second moments at points, third moments at points
+!
+!  FINAL E= -76.0107465159 after 10 iterations
+!    Q(O)=-8.84522
+!    z(H)= 0.01876
+!   xx(O)=-4.40505   xz(H)=+/-0.01348
+!  zzz(O)=-0.23291  xyy(H)=+/-0.01211
+!
+!  The total multipole expansion is
+!        DX          DY          DZ         /D/
+!    0.000000    0.000000    2.198910    2.198910
+!       QXX         QYY         QZZ         QXY         QXZ         QYZ
+!    2.386767   -2.263539   -0.123229    0.000000    0.000000    0.000000
+!       OXXX        OXXY        OXXZ        OXYY        OYYY        OYYZ
+!    0.000000    0.000000    2.014265    0.000000    0.000000   -0.795982
+!       OXZZ        OYZZ        OZZZ        OXYZ
+!    0.000000    0.000000   -1.218284    0.000000
+!
+!  This run takes 0 seconds on anything (15 Feb 2006)
+!
+ $contrl scftyp=rhf runtyp=energy $end 
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $elmom  iemom=3 where=comass $end
+ $stone
+
+atoms    ! change this to "cmass" to check against total multipoles.
+ $end
+ $data
+H2O...these coords have c.o.m. exactly at the origin
+Cnv 2
+
+O           8.0    .0000000000    .0000000000   -.0641730153
+H           1.0   -.7540664008    .0000000000    .5092360298
+ $end
+

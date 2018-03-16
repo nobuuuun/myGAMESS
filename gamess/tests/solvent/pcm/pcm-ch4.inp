@@ -1,0 +1,66 @@
+!  calculation of CH4 (metano), in PCM water.
+!
+!  This input reproduces the data in Table 2, line 6, of
+!  C.Amovilli, B.Mennucci J.Phys.Chem.B 101, 1051-7(1997)
+!  To do this, we must use many original PCM options.
+!
+!     The gas phase FINAL energy is  -40.2075980292
+!  The FINAL energy in PCM water is  -40.2048210283
+!                                                   (lit.)
+!  FREE ENERGY IN SOLVENT      = -25234.89 KCAL/MOL
+!  INTERNAL ENERGY IN SOLVENT  = -25230.64 KCAL/MOL
+!  DELTA INTERNAL ENERGY       =       .01 KCAL/MOL ( 0.0)
+!  ELECTROSTATIC INTERACTION   =      -.22 KCAL/MOL (-0.2)
+!  PIEROTTI CAVITATION ENERGY  =      5.98 KCAL/MOL ( 6.0)
+!  DISPERSION FREE ENERGY      =     -6.00 KCAL/MOL (-6.0)
+!  REPULSION FREE ENERGY       =      1.98 KCAL/MOL ( 2.0)
+!  TOTAL INTERACTION           =      1.73 KCAL/MOL ( 1.8)
+!  TOTAL FREE ENERGY IN SOLVENT= -25228.91 KCAL/MOL
+!
+!  This run takes 6 seconds on a 2.66 GHz Cloverton (30 Aug 2008)
+!
+ $contrl scftyp=rhf runtyp=energy $end
+ $guess  guess=huckel $end
+ $system mwords=2 $end
+!    the "W1 basis" input here exactly matches HONDO's DZP
+ $DATA
+CH4...gas phase geometry...in PCM water
+Td
+
+Carbon      6.
+   DZV
+   D 1 ; 1 0.75 1.0
+
+Hydrogen    1.  0.6258579976  0.6258579976  0.6258579976
+   DZV 0 1.20 1.15  ! inner and outer scale factors
+   P 1 ; 1 1.00 1.0
+
+ $END
+!    The reference cited used a value for H2O's solvent
+!    radius that differs from the built in value (RSOLV).  
+!    The IEF, ICOMP, MTHALL, and RET keywords are set to
+!    duplicate the original code's published results,
+!    namely D-PCM and GEPOL-GB.  This run doesn't put in
+!    any "extra spheres" but we try that option (RET)
+!    like it originally would have.
+ $PCM    SOLVNT=WATER RSOLV=1.35 RET=0.2
+         IEF=0 ICOMP=2 IDISP=0 IREP=1 IDP=1 ICAV=1 $end
+ $TESCAV MTHALL=1 $END
+ $NEWCAV IPTYPE=2 ITSNUM=540 $END
+!    dispersion "W2 basis" uses exponents which are
+!    1/3 of smallest exponent in "W1 basis" of $DATA.
+ $DISBS  NADD=11 NKTYP(1)=0,1,2, 0,1, 0,1, 0,1, 0,1
+         XYZE(1)=0.0,0.0,0.0, 0.0511
+                 0.0,0.0,0.0, 0.0382
+                 0.0,0.0,0.0, 0.25
+         1.1817023, 1.1817023, 1.1817023,  0.05435467
+         1.1817023, 1.1817023, 1.1817023,  0.33333333
+        -1.1817023, 1.1817023,-1.1817023,  0.05435467
+        -1.1817023, 1.1817023,-1.1817023,  0.33333333
+         1.1817023,-1.1817023,-1.1817023,  0.05435467
+         1.1817023,-1.1817023,-1.1817023,  0.33333333
+        -1.1817023,-1.1817023, 1.1817023,  0.05435467
+        -1.1817023,-1.1817023, 1.1817023,  0.33333333 $end
+
+! TRAVIS-CI SMALL
+

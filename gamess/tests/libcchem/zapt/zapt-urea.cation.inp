@@ -1,0 +1,41 @@
+!   ZAPT computation quartet urea ion quartet
+!   there are 8 atoms, and 17 (14) alpha (beta) occupied MOs (4 are core)
+!   the cc-pVDZ basis has 80 AOs and 76 MOs.
+!
+!   note: energys E2 and E6 are switched in GAMESS
+!
+!   GAMESS' FORTRAN: FINAL= -223.4000320698, E(MP2)= -224.0084099470
+!           E1 = -0.3662542209 CLOSED SHELL-LIKE TERM
+!           E2 = -0.0866992485 SINGLY UNOCCUPIED TERM
+!           E3 = -0.0027618345 TWO SINGLY OCCUPIED
+!           E4 = -0.0317131443 SINGLY UNOCCUPIED/OCCUPIED
+!           E5 = -0.0114985978 "FOCK MATRIX CONTRIBUTION"
+!           E6 = -0.1043230576 SINGLY UNOCCUPIED
+!           E7 = -0.0051277737 TWO SINGLY UNOCCUPIED
+!
+!   GAMESS+LIBCCHEM: FINAL= -223.4000320698, E(MP2)= -224.0084099470
+!     ZAPT ENERGY CONTRIBUTIONS
+!           E1 = -0.3662542209   CLOSED SHELL-LIKE TERM
+!           E2 = -0.0866992485   SINGLY UNOCCUPIED
+!           E3 = -0.0051277737   2 SINGLY OCCUPIED
+!           E4 = -0.0317131443   SINGLY UNOCCUPIED/OCCUPIED
+!           E5 = -0.0114985978   "FOCK MATRIX CONTRIBUTION"
+!           E6 = -0.1043230576   SINGLY OCCUPIED
+!           E7 = -0.0027618345   2 SINGLY UNOCCUPIED
+!   test case took 12 seconds on one node w/6 cores and w/2 GPUs
+!
+ $contrl scftyp=rohf icharg=1 mult=4 $end
+ $contrl mplevl=2 runtyp=energy ispher=1 $end
+ $system mwords=10 memddi=20 $end
+ $basis  gbasis=ccd $end
+ $scf    dirscf=.true. $end
+ $data
+urea...MP2/cc-pVTZ...this molecule really has C2 rather than C2v symmetry!
+Cnv 2
+
+HYDROGEN    1.0   1.1706494911    .0000000000  -1.7277523720
+OXYGEN      8.0    .0000000000    .0000000000   1.2568040799
+CARBON      6.0    .0000000000    .0000000000    .0324234675
+NITROGEN    7.0   1.1568642068    .0000000000   -.7190915340
+HYDROGEN    1.0   2.0306752995    .0000000000   -.2127855550
+ $END

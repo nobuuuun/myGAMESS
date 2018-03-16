@@ -1,0 +1,44 @@
+#!/bin/csh
+#
+#    test case 'eda-c2h6-zapt'
+#    Hui's energy decomposition analysis
+#    system is ethane (internal bond decomposition)
+#    ZAPT level test of each methyl group.
+#
+set ierr=0
+set ethrsh=0.01
+#
+#      checking only "all basis" results, which is the second set.
+set  ES0=-147.02
+set  EX0=-194.22
+set REP0=407.00
+set POL0=-148.55
+set DIS0=-25.68
+set TIH0=-82.79
+set TIM0=-108.47
+
+set  ES=`grep "ELECTROSTATIC ENERGY                  ES=" $1 | sed -n -e "2 p" | awk '{ print $5 }'`0
+set  EX=`grep "EXCHANGE ENERGY                       EX=" $1 | sed -n -e "2 p" | awk '{ print $5 }'`0
+set REP=`grep "REPULSION ENERGY                     REP=" $1 | sed -n -e "2 p" | awk '{ print $5 }'`0
+set POL=`grep "POLARIZATION ENERGY                  POL=" $1 | sed -n -e "2 p" | awk '{ print $5 }'`0
+set DIS=`grep "MP2 DISPERSION ENERGY               DISP=" $1 | sed -n -e "2 p" | awk '{ print $6 }'`0
+set TIH=`grep "TOTAL INTERACTION ENERGY HF OR DFT     E=" $1 | sed -n -e "2 p" | awk '{ print $9 }'`0
+set TIM=`grep "TOTAL INTERACTION ENERGY MP2           E=" $1 | sed -n -e "2 p" | awk '{ print $7 }'`0
+#
+set ESerr=`$chkabs $ES $ES0 $ethrsh`
+if($status != 0) set ierr=1 
+set EXerr=`$chkabs $EX $EX0 $ethrsh`
+if($status != 0) set ierr=1 
+set REPerr=`$chkabs $REP $REP0 $ethrsh`
+if($status != 0) set ierr=1 
+set POLerr=`$chkabs $POL $POL0 $ethrsh`
+if($status != 0) set ierr=1 
+set DISerr=`$chkabs $DIS $DIS0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIHerr=`$chkabs $TIH $TIH0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIMerr=`$chkabs $TIM $TIM0 $ethrsh`
+if($status != 0) set ierr=1 
+#
+echo -n "ESerr=$ESerr EXerr=$EXerr REPerr=$REPerr DISerr=$DISerr POLerr=$POLerr TIHerr=$TIHerr TIMerr=$TIMerr"
+exit $ierr 

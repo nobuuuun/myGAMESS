@@ -1,0 +1,157 @@
+{
+  "name": "eom-ccsd-ro-c2n.log",
+  "validation": [
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-255.9314909832",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "84.8472341121",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "41.0687523228",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-130.0155045483",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "41.0687523228",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "84.8472341121",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-385.6776816124",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-259.7616951775",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL KINETIC ENERGY",
+      "value": "129.7461906292",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "2.0020756981",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-130.0155045483",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : OPEN-SHELL EOM",
+      "name": "OPEN-SHELL EOM-CCSD ENERGY : STATE 1",
+      "value": "-130.27919408",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "COUPLED-CLUSTER : OPEN-SHELL EOM",
+      "name": "OPEN-SHELL EOM-CCSD ENERGY : STATE 2",
+      "value": "-130.16732632",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "COUPLED-CLUSTER : OPEN-SHELL EOM",
+      "name": "OPEN-SHELL EOM-CCSD ENERGY : STATE 3",
+      "value": "-130.35126890",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "COUPLED-CLUSTER : OPEN-SHELL EOM",
+      "name": "OPEN-SHELL EOM-CCSD ENERGY : STATE 4",
+      "value": "-130.27453596",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "COUPLED-CLUSTER : OPEN-SHELL EOM",
+      "name": "OPEN-SHELL EOM-CCSD ENERGY : STATE 5",
+      "value": "-130.20004262",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "SPIN",
+      "name": "S-SQUARED",
+      "value": "0.750",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.556398",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

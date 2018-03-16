@@ -1,0 +1,33 @@
+!   Carbon monoxide in water...excited states by TD-DFT
+!
+!   STATE        ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+!               HARTREE          EV         X       Y       Z     STRENGTH
+!   0  A    -113.2695486560     .000
+!   1  A    -112.9956669508    7.453      .0000   .4878   .0000     .043
+!   2  A    -112.9956669013    7.453     -.4878   .0000   .0000     .043
+!
+!   note, gas phase results are E(sigma)= -113.2783086306,
+!   E(pi)=-113.0031433234, del-E=7.488 eV, mu(x/y)=-0.4611
+!
+!   the solvent run is asked to compute cavitation energies, 3rd set is
+!   CLAVERIE-PIEROTTI (SPHERE BY SPHERE, SURFACE):    5.95417  KCAL/MOL
+!   CAVITATION ENERGY (ENTHALPY) =    0.57882 KCAL/MOL
+!
+!   this run requires 5 seconds on 2.66 GHz Cloverton (10 Dec 2008)
+!   results unchanged since 2008
+!
+ $contrl scftyp=rhf dfttyp=blyp runtyp=energy TDDFT=excite ispher=1 $end
+ $system mwords=1 $end
+ $scf    dirscf=.t. soscf=.t. $end
+ $tddft  nstate=2  $end
+ $pcm    solvnt=water ief=-10 icomp=2 icav=1  $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $data
+CO in water 
+C1
+C  6.   0.0   0.0   0.0
+O  8.   0.0   0.0   1.236
+ $end
+
+! TRAVIS-CI SMALL
+

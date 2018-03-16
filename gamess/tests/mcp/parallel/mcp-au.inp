@@ -1,0 +1,25 @@
+!   gold atom 2-S state, with built in MCP, scalar rel. basis #2
+!
+!   FINAL E= -103.3628892359, 10 iters
+!
+!   This run takes a second on anything ( 9 Nov 2005)
+!
+ $contrl scftyp=rohf mult=2 pp=mcp ispher=1 $end
+ $system kdiag=3 mwords=1 $end
+ $basis  gbasis=imcp-sr2 $end
+ $guess  guess=huckel $end
+!      input to select s2d9's 2-D term:
+--- $guess norder=1 iorder(5)=10,5,6,7,8,9 $end
+--- $scf    nco=5 nseto=1 no(1)=5 couple=.t.
+             f(1)= 1.0, 0.9
+         alpha(1)= 2.0, 1.80, 1.60
+          beta(1)=-1.0,-0.90,-0.80 $end
+ $data
+Au atom...2-S
+Dnh 2
+
+Au 79.0
+ $end
+
+! TRAVIS-CI SMALL
+

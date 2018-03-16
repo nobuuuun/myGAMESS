@@ -1,0 +1,35 @@
+#!/bin/bash
+
+solute0=-412.9000097569
+fgpol0=-1.0145037790
+qmpol0=-0.0248695403
+
+solute=`grep "SOLUTE ENERGY =" $1 | tail -n 1 | awk '{print $4}'`
+fgpol=`grep "FRAGMENT INDUCTION ENERGY =" $1 | tail -n 1 | awk '{print $5}'`
+qmpol=`grep "SOLUTE INDUCTION ENERGY =" $1 | tail -n 1 | awk '{print $5}'`
+
+tolE0=$tolE
+
+error=0
+
+#solute induction
+diffs=`$chkabs $solute $solute0 $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+#fragment induction
+difff=`$chkabs $fgpol $fgpol0 $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+#qm induction
+diffq=`$chkabs $qmpol $qmpol0 $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+
+printf "Solute=%12.8f; EFind=%12.8f; QMind=%12.8f\n" $diffs $difff $diffq
+exit $error

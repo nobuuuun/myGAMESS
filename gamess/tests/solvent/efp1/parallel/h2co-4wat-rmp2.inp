@@ -1,0 +1,59 @@
+!  H2CO(H2O)4...MP2 + EFP gradient test (October 2010)...40 AOs
+!  starting geometry was fully optimized at SCF level with EFP1=H2Orhf,
+!  taking 61 steps to go from Noriyuki's geometry (see TDDFT test)
+!  to the geometry here, converging crisply at the end (to 1d-5).
+!
+!  The MP2 optimization goes like this:
+!       NSERCH:   0  E=     -114.2462483286  R.M.S.=  0.0127572
+!       NSERCH:   1  E=     -114.2507281730  R.M.S.=  0.0054639
+!       NSERCH:   2  E=     -114.2488768236  R.M.S.=  0.0083639
+!       NSERCH:   3  E=     -114.2527411506  R.M.S.=  0.0027513
+!       NSERCH:   4  E=     -114.2502239021  R.M.S.=  0.0055172
+!       NSERCH:   5  E=     -114.2527933877  R.M.S.=  0.0014300
+!            ...snip...
+!       NSERCH:  26  E=     -114.2533870428  R.M.S.=  0.0000383
+!       NSERCH:  27  E=     -114.2533873179  R.M.S.=  0.0000305
+!       NSERCH:  28  E=     -114.2533873855  R.M.S.=  0.0000243
+!       NSERCH:  29  E=     -114.2533874234  R.M.S.=  0.0000357
+!       NSERCH:  30  E=     -114.2533874759  R.M.S.=  0.0000134
+!
+!  This run takes 106 seconds on 2.66 GHz Cloverton (26 Oct 2015)
+!
+ $CONTRL SCFTYP=RHF mplevl=2 RUNTYP=optimize ispher=1 $END
+ $SYSTEM MWORDS=5 memddi=5 $END
+ $mp2    code=ims $end
+ $GUESS  GUESS=HUCKEL $END
+ $BASIS  GBASIS=ccd $END
+ $STATPT OPTTOL=5.0E-05 nstep=100 $END
+
+ $data  
+H2CO+4EFP...MP2/cc-pVDZ geometry search
+C1
+O  8.0   2.0135521826  -1.2246628086  -1.1649715519
+C  6.0   1.7991544587  -1.0155130064  -0.0149773800
+H  1.0   0.8093469817  -1.1647256484   0.4336855893
+H  1.0   2.5889154879  -0.6630554233   0.6632383528
+ $END
+ $efrag
+
+fragname=H2Odft
+O1              -0.2643367574  -1.1267275101  -3.0326716318
+H2               0.5336854024  -1.3072046018  -2.5620687142
+H3              -0.0255033453  -1.0151523196  -3.9389762341
+fragname=H2Odft
+O1              -1.4859045857   0.8371332265  -1.2586872987
+H2              -1.9059210520   0.3199625550  -0.5901073718
+H3              -1.2353132605   0.2404791471  -1.9457727020
+fragname=H2Odft
+O1              -1.5439651677  -0.1128993593   1.5907313090
+H2              -2.0896782978  -0.0085801635   2.3537471274
+H3              -0.9114990598   0.5874029067   1.6117506498
+fragname=H2Odft
+O1               0.4141050271   1.7629111142   0.5619465261
+H2               0.6495068484   2.6761345051   0.6005143245
+H3              -0.1083350560   1.6500525903  -0.2159980524
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

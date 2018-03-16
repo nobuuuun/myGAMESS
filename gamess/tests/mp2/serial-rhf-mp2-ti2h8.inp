@@ -1,0 +1,57 @@
+!  titane dimer, Ti2H8...MP2 energy...172 basis functions
+!  S.P.Webb, M.S.Gordon, J.Am.Chem.Soc. 117, 7195-201(1995)
+!
+!  FINAL E= -1701.2487653096, 16 its, E(MP2)= -1701.5812566510, RMS=0.005080534
+!
+!  This run takes 222 seconds on 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results haven't changed much since at least 2007
+!
+ $contrl scftyp=rhf mplevl=2 runtyp=gradient $end
+ $system mwords=100 memddi=20 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $mp2    code=serial $end
+ $data
+Ti2H8...the Cs(2) isomer...MP2/TZVP(f)//RHF/TZVP
+Cs
+
+TI         22.0    0.7777811120   0.0410707558   0.0000000000
+   TZV
+   F 1
+   1 0.4 1.0
+
+TI         22.0   -2.0701228270   0.1899059256   0.0000000000
+   TZV
+   F 1
+   1 0.4 1.0
+
+H           1.0  -3.0208589868  -0.1234892952   1.3807920495
+   TZV
+   P 1
+   1 1.0 1.0
+
+H           1.0  -0.8030336845  -0.5333905552   1.0249853900
+   TZV
+   P 1
+   1 1.0 1.0
+
+H           1.0   1.6043361770   1.5103725404   0.0000000000
+   TZV
+   P 1
+   1 1.0 1.0
+
+H           1.0   1.5645743178  -0.7202408916  -1.2743582860
+   TZV
+   P 1
+   1 1.0 1.0
+
+H           1.0  -0.7933577550   1.4194663163   0.0000000000
+   TZV
+   P 1
+   1 1.0 1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

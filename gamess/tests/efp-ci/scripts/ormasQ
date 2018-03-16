@@ -1,0 +1,19 @@
+#!/bin/bash
+
+mrcisdqE0=-415.8761132312
+
+mrcisdqE=`grep "E(MRCISD + Q) = " $1 | tail -n 1 | awk '{print $5}'`
+
+tolE0=$tolE
+
+error=0
+
+#total energy
+diffe=`$chkabs $mrcisdqE0 $mrcisdqE $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$((error + 1))
+fi
+
+printf "mrcisdqE=%12.8f\n" $diffe
+exit $error

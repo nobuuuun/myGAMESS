@@ -1,0 +1,52 @@
+!   Jerry's V(N3)4 which is so cool it is even adopts S4 symmetry,
+!   which is the symmetry of a baseball (considering its stitches).
+!   the MCP run has 37 alpha and 36 beta MOs, 385 total MOs, 452 AOs.
+!   test case collected June 2010.
+!
+!   This input exposed an error in parallel MCP gradients, now fixed.
+!   It was kept because guess=Huckel finds an incorrect configuration,
+!   but converges if one flips the Huckel HOMO and LUMO.  Note that
+!   April 2013 Huckel changes made the iterations far more systematic,
+!   from clean symmetry starting orbs, but did not remove the need
+!   to reorder to place a B symmetry orbital at #37.
+!
+!   2-B state FINAL RO-B3LYP E= -191.2006418131, 34 iters, RMS= 0.031822576
+!
+!   this run took 1847 seconds 2.66 GHz Cloverton ( 7 Apr 2015)
+!   answers have been stable since 2013.
+!
+!   -----------------------------------------------------------------------
+!        information about the incorrect SCF solution (old-style grid):
+!   Huckel guess w/o reordering was finding this Kohn-Sham ordering:
+!      31      32      33      34    35&36     37      38      39     40&41
+!       E       A       B       A      E        A       B       B       E
+!   -0.3245 -0.3218 -0.3081 -0.2993 -0.2867 -0.1772 -0.1682 -0.1364 -0.1158
+!   with B3LYP 2-A state energy -191.1799622655, r.m.s.= 0.0294061,
+!   going through SCF, coarse grid, and fine grid stages.
+!
+!   flipping the SOMO and the first virtual (w/o coarse grid stage) gives
+!      31      32      33      34    35&36     37      38     39&40    41
+!       E       E       B       A       E       B       A       E       B
+!   -0.3222 -0.3222 -0.3083 -0.2971 -0.2886 -0.1868 -0.1559 -0.1212 -0.1121
+!   and Jerry's original 2-B E= -191.2006220793, R.M.S. of 0.031837804
+!   the good solution has SCF energy around -187.3468489
+!
+ $CONTRL SCFTYP=ROHF dfttyp=b3lyp RUNTYP=gradient PP=mcp
+         mult=2 maxit=50 ISPHER=1 $END
+ $SYSTEM mwords=20 $end
+ $basis  gbasis=mcp-tzp $end
+ $guess  guess=huckel norder=1 iorder(37)=38,37 $end
+ $SCF    dirscf=.t. diis=.t. soscf=.f. $end
+ $DATA
+B3LYP/MPC-TZP for V(N3)4 in S4 symmetry
+S2n 2
+
+V   23.0    .0000000000    .0000000000    .0000000000
+N    7.0    .5461312650   1.3840306081  -1.0838907510
+N    7.0   1.5147522581   1.6251160782  -1.7713425430
+N    7.0   2.4080547800   1.9230061148  -2.4469520312
+ $END
+ 
+
+! TRAVIS-CI MEDIUM
+

@@ -1,0 +1,44 @@
+#!/bin/csh
+#
+#    test case 'eda-ac-wat'
+#    Hui's energy decomposition analysis
+#    system is actinium +3 ion, plus one water.
+#    MP2 level test, with a core potential, and with an f AO.
+#
+set ierr=0
+set ethrsh=0.01
+#
+#      checking only "own basis" results, which is the first set.
+set  ES0=-69.98
+set  EX0=-29.35
+set REP0=67.35
+set POL0=-43.08
+set DIS0=-2.95
+set TIH0=-75.06
+set TIM0=-78.01
+
+set  ES=`grep "ELECTROSTATIC ENERGY                  ES=" $1 | head -1 | awk '{ print $5 }'`0
+set  EX=`grep "EXCHANGE ENERGY                       EX=" $1 | head -1 | awk '{ print $5 }'`0
+set REP=`grep "REPULSION ENERGY                     REP=" $1 | head -1 | awk '{ print $5 }'`0
+set POL=`grep "POLARIZATION ENERGY                  POL=" $1 | head -1 | awk '{ print $5 }'`0
+set DIS=`grep "MP2 DISPERSION ENERGY               DISP=" $1 | head -1 | awk '{ print $6 }'`0
+set TIH=`grep "TOTAL INTERACTION ENERGY HF OR DFT     E=" $1 | head -1 | awk '{ print $9 }'`0
+set TIM=`grep "TOTAL INTERACTION ENERGY MP2           E=" $1 | head -1 | awk '{ print $7 }'`0
+#
+set ESerr=`$chkabs $ES $ES0 $ethrsh`
+if($status != 0) set ierr=1 
+set EXerr=`$chkabs $EX $EX0 $ethrsh`
+if($status != 0) set ierr=1 
+set REPerr=`$chkabs $REP $REP0 $ethrsh`
+if($status != 0) set ierr=1 
+set POLerr=`$chkabs $POL $POL0 $ethrsh`
+if($status != 0) set ierr=1 
+set DISerr=`$chkabs $DIS $DIS0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIHerr=`$chkabs $TIH $TIH0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIMerr=`$chkabs $TIM $TIM0 $ethrsh`
+if($status != 0) set ierr=1 
+#
+echo -n "ESerr=$ESerr EXerr=$EXerr REPerr=$REPerr DISerr=$DISerr POLerr=$POLerr TIHerr=$TIHerr TIMerr=$TIMerr"
+exit $ierr 

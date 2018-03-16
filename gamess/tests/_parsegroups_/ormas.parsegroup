@@ -1,0 +1,128 @@
+{
+  "parse_header" : "ORMAS PT2",
+  "parse_group" : [
+   {
+     "regex_string" : "^                     2ND ORDER ENERGY CORRECTION  =.*$",
+     "parse_name"   : "2ND ORDER ENERGY CORRECTION",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : 5e-8,
+     "parse_precision" : -1
+   },
+   {
+     "regex_string" : "^ TOTAL MRPT2, E\\(MP2\\) 0TH \\+ 1ST \\+ 2ND ORDER ENERGY =.*$",
+     "parse_name"   : "TOTAL MRPT2",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : 5e-8,
+     "parse_precision" : -1
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "V -> A  : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 8,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "V -> E  : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 9,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "A -> E  : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 10,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "VV -> AA : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 11,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "VV -> AE : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 12,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "VA -> AE : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 13,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "VV -> EE : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 14,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "VA -> EE : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 15,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "AA -> EE : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 16,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "INTERNAL CCAS : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 17,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ BREAKDOWN OF E\\(2\\) ACCORDING TO CLASS OF EXCITED DETERMINANT$",
+     "parse_name"   : "TOTAL : E(2) COMPONENT",
+     "parse_precision" : -1,
+     "parse_tolerance" : 5e-8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 19,
+     "parse_instance" : -1
+   }
+  ]
+}

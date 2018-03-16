@@ -1,0 +1,45 @@
+!   CF3COO- in water...133 AOs
+!   Aqueous solvation energy based on the SMVLE/SVP protocol      
+!
+!   FINAL RHF ENERGY IS     -523.9549097618 AFTER  13 ITERATIONS
+!
+!   SMVLE  SOLVATION METHOD ENERGIES  
+! ----------------------------------  
+! TOTAL SVPE FREE ENERGY        GSVPE = -523.95490976
+! LOCAL ELECTROSTATIC EFFECTS      GL =   -0.01091631   ( -6.85009 KCAL/MOL)
+! NON-BULK-ELECTROSTATIC EFFECTS GCDS =    0.00813230   (  5.10309 KCAL/MOL)
+! TOTAL SMVLE FREE ENERGY      GSMVLE = -523.95769377
+! SMVLE SOLV FREE ENERGY  GSMVLE-EGAS =   -0.09809766   (-61.55721 KCAL/MOL)
+! SMVLE SOLV FREE ENERGY  GSMVLE-EGAS =   -0.09507924   (-59.66312 KCAL/MOL)
+!    for (1 ATM STANDARD STATE)
+!        
+!   SMVLE  SOLVATION METHOD PROPERTIES 
+! ------------------------------------
+! CAVITY SURFACE AREA FOR CDS CALC   =     458.68129 (    128.44386 ANG**2 )
+!
+!   this run takes 355 seconds on 2.66 GHz Cloverton (24 Oct 2013)
+!     answers almost invariant since 2010
+!
+ $CONTRL SCFTYP=RHF RUNTYP=ENERGY ICHARG=-1 $end
+ $SYSTEM MWORDS=5 $END
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 DIFFSP=.TRUE. $END
+
+ $SVP    NVLPL=5 DIELST=78.5 RHOISO=0.001 NPTLEB=1202 
+         EGAS=-523.8595961062 SMVLE=.T. $END
+
+ $DATA
+SMVLE/HF/6-31+G(d) solvation energy relative to EGAS - CF3COO- in water
+C1
+CARB1           6.0         0.512211   0.000040  -0.012117
+CARB2           6.0        -1.061796   0.000003  -0.036672
+OXYG3           8.0        -1.547400   1.150225  -0.006609
+OXYG4           8.0        -1.547182  -1.150320  -0.006608
+FLUO5           9.0         1.061911   1.087605  -0.610341
+FLUO6           9.0         1.061963  -1.086426  -0.612313
+FLUO7           9.0         0.993255  -0.001122   1.266928
+ $END
+
+
+
+! TRAVIS-CI SMALL
+

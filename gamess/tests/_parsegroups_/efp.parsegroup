@@ -1,0 +1,141 @@
+{
+  "parse_header" : "EFP ADDITIVE CONTRIBUTIONS TO NUCLEAR ENERGY",
+  "parse_group" : [
+   {
+     "regex_string" : "^   -- NUCLEAR CHARGE - NUCLEAR CHARGE   =.*$",
+     "parse_name"   : "NUCLEAR CHARGE - NUCLEAR CHARGE  ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- NUCLEAR CHARGE - EFP CHARGE       =.*$",
+     "parse_name"   : "NUCLEAR CHARGE - EFP CHARGE      ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- NUCLEAR CHARGE - EFP DIPOLE       =.*$",
+     "parse_name"   : "NUCLEAR CHARGE - EFP DIPOLE      ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- NUCLEAR CHARGE - EFP QUADRUPOLE   =.*$",
+     "parse_name"   : "NUCLEAR CHARGE - EFP QUADRUPOLE  ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- NUCLEAR CHARGE - EFP OCTUPOLE     =.*$",
+     "parse_name"   : "NUCLEAR CHARGE - EFP OCTUPOLE    ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP CHARGE     - EFP CHARGE       =.*$",
+     "parse_name"   : "EFP CHARGE     - EFP CHARGE      ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP CHARGE     - EFP DIPOLE       =.*$",
+     "parse_name"   : "EFP CHARGE     - EFP DIPOLE      ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP CHARGE     - EFP QUADRUPOLE   =.*$",
+     "parse_name"   : "EFP CHARGE     - EFP QUADRUPOLE  ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP CHARGE     - EFP OCTUPOLE     =.*$",
+     "parse_name"   : "EFP CHARGE     - EFP OCTUPOLE    ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP DIPOLE     - EFP DIPOLE       =.*$",
+     "parse_name"   : "EFP DIPOLE     - EFP DIPOLE      ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP DIPOLE     - EFP QUADRUPOLE   =.*$",
+     "parse_name"   : "EFP DIPOLE     - EFP QUADRUPOLE  ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP QUADRUPOLE - EFP QUADRUPOLE   =.*$",
+     "parse_name"   : "EFP QUADRUPOLE - EFP QUADRUPOLE  ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP-EFP EXCHANGE REPULSION ENERGY =.*$",
+     "parse_name"   : "EFP-EFP EXCHANGE REPULSION ENERGY",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP-EFP DISPERSION ENERGY \\(C6\\)    =.*$",
+     "parse_name"   : "EFP-EFP DISPERSION ENERGY (C6)   ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- EFP-EFP DISPERSION ENERGY \\(C8\\)    =.*$",
+     "parse_name"   : "EFP-EFP DISPERSION ENERGY (C8)   ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^   -- TOTAL INTERFRAGMENT INTERACTION   =.*$",
+     "parse_name"   : "TOTAL INTERFRAGMENT INTERACTION  ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^THE TOTAL NUCLEAR CHARGE\\/EFP ENERGY    =.*$",
+     "parse_name"   : "TOTAL NUCLEAR CHARGE/EFP ENERGY  ",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_instance" : -1,
+     "parse_required" : true
+   }
+  ]
+}

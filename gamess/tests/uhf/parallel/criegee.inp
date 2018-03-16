@@ -1,0 +1,47 @@
+!  "Criegee intermediate" aka formaldehyde oxide aka carbonyl oxide.
+!
+!  The H2COO radical is an important intermediate in olefin ozonolysis.
+!  See for example R.Criegee, Record Chem. Prog. 18, 111(1957)
+!  For a detailed theoretical investigation of ozonolysis, see
+!  D.Cremer, R.Crehuet, J.Anglada  J.Am.Chem.Soc. 123, 6127-6141(2001)
+!  There is now a good experimental geometry for this radical, which
+!  is found to be planar (not the out of plane CH2 group used below):
+!  M.C.McCarthy, L.Cheng, K.N.Crabtree, O.Martinez, T.L.Nguen,
+!  C.C.Womack, J.F.Stanton   J.Phys.Chem.Lett. 4, 4133-4139(2013)
+!
+!  Here we do UHF on the "singlet" state, which is of course 50% triplet.
+!  The job tests UHF natural orbital generation for this 1-A'' state.
+!  There are 49 AOs, 46 MOs, 12 alpha and beta electrons.
+!
+!  FINAL E= -188.5612522250, <S**2>=1.020, 19 iters, RMS=0.000001252
+!  The UHF natural orbital occupancies for orbitals 11-14 are:
+!        1.9965(a'), 1.0000(a'), 1.0000(a''), 0.0035(a')
+!
+!  This run takes 1 second on almost anything (8 Nov 2005)
+!
+ $contrl scftyp=uhf mult=1 runtyp=gradient ispher=1 nzvar=9 coord=zmt $end
+ $system mwords=2 $end
+ $guess  guess=huckel norder=1 jorder(12)=13,12 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $scf    uhfnos=.true. $end
+ $data
+Criegee intermediate...optimized geometry
+Cs
+
+C
+O 1 rCO
+O 2 rOO 1 aOOC
+H 1 rCH 2 aHCO 3  wHCOO
+H 1 rCH 2 aHCO 3 -wHCOO
+
+rCO=1.3824615
+rOO=1.3105794
+rCH=1.0726882
+aOOC=111.3307543
+aHCO=115.9378659
+wHCOO=76.6711805
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

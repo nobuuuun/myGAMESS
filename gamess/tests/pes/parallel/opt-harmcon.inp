@@ -1,0 +1,45 @@
+!    Harmonically Constrained RHF geometry optimization
+!    this test is provided by Casper Steinmann, circa 2012 or so.
+!
+!    With RHF/STO-3G the C-C bond distance in ethane is 1.54 Angstrom.
+!    This test adds a harmonic constraint to the distance between the
+!    two C's to 2.0 Angstrom with a force-constant of 500 kcal mol^-1
+!    Angstrom^-2 which results in
+!       NSERCH:   0  E=      -78.1358511263  R.M.S.=  0.1125589
+!       NSERCH:   1  E=      -78.2255444738  R.M.S.=  0.0197447
+!       NSERCH:   2  E=      -78.2387732595  R.M.S.=  0.0057284
+!       NSERCH:   3  E=      -78.2409946839  R.M.S.=  0.0016678
+!       NSERCH:   4  E=      -78.2410997528  R.M.S.=  0.0007462
+!       NSERCH:   5  E=      -78.2411162938  R.M.S.=  0.0001549
+!       NSERCH:   6  E=      -78.2411131161  R.M.S.=  0.0003753
+!       NSERCH:   7  E=      -78.2411169455  R.M.S.=  0.0000081
+!    The CC bond distance with this constraint ends up being 1.845
+!
+!    The energy values above contain the constraining energy,
+!    so one could also check that the last geometry's quantum
+!    energy is FINAL E= -78.2602388622
+!
+!    This run takes 0 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!
+ $CONTRL SCFTYP=RHF RUNTYP=OPTIMIZE $END
+ $BASIS  GBASIS=STO NGAUSS=3 $END
+ $STATPT OPTTOL=0.0001 NSTEP=20
+         IHMCON(1)=1,1,2
+         SHMCON(1)=2.0
+         FHMCON(1)=500.0 $END
+ $DATA
+Title
+C1
+ C           6.0  -6.2363126322   1.7529676581   0.1646990386
+ C           6.0  -4.6987919301   1.7412484162   0.1483538561
+ H           1.0  -6.6074323757   2.4534906165   0.9070325314
+ H           1.0  -6.6259520527   0.7677973685   0.4036239104
+ H           1.0  -6.6288956281   2.0465960900  -0.8044130853
+ H           1.0  -4.3062173272   1.4476505362   1.1174725498
+ H           1.0  -4.3091518057   2.7264118580  -0.0906161054
+ H           1.0  -4.3276762483   1.0407674565  -0.5940226956
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

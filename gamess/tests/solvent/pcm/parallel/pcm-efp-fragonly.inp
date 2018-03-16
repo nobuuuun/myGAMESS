@@ -1,0 +1,103 @@
+!    8 EFP1 (RHF-style) waters embedded in PCM water, no QM molecule
+!
+!    this test case came from Hui when EFP gradients were made more exact,
+!    shortly after the FIXPVA changes made PCM more exact.
+!
+!      NSERCH:   0  E=       -0.1258734675  R.M.S.=  0.0026132
+!      NSERCH:   1  E=       -0.1303830351  R.M.S.=  0.0019628
+!      NSERCH:   2  E=       -0.1345145091  R.M.S.=  0.0011755
+!      NSERCH:   3  E=       -0.1357567291  R.M.S.=  0.0019828
+!      NSERCH:   4  E=       -0.1352783911  R.M.S.=  0.0026416
+!      NSERCH:   5  E=       -0.1376058298  R.M.S.=  0.0009786
+!      NSERCH:   6  E=       -0.1361186467  R.M.S.=  0.0025855
+!      NSERCH:   7  E=       -0.1381149610  R.M.S.=  0.0010957
+!      NSERCH:   8  E=       -0.1373772559  R.M.S.=  0.0022000
+!      NSERCH:   9  E=       -0.1386688951  R.M.S.=  0.0006354
+!      NSERCH:  10  E=       -0.1376666615  R.M.S.=  0.0019592
+!              ...snipped...
+!      NSERCH:  20  E=       -0.1390927536  R.M.S.=  0.0005220
+!      NSERCH:  21  E=       -0.1392020667  R.M.S.=  0.0001310
+!      NSERCH:  22  E=       -0.1391556833  R.M.S.=  0.0003371
+!      NSERCH:  23  E=       -0.1392150786  R.M.S.=  0.0000785
+!      NSERCH:  24  E=       -0.1391927204  R.M.S.=  0.0002484
+!      NSERCH:  25  E=       -0.1392197580  R.M.S.=  0.0000749
+!      NSERCH:  26  E=       -0.1392072037  R.M.S.=  0.0001759
+!      NSERCH:  27  E=       -0.1392227615  R.M.S.=  0.0000443
+!      NSERCH:  28  E=       -0.1392171086  R.M.S.=  0.0001192
+!      NSERCH:  29  E=       -0.1392243760  R.M.S.=  0.0000154
+!      NSERCH:  30  E=       -0.1392246762  R.M.S.=  0.0000149
+!
+!    This run takes 6 seconds on 2.66 GHz Cloverton ( 2 Oct 2015)
+!
+!   -------------------------------------------------------------------
+!    some data from 2008 showed more monotonic approach to the
+!    same minimum.  Unclear what happened!  (change noticed in 2015)
+!    This could be due to change in hessian guess, or in stepping,
+!    as the very first gradient is clearly the same as in 2008.
+!    FINAL EFPPCM ENERGY   =   -.1258734675 RMS GRADIENT =  .0026132
+!    FINAL EFPPCM ENERGY   =   -.1305449786 RMS GRADIENT =  .0018910
+!    FINAL EFPPCM ENERGY   =   -.1344605011 RMS GRADIENT =  .0010762
+!    FINAL EFPPCM ENERGY   =   -.1360956317 RMS GRADIENT =  .0013444
+!    FINAL EFPPCM ENERGY   =   -.1369954217 RMS GRADIENT =  .0012671
+!    FINAL EFPPCM ENERGY   =   -.1375151694 RMS GRADIENT =  .0013082
+!    FINAL EFPPCM ENERGY   =   -.1382570837 RMS GRADIENT =  .0008956
+!    FINAL EFPPCM ENERGY   =   -.1388046133 RMS GRADIENT =  .0007547
+!    FINAL EFPPCM ENERGY   =   -.1390234209 RMS GRADIENT =  .0005301
+!    FINAL EFPPCM ENERGY   =   -.1391341390 RMS GRADIENT =  .0004092
+!    FINAL EFPPCM ENERGY   =   -.1391647866 RMS GRADIENT =  .0003348
+!    FINAL EFPPCM ENERGY   =   -.1392001882 RMS GRADIENT =  .0001445
+!    FINAL EFPPCM ENERGY   =   -.1392076822 RMS GRADIENT =  .0001269
+!    FINAL EFPPCM ENERGY   =   -.1392189163 RMS GRADIENT =  .0000709
+!    FINAL EFPPCM ENERGY   =   -.1392201652 RMS GRADIENT =  .0000746
+!    FINAL EFPPCM ENERGY   =   -.1392234301 RMS GRADIENT =  .0000333
+!    FINAL EFPPCM ENERGY   =   -.1392233762 RMS GRADIENT =  .0000494
+!    FINAL EFPPCM ENERGY   =   -.1392245427 RMS GRADIENT =  .0000147
+!    FINAL EFPPCM ENERGY   =   -.1392245058 RMS GRADIENT =  .0000207
+!    FINAL EFPPCM ENERGY   =   -.1392247176 RMS GRADIENT =  .0000061
+!    FINAL EFPPCM ENERGY   =   -.1392247123 RMS GRADIENT =  .0000085
+!    FINAL EFPPCM ENERGY   =   -.1392247477 RMS GRADIENT =  .0000027
+!    time requirement is trivial (3 Nov 2008)
+!
+ $contrl runtyp=optimize coord=fragonly $end
+ $system mwords=1 $end
+ $statpt nstep=30 opttol=1d-5 $end
+ $pcm    solvnt=water $end
+ $pcmcav radii=suahf $end
+ $efrag
+coord=cart polmethd=frgscf position=optimize
+ FRAGNAME=H2ORHF
+O1        -1.35475779    -1.50658107    -1.71645629
+H2        -1.83595586    -0.78172690    -2.08034229
+H3        -1.57160699    -1.55152857    -0.79975861
+ FRAGNAME=H2ORHF
+O1        -1.53432715    -1.56485939     1.32010055
+H2        -0.61531460    -1.52483869     1.52792883
+H3        -1.90980411    -2.24704599     1.85209358
+ FRAGNAME=H2ORHF
+O1         1.50415134    -1.59683704     1.48269606
+H2         2.07273030    -0.91529912     1.80144560
+H3         1.71014416    -1.72672319     0.57161158
+ FRAGNAME=H2ORHF
+O1         1.66174364    -1.86428094    -1.54463077
+H2         0.75523323    -1.71669662    -1.75871980
+H3         1.94393635    -2.61800265    -2.03620958
+ FRAGNAME=H2ORHF
+O1        -1.35475779     1.53706789    -1.71645629
+H2        -1.83595586     2.26192212    -2.08034229
+H3        -1.57160699     1.49212039    -0.79975861
+ FRAGNAME=H2ORHF
+O1        -1.53432715     1.47878957     1.32010055
+H2        -0.61531460     1.51881027     1.52792883
+H3        -1.90980411     0.79660296     1.85209358
+ FRAGNAME=H2ORHF
+O1         1.50415134     1.44681191     1.48269606
+H2         2.07273030     2.12834978     1.80144560
+H3         1.71014416     1.31692576     0.57161158
+ FRAGNAME=H2ORHF
+O1         1.66174364     1.17936802    -1.54463077
+H2         0.75523323     1.32695234    -1.75871980
+H3         1.94393635     0.42564631    -2.03620958
+ $end  
+
+! TRAVIS-CI SMALL
+

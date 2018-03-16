@@ -1,0 +1,42 @@
+!   another PCM test case from Francois Rotzinger, on triiodide ion.
+!   the functional choice is a bit unusual!
+!     FINAL R-OPBE E=   -34.7222748292, 12 iters, RMS GRADIENT = 0.0005398
+!     FINAL R-OPBE E=   -34.7222855734,  6 iters, RMS GRADIENT = 0.0003911
+!     FINAL R-OPBE E=   -34.7222972409,  6 iters, RMS GRADIENT = 0.0000093
+!     FINAL R-OPBE E=   -34.7222972468,  3 iters, RMS GRADIENT = 0.0000003
+!
+!   this job requires 43 seconds on 2.66 GHz Cloverton ( 2 Oct 2015)
+!   results unchanged since 2008
+!
+ $contrl scftyp=rhf dfttyp=opbe runtyp=optimize 
+         icharg=-1 pp=sbkjc ispher=1 $end
+ $system mwords=10 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $dft    method=grid nrad0=96 nthe0=24 nphi0=48
+                     nrad=96 nthe=24 nphi=48 $end
+ $statpt opttol=1d-5 $end
+
+!    these three are a definition of a solvent, not sure which!
+ $pcm    rsolv=3.0 eps=37.5 epsinf=1.3441 $end
+!    supply a radius for the I atoms in this anion
+ $pcmcav rin(1)=2.4, 2.4, 2.4 $end
+!    tightest tesselation selected.
+ $tescav ntsall=240 $end
+
+ $data
+[I3]-, D4h, SBKJC(d), OPBE-CPCM
+dnh  4
+
+I          53.0   0.0000000000   0.0000000000   2.9391837545
+  sbkjc
+  d  1 ; 1  0.25   1.00
+
+I          53.0   0.0000000000   0.0000000000   0.0000000000
+  sbkjc
+  d  1 ; 1  0.25   1.00
+
+ $end
+
+! TRAVIS-CI SMALL
+

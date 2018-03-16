@@ -1,0 +1,120 @@
+!   A test of the DK transformation for the Au atom.   Test used since 2003.
+!
+!   FINAL energy=  -19014.2952671687, 13 iterations for DK 3rd order.
+!
+!          AXP got -19014.2952666555 showing RI accuracy is not to last digits!
+!   Apple/gfortran -19014.2952673299
+!
+!   This run takes 167 seconds on 2.66 GHz Cloverton (15 Apr 2015)
+!      Timing depends on the quality of the q.p. implementation.
+!
+!   -----------------------------------------------------------------
+!   The goal is to reproduce results in Table V of
+!   A.Wolf, M.Reiher, B.A.Hess  J.Chem.Phys. 117, 9215-26(2002)
+!   The 32s,29p,20d,15f "universal basis set" used here is that of
+!   G.L.Malli, A.B.F.Da Silva, Y.Ishikawa  Phys.Rev.A 47, 143-6(1993)
+!   This basis has 389 AOs, retaining 324 using spherical harmonics.
+!
+!             GAMESS      Wolf/Reiher/Hess
+!    NR: -17865.3925397599  -17865.3944  (their entry is a typo?)
+!   DK1: -19339.3088904377  -19339.3088
+!   DK2: -18993.7221374675  -18993.7221
+!   DK3: -19014.2952677750  -19014.2952
+!   DK4:                    -19011.3473
+!   DK5:                    -19012.8103
+!  IOTC: -19012.3011045130
+!   Dirac-Coulomb           -19039.5856  (with this basis set)
+!   Dirac-Coulomb           -19039.84442 (Visscher/Dyall numerical DC-HF)
+!
+!   Because this is converging to a value about 27 Hartree in error due
+!   to applying DK only to the 1e- term, and as the Breit perturbation 
+!   is +22.6 hartree for Hg (Z=78), it is more important to worry about
+!   fixing the Coulomb term by applying these effects, than to do the
+!   1e- DK transformation beyond 3rd order.
+!
+ $contrl scftyp=rohf mult=2 ispher=1 $end
+ $system mwords=5 timlim=600 $end
+
+ $contrl relwfn=dk $end
+ $relwfn norder=3 modeqr=8 qmttol=1d-9 $end
+
+x$contrl relwfn=iotc $end
+x$relwfn          modeqr=8 qmttol=1d-9 $end
+
+ $guess  guess=huckel $end
+ $data
+Gold...32s,29p,20d,15f UBS from Malli/Da Silva/Ishikawa
+Dnh 2
+
+Au  79.0
+   L 1 ; 1         0.021494 1.0
+   L 1 ; 1         0.044157 1.0
+   L 1 ; 1         0.090718 1.0
+   L 1 ; 1         0.186374 1.0
+   L 1 ; 1         0.382893 1.0
+   L 1 ; 1         0.786628 1.0
+   L 1 ; 1         1.616074 1.0
+   L 1 ; 1         3.320117 1.0
+   L 1 ; 1         6.820958 1.0
+   L 1 ; 1        14.013204 1.0
+   L 1 ; 1        28.789191 1.0
+   L 1 ; 1        59.145470 1.0
+   L 1 ; 1       121.510418 1.0
+   L 1 ; 1       249.635037 1.0
+   L 1 ; 1       512.858511 1.0
+   L 1 ; 1      1053.633557 1.0
+   L 1 ; 1      2164.619772 1.0
+   L 1 ; 1      4447.066748 1.0
+   L 1 ; 1      9136.201616 1.0
+   L 1 ; 1     18769.716020 1.0
+   L 1 ; 1     38561.127946 1.0
+   L 1 ; 1     79221.261891 1.0
+   L 1 ; 1    162754.791419 1.0
+   L 1 ; 1    334368.848683 1.0
+   L 1 ; 1    686938.467338 1.0
+   L 1 ; 1   1411269.200969 1.0
+   L 1 ; 1   2899358.315629 1.0
+   L 1 ; 1   5956538.013185 1.0
+   L 1 ; 1  12237309.514749 1.0
+   s 1 ; 1  25140735.076029 1.0
+   s 1 ; 1  51649961.080194 1.0
+   s 1 ; 1 106111395.371615 1.0
+   d 1 ; 1         0.021494 1.0
+   d 1 ; 1         0.044157 1.0
+   d 1 ; 1         0.090718 1.0
+   d 1 ; 1         0.186374 1.0
+   d 1 ; 1         0.382893 1.0
+   d 1 ; 1         0.786628 1.0
+   d 1 ; 1         1.616074 1.0
+   d 1 ; 1         3.320117 1.0
+   d 1 ; 1         6.820958 1.0
+   d 1 ; 1        14.013204 1.0
+   d 1 ; 1        28.789191 1.0
+   d 1 ; 1        59.145470 1.0
+   d 1 ; 1       121.510418 1.0
+   d 1 ; 1       249.635037 1.0
+   d 1 ; 1       512.858511 1.0
+   d 1 ; 1      1053.633557 1.0
+   d 1 ; 1      2164.619772 1.0
+   d 1 ; 1      4447.066748 1.0
+   d 1 ; 1      9136.201616 1.0
+   d 1 ; 1     18769.716020 1.0
+   f 1 ; 1         0.021494 1.0
+   f 1 ; 1         0.044157 1.0
+   f 1 ; 1         0.090718 1.0
+   f 1 ; 1         0.186374 1.0
+   f 1 ; 1         0.382893 1.0
+   f 1 ; 1         0.786628 1.0
+   f 1 ; 1         1.616074 1.0
+   f 1 ; 1         3.320117 1.0
+   f 1 ; 1         6.820958 1.0
+   f 1 ; 1        14.013204 1.0
+   f 1 ; 1        28.789191 1.0
+   f 1 ; 1        59.145470 1.0
+   f 1 ; 1       121.510418 1.0
+   f 1 ; 1       249.635037 1.0
+   f 1 ; 1       512.858511 1.0
+
+ $end
+! TRAVIS-CI SKIP
+

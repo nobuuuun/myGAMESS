@@ -1,0 +1,30 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+  "parse_group" : [
+   {
+     "regex_string" : "^ GROUND STATE CR-CC\\(2,3\\),A.*$",
+     "parse_name"   : "GS CR-CC(2,3)   A ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CC\\(2,3\\),B.*$",
+     "parse_name"   : "GS CR-CC(2,3)   B ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CC\\(2,3\\),C.*$",
+     "parse_name"   : "GS CR-CC(2,3)   C ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CC\\(2,3\\),D.*$",
+     "parse_name"   : "GS CR-CC(2,3)   D ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   }
+  ]
+}

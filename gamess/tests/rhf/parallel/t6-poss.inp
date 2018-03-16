@@ -1,0 +1,87 @@
+!  This file from Jerry, in March 2007.  Actually, this is 2 input files. 
+!  Both are POSS (T6 form) with either -H (first) or -CF3 (2nd) ligands.
+!
+!  FINAL E= -2411.6991069201, 10 iters, RMS= 0.005056644
+!
+!  This run takes 31 seconds on 2.66 GHz Cloverton (17 Mar 2015)
+!  
+!                              -----------
+!  This file is why the default converger was changed from SOSCF to DIIS
+!  for RHF (as it had been for a long time for ROHF).   DIIS makes use
+!  of the SYMDIA diagonalizations to preserve orbital degeneracy in the
+!  non-Abelian groups.
+!  
+! T6 POSS, T. Haddad and J. Mabry, input file from Jerry
+!
+! This illustrates that SOSCF does not hold symmetry as well as DIIS,
+! and runs like this (also -CH3 and -CF3 in corners) are why the
+! default was changed in 4/2007 from SOSCF to DIIS in non-Abelian groups.
+!
+!  diis: F.NAL RHF ENERGY IS    -2411.6991069201 AFTER  10 ITERATIONS
+! soscf: F.NAL RHF ENERGY IS    -2411.7044457872 AFTER  10 ITERATIONS
+!
+!  set to memddi=440 to run MP2 gradient, mwords=8 covers this run.
+!
+ $contrl scftyp=rhf runtyp=gradient mplevl=0 ispher=1 coord=zmt $end
+ $system mwords=8 memddi=0 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=0 $end
+ $scf    dirscf=.t. fdiff=.false. diis=.t. $end
+x$mp2    nosym=1 $end
+ $data
+B3LYP(5)/6-311G(d,p) T6, D3h
+Dnh  3
+
+O
+O      1   3.9820690
+O      1   3.9820690  2    60.0000000
+SI     1   1.6514313  2    72.9966175  3    79.8310729  0
+SI     1   1.6514313  2    72.9966175  3   -79.8310729  0
+SI     2   1.6514313  3    72.9966175  1    79.8310729  0
+SI     2   1.6514313  3    72.9966175  1   -79.8310729  0
+SI     3   1.6514313  1    72.9966175  2    79.8310729  0
+SI     3   1.6514313  1    72.9966175  2   -79.8310729  0
+O      4   1.6621444  1   109.1859234  2    26.0781074  0
+O      6   1.6621444  2   109.1859234  3    26.0781074  0
+O      8   1.6621444  3   109.1859234  1    26.0781074  0
+O      5   1.6621444  1   109.1859234  2   -26.0781074  0
+O      7   1.6621444  2   109.1859234  3   -26.0781074  0
+O      9   1.6621444  3   109.1859234  1   -26.0781074  0
+H      4   1.4621671  1   109.6285801 11   180.0000000  0
+H      5   1.4621671  1   109.6285801 14   180.0000000  0
+H      6   1.4621671  2   109.6285801 12   180.0000000  0
+H      7   1.4621671  2   109.6285801 15   180.0000000  0
+H      8   1.4621671  3   109.6285801 10   180.0000000  0
+H      9   1.4621671  3   109.6285801 13   180.0000000  0
+
+ $END
+
+----------
+the rest is commented out, it is -CF3 in the corners instead of H.
+
+It has the same DIIS vs. SOSCF problems for 6-31G(d), SOSCF and
+DIIS energies of -4425.3376737    and -4425.33480673,   respectively.
+
+It has the same DIIS vs. SOSCF problems for 6-311G(2d,p), SOSCF and
+DIIS energies of -4426.3856796805 and -4426.3733774355, respectively.
+This last run has 1023 AOs, 945 MOs, 177 occupied MOs.
+
+--- $contrl scftyp=rhf runtyp=energy ispher=1 nosym=0 $end
+--- $system mwords=10 $end
+--- $basis  gbasis=n311 ngauss=6 ndfunc=2 npfunc=1 $end
+--- $guess  guess=huckel $end
+--- $scf    dirscf=.t. fdiff=.f. soscf=.t. $end
+--- $data
+---RHF/6-311G(2df,p) CF3-T6, D3h
+---Dnh  3
+---
+---O           8.0  -1.1584931812  -2.0065690500    .0000000000
+---SI         14.0   -.8655649451  -1.4992024613   1.5368301128
+---O           8.0  -1.5297872815    .0000000178   1.7620208804
+---C           6.0  -1.5942454996  -2.7613141812   2.7755864522
+---F           9.0  -1.3680845814  -2.3695919791   4.0482459781
+---F           9.0  -2.9277541520  -2.8917411835   2.6178239031
+--- $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

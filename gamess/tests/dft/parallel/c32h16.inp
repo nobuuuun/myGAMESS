@@ -1,0 +1,71 @@
+!   AO integral direct DFT test case from Shiro Koseki (B3LYP)
+!   C32H16, 48 atoms, 104 occupied MOs, 6-31G(d) has 512 AOs/MOs
+!
+!   This beautiful molecule has a central octagon of carbon atoms,
+!   surrounded by 8 fused hexagons, each having two external H's,
+!   so the entire molecule is curved into the shape of a saddle.
+!   Koseki-san did a tight geometry optimization with the original
+!   polar coordinate grid, whose gradient error is considerably
+!   larger than the OPTTOL=1d-5 he used!
+!
+!   FINAL E= -1228.2508186127, 19 iters, RMS grad=0.000115680
+!
+!   This run takes 577 seconds on a 2.66 GHz Cloverton (31 Mar 2015)
+!   results have been stationary since 2008.
+!
+!   ----------------------------------------------------------------------
+!                            E            r.m.s     t(CPU)
+!   Hartree-Fock     -1221.0591267538  0.007924131   361   (13 iters)
+!   standard grid 1  -1228.2525831189  0.000229903   497   (15 iters)
+!   nthe=12/nphi=24  -1228.2512605457  0.000001366   861   old default
+!      nleb= 194     -1228.2523511590  0.000227133   781
+!      nleb= 302     -1228.2508186128  0.000115680   871   new default
+!      nleb= 350     -1228.2512093981  0.000127478   958
+!      nleb= 434     -1228.2511523758  0.000121979  1053
+!      nleb= 590     -1228.2510845745  0.000111761  1237
+!      nleb=1202     -1228.2510928592  0.000112757  1920, i.e. "army grade"
+!
+!   accuracy assessment, taking nleb=1202 as the "exact result".
+!                   E error   avg.abs(g-g0)   N(electron)
+!   standard grid 1   +31       0.0001040     208.009485
+!   nthe=12/nphi=24    +4       0.0000893     208.001418   old default
+!      nleb= 194      -26       0.0001150     208.007815
+!      nleb= 302       +6       0.0000403     207.998328   new default
+!      nleb= 350       +2       0.0000383     208.000974
+!      nleb= 434       -1       0.0000163     208.000326
+!      nleb= 590        0       0.0000081     207.999973
+!      nleb=1202        0       0.0000000     207.999994   almost 208
+!
+!   E error means (E0 - E)/48 where 48=number of atoms, in microHartree
+!   Average absolute error in gradient means
+!                48  3
+!   1/(3*48) *  sum sum  abs(grad0(j,i)-grad(j,i))      in Hartree/Bohr
+!               i=1 j=1
+!
+!   time on DFT grid points in the SCF cannot be separated from AO
+!   integrals, etc.  However the grid point time for the nuclear 
+!   gradient is measured separately, and is
+!     SG1  =  15.5             (SG1 is a pruned (50,194) grid)
+!     12/24=        122        (12*24=288 is most comparable to 302)
+!     NLEB =  77.2  121  140  175  238  489 s.conds for
+!             194   302  350  434  590 1202 Lebedev points.
+!
+ $contrl scftyp=rhf runtyp=gradient dfttyp=b3lyp $end
+ $system mwords=15 $end
+ $dft    nrad=96 nleb=302 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $scf    dirscf=.true. $end
+ $data
+C32H16 DFT test case from Shiro...optimized using old polar coord grid
+Dnd 2
+
+C           6.0   0.6187030943   1.6404812282   0.4003874535
+C           6.0   0.9463786921   2.8884613153   1.0198211510
+C           6.0   0.3845347110   4.1199584165   0.5590525160
+C           6.0   2.0245770032   2.9877139001   1.9383811710
+H           1.0   0.7060323310   5.0459307622   1.0287597308
+H           1.0   2.1451018565   3.9057891220   2.5081332432
+ $END
+
+! TRAVIS-CI MEDIUM
+

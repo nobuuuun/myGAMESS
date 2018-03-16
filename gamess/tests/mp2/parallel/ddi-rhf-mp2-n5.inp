@@ -1,0 +1,28 @@
+!  N5+ with diffuse functions.  Test comes from MSG...95 AOs, 17 occupied.
+!
+!  The largest LCAO coefficient in the virtual space is 130.7, so
+!  this presents some challenges to accuracy, in terms of the SCF
+!  convergence and cutoff thresholds.
+!
+!  FINAL= -271.7694738650, 21 its, E(MP2)= -272.6021197920, RMS= 0.000120387
+!
+!  this run takes 21 seconds on 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results have been unchanging since at least 2010
+!
+ $contrl scftyp=rhf icharg=+1 runtyp=gradient mplevl=2 $end
+ $system parall=.t. mwords=2 memddi=10 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 diffsp=.true. $end
+ $mp2    code=ddi $end
+ $data
+N5 cation
+C1
+N           7.0   2.7079703171   -.4441528208   -.3950554758
+N           7.0   2.0869372637    .4344367141   -.0066438951
+N           7.0   1.6093190405   1.4904437344    .6105156783
+N           7.0    .4040863345   1.7674441144    .1688002881
+N           7.0   -.6312429557   2.2024482580   -.0480365955
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

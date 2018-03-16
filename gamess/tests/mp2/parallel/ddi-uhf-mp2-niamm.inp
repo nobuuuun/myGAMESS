@@ -1,0 +1,28 @@
+!  Ni(NH3)6 +2 ion, at S6 ROHF/SBKJC geometry (probably it should be D3d)
+!  There are 118 AOs, 115 MOs, occupied= 33 alpha and 31 beta MOs.
+!
+!  FINAL E= -236.5636220378, 16 iters, E(MP2)= -237.3664623598
+!
+!  This run takes 30 seconds on a 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results have not changed much since 2010
+!
+ $contrl scftyp=uhf mplevl=2 mult=3 icharg=+2 runtyp=energy
+         pp=sbkjc ispher=1 $end
+ $system parall=.true. mwords=2 memddi=25 $end
+ $basis  gbasis=sbkjc $end
+ $guess  guess=huckel $end
+ $mp2    code=ddi $end
+ $data
+complex [Ni(NH3)6]+2...eg**2 configuration...3-A-g state
+S2n 3
+
+NI         28.0   0.0000000000   0.0000000000   0.0000000000
+N           7.0   1.2891279625   1.2891317280   1.3268178633
+H           1.0   2.2858608734   1.1259049564   1.1772221814
+H           1.0   1.1259189951   2.2858687600   1.1772292423
+H           1.0   1.1107095841   1.1107169082   2.3159842510
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

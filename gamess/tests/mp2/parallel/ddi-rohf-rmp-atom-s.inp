@@ -1,0 +1,79 @@
+!      Comparison of open shell perturbation theory for 3-P sulfur.
+!         The 6-31G(d) basis is used, in spherical harmonic form.
+!               See input files for other programs as well.
+!
+!   ROHF E= -397.4710708163, RMP2's E(MP2)= -397.5513959523
+!
+!   This run takes 0 seconds on 2.66 GHz Cloverton (31 Mar 2015)
+!   results from this case haven't changed much since 2009
+!
+!   --------------------------------------------------------------------
+!   MOLPRO:
+!           UMP2            UHF-SCF
+!      -397.55092189   -397.47463544
+!           RMP2            RHF-SCF
+!      -397.55137947   -397.47107082
+!         Nota bene: The MOLPRO manual references the "ROMP2" paper as
+!                    its spin-restricted theory, so this is not "RMP2".
+!
+!   GAMESS:
+!     for UMP2,
+!       FINAL UHF ENERGY IS     -397.4746354416 AFTER  11 ITERATIONS
+!                  E(MP2)=      -397.5509219075
+!     for RMP2,
+!      FINAL ROHF ENERGY IS     -397.4710708163 AFTER   8 ITERATIONS
+!                  E(MP2)=      -397.5513959523
+!     for ZAPT, we can only run GAMESS:
+!      FINAL ROHF ENERGY IS     -397.4710708163 AFTER   8 ITERATION
+!                E(MP2)  =      -397.5498560952
+!
+!   Gaussian94:
+!       E(UHF) =  -397.474635442   EUMP2 = -397.55092190745
+!       E(ROHF)=  -397.471070816   ERMP2 = -397.55139595240
+!
+!   ACES2:
+!     for UMP2,
+!         E(SCF)                = -397.474635605484 a.u.
+!         Total MBPT(2) energy  = -397.550922072216 a.u.
+!     for RMP2,
+!         E(SCF)                = -397.471070979222 a.u.
+!         Total MBPT(2) energy  = -397.551396117527 a.u.
+!
+!   NWchem:
+!     for UMP2,
+!         SCF energy              -397.474635605724
+!         Total MP2 energy        -397.550922072580
+!
+!   As both ACES and NWchem draw their basis sets from EMSL, one
+!   might speculate there is some small precision differences
+!   in the basis set data, relative to GAMESS and Gaussian94.
+!
+!
+
+
+!     we can run a total of three open shell PT's using GAMESS, pick one:
+
+--- $contrl scftyp=uhf $end
+--- $mp2    $end
+ $contrl scftyp=rohf $end
+ $mp2    code=ddi ospt=rmp $end
+--- $contrl scftyp=rohf $end
+--- $mp2    code=ddi ospt=zapt $end
+
+!   the rest of the input is the same for any of the open shell MP2 runs.
+!   S atom loses its radial degeneracy due to inequivalent p occupancies!
+
+ $contrl mult=3 mplevl=2 ispher=1 nosym=1 $end
+ $system mwords=1 memddi=0 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $data
+S atom...3-P...inequivalent p orbitals due to unequal occupancies
+Dnh 2
+
+S  16.0
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

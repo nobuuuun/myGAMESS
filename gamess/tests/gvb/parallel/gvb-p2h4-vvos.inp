@@ -1,0 +1,47 @@
+!    Test of VVOs for the doublet cation of P2H4, by ROHF or GVB
+!
+!    FINAL GVB/ROHF E= -683.5144925255, after 14/16 iters
+!    10 cores, valence = 12 total = 6 filled, 1 alpha, 5 virtual:
+!           11         12         13         14         15
+!         -1.1570    -1.0250    -0.8198    -0.7500    -0.7335
+!           A'         A'         A''        A''        A'
+!           16         17         18         19         20
+!         -0.6353    -0.3174    -0.0195     0.0731     0.1189
+!           A'         A'         A'         A''        A'
+!           21         22
+!          0.1476     0.1724        (17 is the alpha spin orbital)
+!           A''        A'
+!     Because this is a cation, the first 8 eigenvalues in the
+!     external space turn out to be negative.
+!
+!     This run takes 7 seconds on 2.66 GHz Cloverton (20 Sep 2013)
+!
+ $contrl scftyp=gvb  $end
+ $scf    nco=16 nseto=1 no=1 npair=0 $end
+
+!    ROHF is forced to use the GVB-style total Fock operator,
+!    so its individual orbital results will exactly match the GVB run.
+x$contrl scftyp=rohf $end
+x$scf    couple=.true. alpha(1)=0.5,0.5,0.5 beta(1)=0.5,0.0,0.5 $end
+
+ $contrl mult=2 icharg=1 runtyp=energy nzvar=12 ispher=1 $end
+ $system mwords=1 $end
+ $basis  gbasis=accd $end
+ $guess  guess=huckel $end
+ $scf    vvos=.true. $end
+ $data
+P2H4 cation...ROHF/aug-cc-pVDZ//ROHF/3-21G*
+Cs
+
+PHOSPHORUS 15.0
+PHOSPHORUS 15.0     0.0               2.172
+HYDROGEN    1.0     0.657737          2.675467          1.111261
+HYDROGEN    1.0    -0.905806         -0.128949          1.054373
+ $end
+ $ZMAT   IZMAT(1)=1,1,2,   1,2,3,   1,2,4,   1,1,5,   1,1,6,
+                  2,1,2,3,   2,1,2,4,   2,2,1,5,   2,2,1,6,
+                  2,3,2,4,   2,5,1,6,    3,3,2,1,5   $end
+
+! TRAVIS-CI SMALL
+
+ !TRAVIS-CI SKIP

@@ -1,0 +1,104 @@
+!   RESC correction to the 5d10,6s1 2-S state of Au atom
+!
+!   FINAL E= -19,035.9775642633, 12 iterations
+!
+!   This run takes 9 seconds on a 2.66 GHz Cloverton (7 May 2013)
+!   This run uses about 160 MBytes of disk space.
+!   This test case is in use since 2005.
+!
+!   -------------------------------------------------------------
+!   This is an attempt to duplicate table 1 from the RESC paper
+!   T. Nakajima and K. Hirao, Chem.Phys.Lett. 302, 383-391(1999)
+!   The basis set is the (19s,14p,8d,5f) uncontracted set from
+!   O. Gropen, J. Comput. Chem. 8, 982-1003(1987) and contains
+!   171 AOs, retaining 146 of these using spherical harmonics.
+!   Cartesian Gaussians have an overlap eigenvalue down to 1.8d-8,
+!   and convergence is hurt if keeping near linear dependencies.
+!   The two QMTTOL settings drop/keep 4 nearly linearly dependent
+!   orbitals in the SCF step, but retain everything in the 
+!   Resolution of the Identity during relativistic integrals.
+!
+!   The ROHF energy w/o relativistic corrections is
+!       -17,864.8959480839 in the present case (spherical harmonics)
+!       -17,864.895913     according to Gropen
+!       -17,864.9137484495 in the present case (Cartesian Gaussians)
+!       -17,864.9137       according to Nakajima/Hirao
+!   With the RESC correction turned on,
+!   F.NAL E= -19,035.9779663667, >30 iterations, with QMTTOL=1d-9/1d-9
+!   F.NAL E= -19,035.9775642633,  12 iterations, with QMTTOL=1d-6/1d-9
+!   F.NAL E= -19,035.9775642576,  27 iterations, on AXP in 4/2010
+!            -19,035.9825  according to Nakajima/Hirao
+!
+!   Inside information from U. Tokyo indicates that the values in the
+!   paper by Nakajima and Hirao were obtained with an incorrect value
+!   for the first p exponent, namely 0.16673054e+5.  If one uses this 
+!   incorrect value, the results are as follows:
+!                         NR             RESC
+!           GAMESS= -17864.913372   -19035.982157
+!            paper= -17864.9137     -19035.9825
+!   Since the difference is 0.0003 for each, it is plausible that the
+!   remaining error is integral accuracy, or something of this nature.
+!
+ $contrl scftyp=rohf mult=2 runtyp=energy relwfn=resc 
+         ispher=-1 qmttol=1.0d-6 $end
+ $system mwords=1 $end
+ $relwfn modeqr=0 qmttol=1d-9 $end
+ $data
+Au atom..Gropen's basis set
+Dnh 2
+
+Au   79.0   0.0  0.0  0.0
+   s 1 ; 1 0.94240863e+7 1.0
+   s 1 ; 1 0.13754422e+7 1.0
+   s 1 ; 1 0.30669080e+6 1.0
+   s 1 ; 1 0.84491492e+5 1.0
+   s 1 ; 1 0.26543620e+5 1.0
+   s 1 ; 1 0.93046797e+4 1.0
+   s 1 ; 1 0.35641327e+4 1.0
+   s 1 ; 1 0.14459715e+4 1.0
+   s 1 ; 1 0.60364506e+3 1.0
+   s 1 ; 1 0.20491458e+3 1.0
+   s 1 ; 1 0.94866768e+2 1.0
+   s 1 ; 1 0.35234607e+2 1.0
+   s 1 ; 1 0.19540386e+2 1.0
+   s 1 ; 1 0.72801752e+1 1.0
+   s 1 ; 1 0.38905484e+1 1.0
+   s 1 ; 1 0.12522517e+1 1.0
+   s 1 ; 1 0.55311110    1.0
+   s 1 ; 1 0.75507140e-1 1.0
+   s 1 ; 1 0.28534686e-1 1.0
+   p 1 ; 1 0.16873054e+5 1.0
+   p 1 ; 1 0.72158456e+5 1.0
+   p 1 ; 1 0.53365550e+4 1.0
+   p 1 ; 1 0.19709859e+4 1.0
+   p 1 ; 1 0.80633572e+3 1.0
+   p 1 ; 1 0.35552526e+3 1.0
+   p 1 ; 1 0.16579167e+3 1.0
+   p 1 ; 1 0.80216366e+2 1.0
+   p 1 ; 1 0.38790536e+2 1.0
+   p 1 ; 1 0.19337199e+2 1.0
+   p 1 ; 1 0.86522832e+1 1.0
+   p 1 ; 1 0.40697338e+1 1.0
+   p 1 ; 1 0.13807124e+1 1.0
+   p 1 ; 1 0.50972635    1.0
+   d 1 ; 1 0.47268080e+4 1.0
+   d 1 ; 1 0.13290893e+4 1.0
+   d 1 ; 1 0.46465094e+3 1.0
+   d 1 ; 1 0.18003014e+3 1.0
+   d 1 ; 1 0.74171925e+2 1.0
+   d 1 ; 1 0.31616362e+2 1.0
+   d 1 ; 1 0.12357104e+2 1.0
+   d 1 ; 1 0.49448522e+1 1.0
+   d 1 ; 1 0.13681377e+1 1.0
+   d 1 ; 1 0.38991085    1.0
+   f 1 ; 1 0.16457891e+3 1.0
+   f 1 ; 1 0.54510867e+2 1.0
+   f 1 ; 1 0.20887159e+2 1.0
+   f 1 ; 1 0.80698463e+1 1.0
+   f 1 ; 1 0.28511552e+1 1.0
+
+ $end      
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

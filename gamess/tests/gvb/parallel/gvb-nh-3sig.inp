@@ -1,0 +1,42 @@
+!  Open shell SCF on X-3-sigma-minus state of NH...(pi)2 config.
+!
+!  FINAL E= -54.9557018112 after 8 iters, RMS grad= 0.000002137
+!
+!  This run takes 0 seconds on anything ( 8 Nov 2005)
+!  test has been in use since at least 2005.
+!
+!  Of course, the most straightforward way to do
+!  a half-filled high-spin open shell is to select
+!  SCFTYP=ROHF and omit the $SCF group.  This is
+!  done by SCFTYP=GVB just to be sure the GVB code
+!  gives the correct results.
+!
+ $contrl mult=3 runtyp=gradient $end
+!
+!            treating the state as having orbital degeneracy
+ $contrl scftyp=gvb $end
+ $scf    nco=3 nseto=1 no(1)=2 npair=0 couple=.true.
+             f(1)=1.0, 0.5
+         alpha(1)= 2.00, 1.00, 0.50
+          beta(1)=-1.00,-0.50,-0.50 $end
+!
+!            treating the state as if two non-degenerate orbitals
+x$contrl scftyp=gvb $end
+x$scf    nco=3 nseto=2 no(1)=1,1 npair=0 $end
+
+!            independent check by half-filled high spin coupling
+x$contrl scftyp=rohf $end
+
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $guess  guess=huckel $end
+ $data
+imidogen...open shell SCF on 3-sigma-minus state
+Cnv 4
+
+Nitrogen   7.0
+Hydrogen   1.0  0.0 0.0 1.0220667
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,37 @@
+{
+  "name": "6frg-protect.log",
+  "validation": [
+    {
+      "header": "MD",
+      "name": "POTENTIAL ENERGY - MD",
+      "value": "-174.24846051",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "MD",
+      "name": "TRANSLATIONAL KINETIC ENERGY - MD",
+      "value": "4.89079276",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "MD",
+      "name": "ROTATIONAL KINETIC ENERGY - MD",
+      "value": "8.12009987",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "MD",
+      "name": "TOTAL KINETIC ENERGY - MD",
+      "value": "13.01089263",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 5e-05
+    }
+  ]
+}

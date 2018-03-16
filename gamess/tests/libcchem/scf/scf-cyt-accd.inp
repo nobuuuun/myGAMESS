@@ -1,0 +1,30 @@
+!   SCF computation on cytosine...C4N3OH5...one of five nucleic acids.
+!
+!      GAMESS FORTRAN:  FINAL energy= -392.6655475286, 13 iters
+!      GAMESS+LIBCCHEM: FINAL energy= -392.6655475292, 13 iters
+!
+!
+ $contrl scftyp=rhf runtyp=energy coord=zmt ispher=1 $end
+ $system mwords=5 $end
+ $basis  gbasis=accd $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $data
+cytosine...one of the bases found in nucleic acids...RHF/6-31G(d)//RHF/AM1
+C1
+C
+C      1   1.4650373
+C      2   1.3716299  1   117.7958997
+N      3   1.3647282  2   121.3155803  1      .3498173  0
+C      4   1.4396187  3   119.9661479  2      .2091058  0
+N      5   1.4011663  3    90.9801250  2      .2114610  0
+O      5   1.2468098  4   115.9883744  3   179.7178226  0
+N      1   1.3788003  2   118.0962168  3   176.8645647  0
+H      2   1.0941969  3   121.2004089  4   179.6832397  0
+H      3   1.1066467  4   117.1420349  5  -179.7448468  0
+H      4    .9940077  5   118.5566942  6  -179.8953981  0
+H      8    .9887008  1   117.8840921  2    15.7868234  0
+H      8    .9916901  1   119.8259677  2   173.2680833  0
+ $end
+! TRAVIS-CI SKIP
+

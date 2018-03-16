@@ -1,0 +1,146 @@
+!   closed shell functional test, on a C1 conformer of ethylalcohol.
+!   an enormous number of functionals are scanned belo.
+!   results are from the "army grade" Lebedev grid.
+!   57 AOs used.
+!
+!   R-M06 final E= -154.9284861081, 19 iters, RMS grad= 0.006355299
+!
+!   This run takes 104 seconds on 2.66 GHz Cloverton (31 Mar 2015)
+!
+!   -----------------------------------------------------------
+!   There is an analogous input file for NWchem, whose energies
+!   typically match the army grade result below to better than
+!   one microHartree, and whose gradient component dE/dz(O) can
+!   be matched to 1 or 2d-6 Hartree/Bohr, because the molecules
+!   are oriented in exactly the same way.
+!
+!   The exception is PW91, whose correlation functional from
+!   the DFT depository does not match NWchem, closer than an
+!   error of 5d-6 Hartree, this is as fifty times worse than
+!   the other functionals.  This is known to be due to the
+!   use of a published coefficient in GAMESS, but extra digits
+!   are used for the same coefficient inside NWchem.  This also
+!   affects the B97 family which uses PW91 correlation.
+!   Recent versions of NWchem have messed up B3PW91 due to some
+!   tinkering with 'xperdew91' exchange, to implement Minnesota
+!   functionals.
+!
+!    RHF      E= -154.0709842950, 11 iters, r.m.s.= 0.012964418, t= 1
+!  R-SVWN     E= -153.7213799705, 18 iters, r.m.s.= 0.005756428, t= 48
+!  R-GILL     E= -154.1022491018, 18 iters, r.m.s.= 0.010333973, t= 85
+!  R-OPTX     E= -154.1125708505, 18 iters, r.m.s.= 0.008791036, t= 85
+!  R-BVWN     E= -155.7633145412, 19 iters, r.m.s.= 0.008969485, t= 97
+!  R-BPZ81    E= -155.7546234746, 18 iters, r.m.s.= 0.008981474, t= 89
+!  R-BP86     E= -155.0262291965, 18 iters, r.m.s.= 0.006840722, t= 91
+!  R-BLYP     E= -154.9581393736, 18 iters, r.m.s.= 0.007911824, t= 91
+!  R-EDF1     E= -155.0440110795, 18 iters, r.m.s.= 0.007129615, t= 86
+!  R-BOP      E= -154.9573867724, 19 iters, r.m.s.= 0.008220145, t= 96
+!  R-PW91     E= -154.9612645857, 19 iters, r.m.s.= 0.006760136, t= 100
+!  R-B3PW91   E= -154.9753758100, 18 iters, r.m.s.= 0.007323770, t= 97
+!  R-B3LYP    E= -154.9367758573, 18 iters, r.m.s.= 0.007683670, t= 95
+!  R-B3LYP1   E= -155.0322609553, 18 iters, r.m.s.= 0.007730549, t= 96
+!  R-X3LYP    E= -154.9584257993, 18 iters, r.m.s.= 0.007718446, t= 99
+!  R-B97      E= -154.9758520088, 18 iters, r.m.s.= 0.007515543, t= 92
+!  R-B97-1    E= -154.9788164239, 18 iters, r.m.s.= 0.007535207, t= 93
+!  R-B97-2    E= -154.9755436546, 18 iters, r.m.s.= 0.007901765, t= 92
+!  R-B97-3    E= -154.9940743493, 18 iters, r.m.s.= 0.008013269, t= 93
+!  R-B97-D    E= -154.9309770412, 18 iters, r.m.s.= 0.007054080, t= 93
+!  R-B97-K    E= -154.9766577424, 18 iters, r.m.s.= 0.008705705, t= 92
+!  R-B98      E= -154.9715671949, 18 iters, r.m.s.= 0.007609255, t= 93
+!  R-HCTH     E= -155.0233109379, 18 iters, r.m.s.= 0.006865370, t= 93
+!  R-HCTH93   E= -154.9857798273, 19 iters, r.m.s.= 0.006848232, t= 104
+!  R-HCTH120  E= -155.0138270896, 19 iters, r.m.s.= 0.006765349, t= 103
+!  R-HCTH147  E= -155.0043940552, 19 iters, r.m.s.= 0.006774601, t= 103
+!  R-THCTH    E= -155.0034532848, 19 iters, r.m.s.= 0.006710471, t= 124
+!  R-THCTHHYB E= -155.0083743899, 18 iters, r.m.s.= 0.007172230, t= 110
+!  R-BMK      E= -154.9328326200, 19 iters, r.m.s.= 0.008243839, t= 120
+!  R-CAMB3LYP E= -154.9527621426, 20 iters, r.m.s.= 0.007822079, t= 134
+!  R-WB97     E= -154.9992330688, 18 iters, r.m.s.= 0.007565408, t= 74
+!  R-WB97X    E= -154.9884436981, 18 iters, r.m.s.= 0.007751839, t= 74
+!  R-WB97X-D  E= -154.9832566424, 18 iters, r.m.s.= 0.007788465, t= 74
+!  R-B2PLYP   E= -154.8495831619     this one only does the energy
+!  R-PBE      E= -154.8301858197, 18 iters, r.m.s.= 0.006620321, t= 92
+!  R-PBE0     E= -154.8482903089, 18 iters, r.m.s.= 0.007277678, t= 91
+!  R-REVPBE   E= -154.9779899979, 18 iters, r.m.s.= 0.007280093, t= 91
+!  R-RPBE     E= -155.0269890379, 18 iters, r.m.s.= 0.007477744, t= 90
+!  R-PBESOL   E= -154.2234144468, 19 iters, r.m.s.= 0.005772020, t= 104
+!  R-VS98     E= -155.0736098465, 19 iters, r.m.s.= 0.007955631, t= 123
+!  R-PKZB     E= -154.7234555615, 19 iters, r.m.s.= 0.007476387, t= 126
+!  R-TPSS     E= -155.0492150277, 19 iters, r.m.s.= 0.008265069, t= 130
+!  R-TPSSH    E= -155.0348141194, 18 iters, r.m.s.= 0.008186632, t= 118
+!  R-TPSSM    E= -155.0322290187, 19 iters, r.m.s.= 0.008243064, t= 130
+!  R-revTPSS  E= -155.1375308770, 19 iters, r.m.s.= 0.008466579, t=  ?
+!  R-M05      E= -154.9277013719, 19 iters, r.m.s.= 0.007518624, t= 125
+!  R-M05-2X   E= -154.9978040657, 18 iters, r.m.s.= 0.009238051, t= 123
+!  dlDF       E= -156.1193769127, 17 iters, r.m.s.= 0.010266237, t=  83
+!  R-M06      E= -154.9284861081, 19 iters, r.m.s.= 0.006355299, t= 145  <--
+!  R-M06-2X   E= -154.9506947625, 19 iters, r.m.s.= 0.008125018, t= 141
+!  R-M06-L    E= -155.0027035416, 19 iters, r.m.s.= 0.006534020, t= 146
+!  R-M06-HF   E= -154.9616439291, 21 iters, r.m.s.= 0.010746323, t= 158
+!  R-M08-HX   E= -154.9752817093, 19 iters, r.m.s.= 0.006683473, t= 160
+!  R-M08-SO   E= -154.9179502348, 18 iters, r.m.s.= 0.006931685, t= 159
+!  R-SOGGA    E= -154.0796402085, 19 iters, r.m.s.= 0.005653018, t= 100
+!  R-M11      E= -154.9439085038, 19 iters, r.m.s.= 0.006997316, t= 103
+!  R-M11-L    E= -154.9803798715, 20 iters, r.m.s.= 0.005766592, t= 113
+!  R-SOGGA11  E= -155.0273990140, 22 iters, r.m.s.= 0.006973540, t= 101
+!  R-SOGGA11X E= -154.9875012909, 17 iters, r.m.s.= 0.007774102, t= 76
+!
+!   information above was collected August 2009, last four in Feb. 2012,
+!   note that the wB97X and -D gradient was fixed in Feb 2012.
+!   CPU timings above are from a 2.66 GHz Cloverton chip,
+!   the new ones are from ifort rather than gfortran which makes a difference.
+!
+ $contrl scftyp=rhf dfttyp=m06 runtyp=gradient units=bohr $end
+ $system mwords=4 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $dft    nrad=96 nleb=1202 $end
+ $data
+ethylalchohol...AM1 structure in NWchem's orientation
+C1
+C 6.0    -2.26068515     0.48494271    -0.05569511
+C 6.0     0.13837656    -1.06159157     0.03883002
+O 8.0     2.33077668     0.46188113    -0.13078484
+H 1.0     2.23554248     1.69767784     1.20480906
+H 1.0    -3.93975684    -0.78972276    -0.07799918
+H 1.0    -2.29233099     1.68456861    -1.79093736
+H 1.0    -2.39597248     1.75066114     1.62721903
+H 1.0     0.27494637    -2.36119537    -1.63494687
+H 1.0     0.20520962    -2.21714532     1.81932461
+ $end
+
+The Z-matrix for this is:
+C
+C 1 rCC
+O 2 rCO 1 aOCC
+H 3 rOH 2 aHOC 1 wHOCC
+H 1 rCHa 2 aHCCa 3 wHCCOa
+H 1 rCHb 2 aHCCb 3 wHCCOb
+H 1 rCHc 2 aHCCc 3 wHCCOc
+H 2 rCHd 1 aHCCd 5 wHCCHd
+H 2 rCHe 1 aHCCe 5 wHCCHe
+
+rCC=1.5112806
+rCO=1.4156215
+rOH=0.9642176
+aOCC=112.2071827
+aHOC=107.2735909
+wHOCC=55.6253325
+rCHa=1.1156170
+rCHb=1.1164473
+rCHc=1.1166199
+rCHd=1.1236952
+rCHe=1.1237926
+aHCCa=109.9973530
+aHCCb=110.3487180
+aHCCc=110.6271354
+aHCCd=111.0607659
+aHCCe=110.4167444
+wHCCOa=175.3392010
+wHCCOb=55.2246426
+wHCCOc=-64.6015341
+wHCCHd=59.1225838
+wHCCHe=-61.9333896
+
+
+! TRAVIS-CI SMALL
+

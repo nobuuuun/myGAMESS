@@ -1,0 +1,106 @@
+!   phenylethylene closed shell MP2 gradient.
+!   test of diffuse exponents, deliberately causing linear dependencies!
+!   Used in November 2004 to sort out accuracy issues in s,p Pople ints,
+!   test case presently uses only "best" integrals and derivative ints.
+!
+!   The molecule is C8H8, in a slightly non-planar geometry,
+!   which probably contributes to the existence of linear
+!   dependence in the basis set when using diffuse exponents.
+!   The usual diffuse L shell has had its exponents divided
+!   by a factor of ten, to make it an even harder test case.
+!
+!   One can observe the largest LCAO coefficient in the LUMO
+!   as a test of convergence of the virtual space.  Computing
+!   the MP2 energy and gradient tests all virtual MOs.
+!
+!      6-311+G(d), using ISPHER=1          208 AOs, 192 MOs
+!    no. of MOs dropped for spherical harmonics=    8
+!    no. of MOs dropped for linear dependence=      8
+!    no. of MOs near QMTTOL, but kept=              3
+!
+!    FINAL E= -307.6411593407, 17 iterations (serial, IMS, DDI runs)
+!    serial: E(.P2)=  -308.6918452066, RMS grad= 0.001790940
+!       IMS: E(MP2)=  -308.6918452066, RMS grad= 0.001791281
+!       DDI: E(.P2)=  -308.6918447080, RMS grad= 0.001791331
+!
+!   This run takes 371 seconds on 2.66 GHz Cloverton (31 Mar 2015)
+!   DDI and serial need 357 and 271 s.conds.
+!   results essentially unchanged since 2011.
+!
+ $contrl scftyp=rhf runtyp=gradient mplevl=2 ispher=1 $end
+ $system parall=.true. mwords=100 memddi=100 $end
+!   next line is MP2 level convergence, even if MP2 is not selected
+ $scf    conv=1d-6 $end
+ $mp2    code=ddi $end
+ $DATA
+H2C=CH-C6H5...note that every diffuse exponent is divided by ten
+C1
+C           6.0      0.4780684100     -1.9818570600     -1.6935017100
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+C           6.0     -0.7270444000     -2.3716883700     -1.0832452800
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+C           6.0     -1.9421863600     -2.2652907400     -1.7643837900
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+C           6.0     -1.9723050600     -1.7658608000     -3.0707814700
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+C           6.0     -0.7789050300     -1.3746302100     -3.6885728800
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+C           6.0      0.4381065400     -1.5044593800     -3.0155561000
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+C           6.0      1.7436451900     -2.1081774200     -0.9506158800
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+C           6.0      2.8170328100     -1.3116110600     -1.1125625400
+   n311     6
+   d 1 ; 1 0.80    1.0
+   L 1 ; 1 0.00438 1.0 1.0
+
+H           1.0      1.7846880000     -2.8983421300     -0.1994430400
+   n311     6
+
+H           1.0      2.8191328000     -0.4824370100     -1.8151431100
+   n311     6
+
+H           1.0      3.7253687400     -1.4734985800     -0.5402559600
+   n311     6
+
+H           1.0     -0.7109906100     -2.7456884400     -0.0599496400
+   n311     6
+
+H           1.0     -2.8650889400     -2.5719795200     -1.2758891600
+   n311     6
+
+H           1.0     -2.9173178700     -1.6820242400     -3.6033334700
+   n311     6
+
+H           1.0     -0.7934548300     -0.9931752700     -4.7077703500
+   n311     6
+
+H           1.0      1.3648064100     -1.2338515500     -3.5182085000
+   n311     6
+
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

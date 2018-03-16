@@ -1,0 +1,157 @@
+{
+  "name": "cc-ea-chplus.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-37.7687349617",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 1",
+      "value": "-0.2913997512",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 2",
+      "value": "-0.2881910418",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 3",
+      "value": "-0.3508931377",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 4",
+      "value": "-0.2881910418",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 5",
+      "value": "-0.3859178596",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 6",
+      "value": "-0.3285417868",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 7",
+      "value": "-0.3859178596",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ATTACHMENT ENERGY : STATE 8",
+      "value": "-0.3285417868",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 1",
+      "value": "-38.1933839733",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 2",
+      "value": "-38.1901752639",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 3",
+      "value": "-38.2528773598",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 4",
+      "value": "-38.1901752639",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 5",
+      "value": "-38.2879020817",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 6",
+      "value": "-38.2305260089",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 7",
+      "value": "-38.2879020817",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : EA-EOM",
+      "name": "EA-EOMCCSDt ENERGY : STATE 8",
+      "value": "-38.2305260089",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SPIN",
+      "name": "S-SQUARED",
+      "value": "-0.000",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "3.227652",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

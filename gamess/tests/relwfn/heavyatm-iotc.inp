@@ -1,0 +1,44 @@
+!   (SnH3)(SeH)(I)Sb=S gradient, using IOTC relativity.
+!
+!   These atoms are not as "heavy" as in the DK test case,
+!   so we can use the Sapporo basis sets, and can avoid the
+!   need to use Q.P. integral accuracy.  So, Bi->Sb and At->I.
+!   There are 185 AOs and 173 MOs in the run.
+!   The RI step has 673 primitive GTOs, keeping 670 combinations
+!   Test created in 2011.
+!
+!     FINAL     IOTC E= -22593.0859380436, 15 iters, RMS grad= 0.011169341
+!     FINAL LUT-IOTC E= -22593.0859277003, 15 iters, RMS grad= 0.011165453
+!
+!   This run takes 1401 seconds on 2.662 GHz Cloverton (21 Jun 2016)
+!       IOTC:  1e- ints=  23, SCF= 267, 1e- grad=  959, 2e grad= 152
+!   LUT-IOTC:  1e- ints=   1, SCF= 266, 1e- grad=    5, 2e grad= 152
+!
+ $contrl scftyp=rhf runtyp=gradient relwfn=iotc nzvar=21 ispher=1 $end
+ $system mwords=15 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $basis  gbasis=SPKrDZP $end
+ $relwfn modeqr=1 $end
+ $data
+test on artificial molecule...(SnH3)(SeH)(I)Sb=S
+C1
+Sb   51.0    .4070872775    .7782398266   -.3936725280
+Sn   50.0   1.1414728458   1.1356145862   2.3848588864
+H     1.0   1.2527257999   -.4214651586   3.0224606970
+H     1.0   2.6177043590   1.9484947995   2.3495726821
+H     1.0   -.1127047214   2.0405969627   3.0535321693
+Se   34.0   2.0684890776  -1.1125182760  -1.2134154093
+H     1.0   2.1422107340   -.5803659875  -2.5852472725
+I    53.0  -2.1302318016   -.6171154150   -.2143212107
+S    16.0    .3754817088   2.6319401078  -1.8885256240
+ $end
+ $zmat izmat(1)=1,1,2,  1,2,3,  1,2,4,  1,2,5,
+           1,1,6,  1,6,7,  1,1,8,  1,1,9
+           2,2,1,6,  2,8,1,6,  2,9,1,6,
+           3,2,1,6,7,  3,8,1,6,7,  3,9,1,6,7
+           2,3,2,1,  2,4,2,1,  2,5,2,1,   2,7,6,1,
+           3,3,2,1,6,  3,4,2,1,6,  3,5,2,1,6  $end
+
+! TRAVIS-CI LARGE
+

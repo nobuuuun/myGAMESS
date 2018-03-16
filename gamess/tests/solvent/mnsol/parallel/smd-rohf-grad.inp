@@ -1,0 +1,28 @@
+!   O2 anion in methanol...SMD/C-CPCM using ROHF...gradient
+!
+!   FINAL ROHF E= -149.6896982108, 9 iters, RMS= 0.029115905
+!
+!   ELECTROSTATIC INTERACTION    =         -86.27 KCAL/MOL
+!   CDS INTERACTION              =           0.59 KCAL/MOL
+!
+!   This run takes 1 seconds on 2.66 GHz Cloverton (28 Oct 2010)
+!
+ $CONTRL SCFTYP=ROHF mult=2 icharg=-1 RUNTYP=GRADIENT $end
+ $system mwords=1 $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+
+ $PCM    SMD=.T. SOLVNT=METHANOL IEF=-3 $END
+ $TESCAV MTHALL=2 NTSALL=240 $END
+
+ $DATA
+SMD/ROHF/6-31G(d) analytical gradients - O2^-1 doublet in water 
+C1
+O               8.0         0.000000  0.000000   0.666820
+O               8.0         0.000000  0.000000  -0.666820
+ $END
+
+
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

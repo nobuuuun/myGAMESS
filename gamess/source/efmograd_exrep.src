@@ -1,0 +1,906 @@
+*MODULE EFMOGRAD_EXREP    *DECK efmo_gexrep
+C>
+C>    @brief calculates the EFP fragment exrep energy and stores coefficients for EFMO gradient
+C>
+C>    @details Calculates the fragment-fragment EFP exchange repulsion energy
+C>             and stores terms needed for the EFMO exrep gradient.
+C>             
+C>             The energy is calculated as in Hui Li, Theor.Chem.Acc. (2006)
+C>             Eq. 1.
+C>             The gradient is split into non-response and response contributions.
+C>             Non-response terms are added with efmoesgm().
+C>             Response terms are added to zvlag, and coefficients of LMO derivatives
+C>             are stored with efmo_store_cpl_coeff. The derivative of the fock matrix
+C>             term is stored with efmo_store_fock_der.
+C>
+C>    @author Hui Li, modified by C. Bertoni
+C>
+C>    @param enxr : [out] fragment-fragment exchange repulsion energy
+C>    @param provec : [in] LMO coefficients for all fragments
+C>           (max number of basis functions among all EFP fragments
+C>            * total number of LMOs (active occupied orbitals), summed over
+C>            all EFP fragments)
+C>    @param fockma : [in] Fock matrix for all fragments, triangular form
+C>           (mxmo*mxmo+mxmo)/2,nfrg
+C>    @param smat : [in] work space for overlap matrix in AO basis for one fragment
+C>    @param tmat : [in] work space for kinetic energy matrix in AO basis for one fragment
+C>    @param wrk : [in] work space
+C>    @param sab : [in] work space for overlap matrix in MO basis for one fragment
+C>    @param tab : [in] work space for kinetic energy matrix in MO basis for one fragment
+C>    @param fa : [in] work space for square fock matrix for one fragment A
+C>    @param fb : [in] work space for square fock matrix for one fragment B
+C>    @param dpvec : [in] rotational derivatives of MO coefficients. unused for EFMO gradient
+C>    @param dsint : [in] work space for derivative of overlap integrals. unused for EFMO gradient
+C>    @param dtint : [in] work space for derivative of kinetic energy integrals. unused for EFMO gradient
+C>    @param dsab : [in] work space for derivative of overlap integrals. unused for EFMO gradient
+C>    @param dtab : [in] work space for derivative of kinetic energy integrals. unused for EFMO gradient
+C>    @param wrk2 : [in] work space
+C>    @param gxrfrg : [out] fragment-fragment exchange repulsion gradient. unused for EFMO gradient
+C>    @param sab_save : [out] overlap integrals, used in overlap-based damping for dispersion
+C>    @param sab_grad : [out] derivative of overlap integrals, used in overlap-based damping for dispersion.
+C>           unused in EFMO gradient
+C>    @param mxbf : [in] maximum number of basis functions in the EFP fragments
+C>    @param mxmo : [in] maximum number of localized (non-core) occupied MOs in the EFP fragments
+C>    @param xrfrg : [in] work space for gradient
+C>    @param epen : [out] penetration energy
+C>    @param weighted_da : [in] work space for weighted density matrix
+C>    @param dnew_density : [in] work space
+C>    @param ctvec : [in] work space to hold CMO coefficients
+C>    @param zvlag : [in/out] An array that stores the lagrangian and is used to
+C>           calculate the response. Exrep contributions are added in this routine
+C>    @param iptlg : [in] An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param efmo_tran : [in] work space that is filled with LMO transformation matrix
+C>
+      SUBROUTINE EFMO_GEXREP(ENXR,PROVEC,FOCKMA,SMAT,TMAT,WRK,SAB,TAB,
+     *                  FA,FB,DPVEC,DSINT,DTINT,DSAB,
+     *                  DTAB,WRK2,GXRFRG,SAB_SAVE,SAB_GRAD,
+     *                  MXBF,MXMO,XRFRG,EPEN,
+     *                  weighted_da, dnew_density,
+     *                  ctvec, zvlag, iptlg, efmo_tran )
+C
+      IMPLICIT DOUBLE PRECISION (A-H, O-Z)
+C
+      LOGICAL GOPARR, DSKWRK, MASWRK, efmo_cal_type
+C
+      PARAMETER (MXDFG=5, MXFRG=1050, MXFGPT=12000,
+     *           MXSHEF=1000, MXGEFP=4000,
+     *           MXDPPT=MXFRG*MXDFG*12, MXAO=8192)
+      PARAMETER (ZERO=0.0D+00, ONE=1.0D+00, TWO=2.0D+00,
+     *           FOUR=4.0D+00, RT2PI=0.7978845608028654D+00,
+     *     HALF=0.5D+00)
+C
+      COMMON /EFPBAS/ EX(MXGEFP,MXDFG),CS(MXGEFP,MXDFG),
+     *                CP(MXGEFP,MXDFG),CD(MXGEFP,MXDFG),
+     *                CF(MXGEFP,MXDFG),CG(MXGEFP,MXDFG),
+     *                PRNAME(MXFGPT),PRCORD(3,MXFGPT),EFZNUC(MXFGPT),
+     *                KSTART(MXSHEF,MXDFG),KATOM(MXSHEF,MXDFG),
+     *                KTYPE(MXSHEF,MXDFG),KNG(MXSHEF,MXDFG),
+     *                KLOC(MXSHEF,MXDFG),KMIN(MXSHEF,MXDFG),
+     *                KMAX(MXSHEF,MXDFG),NSHELL(MXDFG),NGAUSS(MXDFG),
+     *                NAT(MXDFG),NUM(MXDFG),NTPATM
+      COMMON /EFPCT / NOCC(MXDFG),NVIR(MXDFG),NAO(MXDFG),NTAO,
+     *                CTFOK(MXAO,MXDFG),NCTMO(MXDFG),NTCTMO
+      COMMON /EFPGCX/ DCTFRG(6,MXFRG),DXRFRG(6,MXFRG)
+      COMMON /EFPPBC/ XBOX,YBOX,ZBOX,XCUT,YCUT,ZCUT,RCUT
+     *                ,SWR1,SWR2,ISWF
+      COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+     *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+     *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+     *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+     *                IMODEFCT,IDIMTYP,iefmo_agrad
+      COMMON /FGRAD / DEF(3,MXFGPT),DEFT(3,MXFRG),TORQ(3,MXFRG),
+     *                EFCENT(3,MXFRG),FRGMAS(MXFRG),FRGMI(6,MXFRG),
+     *                ATORQ(3,MXFRG)
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /FRGTYP/ NDFRG,ISET(MXFRG),NAMIDX(MXDFG)
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PAULMO/ CENTNM(MXFGPT),CENTCD(3,MXFGPT),NORB(MXFRG),
+     *                NPBF(MXFRG),NTMO
+      COMMON /EFPSCR/ POLAB(MXFRG),B,SCROFF,IELECS,IDISPS,NEW_POL
+C
+      DIMENSION PROVEC(MXBF,NTMO),FOCKMA((MXMO*MXMO+MXMO)/2,NFRG),
+     *          SMAT(MXBF,MXBF),TMAT(MXBF,MXBF),
+     *          WRK(MXBF),SAB(MXMO,MXMO),TAB(MXMO,MXMO),
+     *          FA(MXMO,MXMO), FB(MXMO,MXMO), dnew_density(mxbf,mxbf,8)
+     *          ,SAB_SAVE(NFRG,NFRG,MXMO,MXMO)
+     *          ,SAB_GRAD(NFRG,NFRG,MXMO,MXMO,6),CTVEC(MXBF,NTCTMO),
+     *     weighted_da((mxbf*mxbf+mxbf)/2)
+      DIMENSION DSINT(MXBF,MXBF,6),DTINT(MXBF,MXBF,6),
+     *          DSAB(MXMO,MXMO,6),DTAB(MXMO,MXMO,6),DPVEC(MXBF,NTMO,3),
+     *          WRK2(MXMO,MXMO),GXRFRG(6,NFRG,NFRG),
+     *          XRFRG(4,6,NFRG,NFRG), efmo_tran(mxmo,mxmo)
+      dimension zvlag(1), iptlg(1)
+C
+C     CALCULATE THE EFP EXCHANGE-REPULSION GRADIENTS
+C     HUI LI, 02/27/2005, AMES
+C
+C  ---- OVERLAP & OVERLAP DERIVATIVES MATRICES; USED IN DEISPERSION
+C  ---- DAMPING FORMULA
+      CALL VCLR(SAB_SAVE,1,NFRG*NFRG*MXMO*MXMO)
+      CALL VCLR(SAB_GRAD,1,NFRG*NFRG*MXMO*MXMO*6)
+C
+
+      efmo_cal_type = .true.
+
+      ENXR = ZERO
+      EPEN = ZERO
+      DO ICRD =1, 6
+         DO IFRG=1,NFRG
+           DXRFRG(ICRD,IFRG) = ZERO
+           DO JFRG=1,NFRG
+              GXRFRG(ICRD,JFRG,IFRG)= ZERO
+              DO MFRG=1,4
+              XRFRG(MFRG,ICRD,JFRG,IFRG)=ZERO
+              END DO
+           END DO
+         END DO
+      END DO
+      IF(NTMO.EQ.0) RETURN
+
+C
+C     NOTE 'JM' IS MOLECULAE 'A', 'IM' IS MOLECULE 'B'
+C
+C     - INITIALIZE PARALLEL
+      IPCOUNT = ME - 1
+C
+      MLSWTCH=0
+      ICOEFF=0
+      JCOEFF=0
+      KCOEFF=0
+C
+      JNAT = 1
+      JMO = 1
+      jmmo = 1
+      DO MJ = 1,NFRG
+          COMX1 = EFCENT(1,MJ)
+          COMY1 = EFCENT(2,MJ)
+          COMZ1 = EFCENT(3,MJ)
+C
+         JM=ISET(MJ)
+c
+         INAT = 1
+         IMO = 1
+         CALL CPYTSQ(FOCKMA(1,MJ),FA,MXMO,1)
+         DO MI = 1,NFRG
+            IM=ISET(MI)
+            if( .not. efmo_cal_type ) then
+               IF(MI.LE.MJ) GOTO 502
+            else
+               if(mi .eq. mj) GOTO 502
+            endif
+C
+C           DDK - CALL MULCAL TO OBTAIN VALUES FOR COEFFICIENTS.
+C           MLSWTCH ASSUMES CERTAIN MULTIPLICITY VALUES TO BE
+C           TRUE.  IF THEY ARE, THE INTERACTIONS MUST BE CALCULATED
+C           IF NOT, WE SKIP THE INTERACTION TYPE AND MOVE TO THE NEXT.
+C           SEE ADDITIONAL COMMENTS IN EXREP
+C
+            DO 500 MLSWTCH = 1, 4
+               CALL MULCAL(MJ,MI,MLSWTCH,MULI,MULJ,ICOEFF,JCOEFF,
+     *                  KCOEFF,PCOEFF,JFIRST,JLAST,JDIFF,IFIRST,ILAST,
+     *                  IDIFF,MCOEFF)
+            IF (MLSWTCH .EQ. 2 .AND. MULI .EQ. 0) GOTO 500
+            IF (MLSWTCH .EQ. 3 .AND. MULJ .EQ. 0) GOTO 500
+            IF (MLSWTCH .EQ. 4 .AND. MULJ .EQ. 0) GOTO 500
+            IF (MLSWTCH .EQ. 4 .AND. MULI .EQ. 0) GOTO 500
+C
+C           - GO PARALLEL!
+            IF(GOPARR) THEN
+               IPCOUNT = IPCOUNT + 1
+               IF(MOD(IPCOUNT,NPROC).NE.0) GO TO 502
+            END IF
+C
+              COMX2 = EFCENT(1,MI)
+              COMY2 = EFCENT(2,MI)
+              COMZ2 = EFCENT(3,MI)
+C
+               COMX = COMX1 - COMX2
+               COMY = COMY1 - COMY2
+               COMZ = COMZ1 - COMZ2
+C
+               PBCX = ZERO
+               PBCY = ZERO
+               PBCZ = ZERO
+               IF (XBOX .NE. ZERO) PBCX = XBOX * ANINT(COMX/XBOX)
+               IF (YBOX .NE. ZERO) PBCY = YBOX * ANINT(COMY/YBOX)
+               IF (ZBOX .NE. ZERO) PBCZ = ZBOX * ANINT(COMZ/ZBOX)
+C
+C   ----  DISTANCE BETWEEN FRAGMENTS
+               X12  = ABS(COMX - PBCX)
+               Y12  = ABS(COMY - PBCY)
+               Z12  = ABS(COMZ - PBCZ)
+               R12  = X12*X12+Y12*Y12+Z12*Z12
+C
+               SWF   = 1.0D+00
+C
+            IF(X12.GT.XCUT.OR.Y12.GT.YCUT.OR.Z12.GT.ZCUT) GOTO 502
+            R12  = X12*X12+Y12*Y12+Z12*Z12
+            IF(R12.GT.RCUT) GOTO 502
+C
+               IF(R12.GT.SWR2*SWR2) THEN
+                 GOTO 502
+               ELSE IF(R12.GT.SWR1*SWR1) THEN
+                 IF(ISWF.EQ.1) THEN
+                    DUMY1 = 1.0D+00/(SWR2*SWR2 - SWR1*SWR1)
+                    DUMY2 = DUMY1*DUMY1
+                    DUMY3 = DUMY2*DUMY1
+                    DUMY4 = DUMY2*DUMY2
+                    DUMY5 = DUMY2*DUMY3
+                    VUMY1 = R12 - SWR1*SWR1
+                    VUMY2 = VUMY1*VUMY1
+                    VUMY3 = VUMY2*VUMY1
+                    VUMY4 = VUMY2*VUMY2
+                    VUMY5 = VUMY2*VUMY3
+                    DSWF  = -30.0D+00*DUMY3*VUMY2
+     *                      +60.0D+00*DUMY4*VUMY3
+     *                      -30.0D+00*DUMY5*VUMY4
+                    DSWF  = 2.0D+00*DSWF
+                    SWF   = 1.0D+00 - 10.0D+00*DUMY3*VUMY3
+     *                              + 15.0D+00*DUMY4*VUMY4
+     *                              -  6.0D+00*DUMY5*VUMY5
+                 ELSE IF(ISWF.EQ.2) THEN
+                    R12   = SQRT(R12)
+                    PIL   = 3.1415926535897932D+00/(SWR2-SWR1)
+                    DUMY  = (R12 - SWR1) * PIL
+                    SWF   = 0.50D+00 * (COS(DUMY) + 1.0D+00)
+                    DUMY2 =-0.50D+00 * SIN(DUMY) * PIL / R12
+                 END IF
+               END IF
+C
+            EFCENT(1,MI) = EFCENT(1,MI) + PBCX
+            EFCENT(2,MI) = EFCENT(2,MI) + PBCY
+            EFCENT(3,MI) = EFCENT(3,MI) + PBCZ
+            DO NATIM=1,NAT(IM)
+            PRCORD(1,INAT+NATIM-1) = PRCORD(1,INAT+NATIM-1) + PBCX
+            PRCORD(2,INAT+NATIM-1) = PRCORD(2,INAT+NATIM-1) + PBCY
+            PRCORD(3,INAT+NATIM-1) = PRCORD(3,INAT+NATIM-1) + PBCZ
+            ENDDO
+            DO MOIM=IFIRST,ILAST
+            CENTCD(1,IMO+MOIM-1) = CENTCD(1,IMO+MOIM-1) + PBCX
+            CENTCD(2,IMO+MOIM-1) = CENTCD(2,IMO+MOIM-1) + PBCY
+            CENTCD(3,IMO+MOIM-1) = CENTCD(3,IMO+MOIM-1) + PBCZ
+            ENDDO
+C
+            CALL CPYTSQ(FOCKMA(1,MI),FB,MXMO,1)
+C
+C           -- SAB AND TAB --
+C
+            CALL STINT(SMAT,TMAT,MXBF,MXBF,NAT(IM),NAT(JM),
+     *                 NGAUSS(IM),NSHELL(IM),EX(1,IM),CS(1,IM),
+     *                 CP(1,IM),CD(1,IM),CF(1,IM),CG(1,IM),KSTART(1,IM),
+     *                 KATOM(1,IM),KTYPE(1,IM),KNG(1,IM),KLOC(1,IM),
+     *                 KMIN(1,IM),KMAX(1,IM),NGAUSS(JM),NSHELL(JM),
+     *                 EX(1,JM),CS(1,JM),CP(1,JM),CD(1,JM),CF(1,JM),
+     *                 CG(1,JM),KSTART(1,JM),KATOM(1,JM),KTYPE(1,JM),
+     *                 KNG(1,JM),KLOC(1,JM),KMIN(1,JM),KMAX(1,JM),
+     *                 PRCORD(1,INAT),PRCORD(1,JNAT))
+            CALL VCLR(SAB,1,MXMO*MXMO)
+            CALL TFSQP(SAB,SMAT,PROVEC(1,JMO),PROVEC(1,IMO),WRK,
+     *                 MXBF,MXBF,NORB(MJ),NORB(MI),MXMO,MXMO,.FALSE.)
+C
+            DO II = JFIRST, JLAST
+               DO JJ = IFIRST, ILAST
+C                 LVS: SAVE SAB FOR USE WITH DAMPING COEFFS
+                  SAB_SAVE(MJ,MI,II,JJ) = SAB(II,JJ)
+               END DO
+            END DO
+            
+C
+C           USE SAB TO CHECK IF THE XR TERM IS SIGNIFICANT
+            DO II = JFIRST,JLAST
+               DO JJ = IFIRST,ILAST
+                  IF(ABS(SAB(II,JJ)).GT.1.0D-06) GOTO 600
+               END DO
+            END DO
+C
+            EFCENT(1,MI) = EFCENT(1,MI) - PBCX
+            EFCENT(2,MI) = EFCENT(2,MI) - PBCY
+            EFCENT(3,MI) = EFCENT(3,MI) - PBCZ
+            DO NATIM=1,NAT(IM)
+            PRCORD(1,INAT+NATIM-1) = PRCORD(1,INAT+NATIM-1) - PBCX
+            PRCORD(2,INAT+NATIM-1) = PRCORD(2,INAT+NATIM-1) - PBCY
+            PRCORD(3,INAT+NATIM-1) = PRCORD(3,INAT+NATIM-1) - PBCZ
+            ENDDO
+            DO MOIM=IFIRST,ILAST
+            CENTCD(1,IMO+MOIM-1) = CENTCD(1,IMO+MOIM-1) - PBCX
+            CENTCD(2,IMO+MOIM-1) = CENTCD(2,IMO+MOIM-1) - PBCY
+            CENTCD(3,IMO+MOIM-1) = CENTCD(3,IMO+MOIM-1) - PBCZ
+            ENDDO
+C
+            DO II = JFIRST, JLAST
+               DO JJ = IFIRST, ILAST
+                  SAB_SAVE(MJ,MI,II,JJ) = ZERO
+               END DO
+            END DO
+C
+            GOTO 502
+ 600        CONTINUE
+C
+            CALL VCLR(TAB,1,MXMO*MXMO)
+            CALL TFSQP(TAB,TMAT,PROVEC(1,JMO),PROVEC(1,IMO),WRK,
+     *                 MXBF,MXBF,NORB(MJ),NORB(MI),MXMO,MXMO,.FALSE.)
+
+C
+C           -- DSAB AND DTAB --
+C
+c
+c
+            CALL DSTINT(MJ,DSINT,DTINT,MXBF,MXBF,NAT(IM),NAT(JM),
+     *           NGAUSS(IM),NSHELL(IM),EX(1,IM),CS(1,IM),
+     *           CP(1,IM),CD(1,IM),CF(1,IM),CG(1,IM),KSTART(1,IM),
+     *           KATOM(1,IM),KTYPE(1,IM),KNG(1,IM),KLOC(1,IM),
+     *           KMIN(1,IM),KMAX(1,IM),NGAUSS(JM),NSHELL(JM),
+     *           EX(1,JM),CS(1,JM),CP(1,JM),CD(1,JM),CF(1,JM),
+     *           CG(1,JM),KSTART(1,JM),KATOM(1,JM),KTYPE(1,JM),
+     *           KNG(1,JM),KLOC(1,JM),KMIN(1,JM),KMAX(1,JM),
+     *           PRCORD(1,INAT),PRCORD(1,JNAT))
+c
+            CALL VCLR(DSAB,1,MXMO*MXMO*6)
+            CALL VCLR(DTAB,1,MXMO*MXMO*6)
+c
+            DO ICRD=1,6
+            CALL TFSQP(DSAB(1,1,ICRD),DSINT(1,1,ICRD),
+     *                 PROVEC(1,JMO),PROVEC(1,IMO),WRK,
+     *                 MXBF,MXBF,NORB(MJ),NORB(MI),MXMO,MXMO,.FALSE.)
+            CALL TFSQP(DTAB(1,1,ICRD),DTINT(1,1,ICRD),
+     *                 PROVEC(1,JMO),PROVEC(1,IMO),WRK,
+     *                 MXBF,MXBF,NORB(MJ),NORB(MI),MXMO,MXMO,.FALSE.)
+            END DO
+           DO ICRD=1,3
+               CALL VCLR(WRK2,1,MXMO*MXMO)
+               CALL TFSQP(WRK2,SMAT,DPVEC(1,JMO,ICRD),PROVEC(1,IMO),
+     *                    WRK,MXBF,MXBF,NORB(MJ),NORB(MI),MXMO,MXMO,
+     *                    .FALSE.)
+               DO II=1,MXMO
+               DO JJ=1,MXMO
+                  DSAB(JJ,II,ICRD+3)=DSAB(JJ,II,ICRD+3)+WRK2(JJ,II)
+               END DO
+               END DO
+               CALL VCLR(WRK2,1,MXMO*MXMO)
+               CALL TFSQP(WRK2,TMAT,DPVEC(1,JMO,ICRD),PROVEC(1,IMO),
+     *                    WRK,MXBF,MXBF,NORB(MJ),NORB(MI),MXMO,MXMO,
+     *                    .FALSE.)
+               DO II=1,MXMO
+               DO JJ=1,MXMO
+                  DTAB(JJ,II,ICRD+3)=DTAB(JJ,II,ICRD+3)+WRK2(JJ,II)
+               END DO
+               END DO
+            END DO
+C
+            DO ICRD=1,6
+            DO II = JFIRST, JLAST
+               DO JJ = IFIRST, ILAST
+C                 LVS: SAVE SAB_GRAD FOR USE WITH DAMPING COEFFS
+                  SAB_GRAD(MJ,MI,II,JJ,ICRD) = DSAB(II,JJ,ICRD)
+               END DO
+            END DO
+            END DO
+C
+C           COMPUTE EXCHANGE-REPULSION GRADIENTS
+C
+c     for derivative weights
+
+            XR10 = ZERO
+            XR20 = ZERO
+            XR30 = ZERO
+            EPEN0 = ZERO
+
+      call vclr( dnew_density, 1, mxbf*mxbf*8)
+
+c$$$ get efmo_trans for A
+      call efmo_retrieve_tran( efmo_tran, mxmo,norb(mj),
+     *     iefmodim( mj ) )
+
+      num_AO_A = kloc(nshell(jm),jm) +
+     *     (kmax(nshell(jm),jm) - kmin(nshell(jm),jm) )
+      num_AO_B = kloc(nshell(im),im) +
+     *     (kmax(nshell(im),im) - kmin(nshell(im),im) )
+
+
+c$$$ This makes S_{qi}, where q is all CMOs on JM and i is LMOs on IM
+            CALL DGEMM('N','N',num_AO_A,norb(mi),num_AO_B,ONE,SMAT,
+     *           MXBF,provec(1,imo),MXBF,ZERO,dnew_density(1,1,8),
+     *           MXBF)
+
+            CALL DGEMM('T','N',nocc(jm)+nvir(jm),norb(mi),num_AO_A,ONE,
+     *           CTVEC(1,jmmo),MXBF,dnew_density(1,1,8),MXBF,ZERO,
+     *           dnew_density(1,1,4),MXBF)
+
+c$$$ This makes T_{qi}, where q is all CMOs on JM and i is LMOs on IM
+            CALL DGEMM('N','N',num_AO_A,norb(mi),num_AO_B,ONE,TMAT,
+     *           MXBF,provec(1,imo),MXBF,ZERO,dnew_density(1,1,8),
+     *           MXBF)
+
+            CALL DGEMM('T','N',nocc(jm)+nvir(jm),norb(mi),num_AO_A,ONE,
+     *           CTVEC(1,jmmo),MXBF,dnew_density(1,1,8),MXBF,ZERO,
+     *           dnew_density(1,1,6),MXBF)
+
+            call vclr( dnew_density(1,1,8), 1, mxbf*mxbf)
+
+c$$$ prepping for occ-vir resp terms
+
+            DO 200 I = JFIRST, JLAST
+               XI  = CENTCD(1,JMO+I-1)
+               YI  = CENTCD(2,JMO+I-1)
+               ZI  = CENTCD(3,JMO+I-1)
+
+C
+C              -- VIB
+C
+               VIB  =ZERO
+               DVIB1=ZERO
+               DVIB2=ZERO
+               DVIB3=ZERO
+               DVIB4=ZERO
+               DVIB5=ZERO
+               DVIB6=ZERO
+               IF (MLSWTCH.EQ.2) GOTO 212
+               IF (MLSWTCH.EQ.4) GOTO 212
+               DO JZB = 1, NAT(IM)
+                  DX=XI-PRCORD(1,INAT+JZB-1)
+                  DY=YI-PRCORD(2,INAT+JZB-1)
+                  DZ=ZI-PRCORD(3,INAT+JZB-1)
+                  RIJZB2= DX*DX+DY*DY+DZ*DZ
+                  RIJZB = SQRT(RIJZB2)
+                  ZB=EFZNUC(INAT+JZB-1)
+                  VIB = VIB - ZB/RIJZB
+                  DUM = ZB/RIJZB/RIJZB2
+C
+                    DVIB1=DVIB1+DUM*DX
+                    DVIB2=DVIB2+DUM*DY
+                    DVIB3=DVIB3+DUM*DZ
+
+                    DVIB4=DVIB4+DUM*
+     *                  (-DZ*(YI-EFCENT(2,MJ))+DY*(ZI-EFCENT(3,MJ)))
+                    DVIB5=DVIB5+DUM*
+     *                  (-DX*(ZI-EFCENT(3,MJ))+DZ*(XI-EFCENT(1,MJ)))
+                    DVIB6=DVIB6+DUM*
+     *                  (-DY*(XI-EFCENT(1,MJ))+DX*(YI-EFCENT(2,MJ)))
+               ENDDO
+
+c     EFMO: holding these since they're coefficients of dipole derivs
+               hold_dvib1=dvib1
+               hold_dvib2=dvib2
+               hold_dvib3=dvib3
+
+ 212           CONTINUE
+               DO L = IFIRST, ILAST
+                  DX=XI-CENTCD(1,IMO+L-1)
+                  DY=YI-CENTCD(2,IMO+L-1)
+                  DZ=ZI-CENTCD(3,IMO+L-1)
+                  RIL2= DX*DX+DY*DY+DZ*DZ
+                  RIL = SQRT(RIL2)
+                  VIB = VIB + JCOEFF/RIL
+C
+               ENDDO
+C
+
+               DO 300 J = IFIRST, ILAST
+                  XJ  = CENTCD(1,IMO+J-1)
+                  YJ  = CENTCD(2,IMO+J-1)
+                  ZJ  = CENTCD(3,IMO+J-1)
+C
+C                 -- VJA
+C
+                  VJA  =ZERO
+                  IF (MLSWTCH .GT. 2) GOTO 224
+                  DO IZA = 1, NAT(JM)
+                     DX=PRCORD(1,JNAT+IZA-1)-XJ
+                     DY=PRCORD(2,JNAT+IZA-1)-YJ
+                     DZ=PRCORD(3,JNAT+IZA-1)-ZJ
+                     RJIZA2= DX*DX+DY*DY+DZ*DZ
+                     RJIZA = SQRT(RJIZA2)
+                     ZB=EFZNUC(JNAT+IZA-1)
+                     VJA = VJA - ZB/RJIZA
+                  ENDDO
+
+c     EFMO: deriv of the one term with an explicit dependence on atom
+c     pos (8th term in (3) in HL's exrep paper)
+                  SIJ = SAB(I,J)
+                  SIJ2= SIJ*SIJ
+                  DO IZA = 1, NAT(JM)
+                     DX=PRCORD(1,JNAT+IZA-1)-XJ
+                     DY=PRCORD(2,JNAT+IZA-1)-YJ
+                     DZ=PRCORD(3,JNAT+IZA-1)-ZJ
+                     RJIZA2= DX*DX+DY*DY+DZ*DZ
+                     RJIZA = SQRT(RJIZA2)
+                     ZB=EFZNUC(JNAT+IZA-1)
+
+                     DUM = ZB/RJIZA/RJIZA2*SIJ2
+
+                     index_atom = lstmpts(mj) + iza - 1
+
+                     call efmoesgm( z1, z2, ZERO, index_atom,
+     *                    SWF*MCOEFF*DUM*DX,SWF*MCOEFF*DUM*DY,
+     *                    SWF*MCOEFF*DUM*DZ,z3,z4,z5,z6,z7,z8,
+     *                    ZERO, ONE, 3 )
+                  ENDDO
+
+
+ 224              CONTINUE
+                  DO K = JFIRST, JLAST
+                     DX=CENTCD(1,JMO+K-1)-XJ
+                     DY=CENTCD(2,JMO+K-1)-YJ
+                     DZ=CENTCD(3,JMO+K-1)-ZJ
+                     RJK2= DX*DX+DY*DY+DZ*DZ
+                     RJK = SQRT(RJK2)
+                     VJA = VJA + JCOEFF/RJK
+                  ENDDO
+C
+C                 -- SIJ, TIJ, RIJ
+C
+                  SIJ = SAB(I,J)
+                  SIJ2= SIJ*SIJ
+                  TIJ = TAB(I,J)
+                  RIJ2= (XI-XJ)*(XI-XJ)+
+     *                  (YI-YJ)*(YI-YJ)+
+     *                  (ZI-ZJ)*(ZI-ZJ)
+                  ONERIJ2=ONE/RIJ2
+                  RIJ = SQRT(RIJ2)
+                  ONERIJ=ONE/RIJ
+                  ONERIJ3=ONERIJ*ONERIJ2
+
+c     EFMO: weights for the coefficients. these will eventually end up
+c     in dnew_density()
+                  weight_ds = zero
+                  weight_ds2 = zero
+                  weight_dt = zero
+                  weight_drx = zero
+                  weight_dry = zero
+                  weight_drz = zero
+
+C
+C                 -- 1ST TERM
+C
+                  IF(ABS(SIJ) .GT. 1.0D-07) THEN
+                     RTLNS= SQRT(-LOG(ABS(SIJ)))
+
+                     XR10 = XR10 - TWO*RT2PI*RTLNS*SIJ2*ONERIJ
+                     DUM1 = (-RT2PI/RTLNS+FOUR*RT2PI*RTLNS)*SIJ*ONERIJ
+                     DUM2 = TWO*RT2PI*RTLNS*SIJ2*ONERIJ3
+
+                     if( efmo_cal_type ) then
+c$$$  adds to the index which is the coeff of the dS AO derivative,
+c$$$  dS occ-vir contributation, and non-symmetric occ-occ contribution
+c$$$  in the contributions, it gets multiplied by -2 (i.e. -MCOEFF)
+                        weight_ds2 = DUM1
+
+c$$$ doubled because we send it to efmo_str_deriv, which only takes the 
+c$$$ derivative of the first AO, that is ( < du | x | v> )
+c$$$ this adds to the AO derivatives, occ-vir contribution, and non-symmetric occ-occ
+ 
+                     weight_drx = two*DUM2*(XI-XJ)
+                     weight_dry = two*DUM2*(YI-YJ)
+                     weight_drz = two*DUM2*(ZI-ZJ)
+
+                     end if
+                  END IF
+C
+C                -ELECTROST. DAMPING HERE-
+                  IF (IELECS . EQ. 1) THEN
+                     IF(ABS(SIJ) .GT. 1.0D-07) THEN
+                     RTLNS= SQRT(-LOG(ABS(SIJ)))
+                     EPEN0 = EPEN0-ONE/(SQRT(TWO)*RTLNS)*SIJ2*ONERIJ
+                     DUM3 = ONE/(SQRT(TWO)*RTLNS)*SIJ2*ONERIJ3
+                     DUM4 = -(TWO/RTLNS + ONE/(TWO*RTLNS*RTLNS*RTLNS))*
+     *                      SIJ*ONERIJ/SQRT(TWO)
+
+                     if( efmo_cal_type ) then
+c$$$  since epen terms are not multiplied by -mcoeff, but I do it later,
+c$$$  I did the opposite here (multiplied by -0.5)
+                        weight_ds2 = weight_ds2 - DUM4/MCOEFF
+c$$$  divided by mcoeff, but no need to multiply by -1 (I think)
+                     weight_drx = weight_drx + two*DUM3*(XI-XJ)/MCOEFF
+                     weight_dry = weight_dry + two*DUM3*(YI-YJ)/MCOEFF
+                     weight_drz = weight_drz + two*DUM3*(ZI-ZJ)/MCOEFF
+                  end if
+
+
+                  END IF
+               END IF
+C
+C                 -- 2ND TERM
+C
+                  FIJ  = ZERO
+
+                  DO K = JFIRST, JLAST
+                     FAIK =  FA(I,K)
+                     FIJ  =  FIJ + FAIK*SAB(K,J)
+                  END DO
+                  FJI  = ZERO
+                  DO L = IFIRST, ILAST
+                     FBJL =  FB(J,L)
+                     FJI  =  FJI + FBJL*SAB(I,L)
+                  END DO
+
+                  DUM1 = (FIJ+FJI-TWO*TIJ)
+                  XR20 = XR20 - SIJ*DUM1
+
+                     if( efmo_cal_type ) then
+c$$$ this adds to the AO, occ-vir, and symmetric occ-occ contribution
+                        weight_ds = TWO*(-TIJ+fij+fji)
+                        weight_dt =  -TWO*SIJ
+                     end if
+C
+C                 -- 3RD TERM
+C
+                  SATHREE = ZERO
+                  SBTHREE = ZERO
+                  DO K = JFIRST, JLAST
+                     SKJ = SAB(K,J)
+                     SATHREE = SATHREE + SKJ*SKJ*TWO
+                  END DO
+
+                  DO L = IFIRST, ILAST
+                     SLI = SAB(I,L)
+                     SBTHREE = SBTHREE + SLI*SLI*TWO
+                  END DO
+
+c$$$ note that vib and vja are negative (see where they're calculated above)
+                  XR30 = XR30 + SIJ2*(VIB+VJA-ONERIJ)
+                  DUM1 = TWO*SIJ*(VIB+VJA-ONERIJ)
+
+                     if( efmo_cal_type ) then
+c$$$ we subtract because the density multiplies by neg. one, and vib is negative
+
+                        weight_ds2 = weight_ds2 - DUM1
+
+c$$$ hold_dvibs are positive. factors of two are because efmo_str_deriv
+c$$$ (and EFMOESGM) just calculate <du | x | v> and <du | v>
+                  R_COEFF = two*(SIJ2-SATHREE-SBTHREE)*ONERIJ3
+
+                  weight_drx =  weight_drx+ (XI-XJ)*R_COEFF
+     *                 +two*hold_dvib1*sij2
+
+                  weight_dry = weight_dry + (YI-YJ)*R_COEFF
+     *                 +two*hold_dvib2*sij2
+
+                  weight_drz = weight_drz + (ZI-ZJ)*R_COEFF
+     *                 +two*hold_dvib3*sij2
+
+                  end if
+
+                     if( efmo_cal_type ) then
+                        ncore = nocc(jm) - norb(mj)
+c$$$ send to dipder
+                  i_pass = i
+        CALL EFMOESGM(iefmodim(mj),JM1,i_pass,IC2P,
+     *                 swf*mcoeff*weight_drx,swf*mcoeff*weight_dry,
+     *                 swf*mcoeff*weight_drz,TIX,TIY,TIZ,TJX,TJY,
+     *                 TJZ,F2,F1,7)
+
+        weight_drx = 0
+        weight_dry = 0
+        weight_drz = 0
+
+c$$$ AO dS and dT density coefficients
+                  dnew_density( i, j,1 ) =
+     *                 - (weight_ds+weight_ds2)
+                  dnew_density( i, j,2 ) =
+     *                 - weight_dt
+
+
+c$$$ used for occ-occ resp term
+               DO K = JFIRST, JLAST
+c$$$ for the nonsym occ-occ terms
+                  dnew_density( i, k, 7) =
+     *                 dnew_density( i, k, 7)
+     *                 - swf*mcoeff*weight_ds2
+     *                 *sab(k,j)
+               END DO
+
+
+               do index_AO_A=1,num_AO_A
+                  do index2_AO_A=1,num_AO_A
+c     occ-occ resp terms
+                     weight = zero
+
+                     DO K = JFIRST, JLAST
+c     loop over A
+                        weight = weight + 
+     *                       SAB(K,J)*provec(index2_AO_A,jmo+k-1)
+
+                     END DO
+
+
+c$$$c$$$ fock der AO-derivative weight
+                        dnew_density( index_AO_A, index2_AO_A,5 ) =
+     *                       dnew_density( index_AO_A, index2_AO_A,5 )
+     *                    - weight*sij
+     *                       * provec(index_AO_A, jmo+i-1)
+
+                        
+                     enddo
+                  enddo
+
+
+c$$$ occ-vir resp and nosymm occ-occ resp
+                  do k = 1, nvir(jm)+nocc(jm)
+                  do i_t = ncore+1, nocc(jm)
+
+c$$$ adding in occ-occ part of fock matrix
+                     if( k .lt. (nocc(jm) + 1) .and. k .gt. ncore )
+     *                       then
+                        do i_m= jfirst, jlast
+c$$$ make mixed fock
+                        fki_m = efmo_tran(i_m,k-ncore)*ctfok(k,jm)
+
+                        weight4 = TWO*fki_m
+     *                       *sab(i_m,j)
+
+                        dnew_density( i_t, k,8) =
+     *                       dnew_density( i_t, k, 8)
+     *                       - swf*mcoeff*weight4*SAB(i,j)
+     *                          *efmo_tran(i,i_t-ncore)
+                     enddo
+                     endif
+
+                     dnew_density( i_t,k,3 ) =
+     *                    dnew_density( i_t,k,3 ) -
+     *                    efmo_tran(i,i_t-ncore)
+     *                    *((weight_ds+weight_ds2)
+     *                    *dnew_density(k,j,4)
+     *                    +weight_dt
+     *                    *dnew_density(k,j,6))
+
+                     dnew_density( i_t,k,8 ) =
+     *                    dnew_density( i_t,k,8 ) -
+     *                    efmo_tran(i,i_t-ncore)
+     *                    *((weight_ds+weight_ds2)
+     *                    *dnew_density(k,j,4)
+     *                    +weight_dt
+     *                    *dnew_density(k,j,6))
+     *                    *swf*mcoeff
+
+               enddo
+               enddo
+               end if
+
+C
+ 300           CONTINUE
+ 200        CONTINUE
+
+c$$$ get full dS and dT coeffients.
+            CALL DGEMM('N','T',norb(mj),num_AO_B,norb(mi),ONE,
+     *           dnew_density(1,1,1),MXBF,provec(1,imo),MXBF,ZERO,
+     *           dnew_density(1,1,4),MXBF)
+
+            CALL DGEMM('N','N',num_AO_A,num_AO_B,norb(mj),ONE,
+     *           provec(1,jmo),MXBF,dnew_density(1,1,4),MXBF,ZERO,
+     *           dnew_density(1,1,1),MXBF)
+
+c$$$  dT
+            CALL DGEMM('N','T',norb(mj),num_AO_B,norb(mi),ONE,
+     *           dnew_density(1,1,2),MXBF,provec(1,imo),MXBF,ZERO,
+     *           dnew_density(1,1,4),MXBF)
+
+            CALL DGEMM('N','N',num_AO_A,num_AO_B,norb(mj),ONE,
+     *           provec(1,jmo),MXBF,dnew_density(1,1,4),MXBF,ZERO,
+     *           dnew_density(1,1,2),MXBF)
+
+c$$$ occ-vir contribution
+            if( efmo_cal_type ) then
+               iov = 0
+               do i_t=1, nocc(jm)                        
+                  do k = 1, nvir(jm)
+
+c$$$  stores into the langrangian for the Z-vector method.
+                     iov = iov + 1
+                     ie = iefmodim( mj )
+
+                     dnew_density(i_t,nocc(jm)+k,3)=half*half*SWF
+     *                    *MCOEFF*dnew_density(i_t,nocc(jm)+k,3)
+
+                     call daxpy( 1, 1d0,dnew_density(i_t,nocc(jm)+k,3),
+     *                    1, zvlag(iptlg(ie)+iov-1),1 )
+
+                  enddo
+               enddo
+            endif
+
+            l1 = num_AO_A
+
+c$$$  call add to gradient routine to loop over i,j on A,B and weight
+c$$$  contributions by DS_coeff. note that DT_coeff is SAB
+            if( efmo_cal_type ) then
+            index_atom = lstmpts( mj )
+
+
+c$$$ AO derivatives of S and T
+            CALL efmo_str_deriv(MXBF,MXBF,NAT(IM),NAT(JM),
+     *           NGAUSS(IM),NSHELL(IM),EX(1,IM),CS(1,IM),
+     *           CP(1,IM),CD(1,IM),CF(1,IM),CG(1,IM),KSTART(1,IM),
+     *           KATOM(1,IM),KTYPE(1,IM),KNG(1,IM),KLOC(1,IM),
+     *           KMIN(1,IM),KMAX(1,IM),NGAUSS(JM),NSHELL(JM),
+     *           EX(1,JM),CS(1,JM),CP(1,JM),CD(1,JM),CF(1,JM),
+     *           CG(1,JM),KSTART(1,JM),KATOM(1,JM),KTYPE(1,JM),
+     *           KNG(1,JM),KLOC(1,JM),KMIN(1,JM),KMAX(1,JM),
+     *           PRCORD(1,INAT),PRCORD(1,JNAT), .true.,.true.,.false.,
+     *           index_atom, SWF, MCOEFF, dnew_density(1,1,1),
+     *           dnew_density(1,1,2),dum, dum, dum, .false.,
+     *           .false. )
+
+            ie = iefmodim( mj )
+
+c$$$ call something else to store the CPL coefficient
+            call efmo_store_cpl_coeff( dnew_density(1,1,7), ie,mxbf,
+     *           norb(mj))
+
+c$$$ send nonsym occ-occ to subroutine
+         call efmo_occ_occ_resp( dnew_density(1,1,8), ie,
+     *     lstmpts( mj ),mxbf,dnew_density, nocc(jm), num_AO_A,
+     *     ctvec(1,jmmo),
+     *     ctfok(1,jm), dnew_density(1,1,7), nat(jm), ngauss(jm),
+     *     NSHELL(JM),EX(1,JM),CS(1,JM),CP(1,JM),CD(1,JM),CF(1,JM),
+     *     CG(1,JM),KSTART(1,JM),KATOM(1,JM),KTYPE(1,JM),
+     *     KNG(1,JM),KLOC(1,JM),KMIN(1,JM),KMAX(1,JM),
+     *     PRCORD(1,JNAT),nocc(jm), 0, .false.,ncore)
+
+c     call things to get the derivative of the fock matrix for A
+c$$$  transform to tri, (already halved due to not multiply by two when 
+c$$$  the dnew_density matrix was being formed)
+c$$$
+            call sq2tri( mxbf, num_AO_A, dnew_density(1,1,5),
+     *            weighted_da,MCOEFF*SWF*HALF )
+
+            l2 = (l1*l1+l1)/2
+            call efmo_store_fock_der( iefmodim(mj), weighted_da, l2 )
+
+
+      end if
+c
+c     only sum the energy for unique pairs. this is necessary because
+c     efmo runs loop over every set of pairs, not the unique ones.
+         if( .not. (mi .lt. mj) ) then
+            ENXR = ENXR + SWF*ICOEFF*(XR10+XR20+XR30)
+            EPEN = EPEN + SWF*EPEN0
+         endif
+C
+C
+c     this ends the loop over mlswitch
+ 500        CONTINUE
+C
+C
+            EFCENT(1,MI) = EFCENT(1,MI) - PBCX
+            EFCENT(2,MI) = EFCENT(2,MI) - PBCY
+            EFCENT(3,MI) = EFCENT(3,MI) - PBCZ
+            DO NATIM=1,NAT(IM)
+            PRCORD(1,INAT+NATIM-1) = PRCORD(1,INAT+NATIM-1) - PBCX
+            PRCORD(2,INAT+NATIM-1) = PRCORD(2,INAT+NATIM-1) - PBCY
+            PRCORD(3,INAT+NATIM-1) = PRCORD(3,INAT+NATIM-1) - PBCZ
+            ENDDO
+            DO MOIM=IFIRST,ILAST
+            CENTCD(1,IMO+MOIM-1) = CENTCD(1,IMO+MOIM-1) - PBCX
+            CENTCD(2,IMO+MOIM-1) = CENTCD(2,IMO+MOIM-1) - PBCY
+            CENTCD(3,IMO+MOIM-1) = CENTCD(3,IMO+MOIM-1) - PBCZ
+            ENDDO
+C
+ 502        CONTINUE
+            IMO = IMO + NORB(MI)
+            INAT = INAT + NAT(IM)
+         END DO
+c$$$ ends loop over A
+         JMO = JMO + NORB(MJ)
+         JNAT = JNAT + NAT(JM)
+         jmmo = jmmo + nctmo(jm)
+      END DO
+C     - SUM UP
+      IF(GOPARR) THEN
+         CALL DDI_GSUMF(1510,ENXR,1)
+         CALL DDI_GSUMF(1509,EPEN,1)
+c$$$         CALL DDI_GSUMF(1511,GXRFRG,6*NFRG*NFRG)
+         CALL DDI_GSUMF(1512,SAB_SAVE,NFRG*NFRG*MXMO*MXMO)
+         CALL DDI_GSUMF(1513,SAB_GRAD,NFRG*NFRG*MXMO*MXMO*6)
+      END IF
+C
+C 
+      RETURN
+      END

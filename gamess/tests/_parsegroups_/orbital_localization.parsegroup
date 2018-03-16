@@ -1,0 +1,17 @@
+{
+  "parse_header" : "ORBITAL LOCALIZATION",
+  "parse_group" : [
+   {
+     "regex_string" : "THE FINAL LOCALIZATION SUM IS",
+     "parse_name"   : "ORBITAL LOCALIZATION",
+     "parse_instance" : -2,
+     "parse_precision" : 6
+   },
+   {
+     "regex_string" : "THE FINAL LOCALIZATION SUM IS",
+     "parse_name"   : "ORBITAL LOCALIZATION",
+     "parse_instance" : -1,
+     "parse_precision" : 6
+   }
+  ]
+}

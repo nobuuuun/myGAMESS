@@ -1,0 +1,1181 @@
+C*MODULE EFMOGRAD_ES    *DECK EFMO_MULTIPOLE_GRAD
+C>
+C>    @brief Calculate weighted multipoles for a fragment in the the EFMO electrostatics gradient.
+C>
+C>    @details Calculate weighted multipoles for a given fragment in the EFMO
+C>             electrostatics gradient.
+C>             It stores the non-response weighted mulitpoles in efmo_es_der and
+C>             the weighted multipoles needed in the lagrangian in lag. These will
+C>             be sent to ffelec and calculate the full electrostatics derivative.
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param DM : Triangular density matrix of size L2, represented as a 1D array
+C>                If you have the two AO indeces, then you can get the index into the 1D DM
+C>                array with the IA array.
+C>                the maximum of i, j can be plugged into IA() to get the start of
+C>                the row's index (1,3,6,10), and then we add the min(i,j) to get the
+C>                column
+C>
+C>    @param L2 : (num AOs)*(num AOs + 1) / 2
+C>    @param other_charge : A double array of (num atoms). This routine fills it with Stone's
+C>                          charge. The needed memory should be allocated before the
+C>                          subroutine is called.
+C>    @param other_dipole : A double array of (3, num atoms). This routine fills it with Stone's
+C>                          dipole. The needed memory should be allocated before the
+C>                          subroutine is called.
+C>    @param other_quad : A double array of (6, num atoms). This routine fills it with Stone's
+C>                        quadrupole. The needed memory should be allocated before the
+C>                        subroutine is called.
+C>    @param efmo_es_der : A double array of (10, max multipole points (MXEFMOPTS),
+C>                         max num atoms (MXATM), 3, num fragments). This routine fills it
+C>                         with part of the non-response contribution to the electrostatics
+C>                         derivative. It adds the derivative of the charge, dipole,
+C>                         and quadrupole at each multipole point with respect to the x-y-z-
+C>                         coordinate of each atom on "frag", the fragment the user
+C>                         specifies in the next argument, to the weighted multipoles
+C>                         from the occ-occ part of the density derivative. 
+C>                         The needed memory should be allocated before the subroutine is called.
+C>    @param frag : The fragment we're calculating the wieghted multipoles for.
+C>    @param num_frags : The total number of fragments. This is used for specifying the
+C>                       size of efmo_es_der 
+C>    @param dsint : A double (L2, 3, num atoms) array. This routine fills it with the
+C>                   overlap derivatives of "frag", the current fragment. The needed
+C>                   memory should be allocated before the subroutine is called. 
+C>    @param contrib : A double (num AOs, num AOs, 3, num atoms) array. This is a work
+C>                     space array, which needs memory allocated for it before this
+C>                     routine is called. In this routine, it is populated with
+C>                     part of the non-response contribution to the derivative
+C>                     of the multipole moments. It should contain
+C>                     4 * sum_ij^occ [ (dSij/dx)*c_{ai}c_{bj} ], where a and b are
+C>                     AOs and i and j are MOs
+C>    @param nvir : An int containing the number of virtual orbitals (num-na,
+C>                  most likely. this is the number of AOs - the number of occ
+C>                  MOs. (spatial orbitals, that is))
+C>    @param c_occ : A double array of (num AOs, num occ MOs). This has the MO coefficients.
+C>    @param c_vir : A double array of (num AOs, num virt MOs). This has the MO coefficients.
+C>    @param lag : A double array of (10, max (num occ * num vir) among the fragments,
+C>                 max num multipole points, num frags).
+C>                 This routine fills it with the weighted multipoles
+C>                 which will be used to calculate the lagrangian (coefficient of the
+C>                 response term) later.
+C>                 The needed memory should be allocated before the subroutine is called.
+C>    @param max_ov : max (num occ * num vir) between all the fragments 
+C>
+C>
+      SUBROUTINE EFMO_MULTIPOLE_GRAD(DM,L2,
+     *     other_charge, other_dipole, other_quad, efmo_es_der,
+     *     frag, num_frags, dsint, contrib, nvir, c_occ, c_vir,
+     *     lag, max_ov )
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL NORM,GOPARR,MASWRK,DSKWRK,NXT
+C
+      integer derivative_dir, dipole_dir, quad_dir,i,j, frag,
+     *     num_frags, index, coord, max_ov
+
+      double precision temp_charge, contrib_x, contrib_y, contrib_z,
+     *     temp_dip_x, temp_dip_y, temp_dip_z
+      DIMENSION DM(L2)
+      DIMENSION DFLD(3,9),
+     *          DIJ(225),QFLD(3,6),undij(225),
+     *          IJX(35),IJY(35),IJZ(35),
+     *          XS(6,6),YS(6,6),ZS(6,6),XX(6,6),YY(6,6),ZZ(6,6),
+     *          DXSDI(6,6),DYSDI(6,6),DZSDI(6,6),
+     *          DXXDI(6,6),DYYDI(6,6),DZZDI(6,6),
+     *          XYZINT(3,2),XX2(6,6),YY2(6,6),ZZ2(6,6),
+     *          DXX2DI(6,6),DYY2DI(6,6),DZZ2DI(6,6)
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000, MXAO=8192)
+      PARAMETER (MXEFMOPTS=50)
+C
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      double precision, dimension( 10,mxefmopts,mxefmopts,3,num_frags)
+     *     :: efmo_es_der
+
+      double precision, dimension(L2, 3, nat) :: dsint
+      double precision, dimension(num, num, 3, nat) :: contrib
+      double precision, dimension(10, max_ov, mxefmopts, num_frags)
+     *     :: lag
+
+      dimension other_charge(nat), keq(mxatm),
+     *     other_dipole(3,nat), other_quad(6,nat)
+      double precision, dimension(num,na) :: C_occ
+      double precision, dimension(num,nvir) :: C_vir
+      integer :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+      double precision :: ex,cs,cp,cd,cf,cg,ch,ci
+
+      COMMON /FMCOM / X(1)
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /STV   / XINT,YINT,ZINT,T,X0,Y0,Z0,XI,YI,ZI,XJ,
+     *                YJ,ZJ,NI,NJ
+C
+      PARAMETER (ONE=1.0D+00)
+      PARAMETER (HALF=0.5D+00)
+      PARAMETER (RLN10=2.30258D+00)
+      PARAMETER (SQRT3=1.73205080756888D+00)
+      PARAMETER (SQRT5=2.23606797749979D+00)
+      PARAMETER (SQRT7=2.64575131106459D+00)
+      PARAMETER (THRESH=1.0D-06)
+C
+      DATA IJX    / 1, 2, 1, 1, 3, 1, 1, 2, 2, 1,
+     1              4, 1, 1, 3, 3, 2, 1, 2, 1, 2,
+     2              5, 1, 1, 4, 4, 2, 1, 2, 1, 3,
+     3              3, 1, 3, 2, 2/
+      DATA IJY    / 1, 1, 2, 1, 1, 3, 1, 2, 1, 2,
+     1              1, 4, 1, 2, 1, 3, 3, 1, 2, 2,
+     2              1, 5, 1, 2, 1, 4, 4, 1, 2, 3,
+     3              1, 3, 2, 3, 2/
+      DATA IJZ    / 1, 1, 1, 2, 1, 1, 3, 1, 2, 2,
+     1              1, 1, 4, 1, 2, 1, 2, 3, 3, 2,
+     2              1, 1, 5, 1, 2, 1, 2, 4, 4, 1,
+     3              3, 3, 2, 2, 3/
+C
+C
+C
+
+c     clearing out arguments
+      do i=1,nat
+         keq(i)=0
+         other_charge(i)=0
+         other_dipole(1,i)=0
+         other_dipole(2,i)=0
+         other_dipole(3,i)=0
+
+         other_quad(1,i)=0
+         other_quad(2,i)=0
+         other_quad(3,i)=0
+         other_quad(4,i)=0
+         other_quad(5,i)=0
+         other_quad(6,i)=0
+      enddo
+
+      L1 = num
+      call valfm(loadfm)
+      lwrt = loadfm + 1
+      ldd  = lwrt + L2
+      lwrk1= ldd + L1*L1
+      lwrk3= lwrk1 + L1*L1
+      lwrk4= lwrk3 + L1*L1
+      last = lwrk4 + L1*L1
+      need = last - loadfm - 1
+      call getfm(need)
+
+c     get overlap derivs (dSuv/da). where u and v are AOs (using triangular indexing)
+c     and "a" is the x-, y-, or z-coordinate of an atom
+      call extsder( x(lwrt), dsint, L1,  L2, .true., .true., 0)
+
+      IF(GOPARR) then
+         CALL DDI_GSUMF(1501,DSINT,L2*3*NAT)
+      endif
+
+c     copies triangular DM to square x(ldd)
+      call cpytsq(dm, x(ldd), L1, 1 )
+      do index = 1, nat
+         do coord = 1, 3
+c     calculates (density matrix) * (dS/da) * (density matrix) and stores it in
+c     X(lWRT). this is used in calculating the non-response part of
+c     the density matrix derivative (that is, the occ-occ part, which gets rid
+c     of the response terms). This is the same as 4* sum_ab^occ [ (dSij/dx)*c_{ai}c_{bj} ]
+c     what's done in calcppcder is similar (but that's only for mulliken charges, not
+c     stone's multipoles).
+            CALL TFTRI(x(lWRT),DSINT(1,coord,index),x(ldd),
+     *           contrib(1,1,coord,index),L1,L1,L1)
+c     copies triangular x(lWRT) to square contrib(1,1,coord,index)
+            CALL CPYTSQ(x(lWRT),contrib(1,1,coord,index),L1,1)
+         enddo
+      enddo
+
+      call retfm(need)
+
+      CALL DERCHK(MAXDER)
+      IF(MAXDER.EQ.0) RETURN
+C
+C
+      TOL = RLN10*ITOL
+      NORM = NORMF .NE. 1 .OR. NORMP .NE. 1
+C
+C     ----- CALCULATE FIELD DERIVATIVES -----
+C
+      MULTORDER=2
+      NDER=1
+C
+C     INITIALIZATION FOR PARALLEL
+C
+      NXT = IBTYP.EQ.1
+      IPCOUNT = ME - 1
+      NEXT = -1
+      MINE = -1
+C
+C     ----- ISHELL -----
+C
+      DO 9000 II=1,NSHELL
+C
+C           GO PARALLEL!
+C
+      IF(NXT .AND. GOPARR) THEN
+         MINE = MINE + 1
+         IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+         IF(NEXT.NE.MINE) GO TO 9000
+      END IF
+C
+      I=KATOM(II)
+      XI=C(1,I)
+      YI=C(2,I)
+      ZI=C(3,I)
+      I1=KSTART(II)
+      I2=I1+KNG(II)-1
+      LIT=KTYPE(II)+1
+      MINI=KMIN(II)
+      MAXI=KMAX(II)
+      LOCI=KLOC(II)-MINI
+C
+      LITDER=LIT+NDER
+      IAT=I
+C
+C     ----- JSHELL -----
+C
+      DO 8000 JJ=1,NSHELL
+C
+C           GO PARALLEL!
+C
+      IF((.NOT.NXT) .AND. GOPARR) THEN
+         IPCOUNT = IPCOUNT + 1
+         IF(MOD(IPCOUNT,NPROC).NE.0) GO TO 8000
+      END IF
+C
+      J=KATOM(JJ)
+      XJ=C(1,J)
+      YJ=C(2,J)
+      ZJ=C(3,J)
+      J1=KSTART(JJ)
+      J2=J1+KNG(JJ)-1
+      LJT=KTYPE(JJ)
+      MINJ=KMIN(JJ)
+      MAXJ=KMAX(JJ)
+      LOCJ=KLOC(JJ)-MINJ
+      LJTDER = LJT+NDER-1
+      IF(LJTDER.LE.LJT) LJTDER=LJT
+C     JAT = J
+      RR=(XI-XJ)**2+(YI-YJ)**2+(ZI-ZJ)**2
+C
+C     ----- I PRIMITIVE -----
+C
+      DO 7000 IG=I1,I2
+      AI=EX(IG)
+      ARRI=AI*RR
+      AXI=AI*XI
+      AYI=AI*YI
+      AZI=AI*ZI
+      DUM=AI+AI
+      CSI=CS(IG)
+      CPI=CP(IG)
+      CDI=CD(IG)
+      CFI=CF(IG)
+      CGI=CG(IG)
+C
+C     ----- J PRIMITIVE -----
+C
+      DO 6000 JG=J1,J2
+      AJ=EX(JG)
+      AA =AI+AJ
+      AA1=ONE/AA
+      DUM=AJ*ARRI*AA1
+      IF(DUM.GT.TOL) GO TO 6000
+      FAC= EXP(-DUM)
+      CSJ=CS(JG)
+      CPJ=CP(JG)
+      CDJ=CD(JG)
+      CFJ=CF(JG)
+      CGJ=CG(JG)
+      AX=(AXI+AJ*XJ)*AA1
+      AY=(AYI+AJ*YJ)*AA1
+      AZ=(AZI+AJ*ZJ)*AA1
+C
+C     ----- DENSITY FACTOR -----
+C
+      IJ=0
+      DO 360 I=MINI,MAXI
+      GO TO (110,120,220,220,130,220,220,140,220,220,
+     1       150,220,220,160,220,220,220,220,220,170,
+     2       180,220,220,190,220,220,220,220,220,200,
+     3       220,220,210,220,220),I
+  110 DUM1=CSI*FAC
+      GO TO 220
+  120 DUM1=CPI*FAC
+      GO TO 220
+  130 DUM1=CDI*FAC
+      GO TO 220
+  140 IF(NORM) DUM1=DUM1*SQRT3
+      GO TO 220
+  150 DUM1=CFI*FAC
+      GO TO 220
+  160 IF(NORM) DUM1=DUM1*SQRT5
+      GO TO 220
+  170 IF(NORM) DUM1=DUM1*SQRT3
+      GO TO 220
+  180 DUM1=CGI*FAC
+      GO TO 220
+  190 IF(NORM) DUM1=DUM1*SQRT7
+      GO TO 220
+  200 IF(NORM) DUM1=DUM1*SQRT5/SQRT3
+      GO TO 220
+  210 IF(NORM) DUM1=DUM1*SQRT3
+  220 CONTINUE
+C
+      DO 360 J=MINJ,MAXJ
+      GO TO (230,250,350,350,260,350,350,270,350,350,
+     1       280,350,350,290,350,350,350,350,350,300,
+     2       310,350,350,320,350,350,350,350,350,330,
+     3       350,350,340,350,350),J
+  230 DUM2=DUM1*CSJ
+      GO TO 350
+  250 DUM2=DUM1*CPJ
+      GO TO 350
+  260 DUM2=DUM1*CDJ
+      GO TO 350
+  270 IF(NORM) DUM2=DUM2*SQRT3
+      GO TO 350
+  280 DUM2=DUM1*CFJ
+      GO TO 350
+  290 IF(NORM) DUM2=DUM2*SQRT5
+      GO TO 350
+  300 IF(NORM) DUM2=DUM2*SQRT3
+      GO TO 350
+  310 DUM2=DUM1*CGJ
+      GO TO 350
+  320 IF(NORM) DUM2=DUM2*SQRT7
+      GO TO 350
+  330 IF(NORM) DUM2=DUM2*SQRT5/SQRT3
+      GO TO 350
+  340 IF(NORM) DUM2=DUM2*SQRT3
+  350 CONTINUE
+C
+c     NN indexes into the triangular density matrix
+      NN=IA(MAX(LOCI+I,LOCJ+J)) + MIN(LOCI+I,LOCJ+J)
+      DEN=DM(NN)
+      DEN=DEN+DEN
+C
+      IJ=IJ+1
+      DIJ(IJ)=DUM2*DEN
+      UNDIJ(IJ)=DUM2
+  360 CONTINUE
+
+C     Using LVS's implementation of Stone's nearest neighbor allocation
+C     algorithm so that we can get the correct density. We find all minimally
+C     distant points and then loop over them.
+C     We add the contribution from the derivative to the minimally distant
+C     multipole (atom) points.
+
+
+C     FIND MINIMAL DISTANCE OF GAUSSIAN PRODUCT TO AN EXPANSION POINT.
+C
+      DIST=1.0D+22
+      DO NPT=1,nat
+c$$$ colleen, problems
+c$$$         if( (npt .eq. iat .or. npt .eq. jat) ) then
+         TEST=(AX-c(1,NPT))**2
+     *        +(AY-c(2,NPT))**2
+     *        +(AZ-c(3,NPT))**2
+         IF(TEST.LT.DIST) DIST=TEST
+c$$$         endif
+      ENDDO
+C
+C     FIND ALL EQUIVALENT MINIMALLY DISTANT EXPANSION POINTS.
+C
+      IEQ=0
+      DO 67 NPT=1,nat
+c$$$         if( (npt .eq. iat .or. npt .eq. jat) ) then
+         TEST=(AX-c(1,NPT))**2
+     *        +(AY-c(2,NPT))**2
+     *        +(AZ-c(3,NPT))**2
+         IF(TEST-DIST.GT.THRESH) GO TO 67
+         IEQ=IEQ+1
+         KEQ(IEQ)=NPT
+c$$$         endif
+ 67   CONTINUE
+      IF(IEQ.EQ.0) GO TO 6000
+      CEQ=ONE/IEQ
+C
+C     LOOP OVER EXPANSION POINT(S) FOR THESE PRIMITIVE PRODUCTS.
+C     
+      DO 500 NEQ=1,IEQ
+         IQ=KEQ(NEQ)
+         CX=c(1,IQ)
+         CY=c(2,IQ)
+         CZ=c(3,IQ)
+C
+C     ----- -FLD- DERIVATIVES -----
+C
+      T = SQRT(AA)
+      T1=ONE/T
+      X0=AX
+      Y0=AY
+      Z0=AZ
+C
+      DO 370 J=1,LJTDER
+      NJ=J
+      DO 370 I=1,LITDER
+      NI=I
+      CALL FLDXYZ(cx,cy,cz,XYZINT,MULTORDER)
+C
+      XS(I,J)=XINT*T1
+      YS(I,J)=YINT*T1
+      ZS(I,J)=ZINT*T1
+      XX(I,J)=XYZINT(1,1)*T1
+      YY(I,J)=XYZINT(2,1)*T1
+      ZZ(I,J)=XYZINT(3,1)*T1
+C
+      XX2(I,J)=XYZINT(1,2)*T1
+      YY2(I,J)=XYZINT(2,2)*T1
+      ZZ2(I,J)=XYZINT(3,2)*T1
+  370 CONTINUE
+C
+      IF(NDER.EQ.0) THEN
+         CONTINUE
+      ELSE IF(NDER.EQ.1) THEN
+         CALL DERIOLI(DXSDI,DYSDI,DZSDI,XS,YS,ZS,LIT,LJT,AI)
+         CALL DERIOLI(DXXDI,DYYDI,DZZDI,XX,YY,ZZ,LIT,LJT,AI)
+         CALL DERIOLI(DXX2DI,DYY2DI,DZZ2DI,XX2,YY2,ZZ2,LIT,LJT,AI)
+      ELSE
+         IF(MASWRK) WRITE(IW,*) 'DIPDER: DEAD END NO.1'
+         CALL ABRT
+      END IF
+C
+      IJ=0
+      DO 390 I=MINI,MAXI
+      IX=IJX(I)
+      IY=IJY(I)
+      IZ=IJZ(I)
+      lao_i = loci + i
+      DO 380 J=MINJ,MAXJ
+      JX=IJX(J)
+      JY=IJY(J)
+      JZ=IJZ(J)
+      lao_j = locj + j
+C
+C     FIRST AND SECOND DERIVATIVE OF THE DIPOLE MOMENT MATRIX
+C
+
+         DFLD(1,1)=DXXDI(IX,JX)*   YS(IY,JY)*   ZS(IZ,JZ)
+         DFLD(2,1)=   XX(IX,JX)*DYSDI(IY,JY)*   ZS(IZ,JZ)
+         DFLD(3,1)=   XX(IX,JX)*   YS(IY,JY)*DZSDI(IZ,JZ)
+C
+         DFLD(1,2)=DXSDI(IX,JX)*   YY(IY,JY)*   ZS(IZ,JZ)
+         DFLD(2,2)=   XS(IX,JX)*DYYDI(IY,JY)*   ZS(IZ,JZ)
+         DFLD(3,2)=   XS(IX,JX)*   YY(IY,JY)*DZSDI(IZ,JZ)
+C
+         DFLD(1,3)=DXSDI(IX,JX)*   YS(IY,JY)*   ZZ(IZ,JZ)
+         DFLD(2,3)=   XS(IX,JX)*DYSDI(IY,JY)*   ZZ(IZ,JZ)
+         DFLD(3,3)=   XS(IX,JX)*   YS(IY,JY)*DZZDI(IZ,JZ)
+
+         QFLD(1,1)=DXX2DI(IX,JX)*   YS(IY,JY)*   ZS(IZ,JZ)
+         QFLD(2,1)=   XX2(IX,JX)*DYSDI(IY,JY)*   ZS(IZ,JZ)
+         QFLD(3,1)=   XX2(IX,JX)*   YS(IY,JY)*DZSDI(IZ,JZ)
+         QFLD(1,4)=DXXDI(IX,JX)*   YY(IY,JY)*   ZS(IZ,JZ)
+         QFLD(2,4)=   XX(IX,JX)*DYYDI(IY,JY)*   ZS(IZ,JZ)
+         QFLD(3,4)=   XX(IX,JX)*   YY(IY,JY)*DZSDI(IZ,JZ)
+         QFLD(1,5)=DXXDI(IX,JX)*   YS(IY,JY)*   ZZ(IZ,JZ)
+         QFLD(2,5)=   XX(IX,JX)*DYSDI(IY,JY)*   ZZ(IZ,JZ)
+         QFLD(3,5)=   XX(IX,JX)*   YS(IY,JY)*DZZDI(IZ,JZ)
+         QFLD(1,2)=DXSDI(IX,JX)*   YY2(IY,JY)*   ZS(IZ,JZ)
+         QFLD(2,2)=   XS(IX,JX)*DYY2DI(IY,JY)*   ZS(IZ,JZ)
+         QFLD(3,2)=   XS(IX,JX)*   YY2(IY,JY)*DZSDI(IZ,JZ)
+         QFLD(1,6)=DXSDI(IX,JX)*   YY(IY,JY)*   ZZ(IZ,JZ)
+         QFLD(2,6)=   XS(IX,JX)*DYYDI(IY,JY)*   ZZ(IZ,JZ)
+         QFLD(3,6)=   XS(IX,JX)*   YY(IY,JY)*DZZDI(IZ,JZ)
+         QFLD(1,3)=DXSDI(IX,JX)*   YS(IY,JY)*   ZZ2(IZ,JZ)
+         QFLD(2,3)=   XS(IX,JX)*DYSDI(IY,JY)*   ZZ2(IZ,JZ)
+         QFLD(3,3)=   XS(IX,JX)*   YS(IY,JY)*DZZ2DI(IZ,JZ)
+C
+      IJ=IJ+1
+C
+      other_charge(iq) = other_charge(iq)- half*
+     *     dij(ij) * ceq * (XS(IX,JX) * YS(IY,JY) * ZS(IZ,JZ))
+
+      other_dipole(1,iq) = other_dipole(1,iq)- half*
+     *     dij(ij) * ceq * (XX(IX,JX)*   YS(IY,JY)*   ZS(IZ,JZ))
+      other_dipole(2,iq) = other_dipole(2,iq)- half*
+     *     dij(ij) * ceq * (XS(IX,JX)*   YY(IY,JY)*   ZS(IZ,JZ))
+      other_dipole(3,iq) = other_dipole(3,iq)- half*
+     *     dij(ij) * ceq * (XS(IX,JX)*   YS(IY,JY)*   ZZ(IZ,JZ))
+
+c     xx
+      other_quad(1,iq) = other_quad(1,iq) - half*
+     *    dij(ij) * ceq * (XX2(IX,JX)*   YS(IY,JY)*   ZS(IZ,JZ))
+c     yy
+      other_quad(2,iq) = other_quad(2,iq) - half*
+     *    dij(ij) * ceq * (XS(IX,JX)*  YY2(IY,JY)*   ZS(IZ,JZ))
+c     zz
+      other_quad(3,iq) = other_quad(3,iq) - half*
+     *    dij(ij) * ceq * (XS(IX,JX)*   YS(IY,JY)*  ZZ2(IZ,JZ))
+c     xy
+      other_quad(4,iq) = other_quad(4,iq) - half*
+     *    dij(ij) * ceq * (XX(IX,JX)*   YY(IY,JY)*   ZS(IZ,JZ))
+c     xz
+      other_quad(5,iq) = other_quad(5,iq) - half*
+     *    dij(ij) * ceq * (XX(IX,JX)*   YS(IY,JY)*   ZZ(IZ,JZ))
+c     yz
+      other_quad(6,iq) = other_quad(6,iq) - half*
+     *    dij(ij) * ceq * (XS(IX,JX)*   YY(IY,JY)*   ZZ(IZ,JZ))
+
+c$$$ collect the primitive gaussian derivative terms for the monopoles 
+      efmo_es_der(1,iq,iat,1,frag) = efmo_es_der(1,iq,iat,1,frag) -
+     *     dij(ij) * ceq*(DXSDI(IX,JX) * YS(IY,JY) * ZS(IZ,JZ))
+      efmo_es_der(1,iq,iat,2,frag) = efmo_es_der(1,iq,iat,2,frag) -
+     *     dij(ij) * ceq* (XS(IX,JX) * DYSDI(IY,JY) * ZS(IZ,JZ))
+      efmo_es_der(1,iq,iat,3,frag) = efmo_es_der(1,iq,iat,3,frag) -
+     *     dij(ij) * ceq* (XS(IX,JX) * YS(IY,JY) * DZSDI(IZ,JZ))
+
+c     these are the AO versions--no MO density matrix added.
+      temp_charge =
+     *     undij(ij) * ceq * (XS(IX,JX) * YS(IY,JY) * ZS(IZ,JZ))
+
+      temp_dip_x = 
+     *     undij(ij)*ceq*(XX(IX,JX)* YS(IY,JY)* ZS(IZ,JZ))
+      temp_dip_y =
+     *     undij(ij)*ceq*(XS(IX,JX)* YY(IY,JY)* ZS(IZ,JZ))
+      temp_dip_z =
+     *     undij(ij)*ceq*(XS(IX,JX)* YS(IY,JY)* ZZ(IZ,JZ))
+
+      temp_q_xx = 
+     *     undij(ij)*ceq*(XX2(IX,JX)*   YS(IY,JY)*   ZS(IZ,JZ))
+      temp_q_yy =
+     *     undij(ij)*ceq*(XS(IX,JX)*  YY2(IY,JY)*   ZS(IZ,JZ))
+      temp_q_zz =
+     *     undij(ij)*ceq*(XS(IX,JX)*   YS(IY,JY)*  ZZ2(IZ,JZ))
+      temp_q_xy = 
+     *     undij(ij)*ceq*(XX(IX,JX)*   YY(IY,JY)*   ZS(IZ,JZ))
+      temp_q_xz =
+     *     undij(ij)*ceq*(XX(IX,JX)*   YS(IY,JY)*   ZZ(IZ,JZ))
+      temp_q_yz =
+     *     undij(ij)*ceq*(XS(IX,JX)*   YY(IY,JY)*   ZZ(IZ,JZ))
+
+c     this calculates part of the coefficient of the reponse term.
+c     specifically, it calculates the weighted multipoles, which will
+c     be used to calculate the lagrangian.
+c     this is similar to what's done in calcppclag
+      iov=0
+c     only do this if the dimension of lag is > 0. max_ov is also used
+c     as a flag to say whether or not the response terms are calculated.
+      if( max_ov .gt. 0 ) then
+      do iocc=1, na
+         do ivir=1, nvir
+            iov = iov+1
+
+            lag(1,iov, iq, frag) =
+     *            lag(1,iov, iq, frag) - temp_charge*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+
+            lag(2,iov, iq, frag) =
+     *            lag(2,iov, iq, frag) - temp_dip_x*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+            lag(3,iov, iq, frag) =
+     *            lag(3,iov, iq, frag) - temp_dip_y*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+            lag(4,iov, iq, frag) =
+     *            lag(4,iov, iq, frag) - temp_dip_z*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+
+
+            lag(5,iov, iq, frag) =
+     *            lag(5,iov, iq, frag) - temp_q_xx*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+            lag(6,iov, iq, frag) =
+     *            lag(6,iov, iq, frag) - temp_q_yy*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+            lag(7,iov, iq, frag) =
+     *            lag(7,iov, iq, frag) - temp_q_zz*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+            lag(8,iov, iq, frag) =
+     *            lag(8,iov, iq, frag) - temp_q_xy*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+            lag(9,iov, iq, frag) =
+     *            lag(9,iov, iq, frag) - temp_q_xz*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+            lag(10,iov, iq, frag) =
+     *            lag(10,iov, iq, frag) - temp_q_yz*
+     *           ( C_occ(lao_i, iocc)*C_vir(lao_j, ivir)+
+     *           C_occ(lao_j, iocc)*C_vir(lao_i, ivir) )
+
+         enddo
+      enddo
+      endif
+
+c     this is supposed to be the density matrix derivative's non-response
+c     term. the half is needed since contrib has an extra factor of 2
+
+      do i_atom=1,nat
+
+      contrib_x = temp_charge * half * contrib(lao_i,lao_j, 1,i_atom)
+      contrib_y = temp_charge * half * contrib(lao_i,lao_j, 2,i_atom)
+      contrib_z = temp_charge * half * contrib(lao_i,lao_j, 3,i_atom)
+
+      efmo_es_der(1,iq,i_atom,1,frag) =
+     *      efmo_es_der(1,iq,i_atom,1,frag) + contrib_x
+      efmo_es_der(1,iq,i_atom,2,frag) =
+     *      efmo_es_der(1,iq,i_atom,2,frag) + contrib_y
+      efmo_es_der(1,iq,i_atom,3,frag) =
+     *      efmo_es_der(1,iq,i_atom,3,frag) + contrib_z
+
+
+      do derivative_dir=1,3
+         efmo_es_der(2,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(2,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_dip_x
+         efmo_es_der(3,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(3,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_dip_y
+         efmo_es_der(4,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(4,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_dip_z
+         efmo_es_der(5,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(5,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_q_xx
+         efmo_es_der(6,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(6,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_q_yy
+         efmo_es_der(7,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(7,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_q_zz
+         efmo_es_der(8,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(8,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_q_xy
+         efmo_es_der(9,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(9,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_q_xz
+         efmo_es_der(10,iq,i_atom,derivative_dir,frag)
+     *        =efmo_es_der(10,iq,i_atom,derivative_dir,frag)
+     *        + half * contrib(lao_i,lao_j,derivative_dir,i_atom)
+     *        * temp_q_yz
+      enddo
+
+
+      enddo
+
+
+c$$$ primitive gaussian deriv for dipoles and quadrupoles
+      do dipole_dir=1,3
+         do derivative_dir=1,3
+
+            efmo_es_der(1+dipole_dir,iq,iat,derivative_dir,frag)
+     *           =efmo_es_der(1+dipole_dir,iq,iat,derivative_dir,frag)
+     *           - dij(ij)*ceq*dfld( derivative_dir, dipole_dir)
+
+         enddo
+      enddo
+
+      do quad_dir=1,6
+         do derivative_dir=1,3
+
+            efmo_es_der(4+quad_dir,iq,iat,derivative_dir,frag) =
+     *           efmo_es_der(4+quad_dir,iq,iat,derivative_dir,frag)
+     *           - dij(ij)*ceq*qfld( derivative_dir, quad_dir)
+
+         enddo
+      enddo
+
+  380 CONTINUE
+  390 CONTINUE
+  500 continue
+C
+C     ----- END LOOPS OVER PRIMITVES AND SHELLS -----
+C
+ 6000 CONTINUE
+ 7000 CONTINUE
+ 8000 CONTINUE
+ 9000 CONTINUE
+C     
+C         PARALLEL RUNS COMPUTING GRADIENT WILL DO A SINGLE
+C         GLOBAL SUM LATER TO GET ALL CONTRIBUTIONS TO -DE-
+C
+
+
+      IF(GOPARR) THEN
+         IF(NXT) CALL DDI_DLBRESET
+      END IF
+C
+c     additional terms added due to derivative of center
+c     careful on the signs: we wanted to add something in, but we
+c     previously calculated it as negative, so we subtract it out
+      do i=1,nat
+         do j=1,3
+
+            efmo_es_der(1+j,i,i,j,frag)
+     *           = efmo_es_der(1+j,i,i,j,frag)
+     *           - other_charge(i)
+         enddo
+      enddo
+
+      do i=1,nat
+c xx, yy, zz
+         do j=1,3
+
+            efmo_es_der(4+j,i,i,j,frag) =
+     *           efmo_es_der(4+j,i,i,j,frag) -
+     *           (other_dipole(j,i)+other_dipole(j,i))
+
+         enddo
+
+c xy
+         efmo_es_der(4+4,i,i,1,frag) =
+     *        efmo_es_der(4+4,i,i,1,frag) -         
+     *        other_dipole(2,i)
+         efmo_es_der(4+4,i,i,2,frag) =
+     *        efmo_es_der(4+4,i,i,2,frag) -         
+     *        other_dipole(1,i)
+
+c xz
+
+         efmo_es_der(4+5,i,i,1,frag) =
+     *        efmo_es_der(4+5,i,i,1,frag) -         
+     *        other_dipole(3,i)
+         efmo_es_der(4+5,i,i,3,frag) =
+     *        efmo_es_der(4+5,i,i,3,frag) -         
+     *        other_dipole(1,i)
+
+c yz
+
+         efmo_es_der(4+6,i,i,2,frag) =
+     *        efmo_es_der(4+6,i,i,2,frag) -         
+     *        other_dipole(3,i)
+         efmo_es_der(4+6,i,i,3,frag) =
+     *        efmo_es_der(4+6,i,i,3,frag) -         
+     *        other_dipole(2,i)
+
+      enddo
+
+      if(goparr) CALL DDI_GSUMF(2612,efmo_es_der(1,1,1,1,frag),
+     *     10*mxefmopts*mxefmopts*3)
+      if(goparr) CALL DDI_GSUMF(2613, lag(1, 1, 1, frag),
+     *     10*max_ov*mxefmopts)
+
+      RETURN
+C
+      END
+
+*MODULE EFMOGRAD_ES     *DECK EFMO_ES_GRAD
+C>
+C>    @brief Calculates non-response part of EFMO eletrostatics grad 
+C>
+C>    @details This routine uses the weighted multipoles in efmo_es_der to
+C>             calculate part of the EFMO electrostatics gradient. This calculates
+C>             the non-response part that arises from the derivative of the multipole
+C>             (not the T tensor). For each atom and coordinate on the two fragments,
+C>             FFELEC is called on the weighted multipoles (which arises when the
+C>             derivative is taken wrt that atom and coordinate) and then added to the
+C>             EFMO gradient.
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param efmo_es_der : A double array of (10, max multipole points (MXEFMOPTS),
+C>                         max num atoms (MXATM), 3, num fragments). This routine
+C>                         uses the weighted multipoles in this array to calculate
+C>                         the part of the non-response EFMO electrostatics gradient
+C>                         that involves the multipoles (that is, the gradients of the
+C>                         T tensors are dealt with elsewhere.)
+C>    @param iefmodim : array that takes a fragment index as an argument and
+C>                      returns the fragment index that was used in an earlier
+C>                      part of the EFMO code. This has to do with how FMO
+C>                      deals with the dimers.
+C>    @param lstmpts : array that takes a fragment index as an argument and
+C>                     returns the first index of multipole points in
+C>                     as stored in various EFP arrays by the EFMO code (see
+C>                     EFMOPOPEFP)
+C>    @param nmpts : number of multipole points (in EFMO, this is always the
+C>                   number of atoms)
+C>    @param num_frags : The total number of fragments. This is used for specifying the
+C>                       size of efmo_es_der
+C>
+C>
+      subroutine efmo_es_grad( efmo_es_der, iefmodim, lstmpts,
+     *     nmpts, num_frags )
+c     for efmo gradients
+c     in efmo, we know there are only two fragments.
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+
+      LOGICAL GOPARR,MASWRK,DSKWRK
+      logical use_dlb,use_slb,goparr_save,nxt
+
+      integer, PARAMETER :: MXFRG=1050, MXFGPT=12000
+      integer, PARAMETER :: MXEFMOPTS=50
+
+      integer frag, atom_wrt, der_direction, ie, num_points, ic1,
+     *     num_frags, im1, jm1, index, atom_index
+
+      integer :: iefmodim(2)
+      integer, dimension(mxfrg) :: nmpts, lstmpts
+
+      double precision, dimension(11, mxefmopts) :: hold
+      double precision, dimension( 10,mxefmopts,mxefmopts,3,num_frags)
+     *     :: efmo_es_der
+      double precision efmo_contrib, dum, dum1, dum2, dum3, dum4,
+     *      dum5, dum6
+
+      CHARACTER*8 FRGNME
+
+      COMMON /EFMULT/ EFC(3,MXFGPT),EFCHG(2,MXFGPT),EFATRM(MXFGPT),
+     *                EFBTRM(MXFGPT),EFATRM2(MXFGPT),EFBTRM2(MXFGPT),
+     *                EFDIP(3,MXFGPT),EFQAD(6,MXFGPT),
+     *                EFOCT(10,MXFGPT),FRGNME(MXFGPT)
+      COMMON /EFPAR / LOCNFG,NLOW,NUP
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      double precision, PARAMETER :: ONE=1.0D+00
+
+c     some of the fragment indexing is not straightforward. this is because
+c     the efmo dimer calculation doesn't have all the efp-parameters
+c     for all fragments in an array--it only has the parameters for those two fragments.
+c     as it calculates the contribution for
+c     each dimer, it pulls those two fragments into memory, so we only look
+c     at two at a time. we can use the iefmodim() array to map the two current
+c     fragments to the index we would use in the efmo arrays for all fragments.
+c     remember that the efmo indexing is not the same as the efp-indexing
+c     used when efmo calculates efp-dimer interaction energy.
+C
+C     INITIALIZE PARALLEL
+C
+      NXT = IBTYP.EQ.1
+      use_dlb = goparr .and. nxt
+      use_slb = goparr .and. .not. nxt
+      IPCOUNT = ME - 1
+      NEXT = -1
+      MINE = -1
+c$$$ temporarily turn off EFP parallelization
+      nlow_save = nlow
+      nup_save = nup
+      goparr_save = goparr
+      nlow = 1
+      nup = 2
+      goparr = .false.
+
+      do frag = 1, 2
+         num_points = nmpts( frag )
+         do atom_wrt=1,num_points
+            do der_direction=1,3
+C
+C           GO PARALLEL!
+C
+               IF(use_dlb) THEN
+                  MINE = MINE + 1
+                  IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+                  IF(NEXT.NE.MINE) cycle
+               END IF
+
+               IF(use_slb) THEN
+                  IPCOUNT = IPCOUNT + 1
+                  IF(MOD(IPCOUNT,NPROC).NE.0) cycle
+               END IF
+c     we need to use the same indexing as was used in EFMOPOPEFP when
+c     the EFP arrays were filled in the first place.
+               ie = iefmodim( frag )
+c     store values from efmo_es_der so we can send them to FFELEC
+               ic1 = lstmpts( frag ) - 1
+               do index=1,num_points
+                  ic1 = ic1+1
+                  hold(1,index) = efchg(1,ic1)
+                  hold(2,index) = efchg(2,ic1)
+                  hold(3,index) = efdip(1,ic1)
+                  hold(4,index) = efdip(2,ic1)
+                  hold(5,index) = efdip(3,ic1)
+                  hold(6,index) = efqad(1,ic1)
+                  hold(7,index) = efqad(2,ic1)
+                  hold(8,index) = efqad(3,ic1)
+                  hold(9,index) = efqad(4,ic1)
+                  hold(10,index) = efqad(5,ic1)
+                  hold(11,index) = efqad(6,ic1)
+
+                  efchg(1,ic1) = efmo_es_der(1,index, atom_wrt,
+     *                 der_direction, ie)
+                  efchg(2,ic1) = 0
+                  efdip(1,ic1) = efmo_es_der(2,index, atom_wrt,
+     *                 der_direction, ie)
+                  efdip(2,ic1) = efmo_es_der(3,index, atom_wrt,
+     *                 der_direction, ie)
+                  efdip(3,ic1) = efmo_es_der(4,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(1,ic1) = efmo_es_der(5,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(2,ic1) = efmo_es_der(6,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(3,ic1) = efmo_es_der(7,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(4,ic1) = efmo_es_der(8,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(5,ic1) = efmo_es_der(9,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(6,ic1) = efmo_es_der(10,index, atom_wrt,
+     *                 der_direction, ie)
+                     
+            enddo
+c
+            CALL FFELEC(efmo_contrib,dum,dum1,dum2,dum3,dum4,dum5,
+     *           dum6,.FALSE.,.FALSE.)
+
+c     get the right indexing
+            atom_index = lstmpts( frag ) + atom_wrt - 1
+
+c$$$ This only adds if it's maswrk because the array that efmoesgm adds to
+c$$$ is globally summed later. FFELEC is done in parallel, and summed at
+c$$$ the end, so every processor has the same thing. If all the processors
+c$$$ called efmoesgm, then the same value would get added too many times.
+c$$$            if(maswrk) then
+            if( der_direction .eq. 1 ) then
+               call efmoesgm(im1, jm1, 0, atom_index,
+     *              efmo_contrib, 0,0,0,0,0,0,0,0,0,ONE,1)
+            else if(der_direction .eq. 2 ) then
+               call efmoesgm(im1, jm1, 0, atom_index, 0,
+     *              efmo_contrib,0,0,0,0,0,0,0,0,ONE,1)
+            else
+               call efmoesgm(im1, jm1, 0, atom_index,0,0,
+     *              efmo_contrib,0,0,0,0,0,0,0,ONE,1)
+            endif
+c$$$            endif
+
+c     reset values and hold other values
+
+            ic1 = lstmpts( frag ) - 1
+            do index=1,num_points
+               ic1 = ic1+1
+               efchg(1,ic1) = hold(1,index)
+               efchg(2,ic1) = hold(2,index)
+               efdip(1,ic1) = hold(3,index)
+               efdip(2,ic1) = hold(4,index)
+               efdip(3,ic1) = hold(5,index)
+               efqad(1,ic1) = hold(6,index)
+               efqad(2,ic1) = hold(7,index)
+               efqad(3,ic1) = hold(8,index)
+               efqad(4,ic1) = hold(9,index)
+               efqad(5,ic1) = hold(10,index)
+               efqad(6,ic1) = hold(11,index)
+            enddo
+         enddo
+      enddo
+      enddo
+
+c$$$ finish up parallel
+      IF(use_dlb) CALL DDI_DLBRESET
+c$$$ turn EFP parallelization back on
+      nlow = nlow_save
+      nup = nup_save
+      goparr = goparr_save
+
+      return
+      end
+
+*MODULE EFMOGRAD_ES     *DECK EFMO_ES_GRADZ
+C>
+C>    @brief Calculates response part of EFMO eletrostatics grad 
+C>
+C>    @details This routine uses the weighted multipoles in lag to
+C>             calculate part of the EFMO electrostatics gradient, the
+C>             coefficient of the response (the lagrangian).
+C>             For each fragment in the dimer, it loops through the
+C>             occ-vir pairs and calls FFELEC to calculate the lagranian
+C>             for that occ, vir pair on that fragment. 
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param lag : A double array of (10, max (num occ * num vir) among the fragments,
+C>                 max num multipole points, num frags).
+C>                 This routine uses the weighted multipoles in this array to calculate
+C>                 the part of the response EFMO electrostatics gradient
+C>                 that involves the coefficient of the response (that is,
+C>                 the lagrangian)
+C>    @param iefmodim : array that takes a fragment index as an argument and
+C>                      returns the fragment index that was used in an earlier
+C>                      part of the EFMO code. This has to do with how FMO
+C>                      deals with the dimers.
+C>    @param lstmpts : array that takes a fragment index as an argument and
+C>                     returns the first index of multipole points
+C>                     as stored in various EFP arrays by the EFMO code (see
+C>                     EFMOPOPEFP)
+C>    @param nmpts : number of multipole points (in EFMO, this is always the
+C>                   number of atoms)
+C>    @param num_frags : The total number of fragments. This is used for specifying the
+C>                       size of efmo_es_der
+C>    @param zvlag : An array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>    @param iptlg : An array that takes the fragment as an index
+C>                   and returns an index into zvlag (which needs to be in
+C>                   this order so that the response-solver in FMO works
+C>                   correctly). iptlg(frag) returns
+C>                   \sum_i^{frag-1}[(num occ orbitals in i)*(num vir orbitals in i)] + 1,
+C>                   (with iptlg(1) defined to = 1) and is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param mxzvwk : Among all the fragments, this is the max (num occ * num vir).
+C>                    This is used for the size of lag.
+C>
+C>
+      subroutine efmo_es_gradz( lag, iefmodim, lstmpts,
+     *     nmpts, num_frags, zvlag, iptlg, mxzvwk ) 
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+
+      integer, PARAMETER :: MXFRG=1050, MXFGPT=12000,MXDFG=5
+      integer, PARAMETER :: MXEFMOPTS=50,MXAO=8192
+
+      integer frag, ie, num_points, ic1,
+     *     num_frags, index
+
+      integer :: iefmodim(2)
+      integer, dimension(mxfrg) :: nmpts, lstmpts
+
+      dimension zvlag(1), iptlg(1)
+
+      double precision, dimension(11, mxefmopts) :: hold
+      double precision, dimension(10,mxzvwk,mxefmopts,num_frags)
+     *     :: lag
+      double precision, dimension(1) :: efmo_contrib
+      double precision dum1, dum2, dum3, dum4, dum5,
+     *     dum6, dum7
+
+      CHARACTER*8 FRGNME
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      logical use_dlb,use_slb,goparr_save,nxt
+
+      COMMON /EFPCT / NOCC(MXDFG),NVIR(MXDFG),NAO(MXDFG),NTAO,
+     *                CTFOK(MXAO,MXDFG),NCTMO(MXDFG),NTCTMO
+      COMMON /EFMULT/ EFC(3,MXFGPT),EFCHG(2,MXFGPT),EFATRM(MXFGPT),
+     *                EFBTRM(MXFGPT),EFATRM2(MXFGPT),EFBTRM2(MXFGPT),
+     *                EFDIP(3,MXFGPT),EFQAD(6,MXFGPT),
+     *                EFOCT(10,MXFGPT),FRGNME(MXFGPT)
+      COMMON /EFPAR / LOCNFG,NLOW,NUP
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+      double precision, PARAMETER :: HALF=0.5D+00
+C
+C     INITIALIZE PARALLEL
+C
+      NXT = IBTYP.EQ.1
+      use_dlb = goparr .and. nxt
+      use_slb = goparr .and. .not. nxt
+      IPCOUNT = ME - 1
+      NEXT = -1
+      MINE = -1
+c$$$  temporarily turn off EFP parallelization
+      nlow_save = nlow
+      nup_save = nup
+      goparr_save = goparr
+      nlow = 1
+      nup = 2
+      goparr = .false.
+
+      do frag = 1, 2
+         ie = iefmodim( frag )
+         num_points = nmpts( frag )
+         num_occ = nocc( frag )
+         num_vir = nvir( frag )
+         iov = 0
+         do iocc=1,num_occ
+            do ivir=1,num_vir
+C
+C           GO PARALLEL!
+C
+               IF(use_dlb) THEN
+                  MINE = MINE + 1
+                  IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+                  IF(NEXT.NE.MINE) cycle
+               END IF
+
+               IF(use_slb) THEN
+                  IPCOUNT = IPCOUNT + 1
+                  IF(MOD(IPCOUNT,NPROC).NE.0) cycle
+               END IF
+c     store values
+               ic1 = lstmpts( frag ) - 1
+               iov = ivir + (iocc-1)*num_vir
+               do index=1,num_points
+                  ic1 = ic1+1
+                  hold(1,index) = efchg(1,ic1)
+                  hold(2,index) = efchg(2,ic1)
+                  hold(3,index) = efdip(1,ic1)
+                  hold(4,index) = efdip(2,ic1)
+                  hold(5,index) = efdip(3,ic1)
+                  hold(6,index) = efqad(1,ic1)
+                  hold(7,index) = efqad(2,ic1)
+                  hold(8,index) = efqad(3,ic1)
+                  hold(9,index) = efqad(4,ic1)
+                  hold(10,index) = efqad(5,ic1)
+                  hold(11,index) = efqad(6,ic1)
+
+c     note! should be multiplied by two. this is divided by two because
+c     it's later scaled by 4 in the FMO z-vector solver
+
+                  efchg(1,ic1) = half * lag(1,iov,index, ie)
+                  efchg(2,ic1) = 0
+                  efdip(1,ic1) = half * lag(2,iov,index, ie)
+                  efdip(2,ic1) = half * lag(3,iov,index, ie)
+                  efdip(3,ic1) = half * lag(4,iov,index, ie)
+                  efqad(1,ic1) = half * lag(5,iov,index, ie)
+                  efqad(2,ic1) = half * lag(6,iov,index, ie)
+                  efqad(3,ic1) = half * lag(7,iov,index, ie)
+                  efqad(4,ic1) = half * lag(8,iov,index, ie)
+                  efqad(5,ic1) = half * lag(9,iov,index, ie)
+                  efqad(6,ic1) = half * lag(10,iov,index, ie)
+               enddo
+c
+            CALL FFELEC(efmo_contrib(1),dum1,dum2,dum3,dum4,dum5,dum6,
+     *              dum7, .FALSE.,.FALSE.)
+
+c$$$            if(maswrk) then
+            call daxpy( 1, 1d0, efmo_contrib, 1, zvlag(iptlg(ie)+iov-1),
+     *           1 )
+
+c     reset values and hold other values
+
+            ic1 = lstmpts( frag ) - 1
+            do index=1,num_points
+               ic1 = ic1+1
+               efchg(1,ic1) = hold(1,index)
+               efchg(2,ic1) = hold(2,index)
+               efdip(1,ic1) = hold(3,index)
+               efdip(2,ic1) = hold(4,index)
+               efdip(3,ic1) = hold(5,index)
+               efqad(1,ic1) = hold(6,index)
+               efqad(2,ic1) = hold(7,index)
+               efqad(3,ic1) = hold(8,index)
+               efqad(4,ic1) = hold(9,index)
+               efqad(5,ic1) = hold(10,index)
+               efqad(6,ic1) = hold(11,index)
+            enddo
+         enddo
+      enddo
+      enddo
+
+c$$$ finish up parallel
+      IF(use_dlb) CALL DDI_DLBRESET
+c$$$ turn EFP parallelization back on
+      nlow = nlow_save
+      nup = nup_save
+      goparr = goparr_save
+
+      return
+      end

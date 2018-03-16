@@ -1,0 +1,173 @@
+{
+  "name": "water-pbc-ewald.log",
+  "validation": [
+    {
+      "header": "QUANPOL MD",
+      "name": "BOND STRETCHING ENERGY - QUANPOL MD",
+      "value": "0.0000008135",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "DIHEDRAL ROTATION ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "DIHEDRAL BENDING ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "CMAP ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "WAGGING ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "LJ REPULSION ENERGY - QUANPOL MD",
+      "value": "2579.7270868871",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "LJ DISPERSION ENERGY - QUANPOL MD",
+      "value": "-1856.3074059726",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "CHARGE ENERGY - QUANPOL MD",
+      "value": "-5734.9458441712",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "INDUCED DIPOLE ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "SPHSOL ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "FIXSOL ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "QM CENTER ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "SPHERE ENERGY - QUANPOL MD",
+      "value": "0.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "POTENTIAL ENERGY - QUANPOL MD",
+      "value": "-5011.5261546191",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "KINETIC ENERGY - QUANPOL MD",
+      "value": "911.0064804335",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "TOTAL ENERGY - QUANPOL MD",
+      "value": "-4100.5196741855",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE POTENTIAL ENERGY - QUANPOL MD",
+      "value": "-5010.1212468377",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE TOTAL ENERGY - QUANPOL MD",
+      "value": "909.5973176469",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE TEMPERATURE - QUANPOL MD",
+      "value": "298.2903828356",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE PRESSURE - QUANPOL MD",
+      "value": "-1790.4709618622",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "QUANPOL MD",
+      "name": "AVERAGE VOLUME - QUANPOL MD",
+      "value": "15625.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    }
+  ]
+}

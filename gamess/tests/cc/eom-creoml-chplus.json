@@ -1,0 +1,533 @@
+{
+  "name": "eom-creoml-chplus.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-37.9027681837",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "MBPT(2) ENERGY",
+      "value": "-37.9868200233",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD    ENERGY",
+      "value": "-38.0176701619",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   A ENERGY",
+      "value": "-38.0190500904",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   B ENERGY",
+      "value": "-38.0190014159",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   C ENERGY",
+      "value": "-38.0194632338",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CC(2,3)   D ENERGY",
+      "value": "-38.0194528384",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T)  IA ENERGY",
+      "value": "-38.0189980469",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T)  IB ENERGY",
+      "value": "-38.0189519338",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T)  IC ENERGY",
+      "value": "-38.0193911928",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T)  ID ENERGY",
+      "value": "-38.0193814904",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T) IIA ENERGY",
+      "value": "-38.0189957266",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T) IIB ENERGY",
+      "value": "-38.0189496127",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T) IIC ENERGY",
+      "value": "-38.0193888796",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "GS CR-CCSD(T) IID ENERGY",
+      "value": "-38.0193791770",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "CR-CC(2,3),A OR CCSD(2)_T  ENERGY",
+      "value": "-38.0190500904",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+      "name": "CR-CC(2,3) OR CR-CCSD(T)_L ENERGY",
+      "value": "-38.0194528384",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : EOM",
+      "name": "EOM-CCSD ENERGY : STATE 1",
+      "value": "-37.7278091824",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : EOM",
+      "name": "EOM-CCSD ENERGY : STATE 2",
+      "value": "-37.6829267886",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : EOM",
+      "name": "EOM-CCSD ENERGY : STATE 3",
+      "value": "-37.5186013469",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : EOM",
+      "name": "EOM-CCSD ENERGY : STATE 4",
+      "value": "-37.7278091762",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : EOM",
+      "name": "EOM-CCSD ENERGY : STATE 5",
+      "value": "-37.3676232013",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IA  ENERGY : STATE 1",
+      "value": "-37.8998021549",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IA  ENERGY : STATE 2",
+      "value": "-37.7511228793",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IA  ENERGY : STATE 3",
+      "value": "-37.6954695961",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IA  ENERGY : STATE 4",
+      "value": "-37.5213292077",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IA  ENERGY : STATE 5",
+      "value": "-37.4924108638",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IB  ENERGY : STATE 1",
+      "value": "-37.8997248711",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IB  ENERGY : STATE 2",
+      "value": "-37.7499148105",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IB  ENERGY : STATE 3",
+      "value": "-37.6948232351",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IB  ENERGY : STATE 4",
+      "value": "-37.5212125303",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IB  ENERGY : STATE 5",
+      "value": "-37.4920938669",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IC  ENERGY : STATE 1",
+      "value": "-37.9004591340",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IC  ENERGY : STATE 2",
+      "value": "-37.7625362714",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IC  ENERGY : STATE 3",
+      "value": "-37.7011050315",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IC  ENERGY : STATE 4",
+      "value": "-37.5219649387",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IC  ENERGY : STATE 5",
+      "value": "-37.4964444299",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) ID  ENERGY : STATE 1",
+      "value": "-37.8997248711",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) ID  ENERGY : STATE 2",
+      "value": "-37.7499148105",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) ID  ENERGY : STATE 3",
+      "value": "-37.6948232351",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) ID  ENERGY : STATE 4",
+      "value": "-37.5212125303",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) ID  ENERGY : STATE 5",
+      "value": "-37.4920938669",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIA ENERGY : STATE 1",
+      "value": "-37.8998048381",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIA ENERGY : STATE 2",
+      "value": "-37.7520256773",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIA ENERGY : STATE 3",
+      "value": "-37.6961159413",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIA ENERGY : STATE 4",
+      "value": "-37.5212815381",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIA ENERGY : STATE 5",
+      "value": "-37.4926533295",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIB ENERGY : STATE 1",
+      "value": "-37.8997260445",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIB ENERGY : STATE 2",
+      "value": "-37.7508170615",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIB ENERGY : STATE 3",
+      "value": "-37.6954694041",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIB ENERGY : STATE 4",
+      "value": "-37.5211619969",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIB ENERGY : STATE 5",
+      "value": "-37.4923291482",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIC ENERGY : STATE 1",
+      "value": "-37.9004746467",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIC ENERGY : STATE 2",
+      "value": "-37.7634442439",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIC ENERGY : STATE 3",
+      "value": "-37.7017529265",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIC ENERGY : STATE 4",
+      "value": "-37.5219328761",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IIC ENERGY : STATE 5",
+      "value": "-37.4967768175",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IID ENERGY : STATE 1",
+      "value": "-37.9004557234",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IID ENERGY : STATE 2",
+      "value": "-37.7630999498",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IID ENERGY : STATE 3",
+      "value": "-37.7015577514",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IID ENERGY : STATE 4",
+      "value": "-37.5219131619",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-EOM",
+      "name": "ES CR-EOMCCSD(T) IID ENERGY : STATE 5",
+      "value": "-37.4964028308",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "T1 DIAGNOSTIC",
+      "value": "0.01006460",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T1 VECTOR",
+      "value": "0.02465314",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T2 VECTOR",
+      "value": "0.27859719",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "1.640233",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

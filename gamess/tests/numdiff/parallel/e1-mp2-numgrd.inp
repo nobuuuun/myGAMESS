@@ -1,0 +1,38 @@
+!   CH2, MP2 numerical gradient test
+!
+!        numerical gradient: RMS= 0.034944430
+!         analytic gradient: R.S= 0.034945091
+!
+!   This run takes 0 seconds on 2.66 GHz Cloverton (14 Apr 2015)
+!
+ $CONTRL SCFTYP=RHF mplevl=2 RUNTYP=gradient numgrd=.T. COORD=ZMT $END
+ $SYSTEM mwords=1 memddi=1 $END
+ $BASIS  GBASIS=STO NGAUSS=2 $END
+ $mp2    code=ims $end
+ $GUESS  GUESS=HUCKEL $END
+ $DATA
+Methylene...1-A-1 state...RHF/STO-2G
+Cnv  2
+
+C
+H  1 rCH
+H  1 rCH  2 aHCH
+
+rCH=1.09
+aHCH=110.0
+ $END
+ENERGY RESTART DATA FOR RUNTYP=OPTIMIZE, NUMGRD=.TRUE.
+ $VIB2
+ NVIB= 2
+ IMODE=    0 IVIB= 0 E=       -37.2651987264
+ IMODE=    1 IVIB= 1 E=       -37.2661806522
+ IMODE=    2 IVIB= 1 E=       -37.2641561342
+ $end
+
+the final two entries for a complete restart file would be these:
+ IMODE=    1 IVIB= 2 E=       -37.2654524826
+ IMODE=    2 IVIB= 2 E=       -37.2649071987
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

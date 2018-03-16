@@ -1,0 +1,333 @@
+/**  ## -*- C++-Cheetah -*-
+#compiler-settings 
+directiveStartToken = %
+commentStartToken = ///
+#end compiler-settings
+ @file 
+ @warning Automatically Generated
+*/
+%include "global.tmpl"
+%from shell import Shell
+%from shell import ShellDerivative2
+
+#ifndef RYSQ_KERNEL_DERIVATIVE_THREEC_QUADRATURE_IMPL_HPP_
+#define RYSQ_KERNEL_DERIVATIVE_THREEC_QUADRATURE_IMPL_HPP_
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+// #include <pmmintrin.h>
+
+#ifdef RYSQ_WITH_SSE
+#warning "Using SSE3 instructions"
+#include <pmmintrin.h>
+#include <xmmintrin.h>
+
+
+#define D128 __m128d
+#define ZERO _mm_setzero_pd()
+#define SET1(v) _mm_set1_pd((v))
+
+#define LOAD(m) _mm_load_pd((m))
+#define LOADU(m) _mm_loadu_pd((m))
+#define LOAD1(m) _mm_load_sd((m))
+#define	LOADDUP(m) _mm_loaddup_pd((m))
+
+#define STORE(m,r) _mm_store_pd((m), (r))
+#define STOREU(m,r) _mm_storeu_pd((m), (r))
+#define STORE1(m,r) _mm_store_sd((m), (r))
+
+#define MUL(x,y) _mm_mul_pd((x), (y))
+#define ADD(a,b) _mm_add_pd((a), (b))
+#define HADD(a,b) _mm_hadd_pd((a), (b))
+
+#define MUL1(x,y) _mm_mul_sd((x), (y))
+#define ADD1(a,b) _mm_add_sd((a), (b))
+
+#endif
+
+#include <math.h>
+#include "meta.hpp"
+#include "kernel/forward.hpp"
+
+%set fps = [ ("double", "", 8) ]
+
+%set DEriID = ( "d/dAx","d/dAy","d/dAz","d/dBx","d/dBy","d/dBz")
+
+namespace rysq {
+namespace kernel {
+namespace threec_derivative_quadrature {
+
+
+
+%for shell in Shell.range(last = $LMAX+1)
+%for (i,j,k) in Shell.unique_orbitals(shell.L)
+#define RI_RYSQ_NORMAL_$(i)$(j)$(k) $Shell.orbital_norm($i,$j,$k) /**< @brief ($i $j $k) normalization constant */ 
+%end for
+%end for
+
+%set index = ", ".join([str(shell.first) for shell in Shell.range(last = $LMAX+2)])
+%set normals = []
+
+%for shell in Shell.range(last = $LMAX+1)
+%for part in shell.partition()
+%silent normals += [", ".join(["RI_RYSQ_NORMAL_%i%i%i" %tuple(sorted(orb, reverse = True)) for orb  in part])]
+%end for
+%end for
+
+const double NORMALIZE[] = {
+%echo "\t" + ",\n\t".join(normals)
+};
+
+    //unrolled bras
+
+#define Ix(a,i,j) (Ix[(a) + (i)*NT + (j)*(NT*Li1)])
+#define Iy(a,i,j) (Iy[(a) + (i)*NT + (j)*(NT*Li1)])
+#define Iz(a,i,j) (Iz[(a) + (i)*NT + (j)*(NT*Li1)])
+
+/// need array for offsetting normalization constant
+%set $offsetArray = [0,1,4,10,20,35,56] 
+
+///the Shell.range constructs all of the shells, then loops through them
+%for B in Shell.range(last=$LMAX, sp = $SP)
+///<%print B%> 
+%for A in Shell.range(last=$LMAX, sp = $SP)
+%set DAB  = ShellDerivative2(A,B)
+///
+%for (fp,fp_suffix,fp_size) in fps
+///
+/** 
+    @brief <$(A)$(B)| shell quadrature
+    @param normalize
+    @param tol tolerance
+    @param K number of contractions
+    @param C contraction coefficients
+    @param dim2d 2-D integrals dimensions
+    @param Ix 2-D integral, Ix(N,Li,Lj,K,Lk,Ll)
+    @param Iy 2-D integral, Iy(N,Li,Lj,K,Lk,Ll)
+    @param Iz 2-D integral, Iz(N,Li,Lj,K,Lk,Ll)
+    @param scale scale factor
+    @param[out] I integral batch
+    @return number of screened integrals
+*/
+%set typeA = "rysq::%s" % (A.upper())
+%set typeB = "rysq::%s" % (B.upper())
+%set bra = "meta::state<%s,%s>" % (typeA, typeB)
+
+
+template<>
+struct impl< $(bra) > {
+
+    template<typename T>
+    struct aligned {
+#if (defined(__GNUC__) && ((__GNUC__ < 4) || (__GNUG__ == 4 && __GNUC_MINOR__ < 3)))
+#warning "alignment not implemented for GNUC < 4.3"
+	typedef T type;
+#else
+	typedef T type __attribute__((aligned (16)));
+#endif
+    };
+
+    template<size_t N, typename T, size_t NT>
+    static size_t apply(bool normalize,
+			double tol, int K,
+			const double *__restrict C,
+			const double *__restrict AExp,
+			const double *__restrict BExp,
+			int dim2d,
+			const typename aligned<T>::type *__restrict Ix,
+			const typename aligned<T>::type *__restrict Iy, 
+			const typename aligned<T>::type *__restrict Iz, 
+			double scale,
+			double *__restrict I);// __attribute__((pure));
+};
+
+template<size_t N, typename T, size_t NT>
+size_t impl< $(bra) >::apply(bool normalize,
+			     double tol, int K,
+			     const double *__restrict C,
+			     const double *__restrict AExp,
+			     const double *__restrict BExp,
+			     int dim2d,
+			     const typename aligned<T>::type *__restrict Ix,
+			     const typename aligned<T>::type *__restrict Iy, 
+			     const typename aligned<T>::type *__restrict Iz, 
+			     double scale,
+			     double *__restrict I) {
+
+%set nspij = 1<<(int(A.sp) + int(B.sp))
+///    const int Li1 = $(A.L + 1);
+    const int Li1 = $(A.L + 2);
+    int num = 0;
+    
+    /// first function in block 
+%set ifb = 0  
+
+    /// function block
+%for fb in DAB.partition(block = 10)
+    ///$KERNEL_BLOCK)
+
+#ifdef __GNUG__
+     asm("#begin vector loop");
+#endif
+
+    for(int k = 0; k < K; k += 1) {
+	double C_[$(nspij)];
+        const double alpha = AExp[k];
+        const double beta  = BExp[k];
+	for (int i = 0; i < $(nspij); ++ i) C_[i] = C[k*$(nspij) + i];
+
+	// function registers
+%for i in range(ifb, len(fb)+ifb)
+	T q$(i) = 0.0$(fp_suffix);
+%end for
+///        <%print len(fb),ifb,B%>    
+#if defined (__INTEL_COMPILER) 
+#pragma vector aligned
+#endif // alignment attribute
+
+	for (int a = 0; a < int(N); ++a) {
+%for ii, (fi,fj,fk) in enumerate(fb) 
+%set i = ii + ifb
+%set (ix,iy,iz) = fi[0:3]
+%set (jx,jy,jz) = fj[0:3]
+%set (dindex)   = fk
+///
+%set deri_array = [ix,iy,iz,jx,jy,jz]
+///
+%set du = [ix,iy,iz,jx,jy,jz]
+%set du[dindex] +=1
+%set dd = [ix,iy,iz,jx,jy,jz]
+%set dd[dindex] -=1
+///
+%set (iux,iuy,iuz,jux,juy,juz) = du[0:6]
+%set (idx,idy,idz,jdx,jdy,jdz) = dd[0:6]
+///
+%if $dindex < 3
+ %set exponent = "alpha"
+%else
+ %set exponent = "beta"
+%end if
+///
+%if $deri_array[dindex] > 0
+	    q$(i) += $exponent*Ix(a,$(iux),$(jux))*Iy(a,$(iuy),$(juy))*Iz(a,$(iuz),$(juz))
+                     - $deri_array[dindex]*Ix(a,$(idx),$(jdx))*Iy(a,$(idy),$(jdy))*Iz(a,$(idz),$(jdz));  // $DEriID[dindex]
+%else
+	    q$(i) += $exponent*Ix(a,$(iux),$(jux))*Iy(a,$(iuy),$(juy))*Iz(a,$(iuz),$(juz)); // $DEriID[dindex]
+///$A.orbital_norm($ix,$iy,$iz)                                                                                             
+%end if
+///
+%end for
+	    /// end for functions in block
+	}
+	    
+	//contraction coefficients
+///for functions in block
+%set ider = int(ifb % (len(A)*len(B)))
+%for ii in range(0, len(fb)) 
+%set i = ii + ifb  
+///%set k = int(A.sp and ( $ider % len(A)) > 0)
+///%set k += int(B.sp and ( $ider >= len(A))) << int(A.sp)
+%set k = int(B.sp and ( $ider % len(B)) > 0)
+%set k += int(A.sp and ( $ider >= len(B))) << int(B.sp)
+	///qK$(i) += q$(i)*C[k+$(k)];
+	///I[$(i)] += q$(i)*C[k+$(k)];
+	I[$(i)] += q$(i)*C_[$(k)];
+	///I[$(i)] += q$(i)*C_[$(k)]*NORMALIZE[$( ((i/len(B)) %len(A)) + offsetArray[A.L])]*NORMALIZE[$( i % len(B)+ offsetArray[B.L])];
+///
+%if $ider == len(A)*len(B)-1
+%set   ider = 0
+///%echo ider
+%else
+%set ider += int(1)
+///%echo ider
+%end if
+///
+%end for 
+///end for functions in block
+
+	Ix += 3*dim2d;
+	Iy += 3*dim2d;
+	Iz += 3*dim2d;
+	
+    }
+    Ix = Ix - 3*dim2d*K;
+    Iy = Iy - 3*dim2d*K;
+    Iz = Iz - 3*dim2d*K;
+    
+///  // normalization, scaling, and storage
+///    if(normalize) {
+////// functions in block
+///%for ii in range(0, len(fb)) 
+///%set i = ii + ifb 
+///%set ia = A.first + i % len(A)
+///%set ib = B.first + i / len(A)
+///	// I[$(i)] += scale*NORMALIZE[$(ia)]*NORMALIZE[$(ib)]*qK$(i);
+///	// num += (fabs(I[$(i)]) >= tol);
+////// functions in block
+///%end for 
+///    }
+///    else {
+////// functions in block
+///%for ii in range(0, len(fb))
+///%set i = ii + ifb
+///	// I[$(i)] += scale*qK$(i);
+///	// num += (fabs(I[$(i)]) >= tol);
+////// functions in block
+///%end for 
+///    }
+    
+/// advance function index
+%set ifb += len(fb) 
+/// function block
+%end for 
+    
+    return num;
+}
+
+
+%end for
+///end overloading precision
+
+///%end for
+///end for roots
+%end for
+///end for A
+%end for
+///end for B
+
+
+#undef Ix
+#undef Iy
+#undef Iz
+
+
+} // namespace rysq
+} // namespace kernel
+} // namespace quadrature
+
+
+#undef D128
+#undef ZERO
+#undef SET1
+
+#undef LOAD
+#undef LOADU
+#undef LOAD1
+#undef LOADDUP
+
+#undef STORE
+#undef STOREU
+#undef STORE1
+
+#undef MUL
+#undef ADD
+#undef HADD
+
+#undef MUL1
+#undef ADD1
+
+#endif // RYSQ_KERNEL_DERIVATIVE_THREEC_QUADRATURE_IMPL_HPP_
+
+

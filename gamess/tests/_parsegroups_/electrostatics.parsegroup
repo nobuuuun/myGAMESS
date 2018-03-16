@@ -1,0 +1,21 @@
+{
+  "parse_header" : "ELECTROSTATICS",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s)*DX(\\s)*DY(\\s)*DZ(\\s)*\\/D/(\\s)*\\(DEBYE\\).*$",
+     "parse_name"   : "DIPOLE MOMENT",
+     "parse_precision" : 6,
+     "parse_value_index" : 3,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^(\\s)*MEAN ALPHA POLARIZABILITY =.*$",
+     "parse_name"   : "MEAN ALPHA POLARIZABILITY",
+     "parse_precision" : 5,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_instance" : -1
+   }
+  ]
+}

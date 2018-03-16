@@ -1,0 +1,77 @@
+!   RVS method paper...water dimer interaction energy.
+!   W.J.Stevens, W.H.Fink   Chem.Phys.Lett. 139, 15-22(1987)
+!
+!   this geometry is not what is quoted in the paper, rOO=2.991 vs. 3.0085,
+!   because the paper optimized only to OPTTOL=5d-4 (not very tight).
+!   Energies found at the tightly optimized dimer geometry, but with
+!   the monomers kept at the paper's constraints, are:
+!     F_NAL RHF ENERGY IS      -76.0464785458 AFTER  13 ITERATIONS  m
+!     F_NAL RHF ENERGY IS      -76.0464785458 AFTER  14 ITERATIONS  m
+!     F_NAL RHF ENERGY IS      -76.0467031635 AFTER   7 ITERATIONS
+!     F_NAL RHF ENERGY IS      -76.0465390155 AFTER  15 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.1011131752 AFTER   9 ITERATIONS  x
+!     F_NAL RHF ENERGY IS     -152.1159067735 AFTER   7 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.1146884920 AFTER   6 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.0988303923 AFTER   8 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.0991500175 AFTER   8 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.1001869213 AFTER   9 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.0993488163 AFTER   8 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.1064388324 AFTER   8 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.1060407363 AFTER   8 ITERATIONS
+!     F_NAL RHF ENERGY IS     -152.1058669188 AFTER   8 ITERATIONS
+!   m is quoted monomer energy in table 2.    
+!   x is the energy optimized under the $STATPT's (paper's) constraints.
+!   x-2m = -5.12, in agreement with Kitaura/Morokuma's printout.
+!
+!   The final column below is data from Table 3 of the paper, at the
+!   paper's unknown geometry, for the RVS analysis:
+!
+!                                          HARTREE    KCAL/MOLE
+!   Es (electrostatic, or coulomb)        -.012582      -7.90
+!   EX (exchange repulsion)                .007071       4.44
+!   POL            MON=  1                -.000363       -.23      0.21
+!   POL            MON=  2                -.000682       -.43      0.39
+!   CT             MON=  1                -.001132       -.71      0.74
+!   CT             MON=  2                -.000138       -.09      0.08
+!  
+!            t.tal coulomb/exchange       -.005511      -3.46      3.44
+!            t.tal polarization           -.001045       -.66
+!            t.tal charge transfer        -.001270       -.80
+!            T.TAL of CEX+POL+CT          -.007826      -4.91      4.86
+!            t.tal interaction energy     -.008156      -5.12
+!  
+!   BSSE(VIR)      MON=  1                -.000225       -.14
+!   BSSE(VIR)      MON=  2                -.000060       -.04
+!   total BSSE        =                   -.000285       -.18
+!   bsse corrected total interaction =    -.007871      -4.94      4.89
+!
+!   this run takes 1 seconds on 2.66 GHz Cloverton (28 Apr 2009)
+!   results in 2009 were unchanged from the input file's undated answers
+!
+ $contrl scftyp=rhf runtyp=eda coord=zmt nzvar=12 ispher=0 $end
+ $system mwords=1 timlim=2 $end
+ $basis  gbasis=dzv ndfunc=1 npfunc=1 $end
+ $guess  guess=huckel $end
+ $statpt opttol=1d-5 ifreez(1)=1,2,3,7,10,11 $end
+ $morokm rvs=.true. $end
+ $data
+water dimer...almost duplicating Stevens and Fink
+Cs
+
+O
+H 1 rOH
+H 1 rOH      2 aHOH
+H 1 rHbond   2 ang    3  ang +1
+O 4 rOH      2 fict   3  fict +1
+H 5 rOH      4 aHOH   1  w
+
+rOH=0.956
+aHOH=105.2
+rHbond=2.0359468
+ang=114.3035456
+fict=158.7469599
+w=180.0
+ $end
+
+! TRAVIS-CI SMALL
+

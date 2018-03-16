@@ -1,0 +1,67 @@
+!  Monte Carlo FMO test case
+!  This is a sample input file for testing the pair
+!  binding option on a 5 methanol cluster.  The bindings
+!  don't correspond to a local minimum.
+!
+!  The output should contain a line similar to:
+! MINIMUM ENERGY FOUND =           -571.3348688847  AT GEOMETRY NUMBER     79
+!  The geometry number may be different, but the minimum
+!  energy should be within 2 Hartree of the value listed.
+!
+ $CONTRL SCFTYP=RHF RUNTYP=GLOBOP MAXIT=90 MULT=1 $END
+ $SYSTEM TIMLIM=525600 MWORDS=400 memddi=400 $END
+ $BASIS GBASIS=MINI $END
+ $SCF DIRSCF=.TRUE. FDIFF=.f. DAMP=.TRUE. SOSCF=.t. $END
+ $GLOBOP MCTYP=2 NROT=2 NTRAN=2 NBLOCK=20 MCMIN=.f. 
+    RNDINI=.f. septol=1.0 TEMPI=200 NTEMPS=1
+    XMIN=-10 XMAX=10  SCALE(1)=0.1
+    YMIN=-10 YMAX=10  NPRBND=4
+    ZMIN=-10 ZMAX=10 $END
+ $GLBFRG IBNDS(1)=18,25,1,30,6,7,7,24 
+      $END
+ $FMO
+  NFRAG=5 NBODY=2 NACUT=6 RESPAP=0 RESPPC=-1
+  RESDIM=0 RCORSD=0 RITRIM(1)=2,-1,2.5,2 MODESP=0 $END
+ $FMOPRP MAXIT=40 $END
+ $DATA
+
+C1
+O 8
+C 6
+H 1
+ $END
+ $FMOXYZ
+O     8.0    -0.61064     1.21747     0.61984
+C     6.0    -0.32864     0.65320    -0.66895
+H     1.0     0.09383    -0.34252    -0.48346
+H     1.0    -1.24177     0.54221    -1.27767
+H     1.0     0.41017     1.25250    -1.22720
+H     1.0    -0.98475     2.09727     0.48320
+O     8.0    -2.02481     2.79080    -0.96312
+C     6.0    -3.35890     2.95695    -1.46461
+H     1.0    -3.99935     2.30356    -0.85860
+H     1.0    -3.71176     3.99647    -1.35726
+H     1.0    -3.44161     2.65194    -2.52139
+H     1.0    -1.43994     3.35762    -1.48205
+O     8.0     0.00557    -0.52035     2.39029
+C     6.0     1.04624    -1.50815     2.37729
+H     1.0     1.88082    -1.06890     1.81616
+H     1.0     1.39396    -1.75213     3.39524
+H     1.0     0.72745    -2.43424     1.86997
+H     1.0    -0.74296    -0.88427     2.88013
+O     8.0    -3.59684     0.71935    -1.64379
+C     6.0    -3.55453     0.28254    -0.27767
+H     1.0    -3.84117    -0.77677    -0.28399
+H     1.0    -2.54236     0.37252     0.15136
+H     1.0    -4.26807     0.83828     0.35374
+H     1.0    -3.34757     1.65213    -1.66498
+O     8.0    -1.62038     0.03114     2.96186
+C     6.0    -2.57252     0.80813     3.70256
+H     1.0    -3.11556     0.10122     4.34267
+H     1.0    -2.08050     1.55929     4.34312
+H     1.0    -3.29565     1.31264     3.03984
+H     1.0    -1.12796     0.63272     2.38888
+ $END
+! TRAVIS-CI SKIP
+! NEED DETERMINISTIC OUTPUT FOR	VALIDATION
+

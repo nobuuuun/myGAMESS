@@ -1,0 +1,64 @@
+!   Hg(CH3)2...local unitary transformation LUT-IOTC gradient
+!   MP2/SPKrDZC (Sapporo relativistic core/valence basis set)
+!   The basis has only 144 AOs and 131 MOs and so is undemanding
+!   enough to execute the parallel MP2 program on a single core.
+!   The molecule has a slight preference for an eclipsed D3h over
+!   a staggered D3d conformation, by 23 microhartree at this level.
+!   The molecule is extremely toxic:
+!       https://en.wikipedia.org/wiki/Dimethylmercury
+!   so please use this compound only in a computer.
+!
+!   FINAL E= -19701.6305022403, E(MP2)= -19702.3134168050, RMS=0.008793003
+!   (IOTC E= -19701.6305449716,  MP2 E= -19702.3134541917, grd=0.008855468)
+!
+!   This run take 648 seconds on 2.66 GHz Cloverton ( 4 Aug 2015)
+!   (full IOTC is 678 sconds)
+!   ----------------------------------------------------------------------
+!   If run as a LUT geometry optimization from the non-rel MIDI geometry,
+!       N.ERCH:   0  E=   -19702.3134168050  R.M.S.=  0.0087930
+!       N.ERCH:   1  E=   -19702.3183362898  R.M.S.=  0.0063879
+!       N.ERCH:   2  E=   -19702.3227583345  R.M.S.=  0.0031200
+!       N.ERCH:   3  E=   -19702.3237844799  R.M.S.=  0.0019298
+!       N.ERCH:   4  E=   -19702.3239237819  R.M.S.=  0.0005665
+!       N.ERCH:   5  E=   -19702.3239372456  R.M.S.=  0.0000217
+!       N.ERCH:   6  E=   -19702.3239444987  R.M.S.=  0.0000027  <-- best
+!   If run as a seminumerical hessian at the relativistic MP2 geometries,
+!   the methyl rotational modes are successfully modeled:
+!   D3h has a1" rotation with real frequency 15.42,  e'= 164.17, a1'=551.07, ...
+!   D3d has a1u rotation with imag frequency 13.60i, eu= 164.08, a1g=551.15, ...
+!
+ $contrl scftyp=rhf mplevl=2 runtyp=gradient relwfn=LUT-IOTC ispher=1 $end
+ $system parall=.true. mwords=10 memddi=50 $end
+ $mp2    code=ddi $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $basis  gbasis=SPKrDZC $end
+ $statpt opttol=1d-5 $end
+ $data
+dimethylmercury...below is the non-relativistic RHF/MIDI geometry
+Dnh 3
+
+Hg   80.0   0.0000000000   0.0000000000   0.0000000000
+C     6.0   0.0000000000   0.0000000000   2.2204794254
+H     1.0  -1.0149689789   0.0000000000   2.6189159752
+ $end
+
+D3h geometry by non-relativistic RHF/MIDI
+Hg   80.0   0.0000000000   0.0000000000   0.0000000000
+C     6.0   0.0000000000   0.0000000000   2.2204794254
+H     1.0  -1.0149689789   0.0000000000   2.6189159752
+
+D3h geometry by LUT-IOTC MP2/SPKrDZC...E(MP2)= -19702.3239444987
+Hg   80.0   0.0000000000   0.0000000000   0.0000000000
+C     6.0   0.0000000000   0.0000000000   2.0805904809
+H     1.0  -1.0274310791   0.0000000000   2.4735307821
+
+D3d geometry by LUT-IOTC MP2/SPKrDZC...E(MP2)= -19702.3239211488
+Hg   80.0   0.0000000000   0.0000000000   0.0000000000
+C     6.0   0.0000000000   0.0000000000   2.0806635501
+H     1.0   0.0000000000  -1.0274306791   2.4736009265
+
+! TRAVIS-CI MEDIUM
+! TRAVIS-CI SKIP
+! ACCURACY BETWEEN INTEL AND GNU DOES NOT MATCH
+

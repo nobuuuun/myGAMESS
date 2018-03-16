@@ -1,0 +1,1240 @@
+*MODULE EFMOGRAD_DISP    *DECK efmo_secord_disp
+C>
+C>    @brief Calculates EFMO disp grad term involving derivative of dyn. pol. tensor
+C>
+C>    @details Need all contributions to efmo_scptdhf before starting this routine.
+C>
+C>             The dispersion derivative term involves the derivative of the dynamic
+C>             polarizability tensor, which involves the  derivative of the frequency
+C>             and field dependent response matrix. 
+C>
+C>             For all EFMO fragments, this routine calculates the term which involves
+C>             the derivative of the frequency and field dependent response matrix:
+C>             \sum_{ai} \frac{\del Z^{\beta}_{ai}( \omega)}{\del x}  N_{ai}^{\beta, \omega}.
+C>             By standard zvector techniques, the equivalent term 
+C>             \sum_{ai} Z^{scptdhf}_{\beta, \omega}_{ai} B_{ai}^{\beta, \omega}
+C>             is calculated in this routine.
+C>
+C>             Since this is a response term, first the corresponding Zvector equation is
+C>             solved, in the ::efmograd_disp_solve_zvector routine.
+C>
+C>             ((H1)(H2) - w^2) Z^{scptdhf}_{\beta, \omega} = N
+C>
+C>             Where N, the coefficient matrix, is stored in efmo_scptdhf in the
+C>             EFMOPO common block.
+C>
+C>             Then, the B coefficient is contracted with the zvector in the rest of
+C>             the routine. B comes from the derivative of the first order TD CPHF
+C>             equation, and collecting the \frac{\del Z^{\beta}_{ai}( \omega)}{\del x}
+C>             terms to one side. The terms on the other side are B.
+C>
+C>             Finally, the terms are added to FMODE and other storage arrays.
+C>             Some terms contribute to the firt-order CPHF equation, so they
+C>             are added to the appropriate arrays (zvlag)
+C>             Uses GDDI to loop over all fragments.
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param ilay : current FMO layer
+C>    @param loadhf : an integer flag that is 1 if a "heavy job first" strategy is used
+C>           (mod(modpar,2) == 1).
+C>    @param loadm : integer array with load balancing information which reorders the fragments.
+C>           It takes in a number and returns a fragment, in decreasing order of number of AOs
+C>           work. So, it does the expensive fragments first. This is only used
+C>           if loadhf=1
+C>    @param fmode : A double array of (3,number of atoms in the entire FMO calculation).
+C>                  The first index is whether the derivative is with respect to x,y, or
+C>                  z, and the second index is which atom the derivative is with respect
+C>                  to. It holds FMO gradient values for dimer contributions that will be
+C>                  printed out, and used in MD calculations.
+C>    @param numfrg() : integer array with the number of AO basis functions for each fragment
+C>    @param iodfmo : io array for FMO
+C>    @param scffrg : scf type for the run (UHF or RHF)
+C>    @param isgddi : logical flag for whether it's a GDDI run
+C>    @param irec0 : Record number to read the orbitals in the fragments
+C>    @param ngrfmo(maxpst,layers) : integer array holding the number of GDDI groups for monomers,
+C>           dimers, etc., and is set for each layer
+C>    @param mannod() : defines manual node division into groups for each ngrfmo(i,j)
+C>    @param mastid() : contains the global id of group masters 
+C>    @param nqmtfg() : integer array that can be used to get the number of MO basis functions
+C>           in each fragment
+C>    @param iptlg :: [in] An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param irmdfmo : flag for RMD, but doesn't seem to do anything in this circumstance
+C>
+      subroutine efmo_secord_disp(ILAY,LOADHF,LOADM,FMODE,
+     *                  NUMFRG,IODFMO,LAYFRG,SCFFRG,ISGDDI,
+     *                  IREC0,NGRFMO,MANNOD,MASTID,NQMTFG,IPTLG,
+     *                  irmdfmo )
+
+      IMPLICIT DOUBLE PRECISION (A-H, O-Z)
+C
+      LOGICAL GOPARR,MASWRK,DSKWRK,SVDSKW,SVGPAR, PACK2E
+      LOGICAL ISGDDI,MYJOB, svdskw2,dirsav
+      LOGICAL DIRSCF,DIRTRF,ds,fdiff
+      LOGICAL MOIDON,EDCOMP,DIPDCM,QADDCM,DEPRNT,ZDO,POLDCM,POLANG
+      LOGICAL POLAPP,KMIDPT,POLDYN
+C
+      logical FIRST, secnd,cphf,both,abel,abelpt
+      logical  mfirst, msecnd,mcphf,SCHWRZ
+      integer spot
+
+      INTEGER DDI_WORLD,DDI_GROUP
+      PARAMETER (DDI_WORLD=0,DDI_GROUP=1)
+      PARAMETER (MAXPST=10)
+      PARAMETER (two=2.0D+00)
+      PARAMETER (HALF=0.5D+00)
+C
+      PARAMETER (MXATM=2000,MXSH=5000)
+      PARAMETER(NMO=500)
+      DIMENSION LOADM(*),NUMFRG(*),NQMTFG(*)
+      DIMENSION IODFMO(*),LAYFRG(*),SCFFRG(*)
+      DIMENSION NGRFMO(MAXPST,*),MANNOD(*),MASTID(*)
+      DIMENSION FMODE(3,*)
+      DIMENSION IPTLG(*)
+C
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *     lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /SYMTRY/ MAPSHL(MXSH,48),MAPCTR(MXATM,48),
+     *                T(432),INVT(48),NT
+      COMMON /HSSPAR/ FIRST,SECND,CPHF,BOTH,MFIRST,MSECND,MCPHF
+      COMMON /EDCMP / ZIJ(NMO),ZMO(5,NMO),OCCUP(NMO),DPFREQ(50),
+     *                MOIDNO(5,NMO),IJMO(2,NMO),MOIJ(NMO),NMOIJ(NMO),
+     *                NMOAT(NMO),NDPFREQ,IPROT(5),NPROT,
+     *                MOIDON,EDCOMP,DIPDCM,DEPRNT,QADDCM,ZDO,POLDCM,
+     *                POLANG,POLAPP,KMIDPT,POLDYN
+      COMMON /FMCOM / X(1)
+      common /fmodim/ maxbnd,maxknd,maxcbs,maxcao,maxvec,maxl1,maxnat,
+     *                maxabd,maxbas,maxbbd,maxlmo,maxslo,maxabd2,maxrij
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+      COMMON /GRAD  / DE(3,MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /INTFIL/ NINTMX,NHEX,NTUPL,PACK2E,INTTYP,IGRDTYP
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /SCZLAG/ LZVLAG,LZVWRK,LYALAG,LYAWRK
+      COMMON /SCZVEC/ IDFZVEC,LIPTZVEC,LIPTLG
+czcz
+      COMMON /RESTAR/ TIMLIM,IREST,NREC,INTLOC,IST,JST,KST,LST
+      COMMON /TRFOPT/ CUTTRF,NWDTRF,MPTRAN,ITRFAO,NOSYMT,IPURTF,DIRTRF
+czcz
+
+C
+c$$$ gsum the second-order CPTDHF coefficient.
+        IF (ISGDDI) THEN
+c$$$ move to world scope--functions are over all nodes.
+          CALL GDDI_SCOPE(DDI_WORLD)
+c$$$ sum the values in lefmo_scptdhf over all nodes, and give all nodes the final sum
+          CALL DDI_GSUMF(5000,x(lefmo_scptdhf),36*IPTLG(NFG+1) )
+c$$$ move to group scope--functions are summed only over the nodes in the group
+          CALL GDDI_SCOPE(DDI_GROUP)
+        ELSE
+           CALL DDI_GSUMF(3000,x(lefmo_scptdhf),
+     *          36*IPTLG(NFG+1))
+        END IF
+C
+CZ
+CZ    SWITCH TO GROUP
+CZ
+      IF (ISGDDI) CALL GDDI_SCOPE(DDI_GROUP)
+      IF (ISGDDI.AND.NGRFMO(1,ILAY).NE.0)
+     *  CALL FMOPRE(ILAY,1,NGRFMO,MANNOD,MASTID,irmdfmo)
+C
+      JCURFG  = 0
+      KCURFG  = 0
+      ICURLAY = ILAY
+      IF (ISGDDI) CALL GDDICOUNT(-1,LGROUP,MYJOB)
+
+c$$$ loop over all fragments, group-parallelized
+      DO 230 IIFG = 1,NFG
+         IFG = IIFG
+         IF (LOADHF.EQ.1) IFG = LOADM(IIFG)
+C
+         IF (LAYFRG(IFG).LT.ILAY) GOTO 230
+         ICURFG = IFG
+         IF (ISGDDI) THEN
+            CALL GDDICOUNT(0,LGROUP,MYJOB)
+            IF (.NOT.MYJOB) GOTO 230
+         END IF
+C
+         CALL CLOSDA('DELETE')
+         CALL OPENDA(0)
+c$$$ puts the stored coordinates and basis set for the fragment into common blocks 
+         CALL MAKEMOL(IFG,0,0,ILAY,0,0,0,0,0,0,0,.TRUE.)
+         L1 = NUM
+         L2 = (L1*L1+L1)/2
+         L3 =  L1*L1
+         IDMREC0I = IFG + IREC0
+
+c$$$ this is necessary to initialize variables for the call to TWOEI 
+         DIRSAV = DIRSCF
+         DIRSCF = .TRUE.
+         IST=1
+         JST=1
+         KST=1
+         LST=1
+         CALL JANDK
+         DIRSCF = DIRSAV
+
+         CALL VALFM(LOADFM)
+         Lvec   = 1+LOADFM
+         NEED_D = Lvec + l3+l1- LOADFM - 1
+         CALL GETFM(NEED_D)
+        
+
+!     MO COEF. AND ORBITAL ENERGIES
+         CALL VCLR(x(lvec),1,L3+L1)
+         CALL RAREADS(IDAFMO,IODFMO,x(lvec),L3+L1,IDMREC0I,0)
+
+c$$$ since everyone needs the frequencies
+         NDPFREQ=12
+         DPFREQ(1) = 0.00279164292546976127D+00
+         DPFREQ(2) = 0.015106644820649056973D+00
+         DPFREQ(3) = 0.03900169130663191517D+00
+         DPFREQ(4) = 0.077996102406373782231D+00
+         DPFREQ(5) = 0.13865052123704475618D+00
+         DPFREQ(6) = 0.233222703362246034002D+00
+         DPFREQ(7) = 0.38589725057860362524D+00
+         DPFREQ(8) = 0.649114040084500804964D+00
+         DPFREQ(9) = 1.15390381343780158400D+00
+         DPFREQ(10)= 2.307592234716658147562D+00
+         DPFREQ(11)= 5.95764321386442380950D+00
+         DPFREQ(12)= 32.239080141259587698936D+00
+
+
+         NQI    = IAND(NQMTFG(IFG),65535)
+         NAI    = ISHFT(NUMFRG(IFG),-16)
+         nocc   = NAI
+         nvir   = NQI - nocc
+         nrot = nocc*nvir
+
+c$$$  num2 is the number of triangular AOs
+         num2 = L2
+c$$$ nxyz is the number of fields--x,y,z
+         nxyz = 3
+c$$$ number of responses (frequencies * fields)
+         num_resp = nxyz*NDPFREQ
+         NFT16  = 16
+         NFTH2  = 67
+         NFTH21 = 68
+
+         FIRST=.TRUE.
+         SECND=.TRUE.
+         CPHF=.TRUE.
+         BOTH=.TRUE.
+         MFIRST=.TRUE.
+         MSECND=.TRUE.
+         MCPHF=.TRUE.
+C
+C     IF DUPLICATED INTEGRAL FILES DESIRED FOR TRANSF., GENERATE THEM.
+C     IF POINT GROUP IS NON-ABELIAN, GENERATE A C1 INTEGRAL FILE.
+C
+         ABEL = ABELPT()
+         NTSAVE = NT
+         SVDSKW = DSKWRK
+         SVGPAR = GOPARR
+         IF(GOPARR) DSKWRK = .TRUE.
+         IF(CPHF  .AND.
+     *        ((GOPARR.AND.ITRFAO.EQ.1)
+     *        .OR.  .NOT.ABEL)) THEN
+            IF(ITRFAO.EQ.1) GOPARR = .FALSE.
+            IF(.NOT.ABEL) NT = 1
+            IF(.NOT.DIRSCF) CALL JANDK
+         END IF
+         GOPARR = SVGPAR
+         NT = NTSAVE
+
+C
+C     ----- INTEGRAL TRANSFORMATION TO GET TWOEI -----
+C
+c$$$ saving dirtrf in ds
+         ds = dirtrf
+         DIRTRF=.TRUE.
+
+c$$$ need to write the MO coefficients to record 15.
+         CALL dawrit(IDAF,IODA,x(lvec),l3,15,0)
+c$$$  this is just junk. this shouldn't be used in the actual calulation
+         CALL dawrit(IDAF,IODA,x(lvec),l2,12,0)
+         CALL dawrit(IDAF,IODA,x(lvec),l2,11,0)
+         CALL dawrit(IDAF,IODA,x(lvec),l3,45,0)
+
+         CALL TRFMCX(0,0,NOCC,NQMT,.FALSE.,.true.,
+     *        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,
+     *        .FALSE.,.FALSE.,.TRUE.)
+
+
+c$$$ restore dirtrf
+         DIRTRF=ds
+
+c$$$  code to get NFREE value
+         CALL VALFM(LOADFM)
+         CALL GOTFM(NGOTMX)
+
+         LB   = 1+LOADFM
+         LAST = LB   + NROT*NXYZ
+C     OVERLAP PART OF -A- FORMATION STORAGE...
+         LE   = LAST
+         LXX  = LE   + NUM
+         LIX  = LXX  + NINTMX
+         LAST1= LIX  + NINTMX
+C     ...WITH PART OF THE CPHF SOLUTION STORAGE...
+         LU   = LAST
+         LAST2= LU   + NROT*NXYZ
+C     
+         LAST = MAX(LAST1,LAST2)
+         NNEED= LAST-LB
+         NFREE= NGOTMX-NNEED
+
+C                         ...FOLLOWED BY MORE SOLVER STORAGE,
+C                         WITH -A- ITSELF ALLOCATED LAST.
+C
+C        IF -A- FITS IN MEMORY, WE SOLVE FOR ONE RESPONSE
+C        AT A TIME TO MINIMIZE WORKING STORAGE -LWRK-.
+C        IF NOT, WE MINIMIZE DISK I/O ON THE EXTERNAL FILE OF
+C        -A- BY WORKING ON ALL RESPONSES SIMULTANEOUSLY.
+C
+C        BY USING THE NEXT FOUR LINES, SMALL PROBLEMS CAN BE FORCED
+C        INTO AN OUT OF CORE, 2 SLICE STORAGE OF THE -A- MATRIX:
+C
+C        IF(INCORE) THEN
+C           INCORE=.FALSE.
+C           NFREE = NUM*NUM +2*NXYZ +4*NXYZ*NROT +NROT +(NROT*NROT+10)/2
+C        END IF
+C
+C
+C IMPORTANT FOR STATIC POLARIZABILITY
+C
+         NSOLV = NXYZ
+C
+c$$$C
+c$$$      IF(INCORE) THEN
+c$$$         NWIDTH = NROT
+c$$$      ELSE
+c$$$ I commented out the above, since I found a line in POLRHF that sets
+c$$$ INCORE to false if POLDYN is true. And we're using the POLDYN code.
+         NWIDTH = (NFREE - NUM*NUM - 2*NXYZ- 4*NROT*NXYZ - NROT)/NROT
+C
+C TAKE IN ACCOUNT FACT THAT WE NEED 3 TIMES MORE MEMORY
+C
+         NWIDTH = NWIDTH/3
+         IF(NWIDTH.GT.NROT) NWIDTH = NROT
+C
+C   DEBUG
+C        INCORE = .FALSE.
+C        NWIDTH = 1000
+C
+         IF(NWIDTH.GT.0) THEN
+            NSLICE = (NROT-1)/NWIDTH + 1
+         ELSE
+            NSLICE=-1
+         END IF
+         IF(NWIDTH.LE.0  .OR.  (NSLICE.GT.NAT .AND. NAT.GT.5)) THEN
+            IF (MASWRK) THEN
+               NEEDX = NUM*NUM + 2*NXYZ + 4*NROT*NXYZ + NROT
+               NNEED = NNEED + NEEDX
+               NFREE = NFREE - NEEDX
+               NEEDW = (NROT-1)/(NAT-1)
+               NEEDW=3*NEEDW
+               NEED  = NNEED + NROT*NEEDW
+               WRITE(*,*) NWIDTH,NSLICE,NAT,NFREE,NNEED,NROT,NEED
+            END IF
+            CALL ABRT
+            STOP
+         END IF
+
+         LIROT= LAST
+         LBNRM= LIROT + NUM*NUM
+         LRESD= LBNRM + NSOLV
+         LWRK1= LRESD + NSOLV
+         LWRK2= LWRK1 + NROT*NSOLV
+         LWRK3= LWRK2 + NROT*NSOLV
+         LWRK4= LWRK3 + NROT*NSOLV
+         LWII = LWRK4 + NROT*NSOLV
+         LA   = LWII  + NROT
+         LAST = LA    + NROT*NWIDTH
+C
+         NEED = LAST - LOADFM - 1
+         CALL GETFM(NEED)
+C
+C        GET RHF ORBITAL ENERGIES
+C
+C
+         SVDSKW2 = DSKWRK
+         DSKWRK = .FALSE.
+         CALL SEQOPN(NFT16,'WORK16','UNKNOWN',.FALSE.,'UNFORMATTED')
+         DSKWRK = SVDSKW2
+         CALL CPWXYO(X(LA),X(LVEC+L3),X(LXX),X(LIX),X(LIROT),X(LWII),
+     *        NROT,NWIDTH,NUM,NOCC,NVIR,IPK,NINTMX,NFT16,.false.)
+C
+
+         call retfm(need)
+
+         LH2   = 1+LOADFM
+         LE    = LH2 + NROT*NWIDTH
+         LXX   = LE   + NUM
+         LIX   = LXX  + NINTMX
+         LIROT = LIX  + NINTMX
+         LH2II = LIROT + NUM*NUM
+         LAST  = LH2II  + NROT
+         NEED  = LAST - LOADFM - 1
+         CALL GETFM(NEED)
+C
+C        GET RHF ORBITAL ENERGIES
+C
+C
+         SVDSKW2 = DSKWRK
+         DSKWRK = .FALSE.
+         CALL SEQOPN(NFTH2,'DCPHFH2','UNKNOWN',.FALSE.,'UNFORMATTED')
+         DSKWRK = SVDSKW2
+         CALL CPH2O(X(LH2),X(LVEC+L3),X(LXX),X(LIX),X(LIROT),X(LH2II),
+     *        NROT,NWIDTH,NUM,NOCC,NVIR,IPK,NINTMX,NFTH2,
+     *        .false.)
+C
+         CALL RETFM(NEED)
+
+         MAXL2   = (MAXL1*MAXL1+MAXL1)/2
+         MAXL3   =  MAXL1*MAXL1
+
+c$$$  pulled from POLRHF in locpol.src
+C     MEMORY ALLOCATION FOR SOLVCPDYN
+         LH    = 1+LOADFM
+         LZ    = LH    + NUM2*NXYZ
+c$$$  lz holds the solution.
+         lstore_efmo   = LZ    + NROT*NXYZ*NDPFREQ
+         lug2  = lstore_efmo + NROT*NXYZ*num_resp
+         lcont_b_c = lug2 + nrot*nxyz*NDPFREQ
+         LWRT1 = lcont_b_c + l1*l1*num_resp
+c$$$ only used after solved
+         LWRK1 = LWRT1 + MAXL2*num_resp
+         LWRK2 = LWRK1 + MAXL3
+         LWRK3 = LWRK2 + MAXL3*num_resp
+         lcmat  = LWRK3 + MAXL3*num_resp
+         Lwrt2  = lcmat + MAXL3*3
+         lcont_za_c  = lwrt2 + MAXL2*num_resp
+         ld1 = lcont_za_c + l1*l1*num_resp
+         ld2 = ld1 + l2*num_resp
+         ld1_new = ld2 + l2*num_resp
+         last = ld1_new + num_resp*l2
+
+         NEED = LAST - LH
+         CALL GETFM(NEED)
+
+c$$$ Solve and contract the Zvector (Z^{scptdhf}_{\beta, \omega})
+
+         svgpar = goparr
+         goparr = .false.
+         dskwrk = .false.
+
+         call efmograd_disp_solve_zvector( x(lstore_efmo), nxyz,
+     *        ndpfreq, x(lefmo_f_resp), x(lug2), nocc, nvir, ifg,
+     *        iptlg, nfg, x(lcont_b_c), x(lefmo_scptdhf), x(lz),
+     *        x(lh), nwidth, num2, nft16, nfth2, nfth21 )
+
+         dskwrk = svdskw
+         goparr = svgpar
+
+c$$$ now that we have the Z-vector, we need to make Z*B, and add it to the gradient.
+c$$$ for the second order TDCPHF equation, we have one term that arises from
+c$$$ the derivative of the H1 term, a dipole derivative term, and a term that
+c$$$ arises from the derivative of the H2 term. Since H1 is identical to A
+c$$$ in the time-independent CPHF equation, the term that arises from
+c$$$ the derivative of the H1 term can be dealt with in a similar manner
+c$$$ as the time-independent CPHF equation, by calling efmo_zvector_contract.
+c$$$ the dipole derivative term can be included in this. The coefficients
+c$$$ of the terms is different, so we make different matrices, and send then to
+c$$$ efmo_zvector_contract.
+
+c$$$ the H1 derivative terms are the same as the A derivative terms in the
+c$$$ time-independent case, except that the coefficient is -H2*Z.
+
+c$$$ the H2 derivative terms are similar, but have different 2e- integral derivatives
+c$$$ the coefficient is 2*dipole + H1*freq_resp  
+
+c$$$ let's get the dipole integrals and add them to H1*freq_resp, which is in
+c$$$ store_efmo.
+
+         CALL DIPINT(0,0,0,.FALSE.)
+         CALL DAREAD(IDAF,IODA,x(lwrk2),L2,95,0)
+         CALL DAREAD(IDAF,IODA,x(lwrk2+L2),L2,96,0)
+         CALL DAREAD(IDAF,IODA,x(lwrk2+2*L2),L2,97,0)
+      
+         CALL TFTRI(x(lwrk3),x(lwrk2),x(lvec),x(lcmat),L1,L1,L1)
+         CALL TFTRI(x(lwrk3+L2),x(lwrk2+L2),x(lvec),x(lcmat),L1,L1,L1)
+         CALL TFTRI(x(lwrk3+2*L2),x(lwrk2+L2*2),x(lvec),x(lcmat),L1,
+     *        L1,L1)
+
+c$$$ calculate -2*<b|x,y,z|j> - H1*U^g(w), an intermediate term
+         call efmo_aux_add( nvir, nocc,
+     *        x(lstore_efmo + (nrot*3*24)), x(lwrk3),
+     *        l1, nrot )
+
+         call cpytsq(x(lwrk2), x(lcmat), l1, 1 )
+         call cpytsq(x(lwrk2+L2), x(lcmat+L1*L1), l1, 1 )
+         call cpytsq(x(lwrk2+2*L2), x(lcmat+ 2*L1*L1), l1, 1 )
+
+c$$$ now cmat has the dipole integrals.
+
+c$$$ first, we need to make several matrices for efmo_zvector_contract: -H2*Z,
+
+         spot = 0
+         do index_freq=1,NDPFREQ
+            do index_field=1,nxyz
+            
+               new_index = spot*nrot+(nrot*nxyz*NDPFREQ)
+c$$$  make cont_za_c
+               CALL SWBASIS(0,L1,NOCC,NVIR,x(lvec),
+     *              X(lstore_efmo+new_index),NVIR,
+     *              x(lcont_za_c+l1*l1*spot),L1,X(LWRK1))
+
+               spot = spot + 1
+            enddo
+         enddo
+
+         call efmo_get_norb(x(lnefmopts),nact,ifg,nfg )
+         ncore = nocc-nact
+
+c$$$ this is for the FMO two electron integral code.
+         NCURSH = 0
+
+c$$$ let's try H1 terms
+         CALL efmo_zvector_contract(IFG,x(lcont_za_c),
+     *        x(lstore_efmo+(nrot*nxyz*NDPFREQ)),
+     *        L1,L2,FMODE,SCFFRG,X(LWRT1),
+     *        X(LWRK1),X(LWRK2),X(LWRK3),
+     *        nocc, nvir, x(lvec), x(lvec+l3),
+     *        x(lcmat), x(LZVLAG), x(LIPTLG), x(lug2),
+     *        x(lefmo_f_resp), x(lwrt2),NDPFREQ,nxyz,num_resp,
+     *        x(ld1_new),ncore)
+
+c$$$ the H2 derivative terms are similar to the A derivative terms in the
+c$$$ time-independent case. Not exactly the same, since the 2-electron inegral
+c$$$ derivative is different. We can use a similar structure, though. the
+c$$$ needed coefficient here is 2*dipole + H1*freq_resp. this is in store_efmo.
+
+c$$$ form the density matrices. one is the zvector contracted with the MOs
+
+c$$$ make za_c. the first NDPFREQ(12) spots of store_efmo is the zvector.
+         spot = 0
+         do index_freq=1,NDPFREQ
+            do index_field=1,nxyz
+
+               CALL SWBASIS(0,L1,NOCC,NVIR,x(lvec),
+     *              X(lstore_efmo+spot*nrot),NVIR,
+     *              x(lcont_za_c+spot*l1*l1),L1,X(LWRK3))
+
+               spot = spot+1
+            enddo
+         enddo
+
+c$$$ the next is the more complicated density. it's in store_efmo after cont_za
+
+c$$$ get the dipole integrals
+         call vclr( x(lcont_b_c), 1,l1*l1*num_resp )
+
+c$$$ now we need to switch the basis for b.
+         spot = 0
+         do index_freq=1,NDPFREQ
+            do index_field=1,nxyz
+               
+               CALL SWBASIS(0,L1,NOCC,NVIR,x(lvec),
+     *              x(lstore_efmo + spot*nrot+ (nrot*nxyz*24)),NVIR,
+     *              x(lcont_b_c+ spot*l1*l1),L1,X(LWRK3))
+               
+               spot = spot+1
+            enddo
+         enddo
+
+c$$$ antisq2tri them
+         call vclr(x(ld2),1,l2*num_resp)
+         call vclr(x(ld1),1,l2*num_resp)
+
+         call antisq2tri(l1, x(lcont_za_c),x(ld1), -half,num_resp)
+         call antisq2tri(l1,
+     *        x(lcont_b_c),x(ld2), half,num_resp)
+CZ
+CZ    CLEAR DE FIRST FOR INTERNAL CONTRIBUTIONS
+CZ
+         CALL VCLR(DE,1,NAT*3)
+
+         call efmo_flip( x(lwrk2), x(ld1), num_resp, l2 )
+         call efmo_flip( x(lwrk3), x(ld2), num_resp, l2 )
+
+         SCHWRZ = .true.
+         IF(SCHWRZ) LFMOBUF(3) = 0 ! READ IN XINTS FROM A FILE
+         call esd2der( x(lwrk2),x(lwrk3),-4 )
+
+c$$$ you'll need to sum up DE here. it may be best to just put all this in a
+c$$$ efmo_zvector_contract - like subroutine.
+
+c$$$ MO-derivative term
+
+c$$$ note: the anti symmed things were multiplied by (1/2). Let's undo this here
+         call dscal( l2*num_resp, two,x(ld1), 1)
+         call dscal( l2*num_resp, -two,x(ld2), 1)
+
+c$$$ 24: takes in the contracted, antisymm Zvector and plain B
+c$$$ d1 is what's used as a density to the twoei routine.
+         call efmo_zvector_contract_fock_twoe( IFG,x(ld1),
+     *        x(lstore_efmo +(nrot*nxyz*24)),
+     *        L1,L2,SCFFRG,x(lcmat),X(LWRT1),
+     *        X(LWRK1),X(LWRK2),X(LWRK3),
+     *        nocc, nvir, x(lvec), x(lvec+l3),
+     *        x(LZVLAG), x(LIPTLG),num_resp,x(ld1_new),.true.,.false.,
+     *        x(lstore_efmo),ncore)
+
+c$$$ 13: takes in contracted, antisymm B and plain Zvector
+c$$$ F-derivs, too
+         call efmo_zvector_contract_fock_twoe( IFG,x(ld2),
+     *        x(lstore_efmo),
+     *        L1,L2,SCFFRG,x(lcmat),X(LWRT1),
+     *        X(LWRK1),X(LWRK2),X(LWRK3),
+     *        nocc, nvir, x(lvec), x(lvec+l3),
+     *        x(LZVLAG), x(LIPTLG),num_resp,x(ld1_new),.true.,.true.,
+     *        x(lstore_efmo +(nrot*nxyz*24)),ncore )
+
+CZ
+CZ    SUM UP DE
+CZ
+         IF (GOPARR) CALL DDI_GSUMF(5418,DE,NAT*3)
+      
+CZ
+CZ    THE COLLECTED DE IS NOW COPIED TO FMODE
+CZ
+         IF (MASWRK) THEN
+            CALL FMODEG(1,FMODE,X(LFMOPG),X(LIAGLOB))
+         ENDIF
+
+         CALL RETFM(NEED)
+         call retfm(need_d)
+ 230  CONTINUE
+C
+      IF (ISGDDI) CALL GDDICOUNT( 1,LGROUP,MYJOB)
+
+      return
+      end
+
+*MODULE EFMOGRAD_DISP    *DECK efmo_store_disp
+C>
+C>    @brief Stores coefficients for EFMO dispersion gradient
+C>
+C>    @details Calculates the coefficients of the dispersion interaction
+C>             for EFMO, for the term in the dispersion summation
+C>             between LMO jp on fragment jm and LMO in on fragment im.
+C>             The dipole-derviatve contribution is sent to
+C>             EFMOESGM, and the coefficient of the dynamic polarizability
+C>             tensor is stored with store_dyndisp. 
+C>             disp = (4/3)C6/R6*F6
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param idisps : Flag for type of dispersion damping. If this is 1,
+C>                  overlap-based damping is done. This is the only
+C>                  type that is coded for EFMO
+C>    @param ntmo : Total number of LMOs of all fragments in the system.
+C>                This is 0 if exrep is off.
+C>                If exrep is off, the overlap matrix was not computed,
+C>                so overlap-based damping can not be carried out
+C>    @param sab : overlap integral between in and jp 
+C>    @param im : one fragment that dispersion interaction is calculated between
+C>    @param in : LMO on im
+C>    @param jm : one fragment that dispersion interaction is calculated between
+C>    @param jp : LMO on jp
+C>    @param df6 : derivative of C6 damping coefficient (f6)
+C>    @param c6 : coefficient of the R6 term
+C>    @param r6 : ( r_{in} - r_{jp} )^6
+C>    @param f6 : C6 damping coefficient
+C>    @param swf : multiplicative swtiching function
+C>    @param efmo_weight : [out] Stores weight needed for dispersion damping gradient
+C>    @param iefmodim : array that takes a fragment index as an argument and
+C>                      returns the fragment index that was used in an earlier
+C>                      part of the EFMO code. This has to do with how FMO
+C>                      deals with the dimers.
+C>    @param conx, cony, conz : derivative of disp wrt X/Y/Z holding C6 and F6 constant
+C>    @param fact1, ... fact12 : factor for each imaginary frequency
+C>    @param alp1, ... alp12 : dynamic polarizabilty tensor for each imaginary
+C>           frequency for in
+C>    @param alpn1, ... alpn12 : dynamic polarizabilty tensor for each imaginary
+C>           frequency for jp
+C>    @param nfrg : number of EFP fragments in the dimer calc. this is always 2
+C>    @param mxppts : dimension used in efmo_weight. max number of polarizabilty
+C>                   points (the number of LMOs)
+C>
+      subroutine efmo_store_disp( idisps, ntmo, sab, im, in, jm, jp,
+     *     df6, c6, r6, f6,swf, efmo_weight,iefmodim,conx, cony,conz,
+     *     fact1,fact2,fact3,fact4,fact5,fact6,fact7,fact8,fact9,
+     *     fact10,fact11,fact12,alp1,alp2,alp3,alp4,alp5,alp6,alp7,
+     *     alp8,alp9,alp10,alp11,alp12,alpn1,alpn2,alpn3,alpn4,
+     *     alpn5,alpn6,alpn7,alpn8,alpn9,alpn10,alpn11,alpn12,
+     *     nfrg, mxppts)
+
+      implicit none
+      integer idisps,ntmo,im,in,jm,jp,nfrg,mxppts,jpx,ipx,
+     *     im1,jm1
+      integer, parameter :: mxifrq=12
+      integer, dimension(2) :: iefmodim
+      double precision sab, df6,c6,r6,f6,swf,conx,cony,conz
+      double precision fact1,fact2,fact3,fact4,fact5,fact6,
+     *     fact7,fact8,fact9,fact10,fact11,fact12,alp1,alp2,
+     *     alp3,alp4,alp5,alp6,alp7,alp8,alp9,alp10,alp11,
+     *     alp12,alpn1,alpn2,alpn3,alpn4,alpn5,alpn6,alpn7,
+     *     alpn8,alpn9,alpn10,alpn11,alpn12
+      double precision TIX,TIY,TIZ,
+     *     TJX,TJY,TJZ,F2,F1,pi_factor
+      double precision, parameter :: zero=0.0d0
+      double precision, parameter :: one=1.0d0
+      double precision, parameter :: four=4.0d0
+      double precision, parameter :: two=2.0d0
+      double precision, parameter :: three=3.0d0
+      double precision, dimension(mxifrq) ::  hold_efmo_coeff
+      double precision, dimension(nfrg,mxppts,nfrg,mxppts) :: 
+     *     efmo_weight(nfrg,mxppts,nfrg,mxppts)
+      double precision, parameter :: PI =3.1415926535897932D+00
+
+c$$$  efmo damping part
+
+      efmo_weight(IM,in,JM,jp) = 0
+
+      if(IDISPS .EQ. 1 .and. ntmo.gt. 0 ) then
+         IF (ABS(SAB) .GT. 1.0D-05) THEN
+            efmo_weight(IM,in,JM,jp)
+     *           = -DF6*
+     *           C6/R6 * (four/three) * swf
+         else
+            efmo_weight(IM,in,JM,jp) = 0
+         endif
+      endif
+C     
+c$$$  efmo dispersion
+c$$$  conx is the derivative of (4/3)F6 C_{6,id1,id2}/R^6_{id1,id2}
+c$$$  (holding C_6 constant) wrt the x-coord of polarization point id1
+c$$$  on im. since the energy is -(4/3)[] (note the negative!), we
+c$$$  subtract from IM and add to JM
+         
+      IM1 = iefmodim(im)
+      JM1 = iefmodim(jm)
+      F1 = ONE
+      F2 = ZERO
+      ipx = in
+      jpx = jp
+      
+      CALL EFMOESGM(IM1,JM1,ipx,0,-two*swf*conx,
+     *     -two*swf*cony,-two*swf*conz,TIX,TIY,TIZ,
+     *     TJX,TJY,TJZ,F2,F1,7)
+      
+      CALL EFMOESGM(JM1,JM1,jpx,0,two*swf*conx,
+     *     two*swf*cony,two*swf*conz,TIX,TIY,TIZ,
+     *     TJX,TJY,TJZ,F2,F1,7)
+      
+      if(IDISPS .EQ. 1 .and. ntmo.gt. 0 ) then      
+c$$$  this is for the derivative of the dynamic polarizability tensor
+c$$$  this is the coefficient of the derivative wrt an atom on IM
+c$$$  (4/3)*(3/pi) = (4/pi) 
+      pi_factor = four/pi/R6*F6*swf
+      
+      hold_efmo_coeff(1)= alpn1*fact1*pi_factor
+      hold_efmo_coeff(2)= alpn2*fact2*pi_factor
+      hold_efmo_coeff(3)= alpn3*fact3*pi_factor
+      hold_efmo_coeff(4)= alpn4*fact4*pi_factor
+      hold_efmo_coeff(5)= alpn5*fact5*pi_factor
+      hold_efmo_coeff(6)= alpn6*fact6*pi_factor
+      hold_efmo_coeff(7)= alpn7*fact7*pi_factor
+      hold_efmo_coeff(8)= alpn8*fact8*pi_factor
+      hold_efmo_coeff(9)= alpn9*fact9*pi_factor
+      hold_efmo_coeff(10)=alpn10*fact10*pi_factor
+      hold_efmo_coeff(11)=alpn11*fact11*pi_factor
+      hold_efmo_coeff(12)=alpn12*fact12*pi_factor
+      
+      call efmo_store_dyndisp( ipx, im1, hold_efmo_coeff )
+      
+c$$$  this is the coefficient of the derivative wrt an atom on JM 
+      hold_efmo_coeff(1)= alp1*fact1*pi_factor
+      hold_efmo_coeff(2)= alp2*fact2*pi_factor
+      hold_efmo_coeff(3)= alp3*fact3*pi_factor
+      hold_efmo_coeff(4)= alp4*fact4*pi_factor
+      hold_efmo_coeff(5)= alp5*fact5*pi_factor
+      hold_efmo_coeff(6)= alp6*fact6*pi_factor
+      hold_efmo_coeff(7)= alp7*fact7*pi_factor
+      hold_efmo_coeff(8)= alp8*fact8*pi_factor
+      hold_efmo_coeff(9)= alp9*fact9*pi_factor
+      hold_efmo_coeff(10)=alp10*fact10*pi_factor
+      hold_efmo_coeff(11)=alp11*fact11*pi_factor
+      hold_efmo_coeff(12)=alp12*fact12*pi_factor
+      
+      call efmo_store_dyndisp( jpx, jm1, hold_efmo_coeff )
+      endif
+
+      return
+      end
+
+*MODULE EFMOGRAD_DISP    *DECK efmo_disp_damping
+C>
+C>    @brief Calculates the derviative of the dispersion damping term
+C>
+C>    @details Calculates the derivative of the overlap-based damping
+C>             term. This is
+C>             \sum_{lm}^{LMO \in A,B} (\frac{dS_{lm}}{dx} C_{lm})
+C>             This has non-response and response terms, including
+C>             contributions to to the localization response.
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param weight_ds : [in] coefficient of dS/dx from the overlap-based damping in dispersion
+C>    @param provec : [in] LMO coefficients for all fragments
+C>           (max number of basis functions among all EFP fragments
+C>            * total number of LMOs (active occupied orbitals), summed over
+C>            all EFP fragments)
+C>    @param smat : [in] work space for overlap matrix in AO basis for one fragment
+C>    @param tmat : [in] work space for kinetic energy matrix in AO basis for one fragment
+C>    @param wrk : [in] work space
+C>    @param sab : [in] work space for overlap matrix in MO basis for one fragment
+C>    @param mxbf : [in] maximum number of basis functions in the EFP fragments
+C>    @param mxmo : [in] maximum number of localized (non-core) occupied MOs in the EFP fragments
+C>    @param dnew_density : [in] work space
+C>    @param ctvec : [in] work space to hold CMO coefficients
+C>    @param zvlag : [in/out] An array that stores the lagrangian and is used to
+C>           calculate the response. Exrep contributions are added in this routine
+C>    @param iptlg : [in] An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param efmo_tran : [in] work space that is filled with LMO transformation matrix
+C>
+      SUBROUTINE efmo_disp_damping(weight_ds,PROVEC,SMAT,TMAT,WRK,SAB,
+     *                  MXBF,MXMO,
+     *                  dnew_density,
+     *                  ctvec, zvlag, iptlg, efmo_tran )
+C
+      IMPLICIT DOUBLE PRECISION (A-H, O-Z)
+C
+      LOGICAL GOPARR, DSKWRK, MASWRK
+C
+      PARAMETER (MXDFG=5, MXFRG=1050, MXFGPT=12000,
+     *           MXSHEF=1000, MXGEFP=4000,
+     *           MXDPPT=MXFRG*MXDFG*12, MXAO=8192)
+      PARAMETER (ZERO=0.0D+00,ONE=1.0D+00,HALF=0.5D+00)
+C
+      COMMON /EFPBAS/ EX(MXGEFP,MXDFG),CS(MXGEFP,MXDFG),
+     *                CP(MXGEFP,MXDFG),CD(MXGEFP,MXDFG),
+     *                CF(MXGEFP,MXDFG),CG(MXGEFP,MXDFG),
+     *                PRNAME(MXFGPT),PRCORD(3,MXFGPT),EFZNUC(MXFGPT),
+     *                KSTART(MXSHEF,MXDFG),KATOM(MXSHEF,MXDFG),
+     *                KTYPE(MXSHEF,MXDFG),KNG(MXSHEF,MXDFG),
+     *                KLOC(MXSHEF,MXDFG),KMIN(MXSHEF,MXDFG),
+     *                KMAX(MXSHEF,MXDFG),NSHELL(MXDFG),NGAUSS(MXDFG),
+     *                NAT(MXDFG),NUM(MXDFG),NTPATM
+      COMMON /EFPCT / NOCC(MXDFG),NVIR(MXDFG),NAO(MXDFG),NTAO,
+     *                CTFOK(MXAO,MXDFG),NCTMO(MXDFG),NTCTMO
+      COMMON /EFPPBC/ XBOX,YBOX,ZBOX,XCUT,YCUT,ZCUT,RCUT
+     *                ,SWR1,SWR2,ISWF
+      COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+     *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+     *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+     *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+     *                IMODEFCT,IDIMTYP,iefmo_agrad
+      COMMON /FGRAD / DEF(3,MXFGPT),DEFT(3,MXFRG),TORQ(3,MXFRG),
+     *                EFCENT(3,MXFRG),FRGMAS(MXFRG),FRGMI(6,MXFRG),
+     *                ATORQ(3,MXFRG)
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /FRGTYP/ NDFRG,ISET(MXFRG),NAMIDX(MXDFG)
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PAULMO/ CENTNM(MXFGPT),CENTCD(3,MXFGPT),NORB(MXFRG),
+     *                NPBF(MXFRG),NTMO
+C
+      DIMENSION PROVEC(MXBF,NTMO),
+     *          SMAT(MXBF,MXBF),TMAT(MXBF,MXBF),
+     *          WRK(MXBF),SAB(MXMO,MXMO),
+     *          dnew_density(mxbf,mxbf,4),
+     *          CTVEC(MXBF,NTCTMO),
+     *     weight_ds(nfrg,mxmo,nfrg,mxmo)
+      DIMENSION efmo_tran(mxmo,mxmo,3)
+      dimension zvlag(1), iptlg(1)
+C
+      IF(NTMO.EQ.0) RETURN
+
+C
+C     NOTE 'JM' IS MOLECULAE 'A', 'IM' IS MOLECULE 'B'
+C
+C
+C     - INITIALIZE PARALLEL
+      IPCOUNT = ME - 1
+
+      JNAT = 1
+      JMO = 1
+      jmmo = 1
+      DO MJ = 1,NFRG
+         JM=ISET(MJ)
+c
+         INAT = 1
+         IMO = 1
+
+         COMX1 = EFCENT(1,MJ)
+         COMY1 = EFCENT(2,MJ)
+         COMZ1 = EFCENT(3,MJ)
+
+         DO MI = 1,NFRG
+            IM=ISET(MI)
+
+c$$$ don't calculate when mi=mj
+               if(mi .eq. mj) GOTO 502
+
+C           - GO PARALLEL!
+            IF(GOPARR) THEN
+               IPCOUNT = IPCOUNT + 1
+               IF(MOD(IPCOUNT,NPROC).NE.0) GO TO 502
+            END IF
+
+c$$$ get PBC
+              COMX2 = EFCENT(1,MI)
+              COMY2 = EFCENT(2,MI)
+              COMZ2 = EFCENT(3,MI)
+              COMX = COMX1 - COMX2
+              COMY = COMY1 - COMY2
+              COMZ = COMZ1 - COMZ2
+
+              PBCX = ZERO
+              PBCY = ZERO
+              PBCZ = ZERO
+              IF (XBOX .NE. ZERO) PBCX = XBOX * ANINT(COMX/XBOX)
+              IF (YBOX .NE. ZERO) PBCY = YBOX * ANINT(COMY/YBOX)
+              IF (ZBOX .NE. ZERO) PBCZ = ZBOX * ANINT(COMZ/ZBOX)
+              
+              DO NATIM=1,NAT(IM)
+                 PRCORD(1,INAT+NATIM-1) = PRCORD(1,INAT+NATIM-1)+PBCX
+                 PRCORD(2,INAT+NATIM-1) = PRCORD(2,INAT+NATIM-1)+PBCY
+                 PRCORD(3,INAT+NATIM-1) = PRCORD(3,INAT+NATIM-1)+PBCZ
+              ENDDO
+C
+C     -- SAB AND TAB --
+C
+            CALL STINT(SMAT,TMAT,MXBF,MXBF,NAT(IM),NAT(JM),
+     *           NGAUSS(IM),NSHELL(IM),EX(1,IM),CS(1,IM),
+     *           CP(1,IM),CD(1,IM),CF(1,IM),CG(1,IM),KSTART(1,IM),
+     *           KATOM(1,IM),KTYPE(1,IM),KNG(1,IM),KLOC(1,IM),
+     *           KMIN(1,IM),KMAX(1,IM),NGAUSS(JM),NSHELL(JM),
+     *           EX(1,JM),CS(1,JM),CP(1,JM),CD(1,JM),CF(1,JM),
+     *           CG(1,JM),KSTART(1,JM),KATOM(1,JM),KTYPE(1,JM),
+     *           KNG(1,JM),KLOC(1,JM),KMIN(1,JM),KMAX(1,JM),
+     *           PRCORD(1,INAT),PRCORD(1,JNAT))
+            CALL VCLR(SAB,1,MXMO*MXMO)
+            CALL TFSQP(SAB,SMAT,PROVEC(1,JMO),PROVEC(1,IMO),WRK,
+     *           MXBF,MXBF,NORB(MJ),NORB(MI),MXMO,MXMO,.FALSE.)
+
+
+            call vclr( dnew_density,1,mxbf*mxbf*4)
+
+c$$$  get efmo_trans for A
+            call efmo_retrieve_tran( efmo_tran, mxmo,norb(mj),
+     *           iefmodim( mj ) )
+
+               num_AO_A = kloc(nshell(jm),jm) +
+     *              (kmax(nshell(jm),jm) - kmin(nshell(jm),jm) )
+               num_AO_B = kloc(nshell(im),im) +
+     *              (kmax(nshell(im),im) - kmin(nshell(im),im) )            
+
+c$$$ This makes S_{qi}, where q is all CMOs on JM and i is LMOs on IM
+            CALL DGEMM('N','N',num_AO_A,norb(mi),num_AO_B,ONE,SMAT,
+     *           MXBF,provec(1,imo),MXBF,ZERO,dnew_density(1,1,2),
+     *           MXBF)
+
+            CALL DGEMM('T','N',nocc(jm)+nvir(jm),norb(mi),num_AO_A,ONE,
+     *           CTVEC(1,jmmo),MXBF,dnew_density(1,1,2),MXBF,ZERO,
+     *           dnew_density(1,1,3),MXBF)
+
+
+c$$$ this is the density for the overlap derivative
+            DO I = 1, norb(mj)
+               DO J = 1, norb(mi)
+c$$$  put the larger one last
+                  if( mi .lt. mj) then
+                     weight_ds2 = weight_ds(mi, j, mj, i)
+                  else
+                     weight_ds2 = weight_ds(mj, i, mi, j)
+                  endif
+                  dnew_density(i,j,2) = weight_ds2
+               enddo
+            enddo
+            CALL DGEMM('N','T',norb(mj),num_AO_B,norb(mi),ONE,
+     *           dnew_density(1,1,2),MXBF,provec(1,imo),MXBF,ZERO,
+     *           dnew_density(1,1,4),MXBF)
+
+            CALL DGEMM('N','N',num_AO_A,num_AO_B,norb(mj),ONE,
+     *           provec(1,jmo),MXBF,dnew_density(1,1,4),MXBF,ZERO,
+     *           dnew_density(1,1,2),MXBF)
+
+            call vclr( dnew_density(1,1,4),1,mxbf*mxbf )
+
+c$$$ prepping for occ-vir resp terms
+
+            DO 200 I = 1, norb(mj)
+
+               DO 300 J = 1, norb(mi)
+
+
+c$$$  put the larger one last
+                  if( mi .lt. mj) then
+                     weight_ds2 = weight_ds(mi, j, mj, i)
+                  else
+                     weight_ds2 = weight_ds(mj, i, mi, j)
+                  endif
+
+                  ncore = nocc(jm) - norb(mj)
+
+c$$$ used for occ-occ resp term
+
+               DO K = 1, norb(mj)
+c     loop over A
+c$$$ for the nonsym occ-occ terms
+                  dnew_density( i, k, 1) =
+     *                 dnew_density( i, k, 1)
+     *                 +weight_ds2
+     *                 *sab(k,j)
+
+               END DO
+
+
+c$$$  occ-vir resp and nosymm occ-occ resp
+               do k = 1, nvir(jm)+nocc(jm)
+                  do i_t = ncore+1, nocc(jm)
+
+                     dnew_density( i_t,k,4 ) =
+     *                    dnew_density( i_t,k,4 ) + 
+     *                    dnew_density(k,j,3)
+     *                    *efmo_tran(i,i_t-ncore,1)
+     *                    *weight_ds2
+
+                  enddo
+               enddo
+C
+ 300           CONTINUE
+ 200        CONTINUE
+
+c$$$ occ-vir contribution
+               iov = 0
+               do i_t=1, nocc(jm)                        
+                  do k = 1, nvir(jm)
+
+c$$$  stores into the langrangian for the Z-vector method.
+                     iov = iov + 1
+                     ie = iefmodim( mj )
+
+                     call daxpy( 1, half*half,
+     *                    dnew_density(i_t,nocc(jm)+k,4),
+     *                    1, zvlag(iptlg(ie)+iov-1),1 )
+
+                  enddo
+               enddo
+
+            index_atom = lstmpts( mj )
+
+c$$$ AO derivatives of S
+            dum = 0.0D+00
+            CALL efmo_str_deriv(MXBF,MXBF,NAT(IM),NAT(JM),
+     *           NGAUSS(IM),NSHELL(IM),EX(1,IM),CS(1,IM),
+     *           CP(1,IM),CD(1,IM),CF(1,IM),CG(1,IM),KSTART(1,IM),
+     *           KATOM(1,IM),KTYPE(1,IM),KNG(1,IM),KLOC(1,IM),
+     *           KMIN(1,IM),KMAX(1,IM),NGAUSS(JM),NSHELL(JM),
+     *           EX(1,JM),CS(1,JM),CP(1,JM),CD(1,JM),CF(1,JM),
+     *           CG(1,JM),KSTART(1,JM),KATOM(1,JM),KTYPE(1,JM),
+     *           KNG(1,JM),KLOC(1,JM),KMIN(1,JM),KMAX(1,JM),
+     *           PRCORD(1,INAT),PRCORD(1,JNAT),.true.,.false.,.false.,
+     *           index_atom, 1.00D+00, 1, dnew_density(1,1,2),
+     *           dum,dum,dum,dum, .false.,.false. )
+
+            ie = iefmodim( mj )
+
+c$$$ call something else to store the CPL coefficient
+            call efmo_store_cpl_coeff( dnew_density(1,1,1), ie,mxbf,
+     *           norb(mj))
+
+c$$$ recalulcate the occ-occ contrib, and make sure to use T and the CMO
+
+c$$$ send nonsym occ-occ to subroutine
+         call efmo_occ_occ_resp( dnew_density(1,1,4), ie,lstmpts(mj),
+     *     mxbf,dnew_density, nocc(jm), num_AO_A,ctvec(1,jmmo),
+     *     ctfok(1,jm), dnew_density(1,1,3), nat(jm), ngauss(jm),
+     *     NSHELL(JM),EX(1,JM),CS(1,JM),CP(1,JM),CD(1,JM),CF(1,JM),
+     *     CG(1,JM),KSTART(1,JM),KATOM(1,JM),KTYPE(1,JM),
+     *     KNG(1,JM),KLOC(1,JM),KMIN(1,JM),KMAX(1,JM),
+     *     PRCORD(1,JNAT),nocc(jm), 0, .false.,ncore)
+C
+C
+            DO NATIM=1,NAT(IM)
+            PRCORD(1,INAT+NATIM-1) = PRCORD(1,INAT+NATIM-1)-PBCX
+            PRCORD(2,INAT+NATIM-1) = PRCORD(2,INAT+NATIM-1)-PBCY
+            PRCORD(3,INAT+NATIM-1) = PRCORD(3,INAT+NATIM-1)-PBCZ
+            ENDDO
+
+ 502        CONTINUE
+            IMO = IMO + NORB(MI)
+            INAT = INAT + NAT(IM)
+         END DO
+c$$$ ends loop over A.
+         JMO = JMO + NORB(MJ)
+         JNAT = JNAT + NAT(JM)
+         jmmo = jmmo + nctmo(jm)
+      END DO
+
+      RETURN
+      END
+
+*MODULE EFMOGRAD_DISP     *DECK efmograd_disp_solve_zvector
+C>
+C>    @brief calculates and contracts zvector for dispersion gradient for a fragment
+C>
+C>    @details Solves the zvector (Z^{scptdhf}_{\beta, \omega}) equation for the
+C>             input arrays for a certain fragment
+C>
+C>             Zvector equation:
+C>
+C>             ((H1)(H2) - w^2) Z^{scptdhf}_{\beta, \omega} = N
+C>             
+C>             Then forms some intermediate arrays contracted with
+C>             the Zvector and stores them in contracted_zvector
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param contracted_zvector :: [out] array where Zvector, H2*Zvector(g,w),
+C>           and 4*H1*Ug(w) are stored
+C>    @param nxyz :: [in] number of fields
+C>    @param ndpfreq :: [in] number of dynamic frequencies
+C>    @param efmo_f_resp :: [in] A double array of (3,13,X), where
+C>           X= \sum_i^{all fragments}(num occ MOs in fragment i)
+C>           * (num vir MOs in fragment i). It holds the responses for the
+C>           static and dynamic polarizability tensors. The first dimension
+C>           is the x,y, or z field. The second dimension distinguishes
+C>           between the static and dynamic polarizability tensors. (3,1,X)
+C>           holds U^g_{ij} is the canonical orbital response to field g. The
+C>           next 12 spots (3,2,X) to (3,13,X) hold the dynamic response vectors,
+C>           Z^g_{ij}(w),where w is one of 12 frequencies.
+C>    @param ug :: [in] field and frequency response matrix
+C>    @param nocc :: [in] int containing the number of occupied orbitals
+C>    @param nvir :: [in] int containing the number of virtual orbitals
+C>    @param ifg :: [in] specific fragment 
+C>    @param iptlg :: [in] An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other. 
+C>    @param nfg :: [in] number of EFMO fragments
+C>    @param cont_b_c :: [in] work array
+C>    @param efmo_scptdhf :: [in] A double array of (nov,3,12). This holds the coefficient
+C>           of the term needed in the second order response for the
+C>           dispersion energy. That is, for the term
+C>           \sum_i^{vir} \sum_j^{occ} \sum_g \sum_{\omega}^{12}
+C>           \left( C(ij,g,m) \frac{Z^{g}_{ij}(\omega)}{\partial x_a} \right),
+C>           this is C().
+C>    @param zvector :: [out] z-vector (*, field, freq) (Z^{scptdhf}_{\beta, \omega})
+C>    @param h_work :: [in] work array for reading H2/H1 from disk 
+C>    @param nwidth :: [in] blocking for reading H1 or H2 array from disk
+C>    @param num2 :: [in]  is the number of triangular AOs ((L1*L1+L1)/2)
+C>    @param nft16 :: [in] file index for H1
+C>    @param nfth2 :: [in] file index for H2
+C>    @param nfth21 :: [in] file index for H1H2
+C>
+      subroutine efmograd_disp_solve_zvector( contracted_zvector,
+     *     nxyz, ndpfreq, efmo_f_resp, ug, nocc, nvir, ifg, iptlg,
+     *     nfg, cont_b_c, efmo_scptdhf, zvector, h_work, nwidth, num2,
+     *     nft16, nfth2, nfth21 )
+
+      implicit none
+      integer nxyz, ndpfreq, ind, nocc, nvir, ifg,nfg,num2,
+     *     nwidth, num_resp, nrot, me,master,nproc,ibtyp,iptim,
+     *     nft16, nfth2, nfth21, nsolv, loadfm, lh1, last, needh1
+      integer, dimension(36) :: nocp
+
+      double precision, dimension(3,13,*):: efmo_f_resp
+      double precision, dimension(nvir*nocc,3,12) :: ug
+      double precision, dimension(*) :: cont_b_c
+      double precision, dimension(*) :: zvector
+      double precision, dimension(*) :: contracted_zvector
+      double precision, dimension(*) :: efmo_scptdhf
+      double precision, dimension(*) :: h_work
+      integer, dimension(*) :: iptlg
+      double precision :: x, dum
+
+      logical goparr,maswrk,dskwrk
+
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /FMCOM / X(1)
+
+c$$$  set up nocp
+         do ind=1,nxyz*ndpfreq
+            nocp(ind)=0
+         enddo
+
+         nsolv = nxyz
+         nrot = nocc*nvir
+         num_resp = nxyz*ndpfreq
+
+c$$$  we're going to try to calculate 2*dipole + h1*dyn_resp
+         call efmo_retrieve_ug2( efmo_f_resp, ug, nocc, nvir,
+     *        ifg,iptlg)
+
+c$$$ copy the scptdhf coefficient into cont_b_c
+         call efmo_fill_work_array( nocc, nvir, nxyz, ndpfreq,
+     *        cont_b_c,
+     *        efmo_scptdhf, iptlg(ifg), iptlg(nfg+1) )
+
+c$$$ calculate the zvector for this fragment
+         if(maswrk) then
+            call solvcpdyn(h_work,cont_b_c,
+     *           zvector,nrot,nxyz,nocp,
+     *           dum,nwidth,nsolv,
+     *           num2,nocc,nvir,nft16,nfth2,nfth21,
+     *           dum,dum,dum,dum,0,0, dum,dum,
+     *           dum,dum,dum,dum,ndpfreq )
+
+            call valfm(loadfm)
+            lh1 = loadfm + 1
+            last = lh1  + nrot*nwidth
+            needh1 = last - lh1
+            call getfm( needh1)
+
+            call efmo_calc_zvector_coeffs( contracted_zvector, x(lh1),
+     *           nft16,nfth2, ug, nrot, nwidth, nocc, nvir,
+     *           nxyz, ndpfreq,cont_b_c, zvector)
+            
+            call retfm( needh1)
+         
+         end if
+
+
+c$$$ broadcast it to the other processors
+         call ddi_bcast(3002,'f',contracted_zvector,
+     *        nrot*nxyz*num_resp,0)
+
+
+      return
+      end

@@ -1,0 +1,37 @@
+{
+  "name": "efp1-fo-64watmp2.log",
+  "validation": [
+    {
+      "header": "MD",
+      "name": "POTENTIAL ENERGY - MD",
+      "value": "-867.85164461",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "TRANSLATIONAL KINETIC ENERGY - MD",
+      "value": "60.33860568",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "ROTATIONAL KINETIC ENERGY - MD",
+      "value": "68.10202673",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "TOTAL KINETIC ENERGY - MD",
+      "value": "128.44063241",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    }
+  ]
+}

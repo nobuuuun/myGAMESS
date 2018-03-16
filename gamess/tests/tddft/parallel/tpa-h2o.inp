@@ -1,0 +1,58 @@
+!   two photon absorption spectrum of water...SVWN/6-31G level
+!   this seems a poor test, but it is what Federico used;
+!   a small molecule with a two photon spectrum would be better.
+!   30 eV range in a DZ basis set?
+!
+!      the energy values here are NOT the point of this test case:
+!   FINAL R-SVWN E= -75.8181076415, 15 iters
+!  STATE             ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+!  0  A          -75.8181076415    0.000
+!  1  A          -75.5407542273    7.547     0.0000 -0.2476  0.0000    0.011
+!  2  A          -75.4715397591    9.431     0.0000  0.0000  0.6357    0.093
+!  3  A          -75.4586968680    9.780     0.0000  0.0000  0.0000    0.000
+!  4  A          -75.3752248300   12.051    -0.5523  0.0000  0.0000    0.090
+!  5  A          -75.2815506234   14.600     1.0427  0.0000  0.0000    0.389
+!  6  A          -75.1558652799   18.021     0.0000  0.0000  0.7123    0.224
+!  7  A          -74.8215496428   27.118     0.0000  0.0000 -0.1994    0.026
+!  8  A          -74.8058625586   27.545     0.0000  0.0000  0.0000    0.000
+!  9  A          -74.7537895485   28.962     0.0000  0.3407  0.0000    0.082
+! 10  A          -74.7468638407   29.150    -0.3709  0.0000  0.0000    0.098
+!
+!   the 2nd excited state prints 
+!  TPA TRANSITION (SYMMETRIC) TENSOR ELEMENTS (A.U.):
+!               S(1,1) =    -5.5292
+!               S(2,2) =    -1.0223
+!               S(3,3) =    -7.8910
+!     DF = (SUM_{I,J} S(I,I)*S(J,J))/30 =        6.9529 (A.U.)
+!     DG = (SUM_{I,J} S(I,J)*S(I,J))/30 =        3.1295 (A.U.)
+!     D (LINEAR POLARIZATION)   =  2*DF+4*DG =        26.4239 (A.U.)
+!     D (CIRCULAR POLARIZATION) = -2*DF+6*DG =         4.8714 (A.U.)
+!     R (POLARIZATION RATIO) = (-DF+3*DG)/(DF+2*DG) =         0.1844
+!
+!   the tenth excited state prints
+!  TPA TRANSITION (SYMMETRIC) TENSOR ELEMENTS (A.U.):
+!               S(1,1) =     0.0122
+!               S(3,1) =   -75.7139
+!               S(3,3) =     0.0001
+!     DF = (SUM_{I,J} S(I,I)*S(J,J))/30 =        0.0000 (A.U.)
+!     DG = (SUM_{I,J} S(I,J)*S(I,J))/30 =      382.1728 (A.U.)
+!     D (LINEAR POLARIZATION)   =  2*DF+4*DG =      1528.6912 (A.U.)
+!     D (CIRCULAR POLARIZATION) = -2*DF+6*DG =      2293.0367 (A.U.)
+!     R (POLARIZATION RATIO) = (-DF+3*DG)/(DF+2*DG) =         1.5000
+!
+!   this run takes 37 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!   results have not changed since 2012.
+!
+ $contrl units=bohr scftyp=rhf dfttyp=svwn tddft=excite $end
+ $tddft  nstate=10 mult=1 tpa=.t. $end
+ $basis  gbasis=N31 ngauss=6 $end
+ $data
+ H2O
+C1
+O 8.0     0.000000   0.0 -0.1239583    
+H 1.0     1.434376   0.0  0.9836541    
+H 1.0    -1.434376   0.0  0.9836541   
+ $end 
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,53 @@
+!      water dipole by numerical differentiation wrt applied electric field.
+!      test case created in June 2014 (for testing ACPF/AQCC density mtx).
+!
+!      This is a way to test a new "expectation value density matrix".
+!      Here we run RHF, for which we are certain the density is correct,
+!      just to show how to do this for something else.
+!
+!      Run this job three times, to obtain these energies
+!           positive field: FINAL RHF E= -76.0426204259
+!         no applied field: F.NAL RHF E= -76.0418435627
+!           negative field: F.NAL RHF E= -76.0410745552
+!      The middle run prints analytic dipole from RHF density = 1.964622
+!
+!      central differencing (we do it by hand!) gives numerical dipole as
+!             mu-z = (E(ez) - E(-ez))/(2*ez)
+!      0.0015458707/0.002 = 0.772935 a.u. * 2.54176 = 1.964616 Debye.
+!
+!      Note that numerical differentiation should not be pushed to
+!      very tiny step sizes.  We need some significant figures in
+!      the numerator!  GAMESS energies can typically be trusted to
+!      the 8th absolute decimal place, so here the energy difference
+!      contains about 6 significant figures, because of the 0.001 field
+!      magnitude choice.  So, we get about 5 figures in the dipole.
+!
+!      The step size is easy to test, as other choices near the same
+!      value should be numerically similar derivatives.  You can also
+!      compare forward and reverse differences to the more accurate
+!      central difference,
+!             mu-z = (E(ez) - E(0))  /ez
+!             mu-z = (E(0)  - E(-ez))/ez
+!      to get a feel for the 'noise' in the numerical differentiation.
+!
+!      this run takes 0 seconds on 2.66 GHz Cloverton (15 Apr 2015)
+!
+ $contrl scftyp=rhf runtyp=energy ispher=1 $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=accd $end
+
+ $efield evec(1)=0,0,+0.001 sym=.true. $end
+x$efield evec(1)=0,0,-0.001 sym=.true. $end
+
+ $data
+water at RHF/ACCD equilibrium geometry
+Cnv 2
+
+O   8.0   0.0000000000   0.0000000000  -0.0713935645
+H   1.0   0.7532774336   0.0000000000   0.4969447909
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

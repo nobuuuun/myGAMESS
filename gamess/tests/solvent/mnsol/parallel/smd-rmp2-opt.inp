@@ -1,0 +1,40 @@
+!   protonated methanol in acetonitrile.  SMD/IEF-PCM for R-MP2
+!
+!   the optimization steps are monotonically decreasing:
+!      nserch=0:   E(MP2)= -115.7584253799 RMS GRADIENT = 0.0049354
+!      nserch=1:   E(MP2)= -115.7588459115 RMS GRADIENT = 0.0073501
+!      nserch=2:   E(MP2)= -115.7586228769 RMS GRADIENT = 0.0139977
+!      nserch=3:   E(MP2)= -115.7590540867 RMS GRADIENT = 0.0081512
+!             ...
+!      nserch=20:  E(MP2)= -115.7599466664 RMS GRADIENT = 0.0001008
+!      nserch=21:  E(MP2)= -115.7599467223 RMS GRADIENT = 0.0000510
+!      nserch=22:  E(MP2)= -115.7599467190 RMS GRADIENT = 0.0000134
+!      nserch=23:  E(MP2)= -115.7599467288 RMS GRADIENT = 0.0000016
+!
+!  this run takes 60 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!
+ $CONTRL SCFTYP=RHF mplevl=2 icharg=+1 RUNTYP=OPTIMIZE nzvar=15 $end
+ $system parall=.t. mwords=1 memddi=5 $end
+ $mp2    code=ddi $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+
+ $PCM    SOLVNT=ACETNTRL SMD=.T. $end
+
+ $statpt opttol=1d-5 $end
+ $zmat   izmat(1)=1,1,2,  1,4,2,  1,5,2,  1,2,3,  1,3,6,  1,3,7,
+             2,1,2,3,  2,4,2,3,  2,5,2,3,  2,6,3,2,  2,7,3,2,
+             3,4,2,3,6,  3,5,2,3,7,  3,1,2,3,6,  3,1,2,3,7 $end
+ $DATA
+SMD/MP2/6-31G(d) optimization - protonated methanol CH3OH2+ in acetonitrile
+C1
+H     1   -0.996782    1.138765    0.000000
+C     6    0.038330    0.800183    0.000000
+O     8    0.038330   -0.725816    0.000000
+H     1    0.585508    1.066678    0.901842
+H     1    0.585508    1.066678   -0.901842
+H     1   -0.355429   -1.133347   -0.803114
+H     1   -0.355429   -1.133347    0.803114
+ $END
+
+! TRAVIS-CI SMALL
+

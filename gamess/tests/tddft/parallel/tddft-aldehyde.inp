@@ -1,0 +1,373 @@
+!  Acetaldehyde at the (frozen core) CIS geometry of the 1st excited state.
+!  Since there is no functional, this is TD-HF rather than TD-DFT.
+!  This input shows Tamm/Dancoff TD-HF and CIS are the same.
+!
+!  This run also demonstrates equivalence of many code's dipoles and
+!  transition dipoles, where the latter are available, and teaches
+!  us what the amplitude/CI coefficient printing should look like.
+!
+!  All runs doing RHF should get -152.9025456166 in 16 iterations.
+!  To pound out extra digits, integral and SCF and Davidson 
+!  convergence tolerances have been tightened up.
+!        G.S. FINAL RHF energy is -152.9025456173 after 17 iters
+!    the first excited singlet is -152.7520243038 by Tamm/Dancoff
+!                                 -152.7520243074 by CIS
+!                                 -152.7520243073 by ORMAS' CIS
+!                                 -152.752024309  by GUGA's CIS
+!      the 2nd excited singlet is -152.5984379915 by Tamm/Dancoff
+!                                 -152.5984379988 by CIS
+!                                 -152.5984380014 by ORMAS' CIS
+!                                 -152.598438001  by GUGA's CIS
+!  Differences are not gridding, since there is no grid in TD-HF runs.
+!
+!  There is copious information about various results saved below.
+!
+!  The TD-HF run requires 22 seconds on 2.66 GHz Cloverton (10 Dec 2010)
+!
+!  the next inputs are read by all runs, also select one subset below:
+ $contrl scftyp=rhf runtyp=energy icut=10 $end
+ $system mwords=25 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 diffsp=.t. $end
+ $guess  guess=huckel $end
+ $scf    conv=1d-7 $end
+ $data
+Acetaldehyde CIS/6-31+G(d,p) ... test Tamm/Dancoff versus CIS.
+C1
+O  8.0   1.1749004953  -0.1879719947   0.4752860569
+C  6.0   0.2556992876   0.3841215944  -0.1614184387
+C  6.0  -1.1717695425  -0.1486126665  -0.0135388684
+H  1.0   0.3743032374   1.4593885056  -0.2865160703
+H  1.0  -1.5455209379  -0.0149684377   0.9993780758
+H  1.0  -1.8050811582   0.3946990293  -0.7025472250
+H  1.0  -1.2003543817  -1.2022130304  -0.2606435302
+ $end
+
+To use this test, pick one of the 6 input sets below, all of
+which generate the same singlets, in some cases adding triplets.
+The standard test case is meant to be the first set.
+
+Note that runs 1, 2, and 4 can also choose a nuclear gradient
+calculation, below the last input set.
+
+And below that, are a lot of comparisons of dipoles and transition dipoles
+
+!    1. Using Tamm/Dancoff-style TDDFT, but with no DFT functional= TD-HF
+   STATE         ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+              HARTREE          EV         X       Y       Z     STRENGTH
+   0  A   -152.9025456173     .000
+   1  A   -152.7520243038    4.096      .0865   .0937   .0026     .002
+   2  A   -152.5984379915    8.275     -.5474   .2273  -.3280     .093
+ $contrl tddft=excite dfttyp=none $end
+ $tddft  nstate=2 iroot=1 tammd=.true. tdprp=.true. cnvtol=1d-7 $end
+
+!    2. Here is the conventional CIS calculation
+!       the TD-DFT program has no concept of frozen cores, so the two
+!       CI runs below must excite from core orbitals to match it.
+ EXCITED STATE   1  ENERGY=      -152.7520243074  S =  .0  SPACE SYM = A
+ EXCITED STATE   2  ENERGY=      -152.5984379988  S =  .0  SPACE SYM = A
+--- $contrl cityp=cis $end
+--- $cis    nacore=0 nstate=2 iroot=1 hamtyp=saps mult=1
+---         cisprp=.true. davcvg=1d-7 $end
+
+!    3. The CIS can also be done with ORMAS
+!       a) The first electron distribution should be used, to omit the
+!       SCF solution.  Inclusion of the unit CI vector solution of the
+!       ground state can cause numerical difficulties.
+!       b) Since this molecule has two nearly degenerate states for
+!       excited states 7 and 8, both must be included to converge.
+!       c) Just to make sure some obscure options about what CI steps to
+!       run or debug printing, three unnecessary "N" inputs are given.
+!       These are totally irrelevant to the chemistry of the run!
+ STATE   1  ENERGY= -152.7820173052  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE   2  ENERGY= -152.7612783739  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE   3  ENERGY= -152.7520243073  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE   4  ENERGY= -152.6294603018  S=  1.00  SZ=  0.00  SPACE SYM=A  
+ STATE   5  ENERGY= -152.5984380014  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE   6  ENERGY= -152.5893472288  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE   7  ENERGY= -152.5764701255  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE   8  ENERGY= -152.5757809797  S=  0.00  SZ=  0.00  SPACE SYM=A
+--- $contrl cityp=ormas $end
+--- $trans  cuttrf=1d-10 $end
+--- $ciinp  nrnfg(1)=1,1,1,0,1,0 npflg(2)=1 $end
+--- $cidet  ncore=0 nact=77 nels=24 nstate=8 iroot=1
+---         nflgdm(1)=1,2    cvgtol=1d-7    $end
+--- $ormas  nspace=2 mstart(1)=1,13 mine(1)=23,1 maxe(1)=23,1 $end
+        to include the ground state in the determinant definition:
+                                    mine(1)=23,0 maxe(1)=24,1
+
+!    4. The CIS can also be done with GUGA, 1 ground plus 780 excited CSFs:
+--- $contrl cityp=guga $end
+--- $trans  cuttrf=1d-10 $end
+--- $cidrt  nfzc=0 ndoc=12 nval=65 iexcit=1 mxnint=1000000 $end
+--- $gugdia nstate=8 cvgtol=1d-7 $end
+--- $gugdm  iroot=2 nflgdm(1)=1,2 $end
+
+!    5. to get transition densities, via GUGA,
+!  ===> you must add a RHF orbital group as $VEC1 to use this <===
+--- $contrl scftyp=none cityp=guga runtyp=transitn $end
+--- $transt operat=dm NFZC=0 NUMVEC=1 NUMCI=1 IROOTS(1)=2
+---         nosym=0 iprhso=0 skipdm=.false. $END
+--- $trans  cuttrf=1d-10 $end
+--- $drt1   nfzc=0 ndoc=12 nval=65 iexcit=1 mxnint=1000000 $end
+--- $gugdia nstate=8 cvgtol=1d-7 $end
+
+!    6. add triplet states, and spin-orbit couple S0,S1,T1
+!  ===> you must add a RHF orbital group as $VEC1 to use this <===
+!       Note that the number of triplet CSFs explodes up to 64,974!
+!       Russell-Saunders:  S0= -152.9025456, T1= -152.8406245, S1= -152.7520243
+!       OPERAT=HSO1 produces levels at   (70 s.conds on 2.66 GHz Cloverton)
+!               1            0.0000   -152.9025480426
+!               2        13590.8878   -152.8406244558
+!               3        13590.8878   -152.8406244558
+!               4        13591.4199   -152.8406220312
+!               5        33036.7037   -152.7520243079
+!       OPERAT=HSO2 produces levels at  (221 s.conds on 2.66 GHz Cloverton)
+!               1            0.0000   -152.9025465365
+!               2        13590.5573   -152.8406244558
+!               3        13590.5573   -152.8406244558
+!               4        13590.7590   -152.8406235367
+!               5        33036.3730   -152.7520243084
+--- $contrl scftyp=none cityp=guga runtyp=transitn $end
+--- $transt operat=hso1 NFZC=0 NUMVEC=1 NUMCI=2 IROOTS(1)=2,1
+---         nosym=0 skipdm=.false. $END
+--- $trans  cuttrf=1d-10 $end
+--- $drt1   nfzc=0 ndoc=12 nalp=0 nval=65 iexcit=1 mxnint=1000000 $end
+--- $drt2   nfzc=0 ndoc=11 nalp=2 nval=64 iexcit=1 mxnint=1000000 $end
+--- $gugdia nstate=8 cvgtol=1d-7 $end
+
+====== input related to nuclear gradient:
+
+!    TDHF (TDDFT), CIS, and GUGA runs can geometry optimize, if wished,
+!    but not the ORMAS or the spin-orbit runs.
+!    Since the coordinates are already optimized, we allow only 1 step.
+!    The GUGA run needs a little extra help over and above its IROOT to
+!    do the gradient for S1!
+!    RMS results: TDHF= 0.0000029, CIS= 0.0000021, GUGA= 0.0000064
+--- $contrl runtyp=optimize $end
+--- $statpt nstep=1 opttol=1d-5 $end
+--- $gugdm2 wstate(1)=0,1 $end
+!
+!    we could also make other kinds of gradient checks:
+!    If the Z coordinate of oxygen is changed from 7 to 0 in the 2nd digit,
+!    a real geometry optimization will occur.  The TD-HF run does this,
+!           NSERCH:   0  E= -152.7503702405  R.M.S.=   .0154901
+!           NSERCH:   1  E= -152.7481613994  R.M.S.=   .0141039
+!           NSERCH:   2  E= -152.7516826380  R.M.S.=   .0033222
+!           NSERCH:   3  E= -152.7518207394  R.M.S.=   .0029603
+!           NSERCH:   4  E= -152.7519892086  R.M.S.=   .0006613
+!           NSERCH:   5  E= -152.7520104968  R.M.S.=   .0007239
+!           NSERCH:   6  E= -152.7520222985  R.M.S.=   .0003106
+!           NSERCH:   7  E= -152.7520229990  R.M.S.=   .0002430
+!           NSERCH:   8  E= -152.7520242139  R.M.S.=   .0000497
+!           NSERCH:   9  E= -152.7520241884  R.M.S.=   .0000638
+!           NSERCH:  10  E= -152.7520242988  R.M.S.=   .0000093
+!           NSERCH:  11  E= -152.7520242978  R.M.S.=   .0000103
+!           NSERCH:  12  E= -152.7520242989  R.M.S.=   .0000011
+!    CIS reaches essentially the same energy,
+!           NSERCH:   0  E= -152.7503702444  R.M.S.=  0.0154909
+!               ...
+!           NSERCH:  12  E= -152.7520243029  R.M.S.=  0.0000011
+!    If the TD-HF geometry is given to a CIS run,
+!               the E(CIS)= -152.7520243070
+!    If the CIS geometry is given to a TD-HF run,
+!              the E(TDHF)= -152.7520243039
+!    so both runs are finding essentially the same structure.
+!
+!    A genuine Tamm/Dancoff TD-DFT, using CAM-B3LYP optimizes as
+!      NSERCH= 0  E=     -153.6171528764  R.M.S.=  0.0283539
+!      NSERCH= 1  E=     -153.6199567295  R.M.S.=  0.0115043
+!      NSERCH= 2  E=     -153.6226664739  R.M.S.=  0.0070165
+!      NSERCH= 3  E=     -153.6234893194  R.M.S.=  0.0020836
+!      NSERCH= 4  E=     -153.6235693189  R.M.S.=  0.0011812
+!      NSERCH= 5  E=     -153.6236275505  R.M.S.=  0.0006518
+!      NSERCH= 6  E=     -153.6236338185  R.M.S.=  0.0002202
+!      NSERCH= 7  E=     -153.6236352750  R.M.S.=  0.0000692
+!      NSERCH= 8  E=     -153.6236353450  R.M.S.=  0.0000548
+!      NSERCH= 9  E=     -153.6236354530  R.M.S.=  0.0000150
+!      NSERCH=10  E=     -153.6236354551  R.M.S.=  0.0000092
+!      NSERCH=11  E=     -153.6236354591  R.M.S.=  0.0000024
+!
+
+-----------------------------------------------------------------------------
+
+        Below is extra information for excited state number 1:
+             A= CI vector/amplitude printing
+             B= transition from state 0 to state 1 printing
+             C= properties of the excited state
+        for each of the runs TDHF, CIS, ORMAS, and various GUGA.
+
+A. information defining the excited state
+
+1. TD-HF using Tamm/Dancoff.  It prints zero de-excitations, of course.
+Here I deleted everything smaller than 0.05 to compare to the CIS below.
+                 EXCITATION  DE-EXCITATION
+     OCC     VIR  AMPLITUDE      AMPLITUDE
+      I       A     X(I->A)        Y(A->I)
+     ---     ---   --------       --------
+      7      13   -0.058097       0.000000
+     12      13    0.626281       0.000000
+     12      14    0.225528       0.000000
+     12      15    0.457637       0.000000
+     12      17    0.333310       0.000000
+     12      20   -0.384537       0.000000
+     12      21   -0.063788       0.000000
+     12      23   -0.098922       0.000000
+     12      24   -0.170978       0.000000
+     12      25    0.082941       0.000000
+     12      45   -0.056912       0.000000
+
+2. CIS prints
+ EXCITED STATE   1  ENERGY=      -152.7520243229  S = 0.0  SPACE SYM = A
+          ----------------------------------------------
+          SINGLE EXCITATION               SAP COEFFICENT
+          FROM MO     TO MO
+          ----------------------------------------------
+             7         13                   0.05809085
+            12         13                   0.62627919
+            12         14                  -0.22552863
+            12         15                  -0.45763639
+            12         17                   0.33330890
+            12         20                  -0.38454040
+            12         21                  -0.06378276
+            12         23                   0.09892790
+            12         24                  -0.17097927
+            12         25                   0.08295458
+            12         45                  -0.05690303
+
+3. ORMAS uses raw determinants, not SAPS, so its coefficients are
+square root of two smaller (makes the excitation from orbital 7
+fall below the 0.05 printing threshhold).  The output has been
+hand edited to show only the excitation:
+ STATE   3  ENERGY=      -152.7520243073  S=  0.00  SZ=  0.00  SPACE SYM=A   
+            12->13 beta   0.4428463 * sqrt(2) = 0.6262792
+            12->13 alpha  0.4428463
+            12->15 beta   0.3235971
+            12->15 alpha  0.3235971
+            12->20 beta  -0.2719111
+            12->20 alpha -0.2719111
+            12->17 beta   0.2356850
+            12->17 alpha  0.2356850
+            12->14 beta   0.1594743
+            12->14 alpha  0.1594743
+            12->24 beta  -0.1209006
+            12->24 alpha -0.1209006
+            12->23 beta  -0.0699526
+            12->23 alpha -0.0699526
+            12->25 beta   0.0586577
+            12->25 alpha  0.0586577
+
+4. GUGA prints this (I have sorted this list by magnitude):
+ STATE #    2  ENERGY =    -152.752024309
+      CSF      COEF    OCCUPANCY (IGNORING CORE)
+      ---      ----    --------- --------- -----
+      770    0.626279  22222222222110000000000000000000000000000000000000
+      746    0.457635  22222222222100100000000000000000000000000000000000
+      686   -0.384540  22222222222100000001000000000000000000000000000000
+      722    0.333309  22222222222100001000000000000000000000000000000000
+      758    0.225531  22222222222101000000000000000000000000000000000000
+      638   -0.170979  22222222222100000000000100000000000000000000000000
+      650   -0.098928  22222222222100000000001000000000000000000000000000
+      626    0.082955  22222222222100000000000010000000000000000000000000
+      674   -0.063783  22222222222100000000100000000000000000000000000000
+      386   -0.056903  22222222222100000000000000000000000000000000100000
+      775    0.058091  22222212222210000000000000000000000000000000000000
+
+These are clearly all the same, apart from the Davidson solver's 
+convergence thresholds.  Under Tamm/Dancoff, the X excitation
+amplitudes are just the CI coefficients of a stationary state.
+
+The normalization on full TD-DFT amplitudes is 
+     1 = summation (X(i->a))**2 - (Y(a->i))**2     (note the minus sign)
+
+
+B. transition probability data:
+
+1.  The TD-HF calculation:
+   STATE       ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+   1  A   -152.752024R3038   4.096     0.0865  0.0937  0.0026    0.002
+
+2.  The CIS program:
+ TRANSITION FROM THE GROUND STATE TO EXCITED STATE  1
+ STATE MULTIPLICITIES =   1  1
+ STATE ENERGIES =       -152.9025456166     -152.7520243229
+ EXCITATION ENERGY =  9.9038E+14 [1/SEC] =    33035.61 [1/CM] =      4.10 [EV]
+                            X           Y           Z           NORM
+ TRANSITION DIPOLE =    0.086484    0.093700    0.002599    0.127539 E*BOHR
+ TRANSITION DIPOLE =    0.219823    0.238165    0.006607    0.324173 DEBYE
+ OSCILLATOR STRENGTH =    0.001632
+ EINSTEIN COEFFICIENTS: A=  1.1882E+06 1/SEC; B=  6.6015E+06 SEC/G
+
+3. the ORMAS program does not do transition dipoles.
+4. the GUGA  program does not do transition dipoles, directly.
+
+5. the GUGA  program for RUNTYP=TRANSITN does do transition dipoles,
+ CI STATE NUMBER=  1  2 STATE MULTIPLICITY=  1  1
+ STATE ENERGIES         -152.9025456173     -152.7520243087
+ TRANSITION ENERGY=  9.9038E+14 [1/SEC] =    33034.85 [1/CM] =        4.10 [EV]
+ TRANSITION DIPOLE =   -0.219824   -0.238164   -0.006607    0.324173 DEBYE
+ OSCILLATOR STRENGTH =    0.001632
+ EINSTEIN COEFFICIENTS: A=  1.1881E+06 1/SEC; B=  6.6011E+06 SEC/G
+
+6. the spin orbit run's results are Z= -0.006606, see below for more details
+
+
+C. dipole moment of the excited state:
+
+Since CIS is not a fully variational method (orbital's don't relax),
+there are two different density matrices.  The relaxed density from
+gradient theory is often thought to be better, in terms of matching
+experiment.  Here they are fairly different, since CIS may not be
+a very good wavefunction?  Full CI does obey the Hellmann-Feynmann
+theorem, but CIS dipoles differ by 0.5 Debye units, and quite
+a bit in direction of the vector.
+
+1. For TD-HF run, there is only a relaxed density matrix computable
+         DX          DY          DZ         /D/  (DEBYE)
+    -1.837414    0.821945   -0.019048    2.012970
+
+2. For CIS run, using the CISPRP keyword, the property section prints
+               USING THE RESPONSE (OR RELAXED) DENSITY
+         DX          DY          DZ         /D/  (DEBYE)
+    -1.837459    0.821948   -0.019063    2.013013
+instead of results USING THE EXPECTATION VALUE DENSITY.  
+CIS always prints these anyway, higher up in the log file, as
+ EXPECTATION VALUE DIPOLE MOMENT FOR EXCITED STATE  1
+                            X           Y           Z           NORM
+      STATE DIPOLE =   -1.229643    0.442726    0.783471    1.523764 DEBYE
+Every state's dipole, and every pair of state's transition moments
+are printed after the CIS iterations converge.
+
+3. For ORMAS run, since we have no gradient program, we cannot
+obtained a relaxed density:
+               USING THE EXPECTATION VALUE DENSITY
+         DX          DY          DZ         /D/  (DEBYE)
+    -1.229643    0.442726    0.783471    1.523764
+
+4. For GUGA run, as straight CIS
+               USING THE EXPECTATION VALUE DENSITY
+         DX          DY          DZ         /D/  (DEBYE)
+    -1.229643    0.442726    0.783471    1.523764
+
+5. For the GUGA run that can compute the transition dipole,
+the printing is badly labeled,
+ CI STATE NUMBER=  2  2 STATE MULTIPLICITY=  1  1
+ STATE ENERGIES         -152.7520243087     -152.7520243087
+ TRANSITION DIPOLE =   -1.229643    0.442726    0.783471    1.523764 DEBYE
+but this is clearly the correct state specific dipole for 
+the first excited state.  
+
+6. the spin-orbit run prints this, for both OPERAT=HSO1 and HSO2:
+ DIPOLE MOMENTS ARE IN E*BOHR UNITS. TO GET DEBYE, MULTIPLY BY 2.541766.
+   < 1-1A |R| 1-1A > =     -1.121136      0.517556     -0.487263 [CCC]
+   < 1-1A |R| 2-1A > =     -0.086485     -0.093700     -0.002599 [CCC]
+   < 2-1A |R| 2-1A > =     -0.483777      0.174180      0.308239 [CCC]
+converting the z component to Debye is TDM(Z)= -0.006606 and DM(Z)= 0.783471
+
+Note, to keep this file short, 
+the RHF-level $VEC1 required by for RUNTYP=TRANSITN jobs is not included.
+ $VEC1
+....omitted...
+ $END
+
+! TRAVIS-CI SMALL
+

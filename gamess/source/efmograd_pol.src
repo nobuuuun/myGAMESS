@@ -1,0 +1,1324 @@
+*MODULE EFMOGRAD_POL     *DECK EFMO_POL_DER_PASS
+C>
+C>    @brief Calculates some of the dipole derivative terms
+C>
+C>    @details  Calculates the derivative of terms involving dipoles
+C>
+C>              This subroutine calculates dipole derivative terms for one
+C>              fragment.
+C>              This is used in the EFMO exchange repulsion and polarization
+C>              gradients. Both have terms of the form
+C>              \sum_i^{LMOs in frag I}
+C>              \left< \frac{\partial i}{\partial x_a} | \bold{x} | i \right>
+C>              \left[ C(\bold{x}, i) \right].
+C>              The coefficients (C(\bold{x}, i)) from all contributions
+C>              are stored in x(lefmodipder) (in the EFMOPO Common Block).
+C>              The term shown above has an AO-derivative contribution, a CMO
+C>              response contribution, and a LMO response contribution, since
+C>              the term is calculated using LMOs.
+C>              (that is: \sum_{i,l}^{LMOs in frag I} v_{li}^{x_a}  \left[ 
+C>              \bold{<l|x|i>}\cdot C(\bold{x},i) \right]  
+C>              \\ \nonumber &+ \sum_m^{\text{occ CMOs in frag I}}
+C>              \sum^{\text{occ+vir CMOs in frag I}}_q U^{x_a}_{qm}
+C>              \left[  \sum_{i}^{LMOs in frag I} T_{im} \bold{<q|x|i>}\cdot
+C>              C(\bold{x},i) \right] \\ \nonumber &+ \sum_{\mu \nu}^{AOs in frag I}
+C>              <\frac{\partial \mu }{\partial x_a}|\bold{x}|\nu> \left[
+C>              \sum_{i}^{LMOs in frag I} c_{i\mu} c_{i\nu} C(\bold{x},i) \right])
+C> 
+C>              The AO-derivative term is calculated for the fragment and added
+C>              to the EFMO dimer gradient (stored in X(LEFMODIMG) in Common Block
+C>              EFMOPO) by the subroutine efmo_str_deriv.
+C>
+C>              The occ-vir part of the coefficient of the CMO response ($U$) is
+C>              added to zvlag(), where FMO stores the Lagrangian. The Z-vector
+C>              equation is solved later using zvlag.
+C>              The occ-occ part of the coefficient of the CMO response ($U$) is
+C>              passed to the subroutine efmo_occ_occ_resp(), which calculates the
+C>              occ-occ response contribution.
+C> 
+C>              The coefficient of LMO response ($v$) is passed to the subroutine
+C>              store_cpl_coeff(), which stores the coefficient and uses it
+C>              later when the CPL equation is solved.
+C>              
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param efmodipder : A double array of (number of polarizability points
+C>                   (basically # LMOs),3,number fragments). This holds C(\bold{x},i)
+C>                   for each fragment.
+C>    @param efmolmo : array holding the LMO coefficients for each
+C>           fragment in the EFMO run 
+C>    @param efmocv : array holding the occupied and
+C>           virtual CMO coefficients for the charge transfer term
+C>           each fragment in the EFMO run
+C>    @param efmocf : array holding the occupied diagonal terms of the
+C>           fock matrix for the charge transfer term using CMOs. this
+C>           is for all fragments in the EFMO run
+C>    @param nfrag : the total number of fragments in the EFMO run
+C>    @param mxmos :  maximum number of occupied MOs of all the
+C>           fragments in the EFMO run
+C>    @param mxbsfn : maximum number of basis functions of all the
+C>           fragments in the EFMO run
+C>    @param num_AO_A : the number of AOs in the fragment
+C>    @param nmxmo : An integer array of (parameter mxfrg) which contains the
+C>                   number of occupied MOs in each fragment
+C>    @param nefmopts : array of fragment specific counters (such as number of
+C>           occupied MOs) for all fragments in the EFMO run. Indexed as
+C>           nefmopts(num, fragment) where num identifies what specific counter
+C>           is requested, and fragment is the fragment index.
+C>    @param zvlag : An array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>    @param iptlg : An array that takes the fragment number as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param wrk : A double array of ((num_AO_A*num_AO_A+num_AO_A)/2). This is a
+C>                 scratch array.
+C>    @param cab : A double array of (mxmos,mxmos,3). This is a scratch array
+C>                 that holds the occupied LMO dipole integrals (x,y,and z) for
+C>                 a single fragment. 
+C>    @param cmat : A double array of (num_AO_A, num_AO_A, 3). This is a scratch array
+C>                  that holds the AO dipole integrals  (x,y,and z) for a
+C>                  single fragment.
+C>    @param den : A double array of (num_AO_A,num_AO_A,10). This is a scratch array. 
+C>    @param provec : A double array of (num_AO_A, mxmos). This is a scratch array which
+C>                    is used to store the LMOs in a single fragment. The LMOs are
+C>                    copied into this array from the efmolmo() array.
+C>    @param ctvec : A double array of (num_AO_A,num_AO_A). This array holds
+C>                   the occ and virt CMO coefficients in a single fragment.
+C>    @param fockma : A double array of (num_AO_A). This array holds
+C>                    the occupied diagonal elements of the CMO Fock
+C>                    matrix for a single fragment.
+C>    @param frag: An integer containing the index of the fragment the calculation
+C>           is on.
+
+      subroutine efmo_pol_der_pass( efmodipder, efmolmo,
+     *     nfrag, mxmos, mxbsfn, num_AO_A, nmxmo,
+     *     nefmopts, zvlag, iptlg, wrk,
+     *     cab, cmat, den, wrk2,
+     *     provec, ctvec, fockma, frag)
+
+      implicit none
+      integer, PARAMETER :: MXFRG=1050,
+     *     MXEFMOPPTS=60,
+     *     MXGTOT=20000,MXATM=2000,MXSH=5000
+
+      integer nfrag, frag, mxmos, mxbsfn, ngauss,
+     *     iov, i_mo, i_u, j_mo, k, i_v,
+     *     nocc, num_AO_A, nvir, atom_index, i_t, norb,ncore,
+     *     loop_frag, loop_atom
+
+      double precision dum
+
+      integer, dimension(mxfrg) :: nmxmo
+
+      double precision, dimension(mxefmoppts,3, nfrag) :: efmodipder
+
+      double precision, dimension(nfrag,mxbsfn,MXMOS) :: EFMOLMO
+      integer, dimension(7,nfrag) :: NEFMOPTS
+
+      double precision, dimension(num_AO_A,MXMOS) :: provec
+      double precision, dimension(num_AO_A,num_AO_A) :: ctvec
+      double precision, dimension(num_AO_A) :: fockma
+
+      double precision, dimension(num_AO_A, num_AO_A, 3) :: cab
+      double precision, dimension(num_AO_A, num_AO_A, 3) :: cmat
+
+      double precision, dimension((num_AO_A*num_AO_A+num_AO_A)/2) :: wrk
+      double precision, dimension(num_AO_A*num_AO_A) :: wrk2
+
+      double precision, dimension(1) :: zvlag(1)
+      integer, dimension(1) :: iptlg
+
+      double precision, dimension(num_AO_A,num_AO_A,10) :: den
+
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      integer :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+      double precision :: ex,cs,cp,cd,cf,cg,ch,ci
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      integer :: nat, ich, mul, num, nqmt, ne, na, nb, ian
+      double precision :: zan, c
+
+      double precision, PARAMETER :: HALF=0.5D+00,
+     *     one = 1.0D+00
+
+
+c$$$ setting dummy variable
+      dum = 0.0D+00
+
+         call vclr( den, 1, num_AO_A*num_AO_A*10)
+
+         nocc = nmxmo(frag)
+         nvir = num_AO_A - nocc
+         norb = nefmopts(2,frag)
+
+         ncore = nocc - norb
+
+c$$$ put lmos from efmolmo into a reasonable array
+         do i_u=1,num_AO_A
+            do i_mo=1,norb
+               provec(i_u, i_mo) = efmolmo(frag,i_u,i_mo)
+            enddo
+         enddo
+
+c$$$  make density for AO derivative. doubled previously because efmo_str_deriv
+c$$$  only does <du|x|v> (while we want <du|x|v> + <u|x|dv>)
+         do i_u=1,num_AO_A
+            do i_v=1,num_AO_A
+               do i_mo=1,norb
+                  den(i_u,i_v,7) = den(i_u,i_v,7) + provec(i_u,i_mo)
+     *                 * provec(i_v,i_mo)
+     *                 * efmodipder(i_mo, 1, frag)
+                  
+                  den(i_u,i_v,8) = den(i_u,i_v,8) + provec(i_u,i_mo)
+     *                 * provec(i_v,i_mo)
+     *                 * efmodipder(i_mo, 2, frag)
+
+                  den(i_u,i_v,9) = den(i_u,i_v,9) + provec(i_u,i_mo)
+     *                 * provec(i_v,i_mo)
+     *                 * efmodipder(i_mo, 3, frag)
+               enddo
+            enddo
+         enddo
+
+         atom_index = 1
+
+         do loop_frag=1,(frag-1)
+            do loop_atom = 1, nefmopts(1,loop_frag)
+               atom_index = atom_index + 1
+            enddo
+         enddo
+         
+         NGAUSS = KSTART(NSHELL)
+
+         CALL VCLR(CAB,1,num_AO_A*num_AO_A*3)
+         CALL TFSQP(CAB(1,1,1),CMAT(1,1,1),PROVEC,
+     *        PROVEC,den(1,1,4),num_AO_A,num_AO_A,norb,norb,
+     *        num_AO_A,num_AO_A,.false.)
+         CALL TFSQP(CAB(1,1,2),CMAT(1,1,2),PROVEC,
+     *        PROVEC,den(1,1,4),num_AO_A,num_AO_A,norb,norb,
+     *        num_AO_A,num_AO_A,.false.)
+         CALL TFSQP(CAB(1,1,3),CMAT(1,1,3),PROVEC,
+     *        PROVEC,den(1,1,4),num_AO_A,num_AO_A,norb,norb,
+     *        num_AO_A,num_AO_A,.false.)
+
+c$$$ form the occ-occ coeff
+c$$$ this is for the lmo response portion
+         do i_mo =1,norb
+            do j_mo =1,norb
+
+               den(i_mo,j_mo,3) = ( cab(i_mo, j_mo,1)
+     *              *efmodipder(i_mo, 1, frag)
+     *              + cab(i_mo,j_mo, 2)
+     *              *efmodipder(i_mo, 2, frag)
+     *              + cab(i_mo,j_mo, 3)
+     *              *efmodipder(i_mo, 3, frag) )
+            enddo
+         enddo
+
+c$$$ call something else to store the CPL coefficient
+         if(maswrk) call efmo_store_cpl_coeff( den(1,1,3), frag,
+     *         num_AO_A,norb)
+         
+c$$$ we're done with cab now. we'll reuse it.
+         CALL TFSQP(CAB(1,1,1),CMAT(1,1,1),ctvec,
+     *        PROVEC,den(1,1,4),num_AO_A,num_AO_A,num_AO_A,norb,
+     *        num_AO_A,num_AO_A,.false.)
+         CALL TFSQP(CAB(1,1,2),CMAT(1,1,2),ctvec,
+     *        PROVEC,den(1,1,4),num_AO_A,num_AO_A,num_AO_A,norb,
+     *        num_AO_A,num_AO_A,.false.)
+         CALL TFSQP(CAB(1,1,3),CMAT(1,1,3),ctvec,
+     *        PROVEC,den(1,1,4),num_AO_A,num_AO_A,num_AO_A,norb,
+     *        num_AO_A,num_AO_A,.false.)
+
+c$$$  get efmo_trans for A
+         call efmo_retrieve_tran( den(1,1,2),num_AO_A,norb,
+     *        frag )
+
+c$$$  get normal occ-vir coeff term
+c$$$  something with AO-dip and then contract with vir/occ terms
+
+         CALL VCLR(wrk2,1,num_AO_A*num_AO_A)         
+
+c$$$c$$$ make intermediate matrix
+c$$$         do i_mo=1,norb
+c$$$            do k = 1, nvir
+c$$$               den( i_mo,k,4 )=ddot(cab, efmodipder)
+c$$$            enddo
+c$$$         enddo
+
+         iov = ncore*nvir
+
+         do i_mo=1,norb
+            do k = 1, nvir
+               iov = iov + 1
+               do i_t=1,norb
+
+c$$$ for local: sum over another occ LMO i and mult by T
+                  wrk2( iov ) = wrk2( iov )
+     *                 + den(i_t,i_mo,2)
+     *                 *( cab(nocc+k,i_t, 1)
+     *                 *efmodipder(i_t, 1, frag)
+     *                 + cab(nocc+k,i_t, 2)
+     *                 *efmodipder(i_t, 2, frag)
+     *                 + cab(nocc+k,i_t, 3)
+     *                 *efmodipder(i_t, 3, frag))
+               enddo
+            enddo
+         enddo
+
+c$$$  stores into the langrangian for the Z-vector method.
+c$$$ efmodipder is the same on all processors.
+c$$$ cab is too. since zvalg is globally summed later, right now this is ok.
+         if(maswrk) call daxpy( iov, half*half, wrk2,1,
+     *        zvlag(iptlg(frag)),1 )
+
+
+c$$$ get nonsymm occ-occ terms
+
+c$$$ this is for the cmo occ-occ portion
+         do i_mo=1,norb
+            do k = 1, nocc
+               do i_t=1,norb
+c$$$ for local: sum over another occ LMO i and mult by T
+
+                  den(ncore+i_mo,k,10) = den(ncore+i_mo,k,10)
+     *                 +den(i_t,i_mo,2)
+     *                 * ( cab(k,i_t, 1)
+     *                 *efmodipder(i_t, 1, frag)
+     *                 + cab(k,i_t, 2)
+     *                 *efmodipder(i_t, 2, frag)
+     *                 + cab(k,i_t, 3)
+     *                 *efmodipder(i_t, 3, frag) )
+               enddo
+            enddo
+         enddo
+
+
+c$$$ we're done with cab, so we repurpose it here
+         call vclr( cab(1,1,1), 1, num_AO_A*num_AO_A )
+         call vclr( cab(1,1,2), 1, num_AO_A*num_AO_A )
+
+c$$$  get AO derivatives (the dipole derivs)
+         if(maswrk) CALL efmo_str_deriv(num_AO_A,num_AO_A,NAT,NAT,
+     *        NGAUSS,NSHELL,EX,CS,
+     *        CP,CD,CF,CG,KSTART,
+     *        KATOM,KTYPE,KNG,KLOC,
+     *        KMIN,KMAX,NGAUSS,NSHELL,
+     *        EX,CS,CP,CD,CF,
+     *        CG,KSTART,KATOM,KTYPE,
+     *        KNG,KLOC,KMIN,KMAX,
+     *        C,C, .false.,.false.,.true.,
+     *        atom_index, one, 1, dum,dum,den(1,1,7),
+     *        den(1,1,8),den(1,1,9), .false., .false.)
+
+c$$$ get the occ-occ contribution (the cmo occ-occ coeff is in den(1,1,10))
+         if(maswrk) call efmo_occ_occ_resp( den(1,1,10), frag,
+     *        atom_index,num_AO_A,
+     *        cab, nocc, num_AO_A,ctvec,fockma, wrk, nat, ngauss,
+     *        nshell, ex, cs,cp,cd,cf,cg,kstart,katom, ktype,kng,
+     *        kloc,kmin,kmax,c, mxmos,0, .false.,ncore)
+
+      return
+      end
+
+
+*MODULE EFMOGRAD_POL     *DECK EFMO_POL_GRAD
+C>
+C>    @brief Calculates part of the non-response part of the EFMO polarization grad 
+C>
+C>    @details This routine uses the weighted multipoles in efmo_es_der to
+C>             calculate part of the EFMO polarization gradient. This calculates
+C>             the non-response part that arises from the derivative of the multipoles
+C>             (not the T tensor) in the multipole electrostatic field derivative term.
+C>             For each atom and coordinate on the fragments (either two or all fragments,
+C>             depending on whether it's a total polarization or dimer polarization
+C>             energy being calculated), frgflg is called on the weighted multipoles
+C>             (which arise when the derivative is taken wrt that atom and coordinate)
+C>             and then added to the EFMO gradient.
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param efmo_es_der : A double array of (10, max multipole points (MXEFMOPTS),
+C>                         max multipole points (MXEFMOPTS), 3, num fragments). This routine
+C>                         uses the weighted multipoles in this array to calculate
+C>                         the part of the non-response EFMO polarization gradient
+C>                         that involves the multipoles (that is, the gradients of the
+C>                         T tensors are dealt with elsewhere.)
+C>
+C>    @param lstmpts : array that takes a fragment index as an argument and
+C>                     returns the first index of multipole points in
+C>                     as stored in various EFP arrays by the EFMO code (see
+C>                     EFMOPOPEFP)
+C>
+C>    @param nmpts : number of multipole points (in EFMO, this is always the
+C>                   number of atoms)
+C>
+C>    @param num_frags : The total number of fragments. This is used for specifying the
+C>                       size of efmo_es_der
+C>
+C>    @param nppts : number of polarizabilty points (the number of LMOs)
+C>
+C>    @param iefmodim : array that takes a fragment index as an argument and
+C>                      returns the fragment index that was used in an earlier
+C>                      part of the EFMO code. This has to do with how FMO
+C>                      deals with the dimers.
+C>
+C>    @param iefmort : the type of run EFMO is doing. If this is 4, then it's
+C>                     a total polarization energy calculation, so all fragments are
+C>                     used. otherwise, we assume it's a dimer calculation, so we
+C>                     use iefmodim to index.
+C>
+C>    @param nfrag_loop : the number of fragments in the EFP run (could be 2 if this
+C>                        is a polarization dimer calculation, or all EFMO fragments
+C>                        if this is a polarization total energy calculation)
+C>
+C>
+      subroutine efmo_pol_grad( efmo_es_der, lstmpts,
+     *     nmpts, num_frags, nppts,iefmodim,iefmort,nfrag_loop ) 
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+
+      integer, PARAMETER :: MXFRG=1050, MXFGPT=12000
+      integer, PARAMETER :: MXEFMOPTS=50,MXIFRQ=12
+      CHARACTER*8 POLNAM,DPOLNAM
+
+      logical use_dlb,use_slb,goparr_save, nxt
+
+      integer frag, atom_wrt, der_direction, ie, num_points, ic1,
+     *     num_frags, im1, jm1, index, atom_index,iefmort,nfrag_loop
+
+      integer, dimension(mxfrg) :: nmpts, lstmpts, nppts
+      integer :: iefmodim(2)
+
+      double precision, dimension(11, mxefmopts) :: hold
+      double precision, dimension( 10,mxefmopts,mxefmopts,3,num_frags)
+     *     :: efmo_es_der
+
+      CHARACTER*8 FRGNME
+
+      COMMON /EFMULT/ EFC(3,MXFGPT),EFCHG(2,MXFGPT),EFATRM(MXFGPT),
+     *                EFBTRM(MXFGPT),EFATRM2(MXFGPT),EFBTRM2(MXFGPT),
+     *                EFDIP(3,MXFGPT),EFQAD(6,MXFGPT),
+     *                EFOCT(10,MXFGPT),FRGNME(MXFGPT)
+      COMMON /EFPPAR/ EFP(3,MXFGPT),EFPOL(9,MXFGPT),
+     *                EFDP(3,MXIFRQ*MXFGPT),EFDPOL(9,MXIFRQ*MXFGPT),
+     *                ENO,DIND(3,MXFGPT),DINDD(3,MXFGPT),
+     *                POLNAM(MXFGPT),DPOLNAM(MXIFRQ,MXFGPT),
+     *                POLSCR(MXFGPT),IPLSCR,INDSCR
+      COMMON /EFPAR / LOCNFG,NLOW,NUP
+      COMMON /FRFD  / PPEFX(MXFGPT), PPEFY(MXFGPT), PPEFZ(MXFGPT)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+
+      double precision, PARAMETER :: ZERO=0.0D+00, ONE=1.0D+00
+
+c     some of the fragment indexing is not straightforward. this is because
+c     the efmo dimer calculation doesn't have all the efp-parameters
+c     for all fragments in an array--it only has the parameters for those two fragments.
+c     as it calculates the contribution for
+c     each dimer, it pulls those two fragments into memory, so we only look
+c     at two at a time. we can use the iefmodim() array to map the two current
+c     fragments to the index we would use in the efmo arrays for all fragments.
+c     remember that the efmo indexing is not the same as the efp-indexing
+c     used when efmo calculates efp-dimer interaction energy.
+C
+C     INITIALIZE PARALLEL
+C
+      NXT = IBTYP.EQ.1
+      use_dlb = goparr .and. nxt
+      use_slb = goparr .and. .not. nxt
+      IPCOUNT = ME - 1
+      NEXT = -1
+      MINE = -1
+c$$$  temporarily turn off EFP parallelization
+      nlow_save = nlow
+      nup_save = nup
+      goparr_save = goparr
+      nlow = 1
+      nup = nfrag_loop
+      goparr = .false.
+
+      do frag = 1, nfrag_loop
+         num_points = nmpts( frag )
+         do atom_wrt=1,num_points
+            do der_direction=1,3
+C
+C           GO PARALLEL!
+C
+               IF(use_dlb) THEN
+                  MINE = MINE + 1
+                  IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+                  IF(NEXT.NE.MINE) cycle
+               END IF
+
+               IF(use_slb) THEN
+                  IPCOUNT = IPCOUNT + 1
+                  IF(MOD(IPCOUNT,NPROC).NE.0) cycle
+               END IF
+c
+c     we need to use the same indexing as was used in EFMOPOPEFP when
+c     the EFP arrays were filled in the first place.
+               if( iefmort .eq. 4 ) then
+                  ie = frag
+               else
+                  ie = iefmodim(frag)
+               endif
+c     store values from efmo_es_der so we can send them to FFELEC
+               ic1 = lstmpts( frag ) - 1
+               do index=1,num_points
+                  ic1 = ic1+1
+                  hold(1,index) = efchg(1,ic1)
+                  hold(2,index) = efchg(2,ic1)
+                  hold(3,index) = efdip(1,ic1)
+                  hold(4,index) = efdip(2,ic1)
+                  hold(5,index) = efdip(3,ic1)
+                  hold(6,index) = efqad(1,ic1)
+                  hold(7,index) = efqad(2,ic1)
+                  hold(8,index) = efqad(3,ic1)
+                  hold(9,index) = efqad(4,ic1)
+                  hold(10,index) = efqad(5,ic1)
+                  hold(11,index) = efqad(6,ic1)
+
+                  efchg(1,ic1) = efmo_es_der(1,index, atom_wrt,
+     *                 der_direction, ie)
+                  efchg(2,ic1) = 0
+                  efdip(1,ic1) = efmo_es_der(2,index, atom_wrt,
+     *                 der_direction, ie)
+                  efdip(2,ic1) = efmo_es_der(3,index, atom_wrt,
+     *                 der_direction, ie)
+                  efdip(3,ic1) = efmo_es_der(4,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(1,ic1) = efmo_es_der(5,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(2,ic1) = efmo_es_der(6,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(3,ic1) = efmo_es_der(7,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(4,ic1) = efmo_es_der(8,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(5,ic1) = efmo_es_der(9,index, atom_wrt,
+     *                 der_direction, ie)
+                  efqad(6,ic1) = efmo_es_der(10,index, atom_wrt,
+     *                 der_direction, ie)
+                     
+            enddo
+c
+            ifr = frag
+            call frgfld(ifr,.true.)
+      IUP=0
+      DO I=1,NUP
+         IUP = IUP + NPPTS(I)
+      ENDDO
+      ILOW=1
+      DO I=1,NLOW-1
+         ILOW = ILOW + NPPTS(I)
+      ENDDO
+      POLNRG = ZERO
+      DO II=ILOW,IUP
+         POLNRG = POLNRG + (DIND(1,II) + DINDD(1,II))*PPEFX(II)
+     *                   + (DIND(2,II) + DINDD(2,II))*PPEFY(II)
+     *                   + (DIND(3,II) + DINDD(3,II))*PPEFZ(II)
+      ENDDO
+
+      POLNRG = -0.5D+00*POLNRG
+      IF(GOPARR) CALL DDI_GSUMF(677,POLNRG,1)
+
+c     get the right indexing
+            atom_index = lstmpts( frag ) + atom_wrt - 1
+
+c$$$            if(maswrk) then
+            if( der_direction .eq. 1 ) then
+               call efmoesgm(im1, jm1, 0, atom_index,
+     *              polnrg, 0,0,0,0,0,0,0,0,0,ONE,1)
+            else if(der_direction .eq. 2 ) then
+               call efmoesgm(im1, jm1, 0, atom_index, 0,
+     *              polnrg,0,0,0,0,0,0,0,0,ONE,1)
+            else
+               call efmoesgm(im1, jm1, 0, atom_index,0,0,
+     *              polnrg,0,0,0,0,0,0,0,ONE,1)
+            endif
+c$$$            endif
+
+c     reset values and hold other values
+            ic1 = lstmpts( frag ) - 1
+            do index=1,num_points
+               ic1 = ic1+1
+               efchg(1,ic1) = hold(1,index)
+               efchg(2,ic1) = hold(2,index)
+               efdip(1,ic1) = hold(3,index)
+               efdip(2,ic1) = hold(4,index)
+               efdip(3,ic1) = hold(5,index)
+               efqad(1,ic1) = hold(6,index)
+               efqad(2,ic1) = hold(7,index)
+               efqad(3,ic1) = hold(8,index)
+               efqad(4,ic1) = hold(9,index)
+               efqad(5,ic1) = hold(10,index)
+               efqad(6,ic1) = hold(11,index)
+            enddo
+         enddo
+      enddo
+      enddo
+
+c$$$ finish up parallel
+      IF(use_dlb) CALL DDI_DLBRESET
+c$$$ turn EFP parallelization back on
+      nlow = nlow_save
+      nup = nup_save
+      goparr = goparr_save
+
+      return
+      end
+
+*MODULE EFMOGRAD_POL     *DECK EFMO_POL_GRADZ
+C>
+C>    @brief Calculates part of the response part of EFMO polarization grad 
+C>
+C>    @details This routine uses the weighted multipoles in lag to
+C>             calculate part of the EFMO polarization gradient. It calculates the
+C>             coefficient of the response (the lagrangian) that arises from
+C>             the derivative of the multipoles (not the T tensor) in the
+C>             multipole electrostatic field derivative term.
+C>             For each fragment in the dimer (or for each fragment in the EFMO run,
+C>             if this is a total polarization energy calculation), it loops through
+C>             the occ-vir pairs and calls e_frgfld to calculate the lagranian
+C>             for that occ, vir pair on that fragment. It then adds it to zvlag,
+C>             which stores the total lagrangian for each fragment. 
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param lag : A double array of (10, max (num occ * num vir) among the fragments,
+C>                 max num multipole points, num frags).
+C>                 This routine uses the weighted multipoles in this array to calculate
+C>                 the part of the response EFMO polarization gradient
+C>                 that involves the coefficient of the response (that is,
+C>                 the lagrangian)
+C>
+C>    @param nefmopts : See the description in ::efmo_pol_der_pass
+C>
+C>    @param num_frags : The total number of fragments. This is used for
+C>                       dimensioning
+C>
+C>    @param zvlag : The address of an array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>
+C>    @param iptlg : The address of an array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>
+C>    @param mxzvwk : Among all the fragments, this is the max (num occ * num vir).
+C>                    This is used for the size of lag.
+C>
+C>    @param iefmort : the type of run EFMO is doing. If this is 4, then it's
+C>                     a total polarization energy calculation, so all fragments are
+C>                     used. otherwise, we assume it's a dimer calculation, so we
+C>                     use iefmodim to index.
+C>
+C>    @param iefmodim : array that takes a fragment index as an argument and
+C>                      returns the fragment index that was used in an earlier
+C>                      part of the EFMO code. This has to do with how FMO
+C>                      deals with the dimers.
+C>
+C>    @param nfrag_loop : the number of fragments in the EFP run (could be 2 if this
+C>                        is a polarization dimer calculation, or all EFMO fragments
+C>                        if this is a polarization total energy calculation)
+C>
+C>
+      subroutine efmo_pol_gradz( lag, nefmopts,
+     *     num_frags, zvlag, iptlg, mxzvwk, iefmort,iefmodim,
+     *     nfrag_loop )
+      
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+
+      integer, PARAMETER :: MXFRG=1050, MXFGPT=12000,MXIFRQ=12
+      integer, PARAMETER :: MXEFMOPTS=50
+      CHARACTER*8 POLNAM,DPOLNAM
+
+      integer frag, ie, num_points, ic1,iefmort,nfrag_loop,
+     *     num_frags, index, num_atoms
+
+      integer, dimension(mxfrg) :: nmpts, lstmpts, nppts, nocc, nvir
+
+      integer, dimension(7,num_frags) :: nefmopts
+
+      dimension zvlag(1), iptlg(1)
+
+      double precision, dimension(11, mxefmopts) :: hold
+      double precision, dimension(10,mxzvwk,mxefmopts,num_frags)
+     *     :: lag
+
+      integer :: iefmodim(2)
+      CHARACTER*8 FRGNME
+      logical use_dlb,use_slb,goparr_save,nxt
+
+      COMMON /EFMULT/ EFC(3,MXFGPT),EFCHG(2,MXFGPT),EFATRM(MXFGPT),
+     *                EFBTRM(MXFGPT),EFATRM2(MXFGPT),EFBTRM2(MXFGPT),
+     *                EFDIP(3,MXFGPT),EFQAD(6,MXFGPT),
+     *                EFOCT(10,MXFGPT),FRGNME(MXFGPT)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+
+      COMMON /EFPPAR/ EFP(3,MXFGPT),EFPOL(9,MXFGPT),
+     *                EFDP(3,MXIFRQ*MXFGPT),EFDPOL(9,MXIFRQ*MXFGPT),
+     *                ENO,DIND(3,MXFGPT),DINDD(3,MXFGPT),
+     *                POLNAM(MXFGPT),DPOLNAM(MXIFRQ,MXFGPT),
+     *                POLSCR(MXFGPT),IPLSCR,INDSCR
+      COMMON /FRFD  / PPEFX(MXFGPT), PPEFY(MXFGPT), PPEFZ(MXFGPT)
+      COMMON /EFPAR / LOCNFG,NLOW,NUP
+
+      double precision, PARAMETER :: ZERO=0.0D+00,
+     *     HALF=0.5D+00
+
+c     make the nmpts, nppts, nocc, nvir, and lstmpts arrays
+      do frag = 1, nfrag_loop
+         if( iefmort .eq. 4 ) then
+            ie = frag
+         else
+            ie = iefmodim(frag)
+         endif
+
+         nmpts(frag) = nefmopts(1,ie)
+         nppts(frag) = nefmopts(2,ie)
+         nocc(frag) = nefmopts(7,ie)
+         nvir(frag) = nefmopts(4,ie) - nocc(frag)
+      enddo
+
+      num_atoms = 1
+      do frag = 1, nfrag_loop
+         lstmpts( frag ) = num_atoms
+         num_atoms = num_atoms + nmpts(frag)
+      enddo
+C
+C     INITIALIZE PARALLEL
+C
+      NXT = IBTYP.EQ.1
+      use_dlb = goparr .and. nxt
+      use_slb = goparr .and. .not. nxt
+      IPCOUNT = ME - 1
+      NEXT = -1
+      MINE = -1
+c$$$  temporarily turn off EFP parallelization
+      nlow_save = nlow
+      nup_save = nup
+      goparr_save = goparr
+      nlow = 1
+      nup = nfrag_loop
+      goparr = .false.
+
+      do frag = 1, nfrag_loop
+         num_points = nmpts( frag )
+         num_occ = nocc( frag )
+         num_vir = nvir( frag )
+         iov = 0
+         if( iefmort .eq. 4 ) then
+            ie = frag
+         else
+            ie = iefmodim(frag)
+         endif
+         do iocc=1,num_occ
+            do ivir=1,num_vir
+C
+C           GO PARALLEL!
+C
+               IF(use_dlb) THEN
+                  MINE = MINE + 1
+                  IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+                  IF(NEXT.NE.MINE) cycle
+               END IF
+
+               IF(use_slb) THEN
+                  IPCOUNT = IPCOUNT + 1
+                  IF(MOD(IPCOUNT,NPROC).NE.0) cycle
+               END IF
+
+c     store values
+               ic1 = lstmpts( frag ) - 1
+               iov = ivir + (iocc-1)*num_vir
+               do index=1,num_points
+                  ic1 = ic1+1
+                  hold(1,index) = efchg(1,ic1)
+                  hold(2,index) = efchg(2,ic1)
+                  hold(3,index) = efdip(1,ic1)
+                  hold(4,index) = efdip(2,ic1)
+                  hold(5,index) = efdip(3,ic1)
+                  hold(6,index) = efqad(1,ic1)
+                  hold(7,index) = efqad(2,ic1)
+                  hold(8,index) = efqad(3,ic1)
+                  hold(9,index) = efqad(4,ic1)
+                  hold(10,index) = efqad(5,ic1)
+                  hold(11,index) = efqad(6,ic1)
+
+c     note! should be multiplied by two. this is divided by two because
+c     it's later scaled by 4 in the z-vector solver
+
+                  efchg(1,ic1) = half * lag(1,iov,index, ie)
+                  efchg(2,ic1) = 0
+                  efdip(1,ic1) = half * lag(2,iov,index, ie)
+                  efdip(2,ic1) = half * lag(3,iov,index, ie)
+                  efdip(3,ic1) = half * lag(4,iov,index, ie)
+                  efqad(1,ic1) = half * lag(5,iov,index, ie)
+                  efqad(2,ic1) = half * lag(6,iov,index, ie)
+                  efqad(3,ic1) = half * lag(7,iov,index, ie)
+                  efqad(4,ic1) = half * lag(8,iov,index, ie)
+                  efqad(5,ic1) = half * lag(9,iov,index, ie)
+                  efqad(6,ic1) = half * lag(10,iov,index, ie)
+               enddo
+c
+
+               call frgfld(frag,.true.)
+      IUP=0
+      DO I=1,NUP
+         IUP = IUP + NPPTS(I)
+      ENDDO
+      ILOW=1
+      DO I=1,NLOW-1
+         ILOW = ILOW + NPPTS(I)
+      ENDDO
+      POLNRG = ZERO
+      DO II=ILOW,IUP
+         POLNRG = POLNRG + (DIND(1,II) + DINDD(1,II))*PPEFX(II)
+     *                   + (DIND(2,II) + DINDD(2,II))*PPEFY(II)
+     *                   + (DIND(3,II) + DINDD(3,II))*PPEFZ(II)
+      ENDDO
+
+      if( iefmort .eq. 4) then
+      POLNRG = -0.5D+00*POLNRG
+      else
+      POLNRG = 0.5D+00*POLNRG
+      endif
+
+      IF(GOPARR) CALL DDI_GSUMF(678,POLNRG,1)
+      call daxpy( 1, 1d0, polnrg, 1, zvlag(iptlg(ie)+iov-1), 1 )
+c     reset values and hold other values
+
+            ic1 = lstmpts( frag ) - 1
+            do index=1,num_points
+               ic1 = ic1+1
+               efchg(1,ic1) = hold(1,index)
+               efchg(2,ic1) = hold(2,index)
+               efdip(1,ic1) = hold(3,index)
+               efdip(2,ic1) = hold(4,index)
+               efdip(3,ic1) = hold(5,index)
+               efqad(1,ic1) = hold(6,index)
+               efqad(2,ic1) = hold(7,index)
+               efqad(3,ic1) = hold(8,index)
+               efqad(4,ic1) = hold(9,index)
+               efqad(5,ic1) = hold(10,index)
+               efqad(6,ic1) = hold(11,index)
+            enddo
+         enddo
+      enddo
+
+      enddo
+
+c$$$ finish up parallel
+      IF(use_dlb) CALL DDI_DLBRESET
+c$$$ turn EFP parallelization back on
+      nlow = nlow_save
+      nup = nup_save
+      goparr = goparr_save
+
+      return
+      end
+
+*MODULE EFMOGRAD_POL    *DECK efmo_sec_order_ti_resp_wrap
+C>
+C>    @brief Sets up to solve second order CPHF for pol gradient
+C>
+C>    @details Need all contributions to efmo_scphf before starting this routine.
+C>             This wraps ::efmo_sec_order_ti_resp so that is can pass in 
+C>             variables in the EFMOPO common block. See ::efmo_sec_order_ti_resp
+C>             for details about the calculation
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param ilay: current FMO layer
+C>    @param loadhf: an integer flag that is 1 if a "heavy job first" strategy is used
+C>           (mod(modpar,2) == 1).
+C>    @param loadm: integer array with load balancing information which reorders the fragments.
+C>           It takes in a number and returns a fragment, in decreasing order of number of AOs
+C>           work. So, it does the expensive fragments first. This is only used
+C>           if loadhf=1
+C>    @param da: work array. if L1=max number of AOs for all fragments, da has
+C>           space for L1*(L1+1)/2+L1*L1+L1
+C>    @param fmode: A double array of (3,number of atoms in the entire FMO calculation).
+C>                  The first index is whether the derivative is with respect to x,y, or
+C>                  z, and the second index is which atom the derivative is with respect
+C>                  to. It holds FMO gradient values for dimer contributions that will be
+C>                  printed out, and used in MD calculations.
+C>    @param numfrg(): integer array with the number of AO basis functions for each fragment
+C>    @param iodfmo: io array for FMO
+C>    @param layfrag : array holding the layer for each fragment
+C>    @param scffrg: scf type for the run (UHF or RHF)
+C>    @param isgddi: logical flag for whether it's a GDDI run
+C>    @param irec0: Record number to read the orbitals in the fragments
+C>    @param ngrfmo(maxpst,layers): integer array holding the number of GDDI groups for monomers,
+C>           dimers, etc., and is set for each layer
+C>    @param mannod(): defines manual node division into groups for each ngrfmo(i,j)
+C>    @param mastid(): contains the global id of group masters 
+C>    @param nqmtfg(): integer array that can be used to get the number of MO basis functions
+C>           in each fragment
+C>    @param iptlg : An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param mulfg() : An array of multiplicities for each fragment
+C>    @param irmdfmo: flag for RMD, but doesn't seem to do anything in this circumstance
+C>
+      subroutine efmo_sec_order_ti_resp_wrap(ILAY,LOADHF,LOADM,DA,
+     *     FMODE,
+     *                  NUMFRG,IODFMO,LAYFRG,SCFFRG,ISGDDI,
+     *                  IREC0,NGRFMO,MANNOD,MASTID,NQMTFG,IPTLG,mulfg,
+     *                  irmdfmo )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      DIMENSION IPTLG(*)
+
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *                lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf,lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FMCOM / X(1)
+
+      CALL efmo_sec_order_ti_resp(ILAY,LOADHF,LOADM,DA,
+     *     x(lefmo_scphf),
+     *     FMODE,NUMFRG,IODFMO,LAYFRG,SCFFRG,ISGDDI,
+     *     IREC0,NGRFMO,MANNOD,MASTID,NQMTFG,IPTLG,
+     *     mulfg, 3,irmdfmo)
+
+      return
+      end
+
+*MODULE EFMOGRAD_POL    *DECK efmo_sec_order_ti_resp
+C>
+C>    @brief Calculates EFMO pol grad term \frac{\del U^{\beta}}{\del x} N^{\beta}
+C>
+C>    @details Need all contributions to efmo_scphf before starting this routine.
+C>
+C>             The polarization derivative term involves the derivative of the static
+C>             polarizability tensor, which involves the derivative of the
+C>             field dependent response matrix.
+C>
+C>             For all EFMO fragments, this routine calculates the term which involves
+C>             the derivative of the field dependent response matrix:
+C>             \sum_{ai,\beta} \frac{\del U^{\beta}_{ai}}{\del x}  N_{ai}^{\beta}.
+C>             By standard zvector techniques, the equivalent term 
+C>             \sum_{ai,\beta} Z^{scphf}_{\beta}_{ai} B_{ai}^{\beta, x}
+C>             is calculated in this routine. Note that this is a second-order response.
+C>
+C>             Since this is a response term, first the corresponding Zvector equation is
+C>             solved, in the ::FMOCGCP routine.
+C>
+C>             (H1) Z^{scphf}_{\beta} = N
+C>
+C>             Where N, the coefficient matrix, is stored in efmo_scphf in the
+C>             EFMOPO common block.
+C>
+C>             Then, the B coefficient is contracted with the zvector in the rest of
+C>             the routine by calling ::efmo_zvector_contract.
+C>             B comes from the derivative of the first order TI CPHF
+C>             equation, and collecting the \frac{\del U^{\beta}_{ai}}{\del x}
+C>             terms to one side. The terms on the other side are B.
+C>
+C>             Finally, the terms are added to FMODE and other storage arrays.
+C>             Some terms contribute to the firt-order CPHF equation, so they
+C>             are added to the appropriate arrays (zvlag)
+C>             Uses GDDI to loop over all fragments.
+C>
+C>    @author Colleen Bertoni
+C>
+C>    @param ilay: current FMO layer
+C>    @param loadhf: an integer flag that is 1 if a "heavy job first" strategy is used
+C>           (mod(modpar,2) == 1).
+C>    @param loadm: integer array with load balancing information which reorders the fragments.
+C>           It takes in a number and returns a fragment, in decreasing order of number of AOs
+C>           work. So, it does the expensive fragments first. This is only used
+C>           if loadhf=1
+C>    @param da: work array. if L1=max number of AOs for all fragments, da has
+C>           space for L1*(L1+1)/2+L1*L1+L1
+C>    @param zvlag : An array that stores the lagrangian and
+C>                   is used to calculate the response.
+C>    @param fmode: A double array of (3,number of atoms in the entire FMO calculation).
+C>                  The first index is whether the derivative is with respect to x,y, or
+C>                  z, and the second index is which atom the derivative is with respect
+C>                  to. It holds FMO gradient values for dimer contributions that will be
+C>                  printed out, and used in MD calculations.
+C>    @param numfrg(): integer array with the number of AO basis functions for each fragment
+C>    @param iodfmo: io array for FMO
+C>    @param layfrag : array holding the layer for each fragment
+C>    @param scffrg: scf type for the run (UHF or RHF)
+C>    @param isgddi: logical flag for whether it's a GDDI run
+C>    @param irec0: Record number to read the orbitals in the fragments
+C>    @param ngrfmo(maxpst,layers): integer array holding the number of GDDI groups for monomers,
+C>           dimers, etc., and is set for each layer
+C>    @param mannod(): defines manual node division into groups for each ngrfmo(i,j)
+C>    @param mastid(): contains the global id of group masters 
+C>    @param nqmtfg(): integer array that can be used to get the number of MO basis functions
+C>           in each fragment
+C>    @param iptlg : An array that takes the fragment as an index
+C>                   and returns an index into zvlag. It is used to index
+C>                   arrays that store matrices of (vir,occ) elements in a 1D format,
+C>                   and stores the values for each fragment one after the other.
+C>    @param mulfg() : An array of multiplicities for each fragment
+C>    @param field : the number of fields in zvlag
+C>    @param irmdfmo: flag for RMD, but doesn't seem to do anything in this circumstance
+C>
+      SUBROUTINE efmo_sec_order_ti_resp(ILAY,LOADHF,LOADM,DA,
+     *     ZVLAG,FMODE,NUMFRG,IODFMO,LAYFRG,SCFFRG,ISGDDI,
+     *     IREC0,NGRFMO,MANNOD,MASTID,NQMTFG,IPTLG,
+     *     mulfg, field,irmdfmo)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXATM=2000,MAXPST=10)
+      INTEGER DDI_WORLD,DDI_GROUP
+      PARAMETER (DDI_WORLD=0,DDI_GROUP=1)
+C
+      DIMENSION ZVLAG(1),DA(1)
+      DIMENSION LOADM(*),NUMFRG(*)
+      DIMENSION IODFMO(*),LAYFRG(*),SCFFRG(*)
+      DIMENSION NGRFMO(MAXPST,*),MANNOD(*),MASTID(*),NQMTFG(*)
+      DIMENSION IPTLG(*)
+      DIMENSION FMODE(3,*)
+      DIMENSION mulfg(*)
+C
+      integer field
+      LOGICAL OUT
+      LOGICAL ISGDDI,MYJOB
+      LOGICAL DODISTR
+      LOGICAL DIRSAV, DIRSCF, FDIFF
+      LOGICAL UHFCAL
+
+C
+      COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+     *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+     *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+     *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+     *                IMODEFCT,IDIMTYP,iefmo_agrad
+cz    COMMON /EFPFM2/ FK_CNTP,POLTOT,LABFLDT,LDINDF2,LDINDDF2,LDELABFLD,
+cz   *                LDELDIND,LDELDINDD
+      COMMON /EFMOPO/ LNEFMOPTS,LEFMOPTS,LEFMOPPTS,LEFMODPTS,LNEFMOBAS,
+     *                LEFMOBAS,LEFMOLMO,LEFMOFM,LEFMOCV,LEFMOCF,
+     *                LEFMODIMG,LEFMOTOTG,LEFMOIPT,LEFMOIGLOB,
+     *                LEFMOESDER,MXZVWK,lefmo_fock_der,lefmodipder,
+     *     lefmo_tran, lcpl_coeff, liexrep_offset,
+     *     lefmo_tot_field, lefmo_f_resp, lefmo_scphf, lefmo_dyndisp,
+     *     lefmo_scptdhf
+      COMMON /FMCOM / X(1)
+      common /fmodim/ maxbnd,maxknd,maxcbs,maxcao,maxvec,maxl1,maxnat,
+     *                maxabd,maxbas,maxbbd,maxlmo,maxslo,maxabd2,maxrij
+      COMMON /FMOOPT/ ESPSCA(9),RESPAP(2),RESPPC(2),RESDIM,RESTRI(4),
+     *                RCORSD,RESPCT,CONVFG,CNVDMP,COROFF,RFLMO(4),
+     *                ORSHFT,ORSHFT2,CNVAFO,ASCREEN(4),IXESP,MXITFG,
+     *                NGUESS,NBSSE,MODORB,MODPAR,IRSTSTP,IRSTLAY,NPRFMO,
+     *                NFMOPAL,MODPRP,MAXL1C,IPIEDA,MODGRD,MODESP,IVMUL,
+     *                MODLMO,NOPDEN,MOFOCK,modfd,modfmm,ncentm,ndualb
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      logical goparr,maswrk,dskwrk
+      integer :: me, master, nproc, ibtyp, iptim
+
+      COMMON /RESTAR/ TIMLIM,IREST,NREC,INTLOC,IST,JST,KST,LST
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+      COMMON /SCZLAG/ LZVLAG,LZVWRK,LYALAG,LYAWRK
+      COMMON /SCZVEC/ IDFZVEC,LIPTZVEC,LIPTLG
+C
+      DATA   UHF/8HUHF     /
+C     PARAMETERS
+C
+      OUT = MASWRK.AND.IAND(NPRFMO,3).NE.3
+      MAXL2   = (MAXL1*MAXL1+MAXL1)/2
+      MAXL3   =  MAXL1*MAXL1
+      ICURLAY = ILAY
+C
+CZ
+CZ    SPACE FOR ZVEC
+      uhfcal=.false.
+CZ
+c$$$ this means to use DDI's distributed memory.
+c$$$ see INPUT.DOC. It's not the default, and I usually
+c$$$ assume it's false
+c$$$      DODISTR = IAND(MODPAR,512).NE.0
+      DODISTR = .false.
+c$$$ the total number of occ*vir rotations for all fragments
+      NOVTOT = 0
+c$$$ the maximum occ*vir rotations among fragments
+      NOVMAX = 0
+c$$$ loops to calculate the above things
+      DO IFG = 1, NFG
+c$$$ number of total MOs
+        NQI = IAND(NQMTFG(IFG),65535)
+c$$$ number of occ MOs
+        NAI = ISHFT(NUMFRG(IFG),-16)
+c$$$ number of occ*vir for this fragment
+        NTMP = (NQI-NAI)*NAI
+        if(scffrg(ifg).eq.uhf) then
+          NBI = NAI + 1 - mulfg(ifg)
+          NTMP= NTMP + NBI * (NQI-NBI)
+          UHFCAL=.true.
+        end if
+        NOVTOT = NOVTOT + NTMP
+        NOVMAX = MAX(NOVMAX,NTMP)
+      END DO
+C
+CZ
+CZ    SUM UP ZVLAG, which is efmo_scphf for the given field
+CZ
+c$$$      IF (.NOT.DODISTR) THEN
+        IF (ISGDDI) THEN
+c$$$ move to world scope--functions are over all nodes.
+          CALL GDDI_SCOPE(DDI_WORLD)
+c$$$ sum the values in zvlag over all nodes, and give all nodes the final sum
+          CALL DDI_GSUMF(5000,ZVLAG,IPTLG(NFG+1)*field )
+c$$$ move to group scope--functions are summed only over the nodes in the group
+          CALL GDDI_SCOPE(DDI_GROUP)
+        ELSE
+c$$$ if not using GDDI, but using parallel, still sum zvlag up
+           if( iefmorun .gt. 0 .and. iefmo_agrad .gt. 0) then
+              CALL DDI_GSUMF(3000,ZVLAG,IPTLG(NFG+1)*field)
+           else
+              CALL DDI_BCAST(3000,'F',ZVLAG,IPTLG(NFG+1),0)
+           endif
+        END IF
+c$$$      END IF
+
+C
+CZ
+CZ    ALLOCATION OF THE WORK SPACE
+CZ
+      CALL VALFM(LOADFM)
+      NDASC = 0
+      LFPNT = LOADFM
+      LWRT1 = LFPNT + NDASC + 1
+      if(uhfcal) then
+        LWRK1 = LWRT1 + MAXL2*2 + MAXL3*2
+        LWRK2 = LWRK1 + MAXL3*2 + MAXL3*2
+        LWRK3 = LWRK2 + MAXL3*2 + MAXL3*2
+        LAST  = LWRK3 + MAXL3*2 + MAXL3*2
+      else
+        LWRK1 = LWRT1 + MAXL2*field
+        LWRK2 = LWRK1 + MAXL3*field
+        LWRK3 = LWRK2 + MAXL3*field
+        Lfockma  = LWRK3 + MAXL3*field
+        lcmat  = Lfockma + MAXL1
+        Lug  = lcmat + MAXL3*3
+        Lwrt2  = lug + MAXL3*field
+        Ld1_new  = lwrt2 + MAXL2*field
+        Ltri1  = Ld1_new + MAXL2*field
+        LAST  = ltri1 + maxl3*field
+      end if
+C
+        LZVEC0 = LAST
+        LZVEC1 = LZVEC0 + NOVTOT*field
+        LIPTZC = LZVEC1 + NOVTOT*field
+        LAST   = LIPTZC + NFG
+        lqindz    = last
+        NEEDWK = LAST - LOADFM -1
+        CALL GETFM(NEEDWK)
+C
+        IPT = 1
+        DO IFG = 1, NFG
+          NQI = IAND(NQMTFG(IFG),65535)
+          NAI = ISHFT(NUMFRG(IFG),-16)
+          if(scffrg(ifg).eq.uhf) NBI = NAI + 1 - mulfg(IFG)
+          CALL IXSTOR(X(LIPTZC),IFG,IPT)
+          IPT = IPT + (NQI-NAI)*NAI
+          if(scffrg(ifg).eq.uhf) IPT = IPT + (NQI - NBI) * NBI
+        END DO
+C
+C
+C     SWITCH GDDI GROUPS TO MONOMERS (USING MONOMER GROUP DIVISION).
+C
+c$$$ initialize and creates groups out of nodes. Why do we do this multiple times?
+      IF (ISGDDI.AND.NGRFMO(1,ILAY).NE.0)
+     *  CALL FMOPRE(ILAY,1,NGRFMO,MANNOD,MASTID,irmdfmo)
+C
+c$$$ clear some arrays
+        CALL VCLR(X(LZVEC0),1,NOVTOT*field)
+        CALL VCLR(X(LZVEC1),1,NOVTOT*field)
+        NCURSH = 0
+
+c$$$ initialize the parallel task counter
+        IF (ISGDDI) CALL GDDICOUNT(-1,LGROUP,MYJOB)
+        DO 230 IIFG = 1,NFG
+          IFG = IIFG
+          IF (LOADHF.EQ.1) IFG = LOADM(IIFG)
+C
+C
+          IF (LAYFRG(IFG).LT.ILAY) GOTO 230
+          ICURFG = IFG
+c$$$ get job status. if myjob=.t. after the call, do the calculations for this
+c$$$ fragment using the nodes in that group
+          IF (ISGDDI) THEN
+            CALL GDDICOUNT(0,LGROUP,MYJOB)
+            IF (.NOT.MYJOB) GOTO 230
+          END IF
+C
+          IF (OUT) WRITE(IW,9010) IFG
+          CALL CLOSDA('DELETE')
+          CALL OPENDA(0)
+          NEVALS = 0
+c$$$ puts the stored coordinates and basis set for the fragment into common blocks
+          CALL MAKEMOL(IFG,0,0,ILAY,0,0,0,0,0,0,0,.TRUE.)
+          L1  = NUM
+          L2  = (L1*L1+L1)/2
+          L3  =  L1*L1
+          NQI = IAND(NQMTFG(IFG),65535)
+
+          DIRSAV = DIRSCF
+          DIRSCF = .TRUE.
+          IST=1
+          JST=1
+          KST=1
+          LST=1
+          CALL JANDK
+          DIRSCF = DIRSAV
+          IDMREC0I = IFG + IREC0
+          NAI  = NA
+          NBI  = NB
+C
+CZ        NUMBERS OF OCC. AND VIR.
+          NOCC = NAI
+          NVIR = NQI - NOCC
+C
+          NVOC = NOCC*NVIR
+          LCCC = L2 + 1
+          LORB = L2 + L3 + 1
+          if(scffrg(ifg).eq.uhf) then
+            NOCCB = NBI
+            NVIRB = NQI - NOCCB
+            NVOCB = NOCCB * NVIRB
+            LORB = L2+L3*2+1
+            LORBB= LORB+L1
+            LCCCB= LCCC+L3
+            LNUM = L3*2+l1*2
+            NNUM = NVOC + NVOCB
+            SCAL = 2.0D+00
+           else
+            NOCCB = NBI
+            NVIRB = NQI - NOCCB
+            NVOCB = NOCCB * NVIRB
+            LNUM = L3+L1
+            LORBB= LORB
+            LCCCB= LCCC
+            NNUM = NVOC
+            SCAL = 4.0D+00
+           end if
+CZ
+CZ        IN THE FMO/CPHF CASE, MOS AND ORBITAL ENERGIES ARE
+CZ        ALWAYS READ IN.
+CZ
+          CALL VCLR(DA,1,L2+LNUM)
+          CALL RAREADS(IDAFMO,IODFMO,DA(LCCC),LNUM,IDMREC0I,0)
+          ! CONSTRUCT DENSITY: BE CAREFUL ABOUT THE LAST ARG.
+          CALL DMTX2(DA,DA(LCCC),NAI,L1,L1,NBI)
+C
+CZ
+CZ        IF (MASWRK) WRITE(6,*) 'DENSITY FOR ',IFG
+CZ        CALL PRTRI(DA,L1)
+CZ
+CZ
+CZ        COPY ZVEC0 TO ZVEC1
+CZ
+            IPT   = IXFTCH(X(LIPTZC),IFG)-1
+            LZ0PT = LZVEC0+IPT
+            LZ1PT = LZVEC1+IPT
+            if(scffrg(ifg).eq.uhf) LZ2PT= LZ1PT + NVOC
+            if(scffrg(ifg).ne.uhf) LZ2PT= LZ1PT
+            CALL VCLR(X(LZ0PT),1,NNUM*field)
+C
+CZ
+CZ        GET LAGRANGIAN LAG_I=SUM_KL{D_KL*TWOEI} (+ POLARIZATION)
+CZ
+            do ifield=1,field
+               CALL DCOPY(NNUM,ZVLAG(IPTLG(IFG) + novtot*(ifield-1)),
+     *              1,X(LWRK1),1)
+
+c$$$ copy lwrk1 (with lagrangian in it) to lz1pt
+               CALL DCOPY(NNUM,X(LWRK1),1,X(LZ1PT+nnum*(ifield-1)),1)
+c$$$ scale and prefactor lz1pt
+               CALL PRFCTMO(0,NVIR,NOCC,NVIR,X(LZ1PT+nnum*(ifield-1)),
+     *              X(LWRK2),DA(LORB),
+     *              SCAL)
+               CALL DCOPY(NNUM,X(LZ1PT+nnum*(ifield-1)),1,X(LZ0PT),1)
+               CALL DSCAL(NNUM,SCAL,X(LWRK1),1)
+               DUMMY = 0.0D+00
+               CALL FMOCGCP(IFG,ILAY,NOCC,NVIR,L1,L2,DA(LCCC),
+     *              X(LZVEC0),
+     *              X(LZ1PT+nnum*(ifield-1)),
+     *              X(LIPTZC),DA(LORB),
+     *              LAYFRG,dummy,NQMTFG,DODISTR,X(LWRT1),
+     *              X(LWRK1),X(LWRK2),X(LWRK3),
+     *              x(lqindz),
+     *              DA(LCCCB),DA(LORBB),scffrg(ifg).eq.uhf,
+     *              NBI,X(LZ2PT),scffrg,0,dummy,dummy,
+     *              iter0)
+            enddo
+c$$$ the zvector is in LZ1PT
+            ! GET TRI1 FROM ZVEC
+               do ifield=1,field
+                  CALL SWBASIS(0,L1,NOCC,NVIR,DA(LCCC),
+     *                 X(LZ1PT+nnum*(ifield-1)),
+     *                 NVIR,x(ltri1+L3*(ifield-1)),L1,X(LWRK3))
+                  if(scffrg(ifg).eq.uhf) then
+                     WRITE (IW,*) "EFMO analytic gradient isn't",
+     *                    " working with UHF yet"
+                     call abrt
+                  end if
+               enddo
+
+         call efmo_get_norb(x(lnefmopts),norb,ifg,nfg )
+         ncore = nocc-norb
+
+        CALL DIPINT(0,0,0,.FALSE.)
+        CALL DAREAD(IDAF,IODA,x(lwrk2),L2,95,0)
+        CALL DAREAD(IDAF,IODA,x(lwrk2+L2),L2,96,0)
+        CALL DAREAD(IDAF,IODA,x(lwrk2+2*L2),L2,97,0)
+
+        CALL TFTRI( x(lwrk3),x(lwrk2),da(lccc),x(lcmat),L1,L1,L1)
+        CALL TFTRI( x(lwrk3+L2),x(lwrk2+L2),da(lccc),x(lcmat),L1,L1,L1)
+        CALL TFTRI( x(lwrk3+2*L2),x(lwrk2+L2*2),da(lccc),x(lcmat),L1,
+     *       L1,L1)
+
+        CALL efmo_zvector_contract(IFG,x(ltri1),
+     *       x(lz1pt),
+     *       L1,L2,FMODE,SCFFRG,X(LWRT1),
+     *       X(LWRK1),X(LWRK2),X(LWRK3),
+     *       nocc, nvir, da(lccc), da(lorb),
+     *       x(lcmat), x(LZVLAG), x(LIPTLG), x(lug),
+     *       x(lefmo_f_resp), x(lwrt2),1, field, field, x(ld1_new),
+     *       ncore)
+  230   CONTINUE
+        IF (OUT) CALL TIMIT(1)
+C
+        IF (ISGDDI) CALL GDDICOUNT( 1,LGROUP,MYJOB)
+
+      CALL RETFM(NEEDWK)
+      RETURN
+ 9010 FORMAT(/3X,44(1H=)/
+     *        5X,' SCZV CALCULATION FOR IFG=',I5/
+     *        3X,44(1H=))
+      END

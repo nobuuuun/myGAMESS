@@ -1,0 +1,144 @@
+!    HCN...attempt to reproduce SCF and SR-CPF values of paper A:
+!       M.Kofranek, H.Lischka, A.Karpfen
+!       Mol.Phys. 61, 1519(1987)
+!    and SR-ACPF values of paper B:
+!       R.Shepard, H.Lischka, P.G.Szalay, T.Kovar, M.Ernzerhof
+!       J.Chem.Phys. 96, 2085(1992)
+!    Together their data say
+!              r(CN)  r(CH)  dipole   energy
+!       SCF:  1.1253 1.0578  3.271 -92.911553     paper A
+!       CPF:  1.1568 1.0686  2.934 -93.241383     paper A
+!      ACPF:  1.1578 1.0683  2.916 -93.242396     paper B
+!
+!    results from this run, performed at the ACPF geometry, should be:
+!       FINAL RHF E= -92.9087507201, 11 iters, dipole= 3.305937
+!         SR-ACPF E= -93.2423959694, 14 iters, dipole= 2.916116, C0= 0.9360979
+!    which is a perfect match to the last literature row from paper B.
+!
+!    this run takes 54 seconds on 2.66 GHz Cloverton (22 Oct 2014)
+!
+!    -------------------------------------------------------------------
+!    Joe's results are all done at the input's ACPF geometry,
+!      SR-CISD has 43,950 determinants (exploiting A1 irrep of C2v):
+!      SR-CISD  (G=0.0)         -93.2124169998, dipole= 3.074674, C0= 0.9522245
+!      SR-AQCC  (G=0.622222...) -93.2347282379
+!      SR-ACPF  (G=0.8)         -93.2423959694
+!      SR-CEPA0 (G=1.0)         -93.2522974007
+!      E(CISD+Q)                -93.2433646
+!      E(CISDTQ)                -93.2528160365
+!
+!    Paper A says Huzinaga's 11s,7p basis was contracted to 7s,5p,
+!    and explicitly states all polarization functions used below.
+!    Paper B says there are 74 basis functions, so we can infer
+!    the d functions are used as spherical harmonics.
+!    Paper A says hydrogen uses Huzinaga's 6s contracted to 4s.
+!    No explicit contraction pattern was specified, so we guess it.
+!
+!    The 11s,7p exponents for C,N in the open literature "part 2",
+!        S.Huzinaga and Y.Sakai  JCP 50, 1371 (1969)
+!    differ from the 1971 technical report
+!        Approximate Atomic Functions I, S.Huzinaga, U. of Alberta
+!    with the latter giving slightly lower energies for C and N.
+!    The C,N exponents used below are from the technical report.
+!    The 6s exponents for H are taken from "part 1", Table V:
+!        S.Huzinaga, JCP 42, 1293(1965)
+!
+!    I have guessed that for C,N:
+!       11s --> 7s means contract inner 5 with outer 6 left uncontracted
+!        7p --> 5p means contract inner 3 with outer 4 left uncontracted
+!    and for Hydrogen,
+!        6s --> 4s means contract inner 3 with outer 3 left uncontracted
+!    In the case of C and N, the contractions are taken from the 1s
+!    and 2p AO of the uncontracted atomic run, as opposed to optimizing
+!    the s part for best treatment of both 1s/2s.
+!
+!    This gets an SCF energy rounding to -92.911553, matching Paper A.
+!
+ $contrl scftyp=rhf runtyp=energy mult=1 ispher=1 $end
+ $system mwords=10 $end
+ $basis  basnam(1)=h-huz,c-huz,n-huz $end
+ $guess  guess=huckel $end
+
+x$contrl cctyp=ccsd(t) $end
+
+ $contrl cityp=ormas $end
+ $cidet  stsym=a1 ncore=2 nact=72 nels=10 $end
+ $ormas  cepa=acpf nspace=2 mstart(1)=3,8 mine(1)=8,0 maxe(1)=10,2 $end
+
+ $data
+HCN...below is the ACPF geometry
+Cnv 2
+
+H  1.0  0 0 -1.0683
+C  6.0  0 0  0.0
+N  7.0  0 0 +1.1578
+ $end
+
+ $h-huz
+  s 3
+   1 68.1600 2.54893509E-03
+   2 10.2465 1.93800054E-02
+   3 2.34648 9.27962457E-02
+  s 1 ; 1 0.673320 1.0
+  s 1 ; 1 0.224660 1.0
+  s 1 ; 1 0.082217 1.0
+  p 1 ; 1 0.75 1.0
+  p 1 ; 1 0.25 1.0
+
+ $end
+
+ $c-huz
+  s 5
+    1 16371.074 2.26418325E-04
+    2 2426.9925 1.78446816E-03
+    3 544.54418 9.49015625E-03
+    4 150.80487 3.96605151E-02
+    5 47.708143 1.31340252E-01
+  s 1 ; 1 16.457241 1.0
+  s 1 ; 1 6.0845578 1.0
+  s 1 ; 1 2.3824631 1.0
+  s 1 ; 1 0.66198660 1.0
+  s 1 ; 1 0.24698997 1.0
+  s 1 ; 1 0.094987300 1.0
+  p 3
+    1 40.790423 4.09697985E-03
+    2 9.5034633 2.75848266E-02 
+    3 2.9408357 1.06354560E-01
+  p 1 ; 1 1.0751115 1.0
+  p 1 ; 1 0.42670240 1.0
+  p 1 ; 1 0.17481926 1.0
+  p 1 ; 1 0.071130540 1.0
+  d 1 ; 1 1.00 1.0
+  d 1 ; 1 0.30 1.0
+
+ $end
+
+ $n-huz
+  s 5
+    1 23274.857 2.15502695E-04
+    2 3468.1830 1.69440409E-03
+    3 777.98843 9.00631359E-03
+    4 215.71976 3.77815056E-02
+    5 68.078031 1.26854643E-01
+  s 1 ; 1 23.424397 1.0
+  s 1 ; 1 8.6693766 1.0
+  s 1 ; 1 3.4217533 1.0
+  s 1 ; 1 0.93125652 1.0
+  s 1 ; 1 0.34656886 1.0
+  s 1 ; 1 0.13311538 1.0
+  p 3
+    1 60.317240 3.97657661E-03 
+    2 14.100811 2.76419672E-02
+    3 4.3877179 1.08101532E-01
+  p 1 ; 1 1.6082717 1.0
+  p 1 ; 1 0.63885442 1.0
+  p 1 ; 1 0.26035829 1.0
+  p 1 ; 1 0.10396545 1.0
+  d 1 ; 1 0.95 1.0
+  d 1 ; 1 0.30 1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

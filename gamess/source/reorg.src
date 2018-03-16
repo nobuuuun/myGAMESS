@@ -1,0 +1,481 @@
+C             SG  - RORGIN and RORGPE are the relevant subroutines
+C                   that reads the keywords relevant to reorganization 
+C                   energy calculation and writes surface charges 
+C                   to the punch file respectively. RORGIN also calls
+C                   CALCMR which calculates the center of mass of the
+C                   molecule. It differs from CALCOM subroutine in its
+C                   treatment of ghost atoms. With CALCMR, the ghost
+C                   atoms are included in the center of mass calc. 
+C                   RORGPE is called twice: 1) in IXMREQ (in pcmief.src) 
+C                   2) in IXMRNQ
+C                   The conventional IEF=3 will not work 
+C                   in conjunction with the current formalism because 
+C                   it does not use the subroutines that have been 
+C                   modified in pcmief.src. Instead, the ISOTROPIC 
+C                   situation can be computed by setting IEF=14                      
+C
+C=====================================================================72
+C*MODULE REORG  *DECK RORGIN
+C=====================================================================72
+C>
+C> @brief    reads in parameters from inputfile relevant to 
+C>           rerganization energy calculations
+C>
+C> @original author    Samantha Horvath
+C>
+C> @date     March, 2016 - Soumya Ghosh
+C> - modified to exclude passing of arrays through common blocks
+C>
+C>
+      SUBROUTINE RORGIN
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      PARAMETER (MXATM=2000,
+     *           TOANGS=0.52917724924D+00,ANTOAU=1.0D+00/TOANGS)
+C
+      COMMON /EIONDL/ DBLINV,DISMR,EPS1D,EPS1OP
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /LAMIO / IREORG,LAMVAL,IREADF,IPRNTF,RORGTP,EPSST,EPSOP
+      COMMON /LELRC / CATRAD,EPSSAM,SAMLEN,DMSAM,DISTDL,W2IHP
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PCMPAR/ IPCM,NFT26,NFT27,IKREP,IEF,IP_F,NFMOPCM,IHET
+      COMMON /PCMOPT/ RABI,RASC,REFPOL,THRSLS,DENSLS,WB,WA,ETA2,GD,EVAC,
+     *                RHOW,PM,AREATL,AREAKP,BONDRY,OMEGA,RET,FRO,EPSINF,
+     *                EPS,DR,RSOLV,VMOL,TCE,STEN,DSTEN,CMF,TABS,IDIRCT,
+     *                IPCDER,IDP,ICOMP,IFIELD,ICAV,IDISP,IPRINT,IRETCAV,
+     *                ICENT,IFAST,NEVAL,IEFPOL,KEEPSM,IMGABI,IMGASC,NADD
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+C
+C
+C     -----------------------------------------------------------------
+C     ---------------- PROGRAMMER'S NOTES -----------------------------
+C     -----------------------------------------------------------------
+C     The default solvent and cavity parameters are taken from the $PCM 
+C     declaration, and $REORG is performed within the PCM framework. 
+C     Therefore, $REORG MUST be used in conjunction with $PCM.
+C
+C     Since $REORG is built within the PCM framework, there are only a 
+C     few additional parameters that need to be specified. $REORG in 
+C     general appends the $PCM information in the following ways:
+C
+C         1. Reading in (IR) and writing out (IP) the surface charge 
+C            density created by the solute (i.e.: apparent surface 
+C            charges).
+C
+C         2. Preventing the solute charge density from being altered 
+C            after it is read in from the input file (i.e.: preventing 
+C            self-consistent iterations of the charge density to be 
+C            performed. Note that this is NOT the same as the SCF 
+C            iterations used when solving the Hamiltonian.)
+C
+C         3. Separation of the total polarization into its fast and slow
+C            components. The total polarization is determined from the 
+C            static dielectric constant, and the fast (electronic) 
+C            component is determined from the optical dielectric 
+C            constant. Note that the slow (inertial or orientational) 
+C            component is determined from the difference of the total 
+C            and electronic responses. It cannot be direcly calculated
+C            in any other manner. 
+C
+C
+C     -----------------------------------------------------------------
+C     ------------ SET UP NAMELIST $REORG NOTES -----------------------
+C     -----------------------------------------------------------------
+C
+      PARAMETER (NNAM=15)
+      DIMENSION QNAM(NNAM),KQNAM(NNAM)
+      DATA REORGZ/8HREORG   /
+      DATA QNAM/8HLAMDA   ,8HIRCHG   ,8HIPCHG   ,8HRLMIT   ,
+     *          8HRADCAT  ,8HESAM    ,8HDISIHP  ,8HEPSIHP  ,8HEPSIIP  ,
+     *          8HWSAM    ,8HDISTMS  ,8HDISM    ,8HEPSOHP  ,8HEPSIOP  ,
+     *          8HDLDIST  /
+      DATA KQNAM/1,1,1,5,3,3,3,3,3,3,3,3,3,3,3/
+C
+      DATA RNONE/8HNONE    /
+      DATA ENERGY/8HENERGY  /
+      DATA BORNOP,SLFCON,SCTRST/8HBO      ,8HSC      ,8HSCTS    /
+      DATA ZERO/0.0D+00/
+C
+C
+C
+C     -----------------------------------------------------------------
+C     --- DEFAULT PARAMETERS IN A REORGANIZATION ENERGY CALCULATION ---
+C     -----------------------------------------------------------------
+C     If the $REORG group is not found, the REORG computation is not 
+C     performed.
+C
+      IREORG=0
+C
+C VARIABLES THAT ARE PASSED
+C
+      LAMVAL=0
+      IREADF=0
+      IPRNTF=0
+      RORGTP=RNONE
+      EPSD1=ZERO
+      EPSSAM=ZERO
+      SAMLEN=ZERO
+      DMSAM=ZERO
+      W2IHP=ZERO
+      CATRAD=ZERO
+      EPSIP=ZERO
+      DISTDL=ZERO
+      DISMR=ZERO
+      EPS1D=ZERO
+      EPS1OP=ZERO
+      EPSIPE=ZERO
+      EPSOPE=ZERO
+C
+C  KEYWORDS
+C
+      RADCAT=5.0D+00
+      DISIHP=RSOLV      
+      EPSIHP=EPSINF
+      ESAM=3.0D+00
+      WSAM=15.0D+00
+      DISTMS=5.0D+00
+      DLDIST=ZERO
+      DISM=ZERO
+      EPSOHP=EPS/2.0D+00
+      LAMDA=0
+      IRCHG=0
+      IPCHG=0
+      RLMIT=RNONE
+      EPSIIP=EPSINF
+      EPSIOP=EPSINF
+C
+C     ------------------------------------------------------------------
+C     --- READ IN PARAMETERS IN A REORGANIZATION ENERGY CALCULATION ----
+C     ------------------------------------------------------------------
+C
+      JRET=0
+      CALL NAMEIO(IR,JRET,REORGZ,NNAM,QNAM,KQNAM,
+     *            LAMDA,IRCHG,IPCHG,RLMIT,RADCAT,ESAM,DISIHP,EPSIHP,
+     *            EPSIIP,
+     *            WSAM,DISTMS,DISM,EPSOHP,EPSIOP,DLDIST, 0,0,0,0,
+     *            0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+     *            0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0)
+C
+      IF (JRET.EQ.1) RETURN
+      IF (JRET.EQ.2) THEN
+         IF (MASWRK) WRITE(IW,9000) REORGZ
+         CALL ABRT
+      ENDIF
+C
+C
+C     -----------------------------------------------------------------
+C     - DETECTION OF $REORG ENABLES REORGANIZATION ENERGY CALCULATION -
+C     -----------------------------------------------------------------
+C
+      IREORG=1
+C
+C     POSSIBLE VALUES FOR LAMDA:
+C     LAMDA= 1 nonequilibrium solvent (must be specified with IRCHG = 1)
+C              (uses total (static) polarization - no separation)
+C
+C              separate out inertial component of surface charge
+C              density:
+C              (nonequilibrium by definition)
+C          = 2 + IEF=14 homogeneous electron transfer/PCET
+C          = 2 + IEF=9 electrochemical electron transfer/PCET
+C          = 2 + IEF=11 self assembled monolayer
+C          = 2 + IEF=13 ionic solutions
+C
+C     POSSIBLE DECLARATIONS FOR RLMIT:
+c     RLMIT= BO Born-Oppenheimer
+C               fixed electronic polarization, equilibrated rho
+C          = SC Self-Consistent
+C               equilibrated electronic polarization, equlibrated rho
+C          = SCTS Self-Consistent at transition state
+C               equilibrated electronic polarization, equlibrated rho,
+C               inertial polarization = 1/2(reactant inertial +
+C               product inertial)
+C     (Note: phi_inertial is always fixed)
+C     (See Eqs. 29 & 30 from J. Phys. Chem. (1993) 97, 3270.)
+C
+C
+C
+      LAMVAL=LAMDA
+      IREADF=IRCHG
+      IPRNTF=IPCHG
+      RORGTP=RLMIT
+      EPSST=EPS
+      EPSOP=EPSINF
+C
+      IF (IEF.EQ.11) THEN
+        EPSSAM=ESAM
+        SAMLEN=WSAM*ANTOAU
+        DMSAM=DISTMS*ANTOAU
+      ELSE
+        EPSSAM=ZERO
+        SAMLEN=ZERO
+        DMSAM=ZERO
+      ENDIF
+C
+      IF (IEF.EQ.9.OR.IEF.EQ.13) THEN
+        W2IHP=2.0D+00*DISIHP*ANTOAU
+        CATRAD=RADCAT*ANTOAU
+      ELSE
+        W2IHP=ZERO
+        CATRAD=ZERO
+      ENDIF
+C
+      DISMR=DISM
+      IF (IEF.EQ.13) THEN
+        EPSIP=EPSIHP
+        EPSIPE=EPSIIP
+        EPSD1=EPSOHP
+        EPSOPE=EPSIOP
+      ELSE
+        EPSIP=ZERO
+        EPSIPE=ZERO
+        EPSD1=ZERO
+        EPSOPE=ZERO
+      ENDIF
+      DISTDL=DLDIST*ANTOAU
+C
+      CALL CALCMR(XCOM,YCOM,ZCOM)
+      IF (MASWRK) THEN
+        WRITE(IW,*) "XCOM; YCOM; ZCOM values in BOHR"
+        WRITE(IW,'(3(2X,E22.16))') XCOM,YCOM,ZCOM
+      ENDIF
+      DO I=1,NAT
+        C(1,I)=C(1,I)-XCOM
+        C(2,I)=C(2,I)-YCOM
+        C(3,I)=C(3,I)-ZCOM
+      ENDDO
+C
+C        IF (MASWRK) THEN
+C          WRITE(IW,*) "SAMLEN; DMSAM; values in BOHR"
+C          WRITE(IW,'(2(2X,E22.16))') SAMLEN,DMSAM
+C        ENDIF
+C
+      IF (IEF.EQ.13) THEN
+        EPS1D=((W2IHP+CATRAD)*EPSIP*EPSD1)/
+     *        (CATRAD*EPSIP+W2IHP*EPSD1)
+        EPS1OP=((W2IHP+CATRAD)*EPSIPE*EPSOPE)/
+     *        (CATRAD*EPSIPE+W2IHP*EPSOPE)
+      ELSE
+        EPS1D=ZERO
+        EPS1OP=ZERO
+      ENDIF
+C
+C     -----------------------------------------------------------------
+C     ------------- ERROR MESSAGES FOR IMPROPER I/O -------------------
+C     -----------------------------------------------------------------
+C
+      IF (RUNTYP.NE.ENERGY .AND. IREORG.EQ.1) THEN
+         IF (MASWRK) WRITE(IW,9005)
+         CALL ABRT
+      ENDIF
+C
+      IF (IPCM.EQ.0 .AND. IREORG.EQ.1) THEN
+         IF (MASWRK) WRITE(IW,9010)
+         CALL ABRT
+      ENDIF
+C
+      IF (LAMVAL.EQ.0 .AND. IREADF.EQ.0 .AND. IPRNTF.EQ.0) THEN
+         IF (MASWRK) WRITE(IW,9020) LAMVAL,IREADF,IPRNTF
+         CALL ABRT
+      ENDIF
+C
+      IF (LAMVAL.LT.0 .OR. LAMVAL.GT.3) THEN
+         IF (MASWRK) WRITE(IW,9030) 'LAMDA=',LAMVAL
+         CALL ABRT
+      ENDIF
+C
+      IF (IREADF.LT.0 .OR. IREADF.GT.1) THEN
+         IF (MASWRK) WRITE(IW,9030) 'IRCHG=',IREADF
+         CALL ABRT
+      ENDIF
+C
+      IF (IPRNTF.LT.0 .OR. IPRNTF.GT.1) THEN
+         IF (MASWRK) WRITE(IW,9030) 'IPCHG=',IPRNTF
+         CALL ABRT
+      ENDIF
+C
+      IF (LAMVAL.EQ.1 .AND. IREADF.NE.1) THEN
+         IF (MASWRK) WRITE(IW,9040) 
+         CALL ABRT
+      ENDIF
+C
+      IF (IREADF.EQ.1 .AND. IPRNTF.EQ.1) THEN
+         IF (MASWRK) WRITE(IW,9030) 'IPCHG=',IPRNTF 
+         CALL ABRT
+      ENDIF
+C
+      IF (LAMVAL.EQ.2 .AND. IREADF.EQ.1 .AND. RORGTP.EQ.RNONE) THEN
+         RORGTP=BORNOP
+      ENDIF
+C
+      IF (MASWRK) WRITE(IW,9020) LAMVAL,IREADF,IPRNTF,RORGTP
+      IF (MASWRK) THEN
+         IF (IEF.EQ.13) THEN
+            WRITE(IW,9024) EPSST,EPS1D,EPSOP,EPS1OP
+         ELSE
+            WRITE(IW,9023) EPSST,EPSOP
+         ENDIF
+      ENDIF
+C
+      RETURN
+ 9000 FORMAT(/1X,'**** ERROR IN $',A5,' INPUT'/)
+ 9005 FORMAT(/1X,'** INCONSISTENCY FOUND: ONLY RUNTYP=ENERGY VALID **'/)
+ 9010 FORMAT(/1X,'*** INCONSISTENCY FOUND: NO $PCM INPUT GROUP ***'/)
+ 9020 FORMAT(/5X,44(1H-)/
+     *   5X,'PARAMS FOR CALCULATION OF REORGANIZATION ENG'/5X,44(1H-)/
+     *   5X,'LAMDA   =',I2,
+     *   5X,'IRCHG   =',I2/,
+     *   5X,'IPCHG   =',I2,
+     *   5X,'RLMIT   = ',A4)
+ 9023 FORMAT(5X,'EPS STATIC  =',F10.4/,
+     *       5X,'EPS OPTICAL =',F10.4/)
+ 9024 FORMAT(5X,'EPS STATIC  =',F10.4/,
+     *       5X,'EPS STATIC of Double Layer =',F10.4/,
+     *       5X,'EPS OPTICAL  =',F10.4/,
+     *       5X,'EPS OPTICAL of Double Layer =',F10.4/)
+ 9030 FORMAT(/1X,'CANNOT BOTH READ/WRITE. ILLEGAL VALUE FOR ',A6,I1/)
+ 9040 FORMAT(/1X,'IF LAMDA=1 THEN IRCHG MUST = 1'/)
+      END
+C=====================================================================72
+C*MODULE REORG   *DECK CALCMR
+C=====================================================================72
+C>
+C> @brief    calculates the center of mass
+C>
+C> @note     differs from CALCM in the treatment of ghost atoms
+C>
+C>
+      SUBROUTINE CALCMR(X,Y,Z)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXATM=2000)
+C
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /MASSES/ ZMASS(MXATM)
+      COMMON /PCMGH / ZANG(MXATM)
+C
+      PARAMETER (ZERO=0.0D+00)
+C
+      DIMENSION AMS(106)
+C
+      DATA (AMS(I),I=1,54)  /
+     *   1.007825D+00,4.0026D+00,7.01600D+00,9.01218D+00,11.00931D+00,
+     *   12.0D+00,14.00307D+00,15.99491D+00,18.99840D+00,19.99244D+00,
+     *   22.9898D+00,23.98504D+00,26.98153D+00,27.97693D+00,
+     *   30.97376D+00,31.97207D+00,34.96885D+00,39.948D+00,
+     *   38.96371D+00,39.96259D+00,44.95592D+00,47.90D+00,50.9440D+00,
+     *   51.9405D+00,54.9381D+00,55.9349D+00,58.9332D+00,57.9353D+00,
+     *   62.9298D+00,63.9291D+00,68.9257D+00,73.9219D+00,74.9216D+00,
+     *   79.9165D+00,78.9183D+00,83.9115D+00,
+     *   84.9117D+00,87.9056D+00,89.9054D+00,89.9043D+00,92.9060D+00,
+     *   97.9055D+00,97.0D+00,101.9037D+00,102.9048D+00,105.9032D+00,
+     *   106.9041D+00,113.9036D+00,114.9041D+00,119.9022D+00,
+     *   120.9038D+00,129.9067D+00,126.9044D+00,131.9042D+00/
+      DATA (AMS(I),I=55,106)  /
+     *   132.9054D+00,137.9052D+00,138.9063D+00,139.9054D+00,
+     *   140.9076D+00,141.9077D+00,144.9127D+00,151.9197D+00,
+     *   152.9212D+00,157.9241D+00,158.9253D+00,163.9292D+00,
+     *   164.9303D+00,165.9303D+00,168.9342D+00,173.9389D+00,
+     *   174.9408D+00,179.9465D+00,180.9480D+00,183.9509D+00,
+     *   186.9557D+00,191.9615D+00,192.9629D+00,194.9648D+00,
+     *   196.9665D+00,201.9706D+00,
+     *   204.9744D+00,207.9766D+00,208.9804D+00,208.9824D+00,
+     *   209.9871D+00,222.0176D+00,
+     *   223.0197D+00,226.0254D+00,
+     *   227.0278D+00,232.0381D+00,231.0359D+00,238.0508D+00,
+     *   237.0482D+00,244.0642D+00,243.0614D+00,247.0703D+00,
+     *   247.0703D+00,251.0796D+00,252.0829D+00,257.0751D+00,
+     *   258.0986D+00,259.1009D+00,260.1053D+00,261.1087D+00,
+     *   2*0.0D+00/
+C
+C       COMPUTE THE CENTER OF MASS.
+C       NOTE, THIS ROUTINE DOES NOT ACCOUNT FOR EFP PARTICLES.
+C
+      X = ZERO
+      Y = ZERO
+      Z = ZERO
+      TMASS = ZERO
+      ZNUCR = ZERO
+      NUCZR = 0
+      ZMASV = ZERO
+      ZMASSV = ZERO
+      DO 120  I=1,NAT
+         ZMASV = ZMASS(I)
+         IF (ZMASV.EQ.ZERO) THEN
+            ZNUCR = ZANG(I)
+            NUCZR = INT(ZNUCR)
+            ZMASSV = AMS(NUCZR)
+         ELSE
+            ZMASSV = ZMASV
+         ENDIF
+         X = X + ZMASSV*C(1,I)
+         Y = Y + ZMASSV*C(2,I)
+         Z = Z + ZMASSV*C(3,I)
+         TMASS = TMASS + ZMASSV
+  120 CONTINUE
+      X = X/TMASS
+      Y = Y/TMASS
+      Z = Z/TMASS
+      RETURN
+      END
+C=====================================================================72
+C*MODULE REORG  *DECK RORGPE
+C=====================================================================72
+C>
+C> @brief    writes out the surface charge density to punch file
+C>
+C> @author   Soumya Ghosh/Samantha Horvath 
+C> - March, 2016
+C>
+C> @param    NTS: tessera number
+C>           IVALUE: switch
+C>           VEL1/VEL2/VEL3: input arrays of electronic potential 
+C>           VNC1/VNC2/VNC3: input arrays of nuclear potential  
+C>           QSE1/QSE2/QSE3: total/electronic/inertial surface charges
+C>
+C>
+      SUBROUTINE RORGPE(NTS,IVALUE,VEL1,VNC1,QSE1,
+     *                             VEL2,VNC2,QSE2,
+     *                             VEL3,VNC3,QSE3,
+     *                             XCT,YCT,ZCT)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /LAMIO / IREORG,LAMVAL,IREADF,IPRNTF,RORGTP,EPSST,EPSOP
+C
+      DIMENSION VEL1(NTS),VNC1(NTS),QSE1(NTS)
+      DIMENSION VEL2(NTS),VNC2(NTS),QSE2(NTS)
+      DIMENSION VEL3(NTS),VNC3(NTS),QSE3(NTS)
+      DIMENSION XCT(NTS),YCT(NTS),ZCT(NTS)
+C
+      IF (MASWRK) THEN
+        WRITE(IP,1010)
+        WRITE(IP,1015) NTS
+        DO ITS=1,NTS
+          WRITE(IP,1025) ITS,VEL1(ITS),VNC1(ITS),QSE1(ITS)
+          IF (LAMVAL.EQ.2 .AND. IVALUE.EQ.2) THEN
+            WRITE(IP,1025) ITS,VEL2(ITS),VNC2(ITS),QSE2(ITS)
+            WRITE(IP,1025) ITS,VEL3(ITS),VNC3(ITS),QSE3(ITS)
+          ENDIF
+          WRITE(IP,1025) ITS,XCT(ITS),YCT(ITS),ZCT(ITS)
+        ENDDO
+        WRITE(IP,1030) '$END'
+      ENDIF
+C
+      RETURN
+ 1010 FORMAT(1X,'$SRFCHG')
+ 1015 FORMAT(1X,' NTS = ',I5)
+ 1025 FORMAT(1X,I5,3(2X,E22.16))
+ 1030 FORMAT(1X,A4)
+      END

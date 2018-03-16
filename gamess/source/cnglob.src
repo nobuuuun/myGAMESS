@@ -1,0 +1,535 @@
+      module connglob
+!     Type declaration in F90 style.  In order to have an array
+!     of arrays, the lower level of arrays must be declared as pointers
+!     these pointer arrays can be allocated in the normal way and
+!     maintain the properties of arrays (size, upper and lower limits)
+!
+      TYPE :: connarray
+          integer, pointer, dimension(:) :: connect
+          integer, pointer, dimension(:) :: sidea
+          integer, pointer, dimension(:) :: sideb
+      end type connarray
+
+      TYPE(connarray), allocatable :: mcconnarray(:)
+
+      DOUBLE PRECISION, dimension(109) :: elementrad
+
+      contains
+!
+!*MODULE CNGLOB  *DECK BUILDARRAYS
+!>  @brief allocates and populates array of connection arrays
+!>
+!>  @details connarray is a data type made up of three arrays,
+!>   each with a length equal to the number of specified connections
+!>   between the fragment and bonded fragments. %connect is the fragment
+!>   number of the connected fragment.  %sidea and %sideb are the atoms
+!>   on the current fragment and the connected fragment respectively
+!>   that are linked.  This subroutine reads in the fragment information
+!>   array (IFMOID) and bonding array (IBNDS) and fills the necessary
+!>   information into mcconnarray.
+!>
+!>   @author Caleb Carlin
+!>
+!>   @param NMCFRG equal to number of FMO or ab initio fragments
+!>   @param IBNDS  array of bonded atoms as specified in the input
+!>   @param PSBND array of max pair separations
+!>
+!
+      subroutine buildarrays(NMCFRG,IBNDS,PSBND)
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      PARAMETER (MXATM=2000)
+      COMMON /GLOFMO/ MCMIN,IFMOID(MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      DIMENSION IBNDS(*),PSBND(*)
+      allocate(mcconnarray(NMCFRG))
+!
+!     Count how many connections each fragment has
+      Do IJJ=1,NMCFRG
+          ISIZE=0
+          DO IJK=1,NAT
+               IF (IFMOID(IJK)==IJJ.and.IBNDS(IJK) /= 0) THEN
+                    ISIZE = ISIZE + 1
+               END IF
+          END DO
+          ALLOCATE (mcconnarray(IJJ)%connect(ISIZE))
+          ALLOCATE (mcconnarray(IJJ)%sidea(ISIZE))
+          ALLOCATE (mcconnarray(IJJ)%sideb(ISIZE))
+          ICOUNT=1
+!      Populate the arrays
+          DO IJL=1,NAT
+               IF (IFMOID(IJL)==IJJ .and. IBNDS(IJL) /= 0) THEN
+                    ITEMP=IBNDS(IJL)
+                    mcconnarray(IJJ)%connect(ICOUNT)=IFMOID(ITEMP)
+                    mcconnarray(IJJ)%sidea(ICOUNT)=IJL
+                    mcconnarray(IJJ)%sideb(ICOUNT)=ITEMP
+                  IF(PSBND(IJL).EQ.0.0D+00) THEN
+                    IATOMNUMA=ZAN(IJL)
+                    IATOMNUMB=ZAN(ITEMP)
+                    PSBND(IJL)=1.05*(elementrad(IATOMNUMA)+
+     *         elementrad(IATOMNUMB))
+                    PSBND(ITEMP)=PSBND(IJL) 
+                  END IF
+                    ICOUNT=ICOUNT+1
+               END IF
+               IF (ICOUNT > ISIZE) EXIT
+          END DO
+      END DO
+      RETURN
+
+      END Subroutine buildarrays
+!
+!*MODULE CNGLOB   *DECK MC_CON_TRANSLATE
+!>  @brief translates fragments in GLOBOP where bonding is included
+!>
+!>  @details For globop runs where a nonzero number of pair bonds
+!>   are specified, each translation is checked to see if it violates
+!>   the max pair separation distance and if the translation needs to
+!>   be propagated if the moved fragment has more than one connection.
+!>   If more than one connection exists, one connection is randomly
+!>   chosen to be the starting point and the translation is propagated
+!>   to all connected fragments. note: a cyclic set of connections will
+!>   cause an endless loop.
+!>
+!>  @author Caleb Carlin
+!>
+!>  @param DX translation on x-axis
+!>  @param DY translation on y-axis
+!>  @param DZ translation on z-axis
+!>  @param RND single number from array of random numbers
+!>  @param IFRG number of fragment to be moved
+!>  @param ALERT flag tracks if separation is bigger than PRSEP
+!>  @param INDEP flag to disable propagating translation
+!>  @param PRSEP array of maximum separation allowed between paired atoms
+!>  @param AVEXYZ array of coordinate averages
+!>  @param MCFGPOS position corresponding to IFRG in AVEXYZ
+!
+      subroutine mc_con_translate(DX,DY,DZ,RND,IFRG,
+     *    ALERT,INDEP,PRSEP,AVEXYZ,MCFGPOS)
+
+      implicit double precision (A-H,O-Z)
+
+      PARAMETER (MXATM=2000,ZERO=0.0D+00)
+      COMMON /GLOFMO/ MCMIN,IFMOID(MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *               ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      LOGICAL GOPARR,DSKWRK,MASWRK,MCMIN
+      INTEGER, ALLOCATABLE :: icontrack(:)
+      LOGICAL :: ALERT
+      DOUBLE PRECISION :: AVEXYZ(3,*)
+      DIMENSION PRSEP(*)
+
+      ISize=Size(mcconnarray(IFRG)%connect,1)
+      ALLOCATE(icontrack(ISIZE))
+      IANCHOR=ISIZE*RND+1
+
+      DO III=1,ISIZE
+         icontrack(III)=0
+      END DO
+
+      icontrack(ianchor)=1
+      MOVED=0
+      Call mc_translate(DX,DY,DZ,IFRG,MOVED,AVEXYZ,MCFGPOS)
+      CALL mc_change_avexyz(avexyz,DX,DY,DZ,zero,zero,zero,MCFGPOS,
+     *    zero,zero,zero)
+
+      IATOMA = mcconnarray(IFRG)%sidea(ianchor)
+      IATOMB = mcconnarray(IFRG)%sideb(ianchor)
+
+      DPAIRX = C(1,IATOMA)-C(1,IATOMB)
+      DPAIRY = C(2,IATOMA)-C(2,IATOMB)
+      DPAIRZ = C(3,IATOMA)-C(3,IATOMB)
+      DPAIRX = DPAIRX**2+DPAIRY**2+DPAIRZ**2
+      DPAIRX = DSQRT(DPAIRX)
+      IF (DPAIRX.GT.PRSEP(IATOMA)) THEN
+          ALERT=.true.
+          DEALLOCATE(icontrack)
+          RETURN
+      END IF
+
+      IF (INDEP.NE.0) THEN
+          DEALLOCATE(icontrack)
+          Return
+      END IF
+
+      Do IIJ=1,ISIZE
+         IF (icontrack(IIJ).ne.0) cycle
+         NFRG=mcconnarray(IFRG)%connect(IIJ)
+         NEXPOS=MCFGPOS-IFRG+NFRG
+         CALL mc_recurs_trans(NFRG,DX,DY,DZ,MOVED,IFRG,
+     *     AVEXYZ,NEXPOS)
+         icontrack(IIJ)=1
+         IF (MOVED.NE.0) THEN
+            DEALLOCATE(icontrack)
+            RETURN
+         END IF
+      END DO
+
+      DEALLOCATE(icontrack)
+      Return
+      END subroutine mc_con_translate
+!
+!*MODULE CNGLOP   *DECK MC_RECURS_TRANS
+!>  @brief recursively translates connected fragments
+!>
+!>  @details  recursively follows each branch of connected fragments
+!>   until it reaches an end fragment and then collapses to the most
+!>   recent branch point.
+!>
+!>  @author Caleb Carlin
+!>
+!>  @param NFRG number of fragment to be moved
+!>  @param DX translation on x-axis
+!>  @param DY translation on y-axis
+!>  @param DZ translation on z-axis
+!>  @param MOVED flag tracks if boundary condition violated
+!>  @param MFRG number of previous fragment in chain
+!>  @param AVEXYZ array of coordinate averages
+!>  @param MCFGPOS position of NFRG in AVEXYZ
+!
+      recursive subroutine mc_recurs_trans(NFRG,DX,DY,DZ,MOVED,MFRG,
+     *      AVEXYZ,MCFGPOS)
+
+      implicit double precision (A-H,O-Z)
+
+      PARAMETER (MXATM=2000,ZERO=0.0D+00)
+      COMMON /GLOFMO/ MCMIN,IFMOID(MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *               ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      DOUBLE PRECISION :: AVEXYZ(3,*)
+      Integer, allocatable :: ircontrack(:)
+
+      allocate(ircontrack(size(mcconnarray(NFRG)%connect)))
+      ITEMP=size(ircontrack)
+      DO IJR=1,ITEMP
+         IF (mcconnarray(NFRG)%connect(IJR).eq.MFRG) THEN
+             ircontrack(IJR)=1
+         ELSE
+             ircontrack(IJR)=0
+         END IF
+      END DO
+
+      call mc_translate(DX,DY,DZ,NFRG,MOVED,AVEXYZ,MCFGPOS)
+      call mc_change_avexyz(avexyz,dx,dy,dz,zero,zero,zero,
+     *     mcfgpos,zero,zero,zero)
+
+      IF (MOVED.NE.0) THEN
+          IF (MASWRK) THEN
+          WRITE(IW,*)'WARNING A TRANSLATION CAUSED A FRAGMENT
+     *    TO MOVE OUTSIDE THE BOUNDARY CONDITIONS.'
+          WRITE(IW,*)'THE STEP IS REJECTED.  CONSIDER INCREASING
+     *    THE BOX SIZE.'
+          END IF
+          DEALLOCATE(ircontrack)
+          RETURN
+      END IF
+
+      DO IJK=1,ITEMP
+         IF(ircontrack(IJK).ne.0) cycle
+         NRFRG=mcconnarray(NFRG)%connect(IJK)
+         NEXTPOS=MCFGPOS-NFRG+NRFRG
+         call mc_recurs_trans(NRFRG,DX,DY,DZ,MOVED,NFRG,
+     *    AVEXYZ,MCFGPOS)
+         ircontrack(IJK)=1
+         IF(MOVED.NE.0) THEN
+            DEALLOCATE (ircontrack)
+            RETURN
+         END IF
+      END DO
+
+      DEALLOCATE(ircontrack)
+      RETURN
+
+      END subroutine mc_recurs_trans
+!
+!*MODULE CNGLOB   *DECK MC_CON_ROTATE
+!>  @brief rotates fragments in GLOBOP where bonding is included
+!>
+!>  @details For globop runs where a nonzero number of pair bonds
+!>   are specified, rotations of connected fragments are propagated
+!>   so that bonds are not broken.  If more than one connection exists
+!>   for the chosen fragment, one connection is randomly to be the
+!>   point of rotation.
+!>
+!>  @author Caleb Carlin
+!>
+!>  @param DA rotation angle alpha
+!>  @param DB rotation angle beta
+!>  @param DG rotation angle gamma
+!>  @param RND single number from array of random numbers
+!>  @param IFRG number of fragment to rotate
+!>  @param ALERT flag tracks if boundary condition is violated
+!>  @param AVEXYZ array of coordinate averages
+!>  @param MCFGPOS position of IFRG in AVEXYZ
+!
+      subroutine mc_con_rotate(DA,DB,DG,RND,IFRG,ALERT,AVEXYZ,MCFGPOS)
+
+      implicit double precision (A-H,O-Z)
+
+      PARAMETER (MXATM=2000,ZERO=0.0D+00)
+      COMMON /GLOFMO/ MCMIN,IFMOID(MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *               ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      LOGICAL GOPARR,DSKWRK,MASWRK,ALERT
+      DOUBLE PRECISION :: AVEXYZ(3,*)
+      INTEGER, ALLOCATABLE :: ixcontrack(:)
+
+      ISize=Size(mcconnarray(IFRG)%connect,1)
+      ALLOCATE(ixcontrack(ISIZE))
+      IANCHOR=ISIZE*RND+1
+
+      ALERT=.FALSE.
+      DO IIK=1,ISIZE
+         ixcontrack(IIK)=0
+      END DO
+
+      IATOMA = mcconnarray(IFRG)%sidea(ianchor)
+      IATOMB = mcconnarray(IFRG)%sideb(ianchor)
+
+      AA=C(1,IATOMA)
+      AB=C(2,IATOMA)
+      AG=C(3,IATOMA)
+
+      ixcontrack(ianchor)=1
+      MOVED=0
+      Call mc_rotate(DA,DB,DG,IFRG,AA,AB,AG)
+      call mc_change_avexyz(avexyz,zero,zero,zero,DA,DB,DG,mcfgpos,
+     *     AA,AB,AG)
+
+      Do IIJ=1,ISIZE
+         IF (ixcontrack(IIJ).ne.0) cycle
+         NFRG=mcconnarray(IFRG)%connect(IIJ)
+         NEXPOS=MCFGPOS-IFRG+NFRG
+         CALL mc_recurs_rot(NFRG,DA,DB,DG,MOVED,IFRG,AA,AB,AG
+     *      ,ALERT,AVEXYZ,NEXPOS)
+         ixcontrack(IIJ)=1
+
+         IF(MOVED.EQ.1) THEN
+           DEALLOCATE(ixcontrack)
+           RETURN
+         END IF
+      END DO
+
+      DEALLOCATE(ixcontrack)
+      RETURN
+      END subroutine mc_con_rotate
+!
+!*MODULE CNGLOB   *DECK MC_RECURS_ROT
+!>  @brief recursively rotates connected fragments
+!>
+!>  @details  recursively follows each branch of connected fragments
+!>   until it reaches an end fragment and then collapses to the most
+!>   recent branch point.  All rotations are around the same point
+!>
+!>  @author  Caleb Carlin
+!>
+!>  @param  NFRG number of fragment to rotate
+!>  @param DA rotation angle alpha
+!>  @param DB rotation angle beta
+!>  @param DG rotation angle gamma
+!>  @param MOVED flag tracks if any fragments have rotated outside
+!>         the boundary condition
+!>  @param MFRG number of previous fragment in chain
+!>  @param AA  x coordinate of point of rotation
+!>  @param AB  y coordinate of point of rotation
+!>  @param AG  z coordinate of point of rotation
+!>  @param AVEXYZ array of coordinate averages
+!>  @param MCFGPOS position of NFRG in AVEXYZ
+!
+      recursive subroutine mc_recurs_rot(NFRG,DA,DB,DG,MOVED,MFRG,
+     *     AA,AB,AG,ALERT,AVEXYZ,MCFGPOS)
+     
+      implicit double precision (A-H,O-Z)
+
+      PARAMETER (MXATM=2000,ZERO=0.0D+00)
+      COMMON /GLOFMO/ MCMIN,IFMOID(MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *               ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /SIMEN / EPREV,EMIN,ALPHA,DAVE,XMIN,XMAX,YMIN,YMAX
+     *               ,ZMIN,ZMAX,XRANGE,YRANGE,ZRANGE,SEPTOL
+     *               ,DACRAT,UPDFAC,IPTRAJ
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      LOGICAL GOPARR,DSKWRK,MASWRK,ALERT
+      Integer, allocatable :: ibcontrack(:)
+       DOUBLE PRECISION :: AVEXYZ(3,*)
+
+      allocate(ibcontrack(size(mcconnarray(NFRG)%connect)))
+      ITEMP=size(ibcontrack)
+      DO IJR=1,ITEMP
+         IF (mcconnarray(NFRG)%connect(IJR).eq.MFRG) THEN
+             ibcontrack(IJR)=1
+         ELSE
+             ibcontrack(IJR)=0
+         END IF
+      END DO
+ 
+      call mc_rotate(DA,DB,DG,NFRG,AA,AB,AG)
+      call mc_change_avexyz(avexyz,zero,zero,zero,DA,DB,DG,MCFGPOS,
+     *     AA,AB,AG)
+
+       IF((AVEXYZ(1,MCFGPOS).GT.XMAX).OR.(AVEXYZ(1,MCFGPOS).LT.XMIN))
+     *  MOVED=1
+!
+       IF((AVEXYZ(2,MCFGPOS).GT.YMAX).OR.(AVEXYZ(2,MCFGPOS).LT.YMIN)) 
+     *  MOVED=1
+!
+       IF((AVEXYZ(3,MCFGPOS).GT.ZMAX).OR.(AVEXYZ(3,MCFGPOS).LT.ZMIN)) 
+     *   MOVED=1 
+!
+      IF (MOVED==1) THEN
+         IF (MASWRK) write(IW,*)'WARNING: the rotation broke the
+     *   boundary condition'
+         IF (MASWRK) write(IW,*)'Step rejected.  Increase box size.'
+         ALERT=.TRUE.
+         DEALLOCATE (ibcontrack)
+         RETURN
+      END IF
+
+      DO IJK=1,ITEMP
+         IF(ibcontrack(IJK).ne.0) cycle
+         NRFRG=mcconnarray(NFRG)%connect(IJK)
+         NEXTPOS=MCFGPOS-NFRG+NRFRG
+         call mc_recurs_rot(NRFRG,DA,DB,DG,MOVED,NFRG,AA,AB,AG,ALERT
+     *    ,AVEXYZ,NEXTPOS)
+         ibcontrack(IJK)=1
+         IF (MOVED.EQ.1) THEN
+            DEALLOCATE(ibcontrack)
+            RETURN
+         END IF
+      END DO
+
+      DEALLOCATE(ibcontrack)
+      RETURN
+      END subroutine mc_recurs_rot
+
+      subroutine mc_fill_elemrad
+
+      IMPLICIT NONE
+      DOUBLE PRECISION :: UNITS
+      PARAMETER(UNITS = 1.0D+00/0.52917724924D+00)
+
+      elementrad(1)=0.37*UNITS
+      elementrad(2)=0.31*UNITS
+      elementrad(3)=1.52*UNITS
+      elementrad(4)=1.12*UNITS
+      elementrad(5)=0.85*UNITS
+      elementrad(6)=0.77*UNITS
+      elementrad(7)=0.70*UNITS
+      elementrad(8)=0.73*UNITS
+      elementrad(9)=0.72*UNITS
+      elementrad(10)=0.71*UNITS
+      elementrad(11)=1.86*UNITS
+      elementrad(12)=1.60*UNITS
+      elementrad(13)=1.43*UNITS
+      elementrad(14)=1.18*UNITS
+      elementrad(15)=1.10*UNITS
+      elementrad(16)=1.03*UNITS
+      elementrad(17)=0.99*UNITS
+      elementrad(18)=0.98*UNITS
+      elementrad(19)=2.27*UNITS
+      elementrad(20)=1.97*UNITS
+      elementrad(21)=1.63*UNITS
+      elementrad(22)=1.47*UNITS
+      elementrad(23)=1.34*UNITS
+      elementrad(24)=1.30*UNITS
+      elementrad(25)=1.30*UNITS
+      elementrad(26)=1.27*UNITS
+      elementrad(27)=1.25*UNITS
+      elementrad(28)=1.24*UNITS
+      elementrad(29)=1.28*UNITS
+      elementrad(30)=1.38*UNITS
+      elementrad(31)=1.35*UNITS
+      elementrad(32)=1.22*UNITS
+      elementrad(33)=1.20*UNITS
+      elementrad(34)=1.19*UNITS
+      elementrad(35)=1.14*UNITS
+      elementrad(36)=1.12*UNITS
+      elementrad(37)=2.48*UNITS
+      elementrad(38)=2.15*UNITS
+      elementrad(39)=1.81*UNITS
+      elementrad(40)=1.60*UNITS
+      elementrad(41)=1.48*UNITS
+      elementrad(42)=1.39*UNITS
+      elementrad(43)=1.36*UNITS
+      elementrad(44)=1.34*UNITS
+      elementrad(45)=1.35*UNITS
+      elementrad(46)=1.38*UNITS
+      elementrad(47)=1.41*UNITS
+      elementrad(48)=1.50*UNITS
+      elementrad(49)=1.67*UNITS
+      elementrad(50)=1.40*UNITS
+      elementrad(51)=1.40*UNITS
+      elementrad(52)=1.42*UNITS
+      elementrad(53)=1.33*UNITS
+      elementrad(54)=1.31*UNITS
+      elementrad(55)=2.65*UNITS
+      elementrad(56)=2.22*UNITS
+      elementrad(57)=1.82*UNITS
+      elementrad(58)=1.82*UNITS
+      elementrad(59)=1.82*UNITS
+      elementrad(60)=1.81*UNITS
+      elementrad(61)=1.81*UNITS
+      elementrad(62)=1.81*UNITS
+      elementrad(63)=1.80*UNITS
+      elementrad(64)=1.80*UNITS
+      elementrad(65)=1.80*UNITS
+      elementrad(66)=1.79*UNITS
+      elementrad(67)=1.78*UNITS
+      elementrad(68)=1.77*UNITS
+      elementrad(69)=1.76*UNITS
+      elementrad(70)=1.75*UNITS
+      elementrad(71)=1.74*UNITS
+      elementrad(72)=1.60*UNITS
+      elementrad(73)=1.48*UNITS
+      elementrad(74)=1.39*UNITS
+      elementrad(75)=1.37*UNITS
+      elementrad(76)=1.36*UNITS
+      elementrad(77)=1.36*UNITS
+      elementrad(78)=1.39*UNITS
+      elementrad(79)=1.42*UNITS
+      elementrad(80)=1.51*UNITS
+      elementrad(81)=1.70*UNITS
+      elementrad(82)=1.46*UNITS
+      elementrad(83)=1.50*UNITS
+      elementrad(84)=1.68*UNITS
+      elementrad(85)=1.40*UNITS
+      elementrad(86)=1.41*UNITS
+      elementrad(87)=2.80*UNITS
+      elementrad(88)=2.30*UNITS
+      elementrad(89)=1.83*UNITS
+      elementrad(90)=1.82*UNITS
+      elementrad(91)=1.82*UNITS
+      elementrad(92)=1.82*UNITS
+      elementrad(93)=1.82*UNITS
+      elementrad(94)=1.82*UNITS
+      elementrad(95)=1.82*UNITS
+      elementrad(96)=1.82*UNITS
+      elementrad(97)=1.81*UNITS
+      elementrad(98)=1.81*UNITS
+      elementrad(99)=1.80*UNITS
+      elementrad(100)=1.80*UNITS
+      elementrad(101)=1.79*UNITS
+      elementrad(102)=1.78*UNITS
+      elementrad(103)=1.77*UNITS
+      elementrad(104)=1.66*UNITS
+      elementrad(105)=1.55*UNITS
+      elementrad(106)=1.45*UNITS
+      elementrad(107)=1.43*UNITS
+      elementrad(108)=1.40*UNITS
+      elementrad(109)=1.40*UNITS
+      RETURN
+
+      end subroutine
+
+      END MODULE CONNGLOB

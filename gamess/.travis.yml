@@ -1,0 +1,247 @@
+language: c
+matrix:
+  fast_finish: true
+  include:
+  - os: linux
+    dist: trusty
+    env:
+    - LIBCCHEMCPU=TRUE
+    - MATH=ATLAS
+    - COMM=MPI
+    - OSVER=TRUSTY
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: trusty
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=ATLAS
+    - COMM=SOCKETS
+    - OSVER=TRUSTY
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: trusty
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=ATLAS
+    - COMM=MPI
+    - OSVER=TRUSTY
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: trusty
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=NONE
+    - COMM=SOCKETS
+    - OSVER=TRUSTY
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: trusty
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=NONE
+    - COMM=MPI
+    - OSVER=TRUSTY
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: precise
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=ATLAS
+    - COMM=MPI
+    - OSVER=PRECISE
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: precise
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=ATLAS
+    - COMM=SOCKETS
+    - OSVER=PRECISE
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: precise
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=NONE
+    - COMM=MPI
+    - OSVER=PRECISE
+    - TRAVIS_CI=TRUE
+    sudo: true
+  - os: linux
+    dist: precise
+    env:
+    - LIBCCHEMCPU=FALSE
+    - MATH=NONE
+    - COMM=SOCKETS
+    - OSVER=PRECISE
+    - TRAVIS_CI=TRUE
+    sudo: true
+before_install:
+- cat /proc/sys/kernel/shmmax
+- sudo sysctl -w kernel.shmmax=4294967296
+- cat /proc/sys/kernel/shmmax
+install:
+- sudo apt-get -qq install -y csh
+- sudo apt-get -qq install -y make
+- sudo apt-get -qq install -y gcc
+- sudo apt-get -qq install -y gfortran
+- sudo apt-get -qq install -y g++
+- export GIT_DIRECTORY=`pwd`
+- export NUM_CPU_CORES=`grep -c ^processor /proc/cpuinfo`
+- export LD_LIBRARY_PATH=/usr/lib
+- export CC=`which gcc`
+- export FC=`which gfortran`
+- export CXX=`which g++`
+- echo "travis_fold:start:atlas"
+- ''
+- if [ "$MATH" = "ATLAS" ]; then sudo apt-get -qq install -y libatlas-base-dev ; sudo
+  apt-get -qq install -y libblas-dev ; sudo apt-get -qq install -y liblapack-dev ;
+  fi
+- echo "travis_fold:end:atlas"
+- echo "travis_fold:start:mpi"
+- ''
+- if [ "$COMM" = "MPI" ] && [ "$OSVER" = "PRECISE" ]; then sudo apt-get -qq install
+  -y mpich2 ; fi
+- if [ "$COMM" = "MPI" ] && [ "$OSVER" = "TRUSTY" ]; then sudo apt-get -qq install
+  -y mpich ; fi
+- echo "travis_fold:end:mpi"
+- echo "travis_fold:start:libcchem"
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then sudo apt-get -qq install -y autoconf ; sudo
+  apt-get -qq install -y automake ; sudo apt-get -qq install -y git ; sudo apt-get
+  -qq install -y libboost1.55-dev ; sudo apt-get -qq install -y libgmp-dev ; sudo
+  apt-get -qq install -y m4 ; sudo apt-get -qq install -y patch ; sudo apt-get -qq
+  install -y tcsh ; sudo apt-get -qq install -y wget ; sudo apt-get -qq install -y
+  xz-utils ; sudo apt-get -qq install -y zlib1g ; sudo apt-get -qq install -y zlib1g-dev
+  ; fi
+- echo "travis_fold:end:libcchem"
+- echo "travis_fold:start:eigen-libcchem"
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then ./bin/travis-ci-extract-eigen.sh ; fi
+- echo "travis_fold:end:eigen-libcchem"
+- echo "travis_fold:start:mpich-libcchem"
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then ./bin/travis-ci-build-mpi-mpich.sh ; export
+  LD_LIBRARY_PATH=/opt/local/lib:$LD_LIBRARY_PATH ; fi
+- echo "travis_fold:end:mpich-libcchem"
+- echo "travis_fold:start:szip-hdf5"
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then ./bin/travis-ci-build-szip.sh ; export LD_LIBRARY_PATH=/opt/szip/lib:$LD_LIBRARY_PATH
+  ; fi
+- echo "travis_fold:end:szip-hdf5"
+- echo "travis_fold:start:hdf5"
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then wget --no-check-certificate --timeout=0 https://www.hdfgroup.org/package/gzip/?wpdmdl=4301
+  -O /home/travis/hdf5-1.10.1.tar.gz ; ./bin/travis-ci-build-hdf5.sh ; fi
+- echo "travis_fold:end:hdf5"
+- echo "travis_fold:start:libint-libcchem"
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then ./bin/travis-ci-build-libint.sh ; export LD_LIBRARY_PATH=/opt/libint/lib:$LD_LIBRARY_PATH
+  ; fi
+- echo "travis_fold:end:libint-libcchem"
+before_script:
+- export GCC_MAJOR_VERSION=`gcc --version | grep ^gcc | sed 's/gcc (.*) //g' | grep
+  -o '[0-9]\{1,3\}\.[0-9]\{0,3\}\.[0-9]\{0,3\}' | cut -d '.' -f 1`
+- export GCC_MINOR_VERSION=`gcc --version | grep ^gcc | sed 's/gcc (.*) //g' | grep
+  -o '[0-9]\{1,3\}\.[0-9]\{0,3\}\.[0-9]\{0,3\}' | cut -d '.' -f 2`
+- export NUM_CPU_CORES=`grep -c ^processor /proc/cpuinfo`
+- cd $GIT_DIRECTORY
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then cp misc/automation/install.info.template.v2
+  install.info ; else cp misc/automation/install.info.template install.info ; fi
+- mkdir -p object
+- mkdir -p restart
+- mkdir -p scratch
+- sed -i 's?TEMPLATE_GMS_PATH?'`pwd`'?g' install.info
+- sed -i 's?TEMPLATE_GMS_BUILD_DIR?'`pwd`'?g' install.info
+- sed -i 's/TEMPLATE_GMS_TARGET/linux64/g' install.info
+- sed -i 's/TEMPLATE_GMS_FORTRAN/gfortran/g' install.info
+- sed -i 's/TEMPLATE_GMS_GFORTRAN_VERNO/'"$GCC_MAJOR_VERSION"'.'"$GCC_MINOR_VERSION"'/g'
+  install.info
+- sed -i 's/TEMPLATE_GMS_PHI/none/g' install.info
+- sed -i 's/TEMPLATE_GMS_SHMTYPE/sysv/g' install.info
+- sed -i 's/TEMPLATE_GMS_OPENMP/false/g' install.info
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then sed -i 's/TEMPLATE_GMS_LIBCCHEM_OPTION/true/g'
+  install.info ; sed -i 's/TEMPLATE_GMS_LIBCCHEM_GPU_SUPPORT/false/g' install.info
+  ; sed -i 's/TEMPLATE_GMS_CUDA_BOARD//g' install.info ; sed -i 's/TEMPLATE_GMS_CUDA_PATH//g'
+  install.info ; sed -i 's/TEMPLATE_GMS_HDF5_PATH/\/usr\/local/g' install.info ; sed
+  -i 's/TEMPLATE_GMS_LIBCCHEM_LIBINT/true/g' install.info ; sed -i 's/TEMPLATE_GMS_LIBINT_PATH/\/opt\/libint\//g'
+  install.info ; sed -i 's/TEMPLATE_GMS_EIGEN_PATH/\/home\/travis\/eigen-eigen-67e894c6cd8f/g'
+  install.info ; else sed -i 's/TEMPLATE_GMS_LIBCCHEM_OPTION/false/g' install.info
+  ; fi
+- if [ "$MATH" == "NONE" ]; then sed -i 's/TEMPLATE_GMS_MATHLIB_OPTION/none/g' install.info;
+  sed -i 's/TEMPLATE_GMS_MATHLIB_PATH//g' install.info; sed -i 's/TEMPLATE_GMS_MATHLIB_INCLUDE_PATH//g'
+  install.info; fi
+- ''
+- if [ "$MATH" == "ATLAS" ]; then sed -i 's/TEMPLATE_GMS_MATHLIB_OPTION/atlas/g' install.info;
+  sed -i 's/TEMPLATE_GMS_MATHLIB_PATH/\/usr\/lib\/atlas-base/g' install.info; sed
+  -i 's/TEMPLATE_GMS_MATHLIB_INCLUDE_PATH/\/usr\/include\/atlas/g' install.info; fi
+- ''
+- if [ "$COMM" == "SOCKETS" ]; then sed -i 's/TEMPLATE_GMS_DDI_COMM/sockets/g' install.info;
+  fi
+- ''
+- if [ "$COMM" == "MPI" ]; then sed -i 's/TEMPLATE_GMS_DDI_COMM/mpi/g' install.info;
+  sed -i 's/TEMPLATE_GMS_MPI_LIB/mpich2/g' install.info; if [ "$LIBCCHEMCPU" = "TRUE"
+  ]; then sed -i 's/TEMPLATE_GMS_MPI_PATH/\/usr\/local/g' install.info; sed -i 's/set
+  TARGET=sockets/set TARGET=ga/g' misc/automation/rungms; else sed -i 's/TEMPLATE_GMS_MPI_PATH/\/usr/g'
+  install.info; sed -i 's/-lmpifort//g' lked; sed -i 's/$GMS_MPI_PATH\/include/$GMS_MPI_PATH\/include\/mpi/g'
+  ddi/compddi; sed -i 's/set TARGET=sockets/set TARGET=mpi/g' misc/automation/rungms;
+  fi fi
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then sed -i 's/#sed/sed/g' libcchem/boost/Makefile
+  ; sed -i 's/.\/bjam/.\/bjam -d+1/g' libcchem/boost/Makefile ; sed -i 's/>& ..\/make-boost.log//g'
+  libcchem/build-cchem ; sed -i 's/>& ..\/make-ga.log//g' libcchem/build-cchem ; sed
+  -i 's/>& configure.log//g' libcchem/build-cchem ; sed -i 's/>& make-libcchem.log//g'
+  libcchem/build-cchem ; sed -i 's/>& make-install.log//g' libcchem/build-cchem ;
+  sed -i 's/--with-math=mkl/--with-math=atlas/g' libcchem/build-cchem ; sed -i 's/GMS_MATHLIB_PATH\/include/GMS_MATHLIB_INCLUDE_PATH/g'
+  libcchem/build-cchem ; sed -i 's/make -j6/make -j'"$NUM_CPU_CORES"'/g' libcchem/build-cchem
+  ; sed -i 's/\$GMS_MATHLIB_PATH\/libatlas.a/\$GMS_MATHLIB_PATH\/liblapack_atlas.a
+  \$GMS_MATHLIB_PATH\/libcblas.a \$GMS_MATHLIB_PATH\/libatlas.a/g' lked ; sed -i 's/\$HDF5_LIBPATH\/libhdf5.a/\$HDF5_LIBPATH\/libhdf5.so/g'
+  lked ; fi
+- sed -e "s/^\*UNX/    /" tools/actvte.code > actvte.f
+- export makef=`pwd`/Makefile
+- echo "GMS_PATH = "`pwd` > $makef
+- echo "GMS_VERSION = 00" >> $makef
+- echo "GMS_BUILD_PATH = "`pwd` >> $makef
+- echo "GMS_OPENMP = false" >> $makef
+- echo 'include $(GMS_PATH)/Makefile.in' >> $makef
+- sed -i 's/MXFRG=1050/MXFRG=900/g' source/*.src
+- cat install.info
+script:
+- export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+- gfortran -o tools/actvte.x actvte.f
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then ./bin/travis-ci-build-libcchem.sh ; fi
+- make -j$NUM_CPU_CORES
+- make -j$NUM_CPU_CORES
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then mv gamess.00.x gamess.cchem.00.x ; fi
+- ''
+- if [ "$LIBCCHEMCPU" = "TRUE" ]; then
+    ./bin/travis-ci-run-test-set-libcchem.sh  1 libcchem/cc   cc-h2co.inp
+  ; ./bin/travis-ci-run-test-set-libcchem.sh  1 libcchem/mp2  mp2-urea.inp
+  ; ./bin/travis-ci-run-test-set-libcchem.sh  1 libcchem/ri   rizapt-urea_mult-4.rhf.spherical.energy.inp
+  ; ./bin/travis-ci-run-test-set-libcchem.sh  1 libcchem/scf  scf-cyt.inp
+  ; ./bin/travis-ci-run-test-set-libcchem.sh  1 libcchem/zapt zapt-urea.cation.inp
+  ; cd tests && ./checkgms.py -p --verbose_validation --exit_on_fail && cd ../ ; rm tests/libcchem/*/*.log
+  ; fi
+- ''
+- if [ "$LIBCCHEMCPU" = "FALSE" ]; then tests/runtest.py --folder=travis-ci --ncpus=1
+  ; cd tests && ./checkgms.py -p --verbose_validation --exit_on_fail && cd ../ ; rm tests/travis-ci/*.log
+  tests/travis-ci/parallel/*.log ; tests/runtest.py --folder=travis-ci/parallel --ncpus=2
+  ; cd tests && ./checkgms.py -p --verbose_validation --exit_on_fail && cd ../ ; rm tests/travis-ci/parallel/*.log
+  ; fi
+after_success:
+- echo "Successful Build!"
+after_failiure:
+- cat build.out
+notifications:
+  slack:
+    secure: agZ1PSTXsZMSctzzK/4F/V7TA00m3++xxXIzCVOvHCq1JjmCGF56WzbZ5bQ0UIS+chUVZrKXBo+FVxjsAWMHwx49Z1sSlQ13DJ05K36cRlXEOm4WEvXdtC1PlSY2lTZ3CDtnY2nl08q2M7LwJF8epFSmoSH80DsBGdcBwjfE/6e62OpW1Ki1Ckl1OsZWGxNkBXLU52ybvY8+yyTY4+uEUcepI1ZNlLshnlpEOOp+LNCqkKnzHMdbvQwEIRrKysk+f9aFziQFQgqtEUavpSum2PxXj8M0Y+mnoKqXS4+plCYmnTbfpxL5j8rwsoA+7Z6E5wDlKjHZk0R3qolUlWIyTUEo1+GblfEFVZUKXo2ivTeJl7Y4F/cD1IaQ9j7+L0LxeqYhkR/se8WYoYj+CIL7U5l5Kz0L0QvSVMzPVQVoHVi3XZcqx57Lb3YiHpmduT0M3c5Gkjn1ZtXYuJT/+gwXxeuviglrldr7p0QC3QMO7yGwDeV1/ORXS3YLhW8mBwD5+onQoUE1mbBzdC+PBlCZys58xE71A3M9yOgmUiEGOO87AixsBARc8K/LCUPU5+BrjwIDHMy8fl/e5g3UARpR2frXfTQB0Ew2So+8v8FhmvzoQby5s+MuwwdMWg9Ic6oqn/eLybkbqrY6Z0FlNOio3QOC823bpfGPfLk2AARUiPI=

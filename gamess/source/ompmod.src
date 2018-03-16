@@ -1,0 +1,1740 @@
+#define __TIMING 0
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+!*MODULE OMPMOD
+!>  @brief   In this module OpenMP versions of Fock matrix calculation routines are collected.
+!>           They are called explicitly from corresponding routines from int2a.src module,
+!>           namely TWOEI and EXCHNG, using conditional OpenMP compiling. They are never
+!>           called if compiler doesn't support OpenMP or -openmp/-fopenmp/-qopenmp flag
+!>           is not set at compile time for the all files.
+!>  @details A lot of the work on thread-safety is done by small script "addomp.sh" which
+!>           is located in ../tools directory. It sets <threadprivate> attribute
+!>           for sensitive common blocks throughout all files in GAMESS source directory.
+!>  @author  Vladimir Mironov
+!>  @date    2016-2017
+
+
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+MODULE ompmod
+
+    USE omp_lib
+    USE prec, ONLY: fp
+
+    USE mx_limits, ONLY: &
+        mxsh, mxgtot, mxatm, mxang, mxang2, mxgsh, mxg2
+
+    IMPLICIT NONE
+
+    PRIVATE
+
+    PUBLIC &
+        ompmod_twoei_jk, &
+        ompmod_twoei_kl, &
+        ompmod_twoei_shf_kl_rhf, &
+        ompmod_exchng
+
+    CHARACTER(LEN=*), PARAMETER :: &
+        dbgfmt1 = '(/2x,&
+                    &"Thread | Number of |",19X,"Timing",&
+                    &/1x," number | quartets  |  Integrals |   F update  ",&
+                    &"|   Schwartz  |    Total    |")', &
+        dbgfmt2 = '(i5,4x,"|",i10," |",4(f9.2," s | "))', &
+
+        dbgfmt_exch ='(1X,"SCHWARZ INEQUALITY OVERHEAD:",I10," INTEGRALS, &
+                  &T=",F12.2)'
+
+    INTEGER, PARAMETER :: &
+        angm(0:6) = (/4,4,6,10,15,21,28/)
+
+    REAL(KIND=fp), PARAMETER :: &
+        zero=0.0_fp, one=1.0_fp
+
+    INTERFACE
+        REAL(KIND=fp) FUNCTION schwdn(dsh,ish,jsh,ksh,lsh,ia)
+            USE prec
+            INTEGER, INTENT(IN) :: ish, jsh, ksh, lsh, ia(*)
+            REAL(KIND=fp), INTENT(IN) :: dsh(*)
+        END FUNCTION
+    END INTERFACE
+
+CONTAINS
+
+!*MODULE OMPMOD   *DECK OMPMOD_TWOEI_JK
+!
+!>    @brief   Threaded version of two-electron integral
+!>             calculation routine. Load balance of OpenMP code
+!>             is done over J and K shell indices,
+!>             MPI load balance - over I index.
+!>             Related input file option:
+!>             `$INTGRL INTOMP=1 $END`
+!>
+!>    @details Calculates two-electron contribution to the Fock
+!>             matrix. Based on `TWOEI` subroutine from `int2a.src`
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _May, 2016_ Initial release
+!>    @date _Jun, 2017_ Bug fixes
+!
+!     PARAMETERS:
+!
+!>    @param[in]     typscf    hollerith, the kind of SCF (=RHF,UHF, etc.)
+!>    @param[in]     schwrz    determines whether to use integral screening
+!>    @param[out]    nint      number of calculated ERIs
+!>    @param[out]    nschwz    number of ERIs that were screened out
+!>    @param[in]     l1        size of index array
+!>    @param[in]     l2a       size of Fock and density matrices (alpha)
+!>    @param[in]     l2b       size of Fock and density matrices (beta)
+!>    @param[in]     xints(:)  array of exchange integrals
+!>    @param[in]     nsh2      size of `xints(:)` array
+!>    @param[in]     maxg      size of temporary array for Rys code
+!>    @param[in]     ia(:)     index array, contains "triangular numbers"
+!>    @param[in,out] da(:)     density matrix for alpha electrons
+!>    @param[out]    fa(:)     Fock matrix for alpha electrons
+!>    @param[in,out] db(:)     density matrix for beta electrons,
+!>                                 used in open-shell calculations only
+!>    @param[out]    fb(:)     Fock matrix for beta electrons,
+!>                                 used in open-shell calculations only
+!>    @param[in]     dsh       density matrix packed in shells
+!>                                 for screening purposes
+!>    @param[in]     nflmat    when >1 selects CPHF calculation
+!>    @param[in]     nshell    number of shells
+!>    @param[in]     ktype(:)  array of shell types according to their
+!>                                 angular momentum
+!>    @param[in]     cutoff    cutoff for integral screening
+!>    @param[in]     oflag     logical parameter for debug timing output
+  SUBROUTINE ompmod_twoei_jk(typscf,schwrz,nint,nschwz, &
+                             l1,l2a,l2b,xints, &
+                             nsh2,maxg, &
+                             ia,da,fa,db,fb,dsh,nflmat, &
+                             nshell, ktype, cutoff, oflag)
+
+    LOGICAL, INTENT(IN) :: &
+      schwrz
+
+    INTEGER, INTENT(OUT) :: &
+      nint, nschwz
+
+    INTEGER, INTENT(IN) :: &
+      l1, l2a, l2b, nsh2, nshell, nflmat, maxg, &
+      ia(l1),ktype(mxsh)
+
+!   typscf is an 8-byte hollerith constant
+    REAL(KIND=8), INTENT(IN) :: &
+        typscf
+
+    REAL(KIND=fp), INTENT(IN) :: &
+      cutoff, &
+      xints(nsh2), dsh(nsh2)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+      da(l2a), db(l2b)
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+!      fa(l2a), fb(l2b)
+      fa(l2a*nflmat), fb(l2b*nflmat)
+
+    LOGICAL, INTENT(IN) :: &
+        oflag
+
+    COMMON /par   / me,master,nproc,ibtyp,iptim,goparr,dskwrk,maswrk
+        INTEGER :: me,master,nproc,ibtyp,iptim
+        LOGICAL :: dskwrk, maswrk, goparr
+
+    COMMON /iofile/ ir,iw,ip,is,ipk,idaf,nav,ioda(950)
+        INTEGER :: ir,iw,ip,is,ipk,idaf,nav,ioda
+
+    COMMON /fmcom / xx(1)
+        REAL(KIND=fp), TARGET :: xx
+
+    COMMON /shlnos/ qq4,lit,ljt,lkt,llt,loci,locj,lock,locl, &
+                    mini,minj,mink,minl,maxi,maxj,maxk,maxl, &
+                    nij,ij,kl,ijkl
+        INTEGER :: lit,ljt,lkt,llt,loci,locj,lock,locl, &
+                   mini,minj,mink,minl,maxi,maxj,maxk,maxl, &
+                   nij,ij,kl,ijkl
+        REAL(KIND=fp) :: qq4
+
+    COMMON /maxc  / cmax(mxgtot),cmaxa(mxgsh),cmaxb(mxgsh), &
+                    cmaxc(mxgsh),cmaxd(mxgsh),ismlp(mxg2),ismlq
+        REAL(KIND=fp) :: cmax,cmaxa,cmaxb,cmaxc,cmaxd
+        INTEGER :: ismlp,ismlq
+
+    COMMON /gout  / gpople(768),norgp
+        REAL(KIND=fp) :: gpople
+        INTEGER :: norgp
+
+    COMMON /nlrcf / lrint
+        LOGICAL :: lrint
+
+    COMMON /dftpar/ dfttyp(20),exena,exenb,exenc, &
+                    idft34,nauxfun,nauxshl
+        REAL(KIND=fp) :: dfttyp,exena,exenb,exenc
+        INTEGER :: idft34,nauxfun,nauxshl
+
+!   Common blocks /MAXC  /, /SHLNOS/ and /GOUT/ contain
+!   both global (cmax(:),qq4,norgp) and thread-local
+!   data (the rest). Set them threadprivate and copyin
+!   global data later in $omp parallel section.
+
+!$omp threadprivate(/shlnos/,/maxc  /,/gout  /,/nlrcf /,/dftpar/)
+
+    INTEGER :: &
+      next, num_threads, ithread, thr_nshq, &
+      ii, jj, kk, ll, ijij, klkl, jork, ijmax, klmax, &
+      shlmxang
+
+    LOGICAL :: &
+      schskp, dirscf
+
+    REAL(KIND=fp) :: &
+      denmax, tim, tim0, tim1, tim2, tim3, tim4, test
+
+    REAL(KIND=fp),DIMENSION(:),ALLOCATABLE :: &
+      ddij_t, ghondo_t
+
+!
+!   --- Initialization of variables ---
+!
+
+    tim = zero
+    CALL tsecnd(tim)
+
+    nint   = 0
+    nschwz = 0
+    schskp = .FALSE.
+    denmax = zero
+    dirscf = .TRUE.
+
+!   no symmetry supported yet
+    qq4 = 1
+    norgp = 0
+
+
+#if __TIMING==1
+!   text for timing output
+    IF (oflag) WRITE(iw,dbgfmt1)
+#endif
+!
+!   --- Initiate OpenMP parallel ---
+!
+!   early thread invocation decrease OpenMP lib overhead
+!
+!$omp parallel                                  &
+!$omp   private(ithread, thr_nshq, ii,          &
+!$omp     jj,kk,ll,jork, ijij, klkl, test,      &
+!$omp     tim, tim0, tim1, tim2, tim3, tim4,    &
+!$omp     ddij_t, ghondo_t, shlmxang)           &
+!$omp   firstprivate(denmax, schskp)            &
+!$omp   shared(ia,da,l1,l2a,l2b,num_threads,    &
+!$omp     next, maxg, xx,                       &
+!$omp     cutoff, dirscf, xints, dsh, nflmat,   &
+!$omp     typscf,schwrz,oflag)                  &
+!$omp   reduction(+:fa,fb,nint,nschwz)          &
+!$omp   copyin(cmax,qq4,norgp,lrint,/dftpar/)
+
+!   allocate temporary memory for integrals
+    ALLOCATE(ddij_t(mxang2*mxg2),ghondo_t(maxg))
+
+!
+!   --- Variable initialization for OpenMP ---
+!
+
+    num_threads = omp_get_num_threads()
+
+!   reset all info stats
+    ithread  = omp_get_thread_num()
+    thr_nshq = 0
+#if __TIMING==1
+    tim1     = zero
+    tim2     = zero
+    tim3     = zero
+    tim4     = zero
+!   main timer initialization
+    tim0     = omp_get_wtime()
+#endif
+
+!   go over shells from largest value (nshell)
+!   to 0 for better load balance
+    ii = nshell + 1
+ic: DO
+!   --- MPI load balance ---
+        IF (ibtyp.eq.1) THEN
+!           dynamic load balance
+!$omp barrier
+!$omp master
+            CALL ddi_dlbnext(next)
+!$omp flush (next)
+!$omp end master
+!$omp barrier
+            ii = nshell - next
+            IF (ii.LE.0) EXIT ic
+        ELSE
+!           static load balance
+            ii = ii - 1
+            IF (ii.LE.0) EXIT ic
+            IF (MOD(ii,nproc).NE.me) CYCLE ic
+        END IF
+!
+!   --- Begin OpenMP integral calculation ---
+!
+!   Use conventional (instead of triple-sort)
+!   shell order for better load balance and for
+!   further vectorization
+!$omp do schedule(dynamic,1) collapse(2)
+        DO jj = 1,ii
+            DO kk = 1,ii
+
+            IF (ii.NE.kk) THEN
+                jork=kk
+            ELSE
+                jork=jj
+            END IF
+
+                DO ll = 1,jork
+!                   Schwartz screening:
+#if __TIMING==1
+                    tim1 = omp_get_wtime()
+#endif
+                    IF (schwrz) THEN
+                        ijij = (ii*ii-ii)/2 + jj
+                        klkl = (kk*kk-kk)/2 + ll
+                        test = xints(ijij)*xints(klkl)
+                        IF (dirscf) THEN
+                            denmax = schwdn(dsh,ii,jj,kk,ll,ia)
+                            test = test*denmax
+                        END IF
+                        schskp = test.LT.cutoff
+                    END IF
+
+#if __TIMING==1
+                    tim2 = tim2 + omp_get_wtime() - tim1
+#endif
+                    IF(.NOT.schskp) THEN
+
+
+                        shlmxang  = max(ktype(ii),ktype(jj), &
+                                        ktype(kk),ktype(ll))
+                        SELECT CASE (shlmxang)
+                        CASE (1,2)
+                            CALL ompmod_raxintsp(ii,jj,kk,ll, &
+                                                 ghondo_t)
+                        CASE (3)
+                            CALL ompmod_raxintspd(ii,jj,kk,ll, &
+                                                  ghondo_t)
+                        CASE default
+                            CALL ompmod_rysint(ii,jj,kk,ll, &
+                                               ktype,ghondo_t,ddij_t)
+                        END SELECT
+
+#if __TIMING==1
+                        tim3 = tim3 + omp_get_wtime() - tim1
+#endif
+                        thr_nshq = thr_nshq + 1
+!
+!                  ---  Fock matrix update ---
+!
+                        CALL dirfck(typscf,ia,da,fa,db,fb,ghondo_t, &
+                                    l2a,nint,nflmat)
+
+#if __TIMING==1
+                        tim4 = tim4 + omp_get_wtime() - tim1
+#endif
+                    ELSE
+                        nschwz = nschwz + 1
+                    END IF
+                END DO
+            END DO
+        END DO
+!$omp end do nowait
+    END DO ic
+!$omp barrier
+
+#if __TIMING==1
+    tim0 = omp_get_wtime() - tim0
+!   debug timing output
+    IF (oflag) THEN
+!$omp do ordered
+        DO ii = 0, num_threads-1
+!$omp ordered
+            WRITE(iw,dbgfmt2) ithread,thr_nshq,tim3-tim2,tim4-tim3,tim2,tim0
+!$omp end ordered
+        END DO
+!$omp end do
+    END IF
+#endif
+
+!   deallocate temporary memory for integrals
+    DEALLOCATE(ddij_t,ghondo_t)
+
+!$omp end parallel
+
+    CALL ddi_dlbreset
+
+  END SUBROUTINE ompmod_twoei_jk
+
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+!*MODULE OMPMOD   *DECK OMPMOD_TWOEI_KL
+!
+!>    @brief   Threaded version of two-electron integral
+!>             calculation routine. For closed shell only.
+!>             OpenMP parallelization over K and L shell indices,
+!>             MPI -  over I and J indices.
+!>             Related input file options:
+!>             `$INTGRL INTOMP=2 $END`
+!>
+!>    @details Calculates two-electron contribution to the Fock
+!>             matrix. Based on `TWOEI` subroutine from `int2a.src`
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+!     PARAMETERS:
+!
+!>    @param[in]     typscf    hollerith, the kind of SCF (=RHF,UHF, etc.)
+!>    @param[in]     schwrz    determines whether to use integral screening
+!>    @param[out]    nint      number of calculated ERIs
+!>    @param[out]    nschwz    number of ERIs that were screened out
+!>    @param[in]     l1        size of index array
+!>    @param[in]     l2a       size of Fock and density matrices (alpha)
+!>    @param[in]     l2b       size of Fock and density matrices (beta)
+!>    @param[in]     xints(:)  array of exchange integrals
+!>    @param[in]     nsh2      size of `xints(:)` array
+!>    @param[in]     maxg      size of temporary array for Rys code
+!>    @param[in]     ia(:)     index array, contains "triangular numbers"
+!>    @param[in,out] da(:)     density matrix for alpha electrons
+!>    @param[out]    fa(:)     Fock matrix for alpha electrons
+!>    @param[in,out] db(:)     density matrix for beta electrons,
+!>                                 used in open-shell calculations only
+!>    @param[out]    fb(:)     Fock matrix for beta electrons,
+!>                                 used in open-shell calculations only
+!>    @param[in]     dsh       density matrix packed in shells
+!>                                 for screening purposes
+!>    @param[in]     nflmat    when >1 selects CPHF calculation
+!>    @param[in]     nshell    number of shells
+!>    @param[in]     ktype(:)  array of shell types according to their
+!>                                 angular momentum
+!>    @param[in]     cutoff    cutoff for integral screening
+!>    @param[in]     oflag     logical parameter for debug timing output
+  SUBROUTINE ompmod_twoei_kl(typscf,schwrz,nint,nschwz, &
+                             l1,l2a,l2b,xints, &
+                             nsh2,maxg, &
+                             ia,da,fa,db,fb,dsh,nflmat, &
+                             nshell, ktype, cutoff, oflag)
+
+    LOGICAL, INTENT(IN) :: &
+      schwrz
+
+    INTEGER, INTENT(OUT) :: &
+      nint, nschwz
+
+    INTEGER, INTENT(IN) :: &
+      l1, l2a, l2b, nsh2, nshell, nflmat, maxg, &
+      ia(l1),ktype(mxsh)
+
+!   typscf is an 8-byte hollerith constant
+    REAL(KIND=8), INTENT(IN) :: &
+        typscf
+
+    REAL(KIND=fp), INTENT(IN) :: &
+      cutoff, &
+      xints(nsh2), dsh(nsh2)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+      da(l2a), db(l2b)
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+!      fa(l2a), fb(l2b)
+      fa(l2a*nflmat), fb(l2b*nflmat)
+
+    LOGICAL, INTENT(IN) :: &
+        oflag
+!
+!
+!
+    COMMON /par   / me,master,nproc,ibtyp,iptim,goparr,dskwrk,maswrk
+        INTEGER :: me,master,nproc,ibtyp,iptim
+        LOGICAL :: dskwrk, maswrk, goparr
+
+    COMMON /iofile/ ir,iw,ip,is,ipk,idaf,nav,ioda(950)
+        INTEGER :: ir,iw,ip,is,ipk,idaf,nav,ioda
+
+    COMMON /fmcom / xx(1)
+        REAL(KIND=fp), TARGET :: xx
+
+    COMMON /shlnos/ qq4,lit,ljt,lkt,llt,loci,locj,lock,locl, &
+                    mini,minj,mink,minl,maxi,maxj,maxk,maxl, &
+                    nij,ij,kl,ijkl
+        INTEGER :: lit,ljt,lkt,llt,loci,locj,lock,locl, &
+                   mini,minj,mink,minl,maxi,maxj,maxk,maxl, &
+                   nij,ij,kl,ijkl
+        REAL(KIND=fp) :: qq4
+
+    COMMON /maxc  / cmax(mxgtot),cmaxa(mxgsh),cmaxb(mxgsh), &
+                    cmaxc(mxgsh),cmaxd(mxgsh),ismlp(mxg2),ismlq
+        REAL(KIND=fp) :: cmax,cmaxa,cmaxb,cmaxc,cmaxd
+        INTEGER :: ismlp,ismlq
+
+    COMMON /gout  / gpople(768),norgp
+        REAL(KIND=fp) :: gpople
+        INTEGER :: norgp
+
+    COMMON /nlrcf / lrint
+        LOGICAL :: lrint
+
+    COMMON /dftpar/ dfttyp(20),exena,exenb,exenc, &
+                    idft34,nauxfun,nauxshl
+        REAL(KIND=fp) :: dfttyp,exena,exenb,exenc
+        INTEGER :: idft34,nauxfun,nauxshl
+
+!   Common blocks /MAXC  /, /SHLNOS/ and /GOUT/ contain
+!   both global (cmax(:),qq4,norgp) and thread-local
+!   data (the rest). Set them threadprivate and copyin
+!   global data later in $omp parallel section.
+
+!$omp threadprivate(/shlnos/,/maxc  /,/gout  /,/nlrcf /,/dftpar/)
+
+    INTEGER :: &
+      next, num_threads, ithread, thr_nshq, &
+      ii, jj, kk, ll, ijij, klkl, jork, ijmax, klmax, &
+      shlmxang
+
+    LOGICAL :: &
+      schskp, dirscf
+
+    REAL(KIND=fp) :: &
+      denmax, tim, tim0, tim1, tim2, tim3, tim4, test
+
+    REAL(KIND=fp),DIMENSION(:),ALLOCATABLE :: &
+      ddij_t, ghondo_t
+
+!
+!   --- Initialization of variables ---
+!
+
+    tim = zero
+    CALL tsecnd(tim)
+
+    nint   = 0
+    nschwz = 0
+    schskp = .FALSE.
+    denmax = zero
+    dirscf = .TRUE.
+
+!   no symmetry supported yet
+    qq4 = 1
+    norgp = 0
+
+
+#if __TIMING==1
+!   text for debut output
+
+    IF (oflag) WRITE(iw,dbgfmt1)
+#endif
+!
+!   --- Initiate OpenMP parallel ---
+!
+!   early thread invocation decrease OpenMP lib overhead
+!
+!$omp parallel                                  &
+!$omp   private(ithread, thr_nshq,              &
+!$omp     kk,ll,jork, klkl, test,               &
+!$omp     ijij, ii, jj, ijmax, klmax,           &
+!$omp     tim, tim0, tim1, tim2, tim3, tim4,    &
+!$omp     ddij_t, ghondo_t, shlmxang)           &
+!$omp   firstprivate(denmax, schskp)            &
+!$omp   shared(ia,da,l1,l2a,l2b,num_threads,    &
+!$omp     next, maxg, xx,                       &
+!$omp     cutoff, dirscf, xints, dsh, nflmat,   &
+!$omp     typscf,schwrz,oflag)                  &
+!$omp   reduction(+:fa,fb,nint,nschwz)          &
+!$omp   copyin(cmax,qq4,norgp,lrint,/dftpar/)
+
+
+!
+!   --- variable initialization for OpenMP ---
+!
+
+    num_threads = omp_get_num_threads()
+
+!   reset all info stats
+    ithread  = omp_get_thread_num()
+    thr_nshq = 0
+#if __TIMING==1
+    tim1     = zero
+    tim2     = zero
+    tim3     = zero
+    tim4     = zero
+!   main timer initialization
+    tim0     = omp_get_wtime()
+#endif
+
+
+!   allocate temporary memory for integrals
+    allocate(ddij_t(mxang2*mxg2),ghondo_t(maxg))
+
+    ijmax = nshell*(nshell+1)/2
+!   go over shells from largest value (nshell)
+!   to 1 for better load balance
+    ijij = ijmax + 1
+ijc:DO
+!   --- MPI load balance ---
+        IF (ibtyp.eq.1) THEN
+!           Dynamic load balance
+!$omp barrier
+!$omp master
+            CALL ddi_dlbnext(next)
+!$omp flush (next)
+!$omp end master
+!$omp barrier
+            ijij = ijmax - next
+            IF (ijij.LE.0) EXIT ijc
+        ELSE
+!           Static load balance
+            ijij = ijij - 1
+            IF (ijij.LE.0) EXIT ijc
+            IF (MOD(ijij,nproc).NE.me) CYCLE ijc
+        END IF
+
+        ii = ceiling((sqrt(8.0*ijij+1)-1)/2)
+        jj = ijij - ii*(ii-1)/2
+
+        klmax = ii*(ii+1)/2
+
+!   --- Begin OpenMP integral calculation ---
+
+!$omp do schedule(dynamic,1)
+klc:    DO klkl = 1, klmax
+
+            kk = ceiling((sqrt(8.0*klkl+1)-1)/2)
+            ll = klkl - kk*(kk-1)/2
+
+            IF (ii.EQ.kk.AND.ll.GT.jj) CYCLE klc
+
+!           Schwartz screening:
+#if __TIMING==1
+            tim1 = omp_get_wtime()
+#endif
+            IF (schwrz) THEN
+                test = xints(ijij)*xints(klkl)
+                IF (dirscf) THEN
+                    denmax = schwdn(dsh,ii,jj,kk,ll,ia)
+                    test = test*denmax
+                END IF
+                schskp = test.LT.cutoff
+            END IF
+
+#if __TIMING==1
+            tim2 = tim2 + omp_get_wtime() - tim1
+#endif
+
+            IF(.NOT.schskp) THEN
+
+                    shlmxang  = max(ktype(ii),ktype(jj), &
+                                    ktype(kk),ktype(ll))
+                    SELECT CASE (shlmxang)
+                    CASE (1,2)
+                        CALL ompmod_raxintsp(ii,jj,kk,ll, &
+                                             ghondo_t)
+                    CASE (3)
+                        CALL ompmod_raxintspd(ii,jj,kk,ll, &
+                                              ghondo_t)
+                    CASE default
+                        CALL ompmod_rysint(ii,jj,kk,ll, &
+                                           ktype,ghondo_t,ddij_t)
+                    END SELECT
+
+                    thr_nshq = thr_nshq + 1
+
+#if __TIMING==1
+                    tim3 = tim3 + omp_get_wtime() - tim1
+#endif
+!          ---  Fock matrix update ---
+
+                    CALL dirfck(typscf,ia,da,fa,db,fb,ghondo_t, &
+                                l2a,nint,nflmat)
+
+#if __TIMING==1
+                    tim4 = tim4 + omp_get_wtime() - tim1
+#endif
+
+            ELSE
+                nschwz = nschwz + 1
+            END IF
+        END DO klc
+!$omp end do nowait
+    END DO ijc
+!$omp barrier
+
+#if __TIMING==1
+    tim0 = omp_get_wtime() - tim0
+
+!   debug timing output
+    IF (oflag) THEN
+!$omp do ordered
+        DO ii = 0, num_threads-1
+!$omp ordered
+            WRITE(iw,dbgfmt2) ithread,thr_nshq,tim3-tim2,tim4-tim3,tim2,tim0
+!$omp end ordered
+        END DO
+!$omp end do
+    END IF
+#endif
+
+!   deallocate temporary memory for integrals
+    deallocate(ddij_t,ghondo_t)
+
+!$omp end parallel
+
+    CALL ddi_dlbreset
+
+  END SUBROUTINE ompmod_twoei_kl
+
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+!*MODULE OMPMOD   *DECK OMPMOD_TWOEI_KL_RHF_SHF
+!
+!>    @brief   Threaded version of two-electron integral
+!>             calculation routine. Fock matrix is shared
+!>             among threads. For closed shell only.
+!>             Load balance of OpenMP code
+!>             is done over K and L shell indices,
+!>             MPI - over I and J indices.
+!>             Related input file options:
+!>             `$INTGRL INTOMP=2 SHFOCK=.TRUE. $END`
+!>
+!>    @details Calculates two-electron contribution to the Fock
+!>             matrix. Based on `TWOEI` subroutine from `int2a.src`
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _Jun, 2017_ Initial release
+!
+!     PARAMETERS:
+!
+!>    @param[in]     typscf    hollerith, the kind of SCF (=RHF,UHF, etc.)
+!>    @param[in]     schwrz    determines whether to use integral screening
+!>    @param[out]    nint      number of calculated ERIs
+!>    @param[out]    nschwz    number of ERIs that were screened out
+!>    @param[in]     l1        size of index array
+!>    @param[in]     l2a       size of Fock and density matrices (alpha)
+!>    @param[in]     l2b       size of Fock and density matrices (beta)
+!>    @param[in]     xints(:)  array of exchange integrals
+!>    @param[in]     nsh2      size of `xints(:)` array
+!>    @param[in]     maxg      size of temporary array for Rys code
+!>    @param[in]     ia(:)     index array, contains "triangular numbers"
+!>    @param[in,out] da(:)     density matrix for alpha electrons
+!>    @param[out]    fa(:)     Fock matrix for alpha electrons
+!>    @param[in]     dsh       density matrix packed in shells
+!>                                 for screening purposes
+!>    @param[in]     nflmat    when >1 selects CPHF calculation
+!>    @param[in]     nshell    number of shells
+!>    @param[in]     ktype(:)  array of shell types according to their
+!>                                 angular momentum
+!>    @param[in]     cutoff    cutoff for integral screening
+!>    @param[in]     oflag     logical parameter for debug timing output
+  SUBROUTINE ompmod_twoei_shf_kl_rhf(typscf,schwrz,nint,nschwz, &
+                                     l1,l2a,l2b,xints, &
+                                     nsh2,maxg, &
+                                     ia,da,fa,dsh,nflmat, &
+                                     nshell1, ktype1, cutoff, oflag)
+    USE blkint
+
+    USE ompmod_tools, ONLY: &
+        ompmod_tools_col_reduce, &
+        ompmod_dirfck_rhf
+
+    LOGICAL, INTENT(IN) :: &
+      schwrz
+
+    INTEGER, INTENT(OUT) :: &
+      nint, nschwz
+
+    INTEGER, INTENT(IN) :: &
+      l1, l2a, l2b, nsh2, nshell1, nflmat, maxg, &
+      ia(l1),ktype1(mxsh)
+
+!   typscf is an 8-byte hollerith constant
+    REAL(KIND=8), INTENT(IN) :: &
+        typscf
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+      cutoff, &
+      xints(nsh2), dsh(nsh2)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+      da(l2a)
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+      fa(l2a)
+
+    LOGICAL, INTENT(IN) :: &
+        oflag
+!
+!
+!
+    COMMON /par   / me,master,nproc,ibtyp,iptim,goparr,dskwrk,maswrk
+        INTEGER :: me,master,nproc,ibtyp,iptim
+        LOGICAL :: dskwrk, maswrk, goparr
+
+    COMMON /iofile/ ir,iw,ip,is,ipk,idaf,nav,ioda(950)
+        INTEGER :: ir,iw,ip,is,ipk,idaf,nav,ioda
+
+    COMMON /fmcom / xx(1)
+        REAL(KIND=fp), TARGET :: xx
+
+    COMMON /NSHEL / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),     &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),     &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh),  &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+
+    COMMON /shlnos/ qq4,lit,ljt,lkt,llt,loci,locj,lock,locl, &
+                    mini,minj,mink,minl,maxi,maxj,maxk,maxl, &
+                    nij,ij,kl,ijkl
+        INTEGER :: lit,ljt,lkt,llt,loci,locj,lock,locl, &
+                   mini,minj,mink,minl,maxi,maxj,maxk,maxl, &
+                   nij,ij,kl,ijkl
+        REAL(KIND=fp) :: qq4
+
+    COMMON /maxc  / cmax(mxgtot),cmaxa(mxgsh),cmaxb(mxgsh), &
+                    cmaxc(mxgsh),cmaxd(mxgsh),ismlp(mxg2),ismlq
+        REAL(KIND=fp) :: cmax,cmaxa,cmaxb,cmaxc,cmaxd
+        INTEGER :: ismlp,ismlq
+
+    COMMON /gout  / gpople(768),norgp
+        REAL(KIND=fp) :: gpople
+        INTEGER :: norgp
+
+    COMMON /nlrc  / lcflag,emu,emu2,lrfile
+        LOGICAL :: lcflag
+        REAL(KIND=fp) :: emu, emu2
+        INTEGER :: lrfile
+
+    COMMON /shlexc/ norgsh(3),norgsp(3),iexch,nangm,ngth(4)
+        INTEGER :: norgsh,norgsp,iexch,nangm,ngth
+
+    COMMON /nlrcf / lrint
+        LOGICAL :: lrint
+
+    COMMON /dftpar/ dfttyp(20),exena,exenb,exenc, &
+                    idft34,nauxfun,nauxshl
+        REAL(KIND=fp) :: dfttyp,exena,exenb,exenc
+        INTEGER :: idft34,nauxfun,nauxshl
+
+    COMMON /dftcam/ alphac,betac,cammu,camvwn,camlyp,camflag
+        REAL(KIND=fp) :: alphac,betac,cammu,camvwn,camlyp
+        LOGICAL :: camflag
+
+!   Common blocks /MAXC  /, /SHLNOS/ and /GOUT/ contain
+!   both global (cmax(:),qq4,norgp) and thread-local
+!   data (the rest). Set them threadprivate and copyin
+!   global data later in $omp parallel section.
+
+!$omp threadprivate(/shlnos/,/maxc  /,/gout  /,/nlrcf /,/dftpar/)
+
+    INTEGER :: &
+      next, max_threads, ithread, nthreads, thr_nshq, &
+      ii, jj, kk, ll, ijij, klkl, jork, ijmax, klmax, &
+      shlmxang, iprev
+
+    LOGICAL :: &
+      schskp, dirscf
+
+    REAL(KIND=fp) :: &
+      denmax, tim, tim0, tim1, tim2, tim3, tim4, test, &
+      hfscal, cscalt
+
+    REAL(KIND=fp), ALLOCATABLE :: &
+      ddij_t(:), ghondo_t(:), &
+      faomp(:,:), daomp(:,:), &
+      Fi(:,:,:), Fj(:,:,:)
+
+!dir$ attributes align : 64 :: faomp, daomp, Fi, Fj
+
+!
+!   --- Initialization of variables ---
+!
+
+    tim = zero
+    CALL tsecnd(tim)
+
+    nint   = 0
+    nschwz = 0
+    schskp = .FALSE.
+    denmax = zero
+    dirscf = .TRUE.
+
+!   DFT scaling factors
+    hfscal=dfttyp(3)
+    cscalt=1.0d+00
+    if(lcflag) then
+        if(lrint) then
+            hfscal=1.0d+00
+            cscalt=0.0d+00
+        else
+            hfscal=0.0d+00
+            cscalt=1.0d+00
+        endif
+    endif
+    if(camflag.and.lrint) cscalt=0.0d+00
+
+!   no symmetry supported yet
+    qq4 = 1
+    norgp = 0
+
+!   use square fock and density matrices
+    allocate( faomp(l1,l1), &
+              daomp(l1,l1))
+
+    faomp(:,:) = 0
+
+
+    CALL blkint_mtrx_unpack(da,daomp,l1)
+
+    max_threads = omp_get_max_threads()
+
+!   allocate temporary storage for I and J columns of
+!   the Fock matrix
+    allocate(Fi(l1,nangm,0:max_threads-1))
+    allocate(Fj(l1,nangm,0:max_threads-1))
+
+
+#if __TIMING==1
+!   text for timing output
+    IF (oflag) WRITE(iw,dbgfmt1)
+#endif
+!
+!   --- Initiate OpenMP parallel ---
+!
+!   early thread invocation decrease OpenMP lib overhead
+!
+!$omp parallel                                  &
+!$omp   private(ithread, thr_nshq,              &
+!$omp     kk,ll,jork, klkl, test,               &
+!$omp     ijij, ii, jj, ijmax, klmax,           &
+!$omp     tim, tim0, tim1, tim2, tim3, tim4,    &
+!$omp     ddij_t, ghondo_t, shlmxang            &
+!$omp   )                                       &
+!$omp   firstprivate(denmax, schskp)            &
+!$omp   shared(ia,da,l1,l2a,l2b,max_threads,    &
+!$omp     next, maxg, xx, nthreads,             &
+!$omp     cutoff, dirscf, xints, dsh, nflmat,   &
+!$omp     typscf,schwrz,oflag, iprev,           &
+!$omp     daomp, Fi, Fj, faomp                  &
+!$omp   )                                       &
+!$omp   reduction(+:nint,nschwz)                &
+!$omp   copyin(cmax,qq4,norgp,lrint,/dftpar/)
+!!$omp   reduction(+:faomp)                      &
+!!$omp   reduction(+:fa,fb)                      &
+
+
+!
+!   --- Variable initialization for OpenMP ---
+!
+
+!   allocate temporary memory for integrals
+    allocate(ddij_t(mxang2*mxg2),ghondo_t(maxg))
+
+!  Reset all info stats
+    ithread  = omp_get_thread_num()
+    nthreads = omp_get_num_threads()
+    thr_nshq = 0
+#if __TIMING==1
+    tim1     = zero
+    tim2     = zero
+    tim3     = zero
+    tim4     = zero
+!   main timer initialization
+    tim0     = omp_get_wtime()
+#endif
+
+    Fi(:,:,ithread) = 0.0_fp
+    Fj(:,:,ithread) = 0.0_fp
+
+    ijmax = nshell*(nshell+1)/2
+!   go over shells from largest value (nshell)
+!   to 1 for better load balance
+    ijij = ijmax + 1
+    iprev = nshell+1
+ijc:DO
+!   --- MPI load balance ---
+        IF (ibtyp.eq.1) THEN
+!           Dynamic load balance
+!$omp barrier
+!$omp master
+            CALL ddi_dlbnext(next)
+!$omp flush (next)
+!$omp end master
+!$omp barrier
+            ijij = ijmax - next
+            IF (ijij.LE.0) EXIT ijc
+        ELSE
+!           static load balance
+            ijij = ijij - 1
+            IF (ijij.LE.0) EXIT ijc
+            IF (MOD(ijij,nproc).NE.me) CYCLE ijc
+        END IF
+
+        ii = ceiling((sqrt(8.0*ijij+1)-1)/2)
+        jj = ijij - ii*(ii-1)/2
+
+        klmax = ii*(ii+1)/2
+
+        IF (schwrz) THEN
+            test = xints(ijij)
+            IF (dirscf) THEN
+                denmax = schwdn(dsh,ii,jj,ii,jj,ia)
+                test = test*denmax
+            END IF
+            schskp = test.LT.cutoff
+        END IF
+        IF (schskp) cycle ijc
+
+!       if we switch to new I subblock, flush Fi to the Fock matrix
+        IF (iprev/=ii.AND.iprev<=nshell) THEN
+            CALL ompmod_tools_col_reduce(kmax(iprev)-kmin(iprev)+1, &
+                                         kloc(iprev),ithread,nthreads,Fi,faomp)
+        END IF
+!   --- Begin OpenMP integral calculation ---
+
+!$omp do schedule(dynamic,1)
+klc:    DO klkl = 1, klmax
+
+            kk = ceiling((sqrt(8.0*klkl+1)-1)/2)
+            ll = klkl - kk*(kk-1)/2
+
+            IF (ii.EQ.kk.AND.ll.GT.jj) CYCLE klc
+
+!           Schwartz screening:
+#if __TIMING==1
+            tim1 = omp_get_wtime()
+#endif
+            IF (schwrz) THEN
+                test = xints(ijij)*xints(klkl)
+                IF (dirscf) THEN
+                    denmax = schwdn(dsh,ii,jj,kk,ll,ia)
+                    test = test*denmax
+                END IF
+                schskp = test.LT.cutoff
+            END IF
+
+#if __TIMING==1
+            tim2 = tim2 + omp_get_wtime() - tim1
+#endif
+            IF(.NOT.schskp) THEN
+
+                    shlmxang  = max(ktype(ii),ktype(jj), &
+                                    ktype(kk),ktype(ll))
+                    SELECT CASE (shlmxang)
+                    CASE (1,2)
+                        CALL ompmod_raxintsp(ii,jj,kk,ll, &
+                                             ghondo_t)
+                    CASE (3)
+                        CALL ompmod_raxintspd(ii,jj,kk,ll, &
+                                              ghondo_t)
+                    CASE default
+                        CALL ompmod_rysint(ii,jj,kk,ll, &
+                                           ktype,ghondo_t,ddij_t)
+                    END SELECT
+
+                    thr_nshq = thr_nshq + 1
+
+#if __TIMING==1
+                    tim3 = tim3 + omp_get_wtime() - tim1
+#endif
+!          ---  Fock matrix update ---
+
+!                    CALL dirfck(typscf,ia,da,fa,db,fb,ghondo_t, &
+!                                l2a,nint,nflmat)
+!                    write(*,'(4i4)') ii,jj,kk,ll
+                    CALL ompmod_dirfck_rhf(ii,jj,kk,ll,ghondo_t, &
+                                           hfscal,cscalt,cutoff, &
+                                           nint,ia,daomp, &
+                                           Fi(:,:,ithread), Fj(:,:,ithread), faomp)
+
+#if __TIMING==1
+                    tim4 = tim4 + omp_get_wtime() - tim1
+#endif
+            ELSE
+                nschwz = nschwz + 1
+            END IF
+        END DO klc
+!!$omp end do
+!$omp end do nowait
+
+!   always need to add J subblock contribution
+    CALL ompmod_tools_col_reduce(kmax(jj)-kmin(jj)+1, &
+                                 kloc(jj),ithread,nthreads,Fj,faomp)
+
+        iprev = ii
+    END DO ijc
+
+!$omp barrier
+
+!   add last I subblock contribution
+    CALL ompmod_tools_col_reduce(kmax(ii)-kmin(ii)+1, &
+                                 kloc(ii),ithread,nthreads,Fi,faomp)
+#if __TIMING==1
+    tim0 = omp_get_wtime() - tim0
+
+!   debug timing output
+    IF (oflag) THEN
+!$omp do ordered
+        DO ii = 0, max_threads-1
+!$omp ordered
+            WRITE(iw,dbgfmt2) ithread,thr_nshq,tim3-tim2,tim4-tim3,tim2,tim0
+!$omp end ordered
+        END DO
+!$omp end do
+    END IF
+#endif
+
+
+!   deallocate temporary memory for integrals
+    deallocate(ddij_t,ghondo_t)
+
+!$omp end parallel
+
+    CALL blkint_mtrx_spack(faomp,fa,l1)
+
+!   deallocate temporary Fock matrix subblocks
+    deallocate(Fi,Fj)
+
+!   deallocate square Fock and density matrices
+    deallocate(faomp, daomp)
+
+    CALL ddi_dlbreset
+
+  END SUBROUTINE ompmod_twoei_shf_kl_rhf
+
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+!*MODULE OMPMOD   *DECK OMPMOD_EXCHNG
+!
+!>    @brief   Calculates integrals for screening purposes.
+!>             Threaded version of EXCHNG routine
+!>
+!>    @details Calculates exhcange ERIs \f$ (i,j|i,j) \f$.
+!>             Largest ERI in shell pair is stored in
+!>             array `xints(:)` to be used later for screening.
+!>             Based on `EXCHNG` subroutine from `int2a.src`
+!>             OpenMP algorithm is turned on by default when `INTOMP`
+!>             option of the `$INTGRL` group in the input file
+!>             is nonzero.
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _May, 2016_ Initial release
+!>    @date _Jun, 2017_ Bug fixes
+!
+!     PARAMETERS:
+!
+!>    @param[out] xints(:) array to store max exchange
+!>                         integrals over shells
+!>    @param[in]  nsh2     size of `xints(:)`
+!>    @param[in]  maxg     dimension of temporary array for
+!>                         Rys integral code
+!>    @param[in]  inttyp   selects ERI scheme
+  SUBROUTINE ompmod_exchng(xints,nsh2,maxg,inttyp)
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+        xints(nsh2)
+
+    INTEGER, INTENT(IN) :: &
+        nsh2, maxg, inttyp
+
+    COMMON /intac2/ ei1,ei2,cux
+        REAL(KIND=fp) :: ei1,ei2,cux
+
+    COMMON /flips / ib(4,3)
+        INTEGER :: ib
+
+    COMMON /fmoinf/ nfg,nlayer,natfmo,nbdfg,naotyp,nbody
+        INTEGER :: nfg,nlayer,natfmo,nbdfg,naotyp,nbody
+
+    COMMON /fmorun/ espscf,e0scf(2),emp2s,idafmo,icurfg,jcurfg,kcurfg, &
+                    icurlay,icurunt,nat1e,ncursh,ngau,icurpop,ifmostp, &
+                    moncor,needr,modrst,norbproj,nunesp,iskipesp,      &
+                    iesdppc,idoprop,mp2run,icurit,idmfmo,iddfmo,       &
+                    iddcur,nddleft,ivmfmo,nzmtfmo,ifmobas
+        REAL(KIND=fp) :: espscf,e0scf,emp2s
+        INTEGER :: idafmo,icurfg,jcurfg,kcurfg, &
+                   icurlay,icurunt,nat1e,ncursh,ngau,icurpop,ifmostp, &
+                   moncor,needr,modrst,norbproj,nunesp,iskipesp,      &
+                   iesdppc,idoprop,mp2run,icurit,idmfmo,iddfmo,       &
+                   iddcur,nddleft,ivmfmo,nzmtfmo,ifmobas
+
+    COMMON /gout  / gpople(768),norgp
+        REAL(KIND=fp) :: gpople
+        INTEGER :: norgp
+
+    COMMON /iofile/ ir,iw,ip,is,ipk,idaf,nav,ioda(950)
+        INTEGER :: ir,iw,ip,is,ipk,idaf,nav,ioda
+
+    COMMON /elgidx/ lcut
+        LOGICAL :: lcut
+
+    COMMON /nshel / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),       &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),       &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh),    &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+
+    COMMON /output/ nprint,itol,icut,normf,normp,nopk
+        INTEGER :: nprint,itol,icut,normf,normp,nopk
+
+    COMMON /par   / me,master,nproc,ibtyp,iptim,goparr,dskwrk,maswrk
+        INTEGER :: me,master,nproc,ibtyp,iptim
+        LOGICAL :: dskwrk, maswrk, goparr
+
+    COMMON /shlexc/ norgsh(3),norgsp(3),iexch,nangm,ngth(4)
+        INTEGER :: norgsh,norgsp,iexch,nangm,ngth
+
+    COMMON /shlg70/ ish,jsh,ksh,lsh,ijklxx(4)
+        INTEGER :: ish,jsh,ksh,lsh,ijklxx
+
+    COMMON /shlnos/ qq4,lit,ljt,lkt,llt,loci,locj,lock,locl,           &
+                    mini,minj,mink,minl,maxi,maxj,maxk,maxl,           &
+                    nij,ij,kl,ijkl
+        INTEGER :: lit,ljt,lkt,llt,loci,locj,lock,locl, &
+                   mini,minj,mink,minl,maxi,maxj,maxk,maxl, &
+                   nij,ij,kl,ijkl
+        REAL(KIND=fp) :: qq4
+
+    COMMON /maxc  / cmax(mxgtot),cmaxa(mxgsh),cmaxb(mxgsh), &
+                    cmaxc(mxgsh),cmaxd(mxgsh),ismlp(mxg2),ismlq
+        REAL(KIND=fp) :: cmax,cmaxa,cmaxb,cmaxc,cmaxd
+        INTEGER :: ismlp,ismlq
+
+    COMMON /nlrcf / lrint
+        LOGICAL :: lrint
+
+    COMMON /dftpar/ dfttyp(20),exena,exenb,exenc, &
+                    idft34,nauxfun,nauxshl
+        REAL(KIND=fp) :: dfttyp,exena,exenb,exenc
+        INTEGER :: idft34,nauxfun,nauxshl
+
+    COMMON /shlt  / tol,cutoff,icount,out
+        REAL(KIND=fp) :: tol, cutoff
+        INTEGER :: icount
+        LOGICAL :: out
+
+    COMMON /fmcom / xx(1)
+        REAL(KIND=fp), TARGET :: xx
+
+!$omp threadprivate(/flips /,/gout  /,/shlnos/,/shlg70/, &
+!$omp               /maxc  /,/nlrcf /,/dftpar/)
+
+    REAL(KIND=fp) :: &
+        tim, tim0, texch, tolsv, ei1sv, ei2sv, cuxsv, vmax
+
+    REAL(KIND=fp),DIMENSION(:),ALLOCATABLE :: &
+        ddij_t, ghondo_t
+
+    LOGICAL :: &
+        pople,some,iandj,saveint, doesp
+
+    INTEGER :: &
+        ithread, num_threads, lmax, nint, ijij, ii, jj, ish2
+
+    doesp=nfg.NE.0.AND.ncursh.NE.0
+    IF (goparr.OR.doesp) xints(1:nsh2)=0
+
+    some = nprint.NE.-5 .AND. maswrk
+    saveint=nfg.EQ.0.OR.ncursh.EQ.0.OR.ifmostp.EQ.6
+
+    IF (some) THEN
+        tim = zero
+        CALL tsecnd(tim)
+        tim0 = tim
+    ENDIF
+
+    CALL baschk(lmax)
+    nangm = angm(lmax)
+    ngth(4) = 1
+    ngth(3) = ngth(4) * nangm
+    ngth(2) = ngth(3) * nangm
+    ngth(1) = ngth(2) * nangm
+
+!   The idea is to do even small integrals, below the usual
+!   cutoff threshholds, by resetting tolerances tightly.
+
+    tolsv = tol
+    tol = 75.0d+00
+
+    ei1sv = ei1
+    ei2sv = ei2
+    cuxsv = cux
+    ei1 = 1.0d-17
+    ei2 = 1.0d-17
+    cux = 50.0d+00
+
+    iexch = 1
+    norgp = 0
+    qq4   = one
+    nint  = 0
+
+    norgsh(1:3) = 0
+    norgsp(1:3) = 0
+
+    ijij = 0
+
+
+!$omp parallel                                      &
+!$omp   private(ii,jj,ijij,ish2,vmax,               &
+!$omp     pople,ithread,ghondo_t,ddij_t)            &
+!$omp   shared(doesp,ncursh,num_threads,ktype)      &
+!$omp   reduction(+:nint)                           &
+!$omp   copyin(cmax,qq4,norgp,lrint,/dftpar/)
+
+
+    ithread = omp_get_thread_num()
+
+    allocate(ddij_t(mxang2*mxg2),ghondo_t(maxg))
+
+ic: DO ii = 1,nshell
+        ish = ii
+!
+!   ----- go parallel! -----
+!
+        IF (goparr) THEN
+            IF (mod(ish,nproc).NE.me) CYCLE ic
+        END IF
+
+        ish2 = ish*(ish-1)/2
+!$omp do schedule(dynamic,1)
+jc:     DO jj = 1,ii
+            jsh = jj
+            ijij = ish2 + jj
+
+!           skip unneeded off-diagonal blocks for FMO ESP screening
+            IF (doesp.AND.(ish.GT.ncursh).AND.(jsh.LE.ncursh)) CYCLE jc
+
+!           use Pople code for any pure SP integral blocks,
+!           use HONDO Rys polynomial code for other blocks
+
+
+            pople = inttyp.LT.2.AND.max(ktype(ish),ktype(jsh)).LE.2
+
+            IF (pople) THEN
+                ksh=ish
+                lsh=jsh
+                gpople(1:256)=0.0_fp
+                CALL genr70(1,.FALSE.)
+            ELSE
+                CALL ompmod_rysint(ish,jsh,ish,jsh,ktype,ghondo_t,ddij_t)
+            END IF
+
+! -----     pick out largest exchange integral for this block -----
+
+            IF (pople) THEN
+                vmax = maxval(abs(gpople(1:256)))
+                nint = nint+count(abs(gpople(1:256)).gt.zero)
+            ELSE
+                vmax = maxval(abs(ghondo_t))
+                nint = nint+count(abs(ghondo_t).gt.zero)
+            END IF
+
+            xints(ijij) = sqrt(vmax)
+        END DO jc
+!$omp end do nowait
+    END DO ic
+
+!   deallocate temporary memory for integrals
+    deallocate(ddij_t,ghondo_t)
+
+!$omp end parallel
+
+
+! ----- sum up partial contributions if parallel -----
+
+    IF (goparr) THEN
+        CALL ddi_sync(1052)
+        CALL ddi_gsumf(1050,xints,nsh2)
+        CALL ddi_gsumi(1051,nint ,1)
+    END IF
+!
+    IF (out) THEN
+        WRITE(iw,*) 'MAX EXCHANGE INTEGRAL IN SHELL'
+        CALL prtri(xints,nshell)
+    END IF
+!
+    IF (some) THEN
+        CALL tsecnd(tim)
+        texch = tim-tim0
+        WRITE(iw,dbgfmt_exch) nint,texch
+    ENDIF
+!
+    tol = tolsv
+    ei1 = ei1sv
+    ei2 = ei2sv
+    cux = cuxsv
+
+!   During FMO ESP runs, exchange integrals have different size so
+!   one cannot write them to the same record. the only exception is
+!   the separated dimer energies where there is just one set of 2e
+!   integrals.
+!   Elongation method also must decide on this.
+
+    IF (saveint.AND.(.NOT.lcut)) &
+        CALL dawrit(idaf,ioda,xints,nsh2,54,0)
+
+  END SUBROUTINE ompmod_exchng
+
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+!*MODULE OMPMOD   *DECK OMPMOD_RYSINT
+!>    @brief   Rys quadrature ERI calculation
+!>
+!>    @details Calculates two-electron integrals over
+!>             shell quartet \f$ (ii,jj|kk,ll) \f$ using Rys quadrature
+!>             code of GAMESS (`SHELLS, IJPRIM, GENRAL` and `S0000`
+!>             routines). Based on `SHELLQUART` routine from `int2a.src`
+!>             Supports S, P, D, F, G, H and I shells.
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _May, 2016_ Initial release
+!>    @date _Jun, 2017_ Bug fixes
+!
+!     PARAMETERS:
+!
+!>    @param[in]     ii        first shell index
+!>    @param[in]     jj        second shell index
+!>    @param[in]     kk        third shell index
+!>    @param[in]     ll        fourth shell index
+!>    @param[in]     ktype(:)  array of shell types according
+!>                                 to their angular momentum
+!>    @param[out]    ghondo(:) array of integrals over shell quartet
+!>    @param[in]     ddij(:)   temporary array for ingeral normalization
+  SUBROUTINE ompmod_rysint(ii,jj,kk,ll,ktype,ghondo,ddij)
+
+    INTEGER, INTENT(IN) :: &
+      ii,jj,kk,ll,ktype(mxsh)
+
+    REAL(KIND=fp),INTENT(INOUT),ALLOCATABLE :: &
+      ghondo(:)
+
+    REAL(KIND=fp),INTENT(INOUT) :: &
+      ddij(:)
+
+    INTEGER :: &
+      lqsum
+
+!   fill indices for Rys quadrature
+    CALL shells(1,ii,jj,kk,ll,.TRUE.)
+    CALL shells(2,ii,jj,kk,ll,.TRUE.)
+    CALL ijprim(ddij)
+
+    ghondo(:) = 0.0_fp
+
+    lqsum = ktype(ii) + ktype(jj) +     &
+            ktype(kk) + ktype(ll) - 4
+
+!   calculate integrals
+    IF (lqsum.EQ.0) THEN
+      CALL s0000(ghondo,ddij)
+    ELSE
+      CALL genral(ghondo,ddij)
+    END IF
+
+  END SUBROUTINE ompmod_rysint
+
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+!*MODULE OMPMOD   *DECK RAXINTSP
+!>    @brief   Rotated axis method ERI calculation for S,P,L shells
+!>
+!>    @details Calculates two-electron integrals over
+!>             shell quartet \f$ (ii,jj|kk,ll) \f$ using Pople algorithm
+!>             implemented in GAMESS (`GENR70` and `GENR03` routines).
+!>             Supports S, P and L shells.
+!>             Based on `SHELLQUART` routine from `int2a.src`
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _May, 2016_ Initial release
+!>    @date _Jun, 2017_ Bug fixes
+!
+!     PARAMETERS:
+!
+!>    @param[in]     ii        first shell index
+!>    @param[in]     jj        second shell index
+!>    @param[in]     kk        third shell index
+!>    @param[in]     ll        fourth shell index
+!>    @param[out]    ghondo(:) array of integrals over shell quartet
+  SUBROUTINE ompmod_raxintsp(ish,jsh,ksh,lsh,ghondo)
+
+
+    INTEGER, INTENT(IN) :: &
+      ish,jsh,ksh,lsh
+
+    REAL(KIND=fp),INTENT(INOUT),ALLOCATABLE :: &
+      ghondo(:)
+
+    COMMON /gout  / gpople(768),norgp
+        REAL(KIND=fp) :: gpople
+        INTEGER :: norgp
+
+    COMMON /popout/ lpopi,lpopj,lpopk,lpopl
+        INTEGER :: lpopi,lpopj,lpopk,lpopl
+
+    COMMON /shlg70/ ipl,jpl,kpl,lpl,inew,jnew,knew,lnew
+        INTEGER :: ipl,jpl,kpl,lpl,inew,jnew,knew,lnew
+
+    COMMON /eridat/ len1,len2,len3,len4
+        INTEGER :: len1,len2,len3,len4
+
+    COMMON /eriout/ inw,jnw,knw,lnw,lstri,lstrj,lstrk,lstrl
+        INTEGER :: inw,jnw,knw,lnw,lstri,lstrj,lstrk,lstrl
+
+! required for thread-safety:
+!$omp threadprivate(/gout  /,/popout/,/shlg70/,/eriout/)
+
+    COMMON /nshel / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),    &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),    &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh), &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+
+    INTEGER :: &
+      mini,maxi,minj,maxj,mink,maxk,minl,maxl, &
+      ii,i,ij,ijk,ijkl,ip,ijp,ijkp,ijklp,j,k,l
+
+    ipl = ish
+    jpl = jsh
+    kpl = ksh
+    lpl = lsh
+    inw = ish
+    jnw = jsh
+    knw = ksh
+    lnw = lsh
+
+    CALL genr70(1,.FALSE.)
+
+!  save to output array with HONDO indexing
+
+    mini = kmin(inw)
+    maxi = kmax(inw)
+    minj = kmin(jnw)
+    maxj = kmax(jnw)
+    mink = kmin(knw)
+    maxk = kmax(knw)
+    minl = kmin(lnw)
+    maxl = kmax(lnw)
+
+    ii = 1
+    DO i = mini, maxi
+      ip = (i-1)*lpopi + 1
+      ij  = ii
+      DO j = minj, maxj
+        ijp = (j-1)*lpopj + ip
+        ijk  = ij
+        DO k = mink, maxk
+          ijkp = (k-1)*lpopk + ijp
+          ijkl  = ijk
+          DO l = minl, maxl
+            ijklp = (l-1)*lpopl + ijkp
+            ghondo(ijkl) = gpople(ijklp)
+            ijkl = ijkl  + len1
+          END DO
+          ijk  = ijk  + len2
+        END DO
+        ij  = ij  + len3
+      END DO
+      ii = ii + len4
+    END DO
+
+
+    lstri = len4
+    lstrj = len3
+    lstrk = len2
+    lstrl = len1
+  END SUBROUTINE ompmod_raxintsp
+
+!---------------------------------------------------------------------
+!=====================================================================
+!---------------------------------------------------------------------
+
+!*MODULE OMPMOD   *DECK OMPMOD_RAXINTSPD
+!>    @brief   Rotated axis method ERI calculation for \f$ L\le 3 \f$ shells
+!>
+!>    @details Calculates two-electron integrals over
+!>             shell quartet \f$ (ii,jj|kk,ll) \f$ using Pople algorithm
+!>             implemented in GAMESS (`GENR70` and `GENR03` routines).
+!>             Supports S, P, D and L shells.
+!>             Based on `SHELLQUART` routine from `int2a.src`
+!>
+!>    @author  Vladimir Mironov
+!
+!     REVISION HISTORY:
+!>    @date _May, 2016_ Initial release
+!>    @date _Jun, 2017_ Bug fixes
+!
+!     PARAMETERS:
+!
+!>    @param[in]     ii        first shell index
+!>    @param[in]     jj        second shell index
+!>    @param[in]     kk        third shell index
+!>    @param[in]     ll        fourth shell index
+!>    @param[out]    ghondo(:) array of integrals over shell quartet
+  SUBROUTINE ompmod_raxintspd(ish,jsh,ksh,lsh,ghondo)
+
+    INTEGER, INTENT(IN) :: &
+      ish,jsh,ksh,lsh
+
+    REAL(KIND=fp),INTENT(INOUT),ALLOCATABLE :: &
+      ghondo(:)
+
+    COMMON /flips / ib(4,3)
+        INTEGER :: ib
+
+    COMMON /shlg70/ ipl,jpl,kpl,lpl,inew,jnew,knew,lnew
+        INTEGER :: ipl,jpl,kpl,lpl,inew,jnew,knew,lnew
+
+    COMMON /eridat/ len1,len2,len3,len4
+        INTEGER :: len1,len2,len3,len4
+
+    COMMON /eriout/ inw,jnw,knw,lnw,lstri,lstrj,lstrk,lstrl
+        INTEGER :: inw,jnw,knw,lnw,lstri,lstrj,lstrk,lstrl
+
+! required for thread-safety:
+!$omp threadprivate(/flips /,/eriout/,/shlg70/)
+
+    COMMON /nshel / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),    &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),    &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh), &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+
+    COMMON /output/ nprint,itol,icut,normf,normp,nopk
+        INTEGER :: nprint,itol,icut,normf,normp,nopk
+
+    REAL(KIND=fp) :: &
+      grotspd(1296)
+
+    LOGICAL :: &
+      iandj,kandl,same
+
+    INTEGER :: &
+      mini,maxi,minj,maxj,mink,maxk,minl,maxl, &
+      i,j,k,l,ijn,kln, &
+      ibb, jbb, kbb, lbb, jmax, lmax, &
+      ihondo,irotax,ijklhondo,ijklrotax, &
+      ijhondo, ijrotax, ijkhondo, ijkrotax, &
+      idpop(4,10)
+
+    DATA idpop /0,0,0,0,216,36,6,1,432,72,12,2,648,108,18,3, &
+                0,0,0,0,216,36,6,1,432,72,12,2,648,108,18,3, &
+                864,144,24,4,1080,180,30,5/
+
+    ipl = ish
+    jpl = jsh
+    kpl = ksh
+    lpl = lsh
+
+    inw = ish
+    jnw = jsh
+    knw = ksh
+    lnw = lsh
+
+    CALL genr03(grotspd)
+
+!   save to output array with HONDO indexing
+
+    iandj = ish.EQ.jsh
+    kandl = ksh.EQ.lsh
+    same  = ish.EQ.ksh  .AND.  jsh.EQ.lsh
+    IF(nopk.EQ.0) same = .FALSE.
+
+    ibb = ib(1,1)
+    jbb = ib(2,1)
+    kbb = ib(3,1)
+    lbb = ib(4,1)
+
+    mini = kmin(inw)
+    maxi = kmax(inw)
+    minj = kmin(jnw)
+    maxj = kmax(jnw)
+    mink = kmin(knw)
+    maxk = kmax(knw)
+    minl = kmin(lnw)
+    maxl = kmax(lnw)
+
+    ijn = 0
+    jmax = maxj
+
+ic: DO i = mini, maxi
+
+      ihondo = (i-mini)*len4 + 1
+      irotax = idpop(ibb,i)  + 1
+
+      IF(iandj) jmax=i
+
+jc:   DO j = minj, jmax
+
+        ijhondo = (j-minj)*len3 + ihondo
+        ijrotax = idpop(jbb,j)  + irotax
+        ijn = ijn+1
+        lmax=maxl
+        kln=0
+
+kc:     DO k = mink, maxk
+
+          ijkhondo = (k-mink)*len2 + ijhondo
+          ijkrotax = idpop(kbb,k)  + ijrotax
+
+          IF(kandl) lmax=k
+
+lc:       DO l = minl, lmax
+
+            kln = kln+1
+
+            IF(same .AND. kln.GT.ijn) EXIT kc
+
+            ijklhondo = (l-minl)*len1 + ijkhondo
+            ijklrotax = idpop(lbb,l)  + ijkrotax
+            ghondo(ijklhondo) = grotspd(ijklrotax)
+
+          END DO lc
+        END DO kc
+      END DO jc
+    END DO ic
+
+
+    lstri = len4
+    lstrj = len3
+    lstrk = len2
+    lstrl = len1
+
+  END SUBROUTINE ompmod_raxintspd
+
+END MODULE ompmod

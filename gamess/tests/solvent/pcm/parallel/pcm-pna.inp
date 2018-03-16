@@ -1,0 +1,68 @@
+!   para-nitro-aniline (PNA) solvent effect on a CT state.
+!   NO2-C6H4-NH2...the basis set has 180 AOs, 170 MOs
+!   this test comes from Federico
+!
+!   note that there is a very similar test case using EFP1.
+!
+!   the state of interest is S2 in gas phase becoming S1 in solution,
+!   is largely HOMO ---> LUMO, and is a charge transfer state,
+!   from the NH2/ring, to the NO2 group.
+!
+!   with PCM simulating water: G.S. takes 18 iters, TDDFT= 7 iters
+!   STATE        ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!               HARTREE          EV         X       Y       Z     STRENGTH
+!   0  A    -491.9457025110    0.000
+!   1  A    -491.8162544024    3.522    -2.1441 -0.4856 -0.0475    0.417
+!   2  A    -491.8028008828    3.889    -0.0003  0.0002  0.0002    0.000
+!   3  A    -491.7921573094    4.178    -0.0427  0.1890  0.0057    0.004
+!   S1 has amplitude X= 0.995617, Y= -0.100154, for excitation 36 --> 37,
+!   and its lambda diagnostic is 0.583
+!
+!   This run requires 834 seconds on 2.66 GHz Cloverton ( 2 Oct 2015)
+!   results unchanged since 2010
+!
+!   ---------------------------------------------------------------
+!   gas phase: G.S. takes 23 iters, TDDFT= 7 iters, 906 CPU s e c o n d s.
+!   STATE        ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!               HARTREE          EV         X       Y       Z     STRENGTH
+!   0  A    -491.9297647834    0.000
+!   1  A    -491.7933602533    3.712     0.0002 -0.0003  0.0000    0.000
+!   2  A    -491.7840253852    3.966    -1.7652 -0.4003 -0.0371    0.318
+!   3  A    -491.7729190591    4.268    -0.0125 -0.0017 -0.0351    0.000
+!   S2 has amplitude X= -0.987697, Y= 0.089883, for excitation 36 --> 37
+!
+!   Note that the transition dipoles and individual TDDFT amplitudes
+!   show that S2 in the gas phase is red-shifted 0.444 eV, to become S1
+!   in "aqueous" PCM.  This run uses internally stored data for water:
+!   bulk EPS= 78.390; fast EPSINF= 1.776; solvent radius RSOLV= 1.385 A
+!
+ $CONTRL SCFTYP=RHF RUNTYP=ENERGY DFTTYP=B3LYP TDDFT=EXCITE ISPHER=1 $end
+ $SYSTEM MWORDS=5 $end
+ $BASIS  GBASIS=DH NPFUNC=1 NDFUNC=1 $end 
+ $guess  guess=huckel $end
+ $SCF    DIRSCF=.T. $END
+ $TDDFT  NSTATE=3 IROOT=1 MULT=1 $END
+ $pcm    solvnt=water ief=-10 icomp=2 $end
+ $DATA
+para-nitro-aniline...B3LYP/DH(d,p) geometry
+C1
+OXYGEN      8.0  -3.5640962363   0.3129770582   0.0191354896
+NITROGEN    7.0  -2.7543853866  -0.6262705303  -0.0087359626
+OXYGEN      8.0  -3.0782345425  -1.8228597252  -0.0522416501
+CARBON      6.0  -1.3294070074  -0.3027684248   0.0108160927
+NITROGEN    7.0   2.7522753292   0.6226607135   0.1024352951
+CARBON      6.0   1.4022337813   0.3176132806   0.0407863924
+CARBON      6.0  -0.9267524655   1.0402183590   0.0587396720
+CARBON      6.0  -0.3853209859  -1.3399499551  -0.0207141844
+CARBON      6.0   0.4300958532   1.3467983374   0.0742655277
+CARBON      6.0   0.9708571968  -1.0304247646  -0.0050858133
+HYDROGEN    1.0   3.4045995883  -0.0912548172  -0.1918648844
+HYDROGEN    1.0   3.0277395793   1.5654319070  -0.1365567859
+HYDROGEN    1.0  -1.6809166272   1.8200687989   0.0812902463
+HYDROGEN    1.0  -0.7280547283  -2.3688050606  -0.0585412157
+HYDROGEN    1.0   0.7501671709   2.3862734830   0.1135003100
+HYDROGEN    1.0   1.7091994808  -1.8297086596  -0.0272285291
+ $END
+
+! TRAVIS-CI MEDIUM
+

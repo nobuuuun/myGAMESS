@@ -1,0 +1,30 @@
+!   benzene...120 AOs, 114 MOs in cc-pVDZ basis set.
+!   test Michio's RI-MP2 on closed shell with default options
+!
+!   FINAL E= -230.7220136426, in 9 iters.
+!   fully accurate calculation: E(.P2)= -231.5027398334
+!   resolution of the identity: E(MP2)= -231.5026522581
+!
+!   This run takes 5 seconds on one 2.66 GHz Cloverton (9 Jul 2010)
+!         (versus 19 s.conds and 8 megawords for IMS code)
+!
+ $CONTRL SCFTYP=RHF MPLEVL=2 RUNTYP=ENERGY ispher=1 $END
+ $SYSTEM MWORDS=1 memddi=0 $END
+ $GUESS  GUESS=HUCKEL $END
+ $BASIS  GBASIS=CCD $END
+ $SCF    DIRSCF=.TRUE. $END
+
+ $mp2    code=rimp2 $end
+ $rimp2  othaux=.f. ivmtd=0 gosmp=.f. usedm=.f. $end
+ $auxbas cabnam=CCD $end
+
+ $DATA
+C6H6 MP2/cc-pVDZ MP2/6-31G Opt geom
+Dnh 6
+
+C    6.0  0.0000000000  1.3882822686  0.0000000000
+H    1.0  0.0000000000  2.4617106305  0.0000000000
+ $END
+
+! TRAVIS-CI SMALL
+

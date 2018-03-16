@@ -1,0 +1,38 @@
+!   This run demonstrates breakdown of MP2 at large N2 distance.
+!   This is Kurt Glaeseman's example from the MP2 NOON paper,
+!   M.S.Gordon, M.W.Schmidt, G.M.Chaban, K.R.Glaesemann, W.J.Stevens,
+!   C.Gonzalez     J.Chem.Phys.  110, 4199-4207(1999)
+!
+!   FINAL E=-107.9489583821, 9 iters, E(MP2)= -110.1132514703
+!   property evaluation shows a negative density between the atoms:
+!      POINT      X         Y         Z             DENSITY
+!        1      .00000    .00000    .00000         -.011465
+!        2      .00000    .00000    .09449         -.011378
+!        3      .00000    .00000    .18897         -.011110
+!   which is a fun way to make people think.
+!
+!   This run takes 0 seconds on a 2.66 GHz Cloverton MHz ( 1 Apr 2015)
+!   results of this run don't ever vary much.
+!
+ $CONTRL SCFTYP=RHF mplevl=2 RUNTYP=energy $END
+ $SYSTEM mwords=3 memddi=0 $END
+ $BASIS  GBASIS=N31 NGAUSS=6 ndfunc=1 $END
+ $GUESS  GUESS=HUCKEL $END
+ $mp2    code=serial mp2prp=.t. $end
+ $eldens ieden=1 morb=0 where=points output=paper $end
+ $points
+angs 3
+0.0 0.0 0.0
+0.0 0.0 0.05
+0.0 0.0 0.1
+ $end
+ $DATA
+N2 molecule
+Dnh 4
+
+N   7.0  0.0000  0.0000  1.6
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

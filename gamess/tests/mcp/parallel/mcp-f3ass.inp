@@ -1,0 +1,29 @@
+!  F3AsS: 80 AOs...built in non-rel DZP model core potential
+!
+!  NSERCH:   0  E=     -194.7734054784  R.M.S.=  0.0069660
+!  NSERCH:   1  E=     -194.7732711643  R.M.S.=  0.0031504
+!  NSERCH:   2  E=     -194.7737434009  R.M.S.=  0.0011458
+!  NSERCH:   3  E=     -194.7738123722  R.M.S.=  0.0003971
+!  NSERCH:   4  E=     -194.7738143032  R.M.S.=  0.0001890
+!  NSERCH:   5  E=     -194.7738148360  R.M.S.=  0.0000074
+!  NSERCH:   6  E=     -194.7738148383  R.M.S.=  0.0000005
+!
+!  This run takes 16 seconds on a 2.66 GHz Cloverton ( 7 Apr 2015)
+!
+ $contrl scftyp=rhf runtyp=optimize pp=mcp ispher=1 $end
+ $system mwords=5 $end
+ $basis  gbasis=mcp-dzp $end
+ $guess  guess=huckel $end
+ $statpt opttol=1d-5 $end
+ $data
+F3AsS
+Cnv  3
+
+As     33.0   0.0000000000   0.0000000000  -0.1081834002
+S      16.0   0.0000000000   0.0000000000   1.8812962146
+F       9.0   1.4419992354   0.0000000000  -0.9126874642
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

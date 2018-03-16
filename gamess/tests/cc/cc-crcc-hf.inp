@@ -1,0 +1,100 @@
+!   HF...test of CR-CC calculation at 5*Re (Re=0.91681A)
+!
+!   There are 80 AOs, 80 MOs, 1 frozen core, 5 correlated MOs
+!   Very tight accuracy inputs are used, and memory for the CC
+!   step is intentionally kept small enough to execute INTRIP.
+!
+!   FINAL E= -99.6295016507 after 31 iterations
+!   there are 36 CCSD iterations, to E(CCSD)= -100.0945369867
+!   MBPT(2) E= -100.1790287466, CCSD(T) E= -100.2022905209
+!   COUPLED-CLUSTER ENERGY E(CR-CCSD(T)) = -100.1269783526
+!   R-CCSD(T) DENOMINATOR   2.261203
+!   largest T1 amplitude is  0.380836 for   5->6
+!   largest T2 amplitude is -0.994977 for 5,5->6,6
+!   
+!   This run takes 40 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!   results are essentially unchanged since 2002
+!   This run needs about 600 MBytes of disk space
+!   
+ $contrl scftyp=rhf cctyp=cr-cc runtyp=energy maxit=50 units=bohr
+         icut=15 itol=30 $end
+ $system mwords=25 $end
+ $scf    nconv=10 damp=.true. $end
+ $trans  cuttrf=1d-15 $end
+ $ccinp  nword=3000000 iconv=10 maxcc=50 $end
+ $data
+HF, aug-cc-pVTZ, R=8.664 a.u.  
+Cnv   2
+
+Fluorine       9.        0.0000000000        0.0000000000        0.00000
+ S   8
+  1        19500.00000         0.5070000000E-03
+  2        2923.000000         0.3923000000E-02
+  3        664.5000000         0.2020000000E-01
+  4        187.5000000         0.7901000000E-01
+  5        60.62000000         0.2304390000    
+  6        21.42000000         0.4328720000    
+  7        7.950000000         0.3499640000    
+  8       0.8815000000        -0.7892000000E-02
+ S   8
+  1        19500.00000        -0.1170000000E-03
+  2        2923.000000        -0.9120000000E-03
+  3        664.5000000        -0.4717000000E-02
+  4        187.5000000        -0.1908600000E-01
+  5        60.62000000        -0.5965500000E-01
+  6        21.42000000        -0.1400100000    
+  7        7.950000000        -0.1767820000    
+  8       0.8815000000         0.6050430000    
+ S   1
+  1        2.257000000          1.000000000    
+ S   1
+  1       0.3041000000          1.000000000    
+ P   3
+  1        43.88000000         0.1666500000E-01
+  2        9.926000000         0.1044720000    
+  3        2.930000000         0.3172600000    
+ P   1
+  1       0.9132000000          1.000000000    
+ P   1
+  1       0.2672000000          1.000000000    
+ D   1
+  1        3.107000000          1.000000000    
+ D   1
+  1       0.8550000000          1.000000000    
+ F   1
+  1        1.917000000          1.000000000    
+ S   1
+  1       0.915800000E-01      1.00000000    
+ P   1
+  1       0.736100000E-01      1.00000000    
+ D   1
+  1       0.292000000          1.00000000    
+ F   1
+  1       0.724000000          1.00000000    
+
+hydrogen   1.        0.0000000000        0.0000000000       8.664
+ S   3
+  1        33.87000000         0.6068000000E-02
+  2        5.095000000         0.4530800000E-01
+  3        1.159000000         0.2028220000    
+ S   1
+  1       0.3258000000          1.000000000    
+ S   1
+  1       0.1027000000          1.000000000    
+ P   1
+  1        1.407000000          1.000000000    
+ P   1
+  1       0.3880000000          1.000000000    
+ D   1
+  1        1.057000000          1.000000000    
+ S   1
+  1       0.252600000E-01      1.00000000    
+ P   1
+  1       0.102000000          1.00000000    
+ D   1
+  1       0.247000000          1.00000000    
+
+ $end
+
+! TRAVIS-CI SMALL
+

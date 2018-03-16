@@ -1,0 +1,69 @@
+!  glycyl radical by UMP2 with 4 EFP1 DFT-level waters...95 AOs and 90 MOs
+!  starting geometry is fully optimized UHF + RHF-level EFP1 local minimum.
+!
+!  geometry optimization was monotonic at the end, so it suffices to
+!  test UMP2 + EFP1 with a single point gradient:
+!  FINAL E(UHF)= -282.3192346419 E(MP2)= -283.0908533779 RMS grad= 0.010754473
+!
+!  This run takes 69 seconds on 2.66 GHz Cloverton (12 Oct 2010)
+!
+!  ----------------------------------------
+!  The MP2 level optimization moves a water pair closer to the NH2, and
+!  due to the rearrangements of 2 of the EFP, there are several steps.
+!  the numerical results are from the serial UMP2 program:
+!  nserch=0  E(MPtwo)=  -283.0908533779 r.m.s GRADIENT = 0.0107550
+!         1  E(MPtwo)=  -283.0972630775 r.m.s GRADIENT = 0.0034325
+!         2  E(MPtwo)=  -283.0990753941 r.m.s GRADIENT = 0.0039701
+!         3  E(MPtwo)=  -283.0860736663 r.m.s GRADIENT = 0.0128213
+!         4  E(MPtwo)=  -283.0978643361 r.m.s GRADIENT = 0.0063385
+!                           ...
+!        51  E(MPtwo)=  -283.1017966767 r.m.s GRADIENT = 0.0000603
+!        52  E(MPtwo)=  -283.1017980260 r.m.s GRADIENT = 0.0000619
+!        53  E(MPtwo)=  -283.1017986197 r.m.s GRADIENT = 0.0000341
+!        54  E(MPtwo)=  -283.1017990060 r.m.s GRADIENT = 0.0000215
+!        55  E(MPtwo)=  -283.1017990860 r.m.s GRADIENT = 0.0000090
+!  The DDI program gives the same results, with small precision differences,
+!  such as ending at    -283.1017990976                  0.0000116
+!  full optimization took 2760 secnds with serial, 3764 secnds with DDI.
+!
+ $contrl scftyp=uhf mult=2 mplevl=2 runtyp=gradient ispher=1 $end 
+ $system mwords=5 memddi=15 $end
+ $mp2    code=ddi $end
+ $basis  gbasis=ccd $end
+ $statpt opttol=5d-5 nstep=100 $end
+ $data
+glycyl radical + 4 H2O
+C1
+N    7.0   0.3677759801   0.6505749367  -0.0651777807
+H    1.0   0.4742771355   1.4897297723  -0.6004428503
+H    1.0   0.3506416610   0.7767172971   0.9300458392
+C    6.0   1.0663361403  -0.4180566797  -0.5355328179
+H    1.0   1.1313729043  -1.3099472346   0.0674465042
+C    6.0   1.5808803243  -0.3958432666  -1.8786664478
+O    8.0   1.4890032898   0.5667682923  -2.6040772537
+O    8.0   2.1846143615  -1.5176573673  -2.2271857774
+H    1.0   2.5026165746  -1.4653464163  -3.1326497333
+ $end
+
+ $efrag                                                                         
+coord=cart
+FRAGNAME=H2Odft
+O1               3.2078759885  -1.4360953460  -4.8610364461
+H2               4.1357021686  -1.5585307937  -4.9836194581
+H3               2.9890236640  -0.6074316555  -5.2563826263
+FRAGNAME=H2Odft
+O1               3.7031293109  -0.4479220551   2.1208736799
+H2               3.6363707148  -0.6685213271   1.2055826305
+H3               4.5300542911  -0.0071758582   2.2340828715
+FRAGNAME=H2Odft
+O1               2.2905939259   1.1943853521  -5.2734361001
+H2               1.9956280553   1.1724426658  -4.3771146691
+H3               1.5532343782   1.4684238075  -5.7950511654
+FRAGNAME=H2Odft
+O1               1.0830488254   0.5876375691   2.9279314398
+H2               0.6840633624   0.0844152663   3.6196368455
+H3               1.9687153077   0.2734026219   2.8400125332
+ $end
+
+! TRAVIS-CI SMALL
+

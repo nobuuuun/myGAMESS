@@ -1,0 +1,157 @@
+{
+  "name": "exam14.log",
+  "validation": [
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-75.010111355",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-74.394581939",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -3",
+      "value": "-0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -2",
+      "value": "0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -1",
+      "value": "0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -3",
+      "value": "-0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -2",
+      "value": "-0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -1",
+      "value": "0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -3",
+      "value": "-0.638955",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -2",
+      "value": "0.392614",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -1",
+      "value": "0.129795",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -3",
+      "value": "0.638955",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -2",
+      "value": "0.392614",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -1",
+      "value": "0.129795",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "DIPOLE VELOCITY",
+      "name": "DIPOLE VELOCITY X",
+      "value": "0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "DIPOLE VELOCITY",
+      "name": "DIPOLE VELOCITY Y",
+      "value": "-0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "DIPOLE VELOCITY",
+      "name": "DIPOLE VELOCITY Z",
+      "value": "0.368205",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "DIPOLE VELOCITY",
+      "name": "DIPOLE VELOCITY NORM",
+      "value": "0.368205",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "TDDFT",
+      "name": "OSCILLATOR STRENGTH : TRANSITION 1",
+      "value": "0.063254",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

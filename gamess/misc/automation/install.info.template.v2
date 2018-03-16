@@ -1,0 +1,40 @@
+#!/bin/csh
+#
+# Version 2 of install.info template : Sept 14th 2017 : Sarom Leang : sarom@si.msg.chem.iastate.edu
+#
+# This file is used by:
+# - Continous-Integration methods (Travis-CI and Jenkins)
+# - Container deployment (Dockers and NVIDIA-Dockers)
+#
+setenv GMS_PATH                    TEMPLATE_GMS_PATH
+setenv GMS_BUILD_DIR               TEMPLATE_GMS_BUILD_DIR
+#         machine type
+setenv GMS_TARGET                  TEMPLATE_GMS_TARGET
+#         FORTRAN compiler setup
+setenv GMS_FORTRAN                 TEMPLATE_GMS_FORTRAN
+setenv GMS_GFORTRAN_VERNO          TEMPLATE_GMS_GFORTRAN_VERNO
+setenv GMS_IFORT_VERNO             TEMPLATE_GMS_IFORT_VERNO
+#         mathematical library setup
+setenv GMS_MATHLIB                 TEMPLATE_GMS_MATHLIB_OPTION
+setenv GMS_MATHLIB_PATH            TEMPLATE_GMS_MATHLIB_PATH
+setenv GMS_MATHLIB_INCLUDE_PATH    TEMPLATE_GMS_MATHLIB_INCLUDE_PATH
+setenv GMS_MKL_VERNO               TEMPLATE_GMS_MKL_VERNO
+#         parallel message passing model setup
+setenv GMS_DDI_COMM                TEMPLATE_GMS_DDI_COMM
+setenv GMS_MPI_LIB                 TEMPLATE_GMS_MPI_LIB
+setenv GMS_MPI_PATH                TEMPLATE_GMS_MPI_PATH
+#         LIBCCHEM CPU/GPU code interface
+setenv GMS_LIBCCHEM                TEMPLATE_GMS_LIBCCHEM_OPTION
+setenv GMS_LIBCCHEM_GPU_SUPPORT    TEMPLATE_GMS_LIBCCHEM_GPU_SUPPORT
+setenv GMS_HDF5_PATH               TEMPLATE_GMS_HDF5_PATH
+setenv GMS_CUDA_BOARD              TEMPLATE_GMS_CUDA_BOARD
+setenv GMS_CUDA_PATH               TEMPLATE_GMS_CUDA_PATH
+setenv GMS_LIBCCHEM_LIBINT         TEMPLATE_GMS_LIBCCHEM_LIBINT
+setenv GMS_LIBINT_PATH             TEMPLATE_GMS_LIBINT_PATH
+setenv GMS_EIGEN_PATH              TEMPLATE_GMS_EIGEN_PATH
+#         Intel Xeon Phi build: true/false
+setenv GMS_PHI                     TEMPLATE_GMS_PHI
+#         Shared memory type: sysv/posix
+setenv GMS_SHMTYPE                 TEMPLATE_GMS_SHMTYPE
+#         SC17 SCF OpenMP support: true/false
+setenv GMS_OPENMP          TEMPLATE_GMS_OPENMP

@@ -1,0 +1,29 @@
+!   CH2 test case for constrained UHF...CCT has 65 AOs, 58 MOs.
+!   G.E.Scuseria, T.Tsuchimochi, J.Chem.Phys. 134, 064101/1-14(2011)
+!   Table IV of this paper matches to the initial geometry results.
+!
+!   CUHF geometry optimization (results will match an ROHF run)
+!     NSERCH:   0  E=  -38.9322202485  R.M.S.=  0.0035495
+!     NSERCH:   1  E=  -38.9283829792  R.M.S.=  0.0154889
+!     NSERCH:   2  E=  -38.9321456106  R.M.S.=  0.0034768
+!     NSERCH:   3  E=  -38.9325668306  R.M.S.=  0.0008999
+!     NSERCH:   4  E=  -38.9325754150  R.M.S.=  0.0000654
+!     NSERCH:   5  E=  -38.9325754616  R.M.S.=  0.0000004
+!
+!   only 1 second needed on any machine (18 Feb 2013)
+!
+ $contrl scftyp=uhf mult=3 runtyp=optimize ispher=1 $end
+ $basis  gbasis=cct $end
+ $scf    cuhf=.true. $end
+ $data
+CH2 triplet
+Cnv 2
+
+C   6    0.000000     0.000000     0.106788
+H   1    0.000000     0.989216    -0.320363
+ $end
+
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

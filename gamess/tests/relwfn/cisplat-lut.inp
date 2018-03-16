@@ -1,0 +1,74 @@
+!   PtCl2(NH3)2..local unitary transformation LUT-IOTC gradient
+!   RHF/SPKrTZC (Sapporo relativistic core/valence basis set)
+!   Since only SCF is used, the basis is jumped to the TZC level.
+!   The basis has 423 AOs and 366 MOs, containing up to g AOs.
+!
+!      the LUT-IOTC run is
+!   d.p. FINAL E= -19446.2483100078, 12 iters, RMS= 0.008116908
+!   q.p.   RHF E= -19446.2483045612, 12 iters, grd= 0.008116908
+!
+!      as full IOTC runs,
+!   d.p.   RHF E= -19446.2483321405, 12 iters, grd= 0.008157553
+!   q.p.   RHF E= -19446.2483212430, 12 iters, grd= 0.008051287
+!
+!   This run take 1873 seconds on 2.66 GHz Cloverton ( 3 Aug 2015)
+!   (full IOTC is 2678 sconds)
+!            The energy but not the gradient are sensitive to
+!            the number of cores used, in both d.p. runs.
+!            Values quoted above are serial, Linux, ifort, MKL data.
+!   ----------------------------------------------------------------------
+!   If run as a geometry optimization from the non-rel MIDI geometry,           
+!   as a parallel run which has a slightly different RI step and
+!   thus a slightly different energy (oddly, identical gradient):
+!      N.ERCH:   0  E=   -19446.2483086968  R.M.S.=  0.0081169
+!      N.ERCH:   1  E=   -19446.2525113640  R.M.S.=  0.0038103
+!      N.ERCH:   2  E=   -19446.2541788622  R.M.S.=  0.0027934
+!      N.ERCH:   3  E=   -19446.2545371432  R.M.S.=  0.0011823
+!      N.ERCH:   4  E=   -19446.2546054522  R.M.S.=  0.0008972
+!      N.ERCH:   5  E=   -19446.2546096028  R.M.S.=  0.0006742
+!      N.ERCH:   6  E=   -19446.2546393570  R.M.S.=  0.0001462
+!      N.ERCH:   7  E=   -19446.2546433548  R.M.S.=  0.0001058
+!      N.ERCH:   8  E=   -19446.2546439185  R.M.S.=  0.0000273
+!      N.ERCH:   9  E=   -19446.2546338713  R.M.S.=  0.0000129
+!      N.ERCH:  10  E=   -19446.2546395743  R.M.S.=  0.0000087
+!      N.ERCH:  11  E=   -19446.2546360934  R.M.S.=  0.0000056
+!      N.ERCH:  12  E=   -19446.2546527642  R.M.S.=  0.0000017  <-- best
+!   If run as a seminumerical hessian at the relativistic MP2 geometry,
+!   the force constant matrix is positive definite, with omega's:
+!      58.91, 78.88, 125.45, 159.46, 164.27, ..., 3759.36, 3788.51, 3789.51
+!
+ $contrl scftyp=rhf runtyp=gradient relwfn=LUT-IOTC ispher=1 $end
+ $system mwords=35 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $basis  gbasis=SPKrTZC $end
+ $statpt opttol=1d-5 $end
+ $data
+cis-platin...below is the non-relativistic RHF/MIDI geometry
+Cnv 2
+
+Pt   78.0   0.0000000000   0.0000000000  -0.1224408645
+Cl   17.0   0.0000000000   1.8182670960   1.4611355061
+N     7.0   0.0000000000   1.5981604645  -1.5628514206
+H     1.0   0.8260419712   1.6380833398  -2.1500674026
+H     1.0   0.0000000000   2.3965286513  -0.9276667482
+ $end
+
+below is the non-relativistic RHF/MIDI geometry
+Pt   78.0   0.0000000000   0.0000000000  -0.1224408645
+Cl   17.0   0.0000000000   1.8182670960   1.4611355061
+N     7.0   0.0000000000   1.5981604645  -1.5628514206
+H     1.0   0.8260419712   1.6380833398  -2.1500674026
+H     1.0   0.0000000000   2.3965286513  -0.9276667482
+
+below is the optimized LUT-IOTC RHF/SPKrTZC geometry
+Pt   78.0   0.0000000000   0.0000000000  -0.1186448269
+Cl   17.0   0.0000000000   1.7208387732   1.4361593391
+N     7.0   0.0000000000   1.5612815189  -1.5406222473
+H     1.0   0.8094970373   1.5902694283  -2.1269420262
+H     1.0   0.0000000000   2.3890970691  -0.9730685260
+
+! TRAVIS-CI MEDIUM
+! TRAVIS-CI SKIP
+! ACCURACY BETWEEN INTEL AND GNU DOES NOT MATCH
+

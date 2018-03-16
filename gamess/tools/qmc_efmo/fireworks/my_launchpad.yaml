@@ -1,0 +1,10 @@
+host: mongodb03
+logdir: null
+name: fw_gamess_qmcpack
+password: ********
+port: 27017
+ssl_ca_file: null
+strm_lvl: INFO
+user_indices: []
+username: fw_gamess_qmcpack_admin
+wf_user_indices: []

@@ -1,0 +1,54 @@
+{
+  "parse_header" : "ZAPT - LIBCCHEM",
+  "parse_group" : [
+   {
+     "regex_string" : "^ ZAPT ENERGY CONTRIBUTIONS.*$",
+     "parse_name"   : "CLOSED SHELL-LIKE TERM : E1 - ZAPT",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ ZAPT ENERGY CONTRIBUTIONS.*$",
+     "parse_name"   : "SINGLY UNOCCUPIED : E2 - ZAPT",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 2,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ ZAPT ENERGY CONTRIBUTIONS.*$",
+     "parse_name"   : "2 SINGLY OCCUPIED : E3 - ZAPT",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 3,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ ZAPT ENERGY CONTRIBUTIONS.*$",
+     "parse_name"   : "SINGLY UNOCCUPIED/OCCUPIED : E4 - ZAPT",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 4,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ ZAPT ENERGY CONTRIBUTIONS.*$",
+     "parse_name"   : "'FOCK MATRIX CONTRIBUTION' : E5 - ZAPT",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 5,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ ZAPT ENERGY CONTRIBUTIONS.*$",
+     "parse_name"   : "SINGLY OCCUPIED : E6 - ZAPT",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 6,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ ZAPT ENERGY CONTRIBUTIONS.*$",
+     "parse_name"   : "2 SINGLY UNOCCUPIED : E7 - ZAPT",
+     "parse_value_index" : 0,
+     "parse_line_offset" : 7,
+     "parse_required" : true
+   }
+  ]
+}

@@ -1,0 +1,32 @@
+!   tough UHF case from Galya
+!   This has a somewhat stretched HC bond, and the lowest energy
+!   solution is more spin-contaminated due to partial triplet
+!   instability in that bond pair.  If DIIS stays on throughout,
+!   it doesn't converge, but this shows that switching DIIS off
+!   for a while is great, as it converges correctly:
+!
+!   DIIS finds FINAL E= -113.2418193786, 61 iters, <S**2>= 1.266
+!   DIIS switches itself off and on 5 times during this run!
+!   SOSCF will find     -113.2418193785 in just 30 iterations,
+!   but reports a huge angle rescaled at iteration 10.
+!
+!   This job takes 1 second on a 1.5 GHz Power4+ (3 Nov 2009)
+!
+ $CONTRL SCFTYP=uhf RUNTYP=energy icharg=0 mult=2 maxit=100 $END
+ $SYSTEM mwords=1 $END
+ $BASIS  GBASIS=TZV NDFUNC=1 NPFUNC=1 $END
+ $guess  guess=huckel norb=46 $end
+ $scf    diis=.t. soscf=.f. $end
+ $DATA
+HCO tzp
+Cs
+
+H           1.0     -0.5601872414      -1.4584815742
+C           6.0     -0.6065043286      -0.3239050188
+O           8.0      0.5236899558       0.4209269591
+ $END
+
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

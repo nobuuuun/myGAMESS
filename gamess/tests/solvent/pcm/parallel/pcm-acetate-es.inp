@@ -1,0 +1,33 @@
+!   B3LYP calculation on the closed shell H3CCOO anion.
+!
+!   Peifeng and Hui's Table 1.  The individual components of
+!   the gradient will match what is shown in the table.
+!
+!   FINAL R-B3LYP E= -228.4798675471, 15 iters, RMS= 0.015718124
+!   This will optimize in 21 steps to -228.4824090378, grad= 0.0000024
+!
+!   This run takes 29 seconds on a 2.66 GHz Cloverton (14 Nov 2008)
+!
+ $contrl scftyp=rhf dfttyp=b3lyp runtyp=gradient icharg=-1 nzvar=15 $end
+ $system mwords=5 $end
+ $basis  gbasis=N31 NGAUSS=6 NDFUNC=1 $end
+ $zmat   auto=.t. dlc=.t. $end
+ $statpt nstep=50 opttol=1.0d-5 $end
+
+ $pcm    solvnt=water $end
+ $pcmcav radii=suahf $end
+
+ $data
+acetate anion...Peifeng and Hui's table 1...optimized gas phase RHF geometry
+C1
+C           6.0  -0.1972303227   0.0134971931  -1.3827595804
+C           6.0   0.0637448024   0.0033053120   0.1491958176
+O           8.0   1.2472508140  -0.0024866137   0.4960573054
+O           8.0  -0.9587301521   0.0006624612   0.8425161126
+H           1.0   0.7264092898   0.0284660412  -1.9535182910
+H           1.0  -0.7979769902   0.8816767268  -1.6481709634
+H           1.0  -0.7767153404  -0.8649032362  -1.6620302476
+ $end
+
+! TRAVIS-CI SMALL
+! 

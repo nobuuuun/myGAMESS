@@ -1,0 +1,45 @@
+{
+  "name": "rvs-f-wat3.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-327.7755155336",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "ELECTROSTATIC ENERGY - MOROKUMA",
+      "value": "-0.161581",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "EXCHANGE REPULSION ENERGY - MOROKUMA",
+      "value": "0.106641",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "POLARIZATION ENERGY - MOROKUMA",
+      "value": "-0.018745",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "TOTAL INTERACTION ENERGY - MOROKUMA",
+      "value": "-0.105612",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

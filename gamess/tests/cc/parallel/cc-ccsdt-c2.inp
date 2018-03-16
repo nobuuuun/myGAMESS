@@ -1,0 +1,24 @@
+!   C2...CCSD(T)/aug-cc-pTVZ, at Re(experiment)
+!   110 AOs, 92 MOs, 2 frozen cores, 4 correlated MOs
+!
+!       FINAL E= -75.4012819994, 10 iters.
+!      E(CCSD) = -75.7521413946, 20 CCSD iters, T1 diag=0.03896438
+!   E(CCSD(T)) = -75.7862721706
+!
+!   This run took 47 seconds on 2.66 GHz Cloverton ( 6 Apr 2015)
+!   This run uses about 1 GB disk storage...answers same as Feb 2006.
+!
+ $contrl scftyp=rhf runtyp=energy cctyp=ccsd(t) ispher=1 $end
+ $system mwords=5 memddi=10 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=acct $end
+ $data
+C2 dimer...110 AOs, 92 MOs...aug-cc-pVTZ basis
+Dnh 4
+
+CARBON   6.0   0.0 0.0 1.2597/2
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

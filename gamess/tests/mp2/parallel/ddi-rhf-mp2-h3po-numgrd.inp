@@ -1,0 +1,38 @@
+!  H3PO...numerical differentiation for gradient of SCS-MP2 energy
+!
+!  the DDI program is used for the standard test case:
+!     FINAL E=-417.3568768381, 11 iters,
+!     E(MP2)= -417.6961584558, SCS-MP2= -417.6952818064
+!  using the undocumented option to do 5 point rather than 3 point
+!  numerical differentiation, RMS grad= 0.006332469
+!
+!                       MP2            SCS-MP2        5-pt grad    3-pt grad
+!  CODE = SERIAL  -417.6961584559  -417.6952818064  0.006332469  0.006353322
+!  CODE = DDI     -417.6961584558  -417.6952818064  0.006332469  0.006353322
+!  CODE = IMS     -417.6961584558  -417.6952818064  0.006332469  0.006353322
+!      the last program will do analytic gradients, 0.006332437
+!                  and optimize to -417.6959080098 in 5 steps
+!
+!  This run takes 12 seconds on a 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results haven't changed since 2009
+!
+ $contrl scftyp=rhf runtyp=gradient mplevl=2 numgrd=.true. $end
+ $system parall=.true. mwords=1 memddi=5 $end
+ $basis  gbasis=n311 ngauss=6 ndfunc=1 npfunc=1 $end
+ $mp2    code=ddi scspt=scs $end
+ $data
+phosphine oxide...3-21G* basis
+Cnv 3
+
+P 15.0
+O  8.0  0.0000000000  0.0   1.4701
+H  1.0  1.2335928631  0.0  -0.6421021244
+ $end
+!        comment next out to get normal 3-point differentiation
+ $vib2
+nvib= 5
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,181 @@
+{
+  "name": "eda-ac-wat-ims.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-104.1579116404",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(2S)",
+      "value": "-0.2960474419",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(2T)",
+      "value": "-0.1011361817",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(2ST)",
+      "value": "-0.3889689909",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "MP2 : SPIN-COMPONENT-SCALED",
+      "name": "E(SCS-MP2)",
+      "value": "-104.5468806312",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "CMOEDA",
+      "name": "ES ENERGY OWN - CMOEDA",
+      "value": "-0.111514",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "EX ENERGY OWN - CMOEDA",
+      "value": "-0.046779",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "REP ENERGY OWN - CMOEDA",
+      "value": "0.107328",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "POL ENERGY OWN - CMOEDA",
+      "value": "-0.068646",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "DISP ENERGY OWN - CMOEDA",
+      "value": "-0.004705",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (HF/DFT) OWN - CMOEDA",
+      "value": "-0.119611",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (MP2) OWN - CMOEDA",
+      "value": "-0.124316",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "ES ENERGY ALL - CMOEDA",
+      "value": "-0.109375",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "EX ENERGY ALL - CMOEDA",
+      "value": "-0.048846",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "REP ENERGY ALL - CMOEDA",
+      "value": "0.113562",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "POL ENERGY ALL - CMOEDA",
+      "value": "-0.072604",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "DISP ENERGY ALL - CMOEDA",
+      "value": "-0.002018",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (HF/DFT) ALL - CMOEDA",
+      "value": "-0.117263",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (MP2) ALL - CMOEDA",
+      "value": "-0.119281",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "LIBCCHEM",
+      "name": "E(0)       ",
+      "value": "-104.1579116404",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "LIBCCHEM",
+      "name": "E(2)       ",
+      "value": "-0.3971836236",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "LIBCCHEM",
+      "name": "E(MP2)     ",
+      "value": "-104.5550952640",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    }
+  ]
+}

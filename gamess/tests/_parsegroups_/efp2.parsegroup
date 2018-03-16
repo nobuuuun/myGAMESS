@@ -1,0 +1,31 @@
+{
+  "parse_header" : "EFP2",
+  "parse_group" : [
+   {
+     "regex_string" : "^                 INDUCED DIPOLE    ATOMIC UNITS   DEBYE.*$",
+     "parse_name"   : "EFP2 INDUCED DIPOLE X(IND)",
+     "parse_precision" : 5,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 2,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^                 INDUCED DIPOLE    ATOMIC UNITS   DEBYE.*$",
+     "parse_name"   : "EFP2 INDUCED DIPOLE Y(IND)",
+     "parse_precision" : 5,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 3,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^                 INDUCED DIPOLE    ATOMIC UNITS   DEBYE.*$",
+     "parse_name"   : "EFP2 INDUCED DIPOLE Z(IND)",
+     "parse_precision" : 5,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 4,
+     "parse_instance" : -1
+   }
+  ]
+}

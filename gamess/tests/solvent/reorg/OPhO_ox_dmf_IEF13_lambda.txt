@@ -1,0 +1,132 @@
+
+          __                                 
+         /  \                                
+         \__   __             __      ___    
+            \ /  \ |   \   / |__ |\ |  |     
+         \__/ \__/ |__  \_/  |__ | \|  |     
+
+               ___                            
+              |   |                           
+              |_ _|   __  __   _   __    _          __   _   ___    __       
+              |   \  |__ /  \ |_] / __  /_\  |\ | |  /  /_\   |  | /  \ |\ | 
+              |    \ |__ \__/ | \ \__/ /   \ | \| | /_ /   \  |  | \__/ | \| 
+
+                     ___                                                     
+                    |                                                        
+                    |___       __  _   __                                    
+                    |    |\ | |__ |_] / __ \_/                               
+                    |___ | \| |__ | \ \__/  |                                
+
+...............................................................................
+
+ This script prints out the final average solvent reorganization energy at a 
+ particular solute geometry as implemented within the framework of IEF-PCM in
+ GAMESS quantum chemistry software package.                                  
+
+ The solvent reorganization energy is an important parameter in Marcus     
+ Theory that connects the free energy of activation and the equilibrium    
+ reaction free energy for electron transfer and proton-coupled electron    
+ transfer reactions. This parameter is a measure of the energy penalty      
+ required to change the equilibrium solvent configuration upon electron    
+ transfer.                                                                   
+
+...............................................................................
+
+                  REFERENCES                 
+
+    1. Ghosh,S.; Horvath,S.; Soudackov,A.V.; Hammes-Schiffer,S.              
+       Electrochemical Solvent Reorganization Energies in the Framework of   
+       the Polarizable Continuum Model                                       
+       J. Chem. Theory Comput. 2014, 10, 2091-2102.                          
+
+    2. Ghosh,S.; Hammes-Schiffer,S.                                          
+       Calculation of Electrochemical Reorganization Energies for Redox      
+       Molecules at Self-Assembled Monolayer Modified Electrodes             
+       J. Phys. Chem. Lett. 2015, 6, 1-5.                                    
+
+...............................................................................
+               ================              
+                INPUT KEYWORDS               
+               ================              
+
+     ------------- STATE 1 -------------     
+ $CONTRL
+ COORD=UNIQUE UNITS=ANGS
+ ISPHER=-1 MAXIT=200
+ ICHARG=0 MULT=1 RUNTYP=ENERGY EXETYP=RUN
+ SCFTYP=RHF DFTTYP=B3LYPV3 NPRINT=9
+ $END
+ $SYSTEM MWORDS=1000 $END
+ $SCF DIIS=.T. DAMP=.T. DIRSCF=.T. $END
+ $GUESS GUESS=HUCKEL $END
+ $BASIS GBASIS=N31 NGAUSS=6 NDFUNC=1 NPFUNC=1 $END
+ $PCM IEF=13 SOLVNT=DMSO EPS=37.219 EPSINF=2.046 $END
+ $TESCAV MTHALL=4 NTSALL=60 $END
+ $PCMCAV RADII=VANDW $END
+ $REORG 
+ LAMDA=2 IPCHG=1 
+ RADCAT=4.0 
+ DISM=0.1 EPSOHP=18.6095 
+ $END
+
+     ------------- STATE 2 -------------     
+ $CONTRL
+ COORD=UNIQUE UNITS=ANGS
+ ISPHER=-1 MAXIT=200
+ ICHARG=-1 MULT=2 RUNTYP=ENERGY EXETYP=RUN
+ SCFTYP=UHF DFTTYP=B3LYPV3 NPRINT=9
+ $END
+ $SYSTEM MWORDS=1000 $END
+ $SCF DIIS=.T. DAMP=.T. DIRSCF=.T. $END
+ $GUESS GUESS=HUCKEL $END
+ $BASIS GBASIS=N31 NGAUSS=6 NDFUNC=1 NPFUNC=1 $END
+ $PCM IEF=13 SOLVNT=DMSO EPS=37.219 EPSINF=2.046 $END
+ $TESCAV MTHALL=4 NTSALL=60 $END
+ $PCMCAV RADII=VANDW $END
+ $REORG 
+ LAMDA=2 IPCHG=1 
+ RADCAT=4.0 
+ DISM=0.1 EPSOHP=18.6095 
+ $END
+
+               =================              
+                XYZ-COORDINATES               
+               =================              
+
+C    6.0    -0.62400  -0.02800  -0.34790 
+C    6.0     0.71910  -0.02690  -0.34810 
+C    6.0     1.49200   1.24330  -0.34830 
+C    6.0     0.71700   2.51230  -0.34810 
+C    6.0    -0.62610   2.51120  -0.34790 
+H    1.0    -1.21110  -0.94200  -0.34770 
+H    1.0     1.30760  -0.94000  -0.34830 
+H    1.0     1.30410   3.42630  -0.34830 
+H    1.0    -1.21460   3.42430  -0.34770 
+C    6.0    -1.39900   1.24100  -0.34770 
+O    8.0    -2.62410   1.24000  -0.34740 
+O    8.0     2.71710   1.24440  -0.34860 
+...............................................................................
+                                       |                                       
+                                   =========                                   
+                                   |RESULTS|                                   
+                                   =========                                   
+
+        (SOLVENT PROPERTIES:: EPS_STATIC = 37.219; EPS_INFINITY = 2.046)
+
+                      ------------- STATE 1 -------------                    
+
+ NONEQUILIBRIUM FREE ENERGY IN SOLVENT  =   -381.224917683 A.U.
+ EQUILIBRIUM FREE ENERGY IN SOLVENT     =   -381.258407506 A.U.
+                                          ------------------------
+ THE SOLVENT REORGANIZATION ENERGY      =   0.911305 eV
+
+                      ------------- STATE 2 -------------                    
+
+ NONEQUILIBRIUM FREE ENERGY IN SOLVENT  =   -381.345819057 A.U.
+ EQUILIBRIUM FREE ENERGY IN SOLVENT     =   -381.379239086 A.U.
+                                          ------------------------
+ THE SOLVENT REORGANIZATION ENERGY      =   0.909406 eV
+
+*******************************************************************************
+ THE AVERAGE SOLVENT REORGANIZATION ENERGY FOR THIS STRUCTURE  =   0.910355 eV
+

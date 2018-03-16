@@ -1,0 +1,85 @@
+{
+  "name": "o2-mcp-soc.log",
+  "validation": [
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -4",
+      "value": "-31.411046078",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -3",
+      "value": "-31.394257731",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-31.411046078",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-31.432579699",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -5",
+      "value": "-4726.164",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -4",
+      "value": "-4726.164",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -3",
+      "value": "-0.000",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -2",
+      "value": "0.000",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -1",
+      "value": "3692.108",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

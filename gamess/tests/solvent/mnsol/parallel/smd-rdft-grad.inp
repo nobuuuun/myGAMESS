@@ -1,0 +1,50 @@
+!  gradient of protonated methanol in water.  SMD/IEF-PCM using M06-2X
+!  the older GEPOL-AS tesselation is used.
+!
+!  FINAL R-M06-2X E= -116.0796919841, 14 iters, RMS gradient= 0.006617551
+!
+!  This run takes 41 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!
+!  -----------------------------------------
+!  an older grid optimization run did this,
+!  nserch= 0: F.NAL R-M06-2X E= -116.0796890359, r.m.s. GRAD= 0.0065461
+!  nserch= 1: F.NAL R-M06-2X E= -116.0788865637, r.m.s. GRAD= 0.0099331
+!  nserch= 2: F.NAL R-M06-2X E= -116.0813393826, r.m.s. GRAD= 0.0021451
+!  nserch= 3: F.NAL R-M06-2X E= -116.0812179938, r.m.s. GRAD= 0.0027731
+!  nserch= 4: F.NAL R-M06-2X E= -116.0814725036, r.m.s. GRAD= 0.0002857
+!  nserch= 5: F.NAL R-M06-2X E= -116.0814791598, r.m.s. GRAD= 0.0003495
+!  nserch= 6: F.NAL R-M06-2X E= -116.0814907060, r.m.s. GRAD= 0.0000844  <---
+!  nserch= 7: F.NAL R-M06-2X E= -116.0814827743, r.m.s. GRAD= 0.0000532
+!  nserch= 8: F.NAL R-M06-2X E= -116.0814839085, r.m.s. GRAD= 0.0000278
+!  nserch= 9: F.NAL R-M06-2X E= -116.0814849624, r.m.s. GRAD= 0.0000319
+!  nserch=10: F.NAL R-M06-2X E= -116.0814845932, r.m.s. GRAD= 0.0000044
+!  nserch=11: F.NAL R-M06-2X E= -116.0814847272, r.m.s. GRAD= 0.0000052
+!  nserch=12: F.NAL R-M06-2X E= -116.0814847580, r.m.s. GRAD= 0.0000018
+!  Note that the lowest energy occurs at the 6th step, not the end.
+!  Switching to C-PCM and using FIXPVA tessalation cures that problem.
+!
+ $CONTRL SCFTYP=RHF dfttyp=m06-2x icharg=+1 RUNTYP=gradient ispher=1 $end
+ $system mwords=1 $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+ $statpt opttol=1d-5 $end
+
+ $PCM    SOLVNT=WATER SMD=.T. IEF=-3 $END
+ $TESCAV MTHALL=2 NTSALL=240 $END
+
+x$pcm    ief=-10 $end
+x$tescav mthall=4 $end
+
+ $DATA
+SMD/M06-2X/6-31G(d) optimization - protonated methanol CH3OH2+ in water
+C1
+H         1   -0.996782    1.138765    0.000000
+C         6    0.038330    0.800183    0.000000
+O         8    0.038330   -0.725816    0.000000
+H         1    0.585508    1.066678    0.901842
+H         1    0.585508    1.066678   -0.901842
+H         1   -0.355429   -1.133347   -0.803114
+H         1   -0.355429   -1.133347    0.803114
+ $END
+
+! TRAVIS-CI SMALL
+

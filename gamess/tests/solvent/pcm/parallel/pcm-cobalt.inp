@@ -1,0 +1,201 @@
+!   PCM solvation of a highly positive ion, the [Co(NH3)6] +3 ion.
+!   There are 25 atoms and 170 basis functions, and an ECP on Co.
+!
+!   As a gradient job,
+!       FINAL E= -481.0882151305, 12 iters, RMS= 0.002099655
+!           ELECTROSTATIC INTERACTION = -389.78 KCAL/MOL
+!
+!   This test takes 117 seconds on 2.66 GHz Cloverton ( 2 Oct 2015)
+!   results little changed since 2008.
+!
+!   --------------------------------------------------------
+!   This test originally came from Francois Rotzinger.
+!   At first this run had energy = NAN with f orbitals,
+!   then it had really goofy gradients, but Kurt's efforts
+!   in 2008 to fix PCM problems really cleaned stuff up.
+!
+!   After changing the geometry to the gas phase structure,
+!   and changing the N d function to a standard value,
+!   the run was converted to a geometry optimization test of
+!   the different tesselations schemes, but using only the
+!   smallest number of tesseerae.
+!
+!   The first data used DLC coordinates,  permitting only 20 steps,
+!   and using 60 tesserae/atom:
+!                
+!   mthall  ipcder    nserch=0        nserch=2        nserch=20        CPU
+!     1=GB     2  -481.1282872148  took big step to nserch=1, rad=0.29588,
+!                    0.0046651     where E= -481.1434786344 (quite low),
+!                                  and gradient blows up to 31.4028870
+!     2=AS     2  -481.1256555875  -481.1300778750  -481.1300875223
+!                    0.0031199        0.0002838        0.0003141      2,445
+!     3=RT     2              "too many tesserae in PEDRA"
+!     4=PVA    3  -481.0882151265  -481.0916370353  -481.0928447701
+!                    0.0021369        0.0010771        0.0003141      2,685
+!   note that
+!      MTHALL 2 has its lowest E at step 10, -481.1302664237
+!      MTHALL 4 has its lowest E at step 20, monotonic lowering of E (!),
+!               with but only rather slow lowering of the gradient value.
+!   The processor is a 2.66 GHz Cloverton, serial (Aug 12, 2008)
+!
+!   If we allow 50 steps with MTHALL 4, the DLC coordinates 
+!   take almost entirely downhill steps, with great difficulty
+!   in finishing the gradient off:
+!   0: F_NAL RHF E=  -481.0882151265, r.m.s. GRADIENT = 0.0021369
+!   1: F_NAL RHF E=  -481.0909234854, r.m.s. GRADIENT = 0.0015812
+!   2: F_NAL RHF E=  -481.0916370353, r.m.s. GRADIENT = 0.0010771
+!   3: F_NAL RHF E=  -481.0917764662, r.m.s. GRADIENT = 0.0008882
+!   4: F_NAL RHF E=  -481.0919793950, r.m.s. GRADIENT = 0.0007567
+!   5: F_NAL RHF E=  -481.0921931294, r.m.s. GRADIENT = 0.0007941
+!  46: F_NAL RHF E=  -481.0934395589, r.m.s. GRADIENT = 0.0003890
+!  47: F_NAL RHF E=  -481.0934405859, r.m.s. GRADIENT = 0.0003856
+!  48: F_NAL RHF E=  -481.0934412554, r.m.s. GRADIENT = 0.0003860
+!  49: F_NAL RHF E=  -481.0934414433, r.m.s. GRADIENT = 0.0003880
+!  50: F_NAL RHF E=  -481.0934416678, r.m.s. GRADIENT = 0.0003922
+!
+!   Writing a custom Z-matrix (feturing coordinate type 6!),
+!   the run finds the minimum energy geometry (saved at end):
+!   0: F_NAL RHF E=  -481.0882151265, r.m.s. GRADIENT = 0.0021369
+!   1: F_NAL RHF E=  -481.0906155655, RMS GRADIENT = 0.0021369
+!   2: F_NAL RHF E=  -481.0900329108, RMS GRADIENT = 0.0025465 rises
+!   3: F_NAL RHF E=  -481.0920216963, RMS GRADIENT = 0.0032835
+!   4: F_NAL RHF E=  -481.0902375442, RMS GRADIENT = 0.0013913 rises
+!   5: F_NAL RHF E=  -481.0923574647, RMS GRADIENT = 0.0023062
+!   6: F_NAL RHF E=  -481.0925211852, RMS GRADIENT = 0.0010657
+!  38: F_NAL RHF E=  -481.0934971547, RMS GRADIENT = 0.0000041
+!  39: F_NAL RHF E=  -481.0934971754, RMS GRADIENT = 0.0000033
+!  40: F_NAL RHF E=  -481.0934972080, RMS GRADIENT = 0.0000030 <--lowest
+!  41: F_NAL RHF E=  -481.0934971450, RMS GRADIENT = 0.0000032
+!  42: F_NAL RHF E=  -481.0934971842, RMS GRADIENT = 0.0000033
+!  43: F_NAL RHF E=  -481.0934971961, RMS GRADIENT = 0.0000023
+!
+!   Running in Cartesian coordinates results in the Hessian 
+!   being BFGS'd into such tiny steps that the energy gets
+!   stuck, this occuring around nserch=30.
+!
+ $contrl scftyp=rhf runtyp=gradient icharg=+3 pp=read $end
+ $system mwords=20 $end
+ $guess  guess=huckel $end
+ $statpt opttol=1d-5 nstep=2 $end
+ $scf    dirscf=.true. $end
+!
+!        --- PCM inputs ---
+!   We must supply a radius for Co+3, roughly twice Co's r(cov)=1.16,
+!   note that there is an extra factor of ALPHA=1.2 scaling radii up.
+!
+ $pcm    solvnt=water $end
+ $pcmcav rin(1)=2.20 $end
+
+ $contrl nzvar=69 $end
+--- $zmat   dlc=.t. auto=.t. $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  1,1,4,  1,1,5,  1,1,6,  1,1,7,
+           2,2,1,7,   2,7,1,3,   2,2,1,3,
+           2,6,1,4,   2,5,1,4,   2,6,1,5,
+           6,7,2,1,6,5,  6,2,3,1,4,6,  6,3,7,1,5,4,
+           1,2,8,  1,2,14,  1,2,20,  1,3,9,  1,3,15, 1,3,21,
+           1,4,10, 1,4,16,  1,4,22,  1,5,11, 1,5,17, 1,5,23,
+           1,6,12, 1,6,18,  1,6,24,  1,7,13, 1,7,19, 1,7,25,
+           2,1,2,8,  2,1,2,14,  2,1,2,20,  2,1,3,9,  2,1,3,15, 2,1,3,21,
+           2,1,4,10, 2,1,4,16,  2,1,4,22,  2,1,5,11, 2,1,5,17, 2,1,5,23,
+           2,1,6,12, 2,1,6,18,  2,1,6,24,  2,1,7,13, 2,1,7,19, 2,1,7,25,
+           3,3,1,2,8,  3,3,1,2,14,  3,3,1,2,20,
+           3,7,1,3,9,  3,7,1,3,15,  3,7,1,3,21,
+           3,6,1,4,10, 3,6,1,4,16,  3,6,1,4,22,
+           3,4,1,5,11, 3,4,1,5,17,  3,4,1,5,23,
+           3,5,1,6,12, 3,5,1,6,18,  3,5,1,6,24,
+           3,2,1,7,13, 3,2,1,7,19,  3,2,1,7,25   $end
+
+ $ecp
+Co-ecp sbkjc
+N-ecp none
+N-ecp none
+N-ecp none
+N-ecp none
+N-ecp none
+N-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+ $end
+
+ $data
+[Co(NH3)6]3+ in D3 symmetry
+dn  3
+
+CO         27.0   0.0000000000   0.0000000000   0.0000000000
+ sbkjc
+ f  1 ; 1  2.8  1.00
+
+N           7.0  -0.0486327030   1.6678087618   1.1823269962
+ n31  6
+ d  1 ; 1  0.80  1.00
+
+H           1.0  -0.9842684537   1.9875716825   1.4006621225
+ n31  6
+
+H           1.0   0.3887121101   1.5666712166   2.0899655141
+ n31  6
+
+H           1.0   0.3954442982   2.4903030088   0.7937559355
+ n31  6
+
+ $end
+
+!     optimized gas phase geometry is (minimum in nvib=1 Hessian)
+CO         27.0   0.0000000000   0.0000000000   0.0000000000
+N           7.0  -0.0486327030   1.6678087618   1.1823269962
+H           1.0  -0.9842684537   1.9875716825   1.4006621225
+H           1.0   0.3887121101   1.5666712166   2.0899655141
+H           1.0   0.3954442982   2.4903030088   0.7937559355
+
+!     the PCM structure loses D3 symmetry,
+CO         27.0  -0.0014902138   0.0044534723   0.0047230199
+N           7.0  -1.3958946809  -0.8571600129   1.1608946858
+N           7.0   1.4411295750  -0.7904498146   1.1458456461
+N           7.0  -0.0456321068  -1.6353449235  -1.1466933059
+N           7.0   1.4527823822   0.7754841296  -1.1514009404
+N           7.0  -1.3998945734   0.8495938596  -1.1702941438
+N           7.0  -0.0484316274   1.6488352423   1.1507445855
+H           1.0  -1.1741996048  -1.8170319403   1.3823074365
+H           1.0   2.1332078740  -0.1233086761   1.4488686217
+H           1.0  -0.9773207831  -1.9769508978  -1.3255149365
+H           1.0   2.1138379718   0.0831368698  -1.4705717635
+H           1.0  -1.2360381590   1.8321473492  -1.3205280491
+H           1.0  -0.9853724589   1.9350766198   1.3946071610
+H           1.0  -1.5374461002  -0.4243562114   2.0621544062
+H           1.0   1.1329147714  -1.2711113620   1.9783364315
+H           1.0   0.3562704608  -1.5225134689  -2.0651898460
+H           1.0   1.1067420823   1.1870238146  -2.0021806065
+H           1.0  -1.4672275964   0.4563698508  -2.0970180872
+H           1.0   0.4133795846   1.5631259230   2.0461204199
+H           1.0  -2.3178409373  -0.8960953913   0.7554699398
+H           1.0   1.9819269685  -1.4897444986   0.6585341595
+H           1.0   0.4416918245  -2.4346228354  -0.7666401912
+H           1.0   2.0246206130   1.4877785094  -0.7242874096
+H           1.0  -2.3446896737   0.8048650075  -0.8171374735
+H           1.0   0.3662876301   2.4714177543   0.7379848618
+-------- as shown by the Co-N distances...
+  1 STRETCH   1  2    2.0058600
+  2 STRETCH   1  3    2.0037924
+  3 STRETCH   1  4    2.0041574
+  4 STRETCH   1  5    2.0114720
+  5 STRETCH   1  6    2.0125761
+  6 STRETCH   1  7    2.0048841
+
+! TRAVIS-CI SMALL
+

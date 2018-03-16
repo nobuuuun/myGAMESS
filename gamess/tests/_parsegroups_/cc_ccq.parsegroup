@@ -1,0 +1,62 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : CR-CC(Q)",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)R-CCSD\\[T\\](\\s*)ENERGY:.*$",
+     "parse_name"   : "R-CCSD[T] ENERGY",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required": true
+   },
+   {
+     "regex_string" : "^(\\s*)R-CCSD\\(T\\)(\\s*)ENERGY:.*$",
+     "parse_name"   : "R-CCSD(T) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)CR-CCSD\\[T\\](\\s*)ENERGY:.*$",
+     "parse_name"   : "CR-CCSD[T] ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)CR-CCSD\\(T\\)(\\s*)ENERGY:.*$",
+     "parse_name"   : "CR-CCSD(T) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)CCSD\\(TQ\\),B(\\s*)ENERGY:.*$",
+     "parse_name"   : "   CCSD(TQ),B : CR-CC(Q) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required": true
+   },
+   {
+     "regex_string" : "^(\\s*)R1-CCSD\\(TQ\\),A(\\s*)ENERGY:.*$",
+     "parse_name"   : "R1-CCSD(TQ),A : CR-CC(Q) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)R1-CCSD\\(TQ\\),B(\\s*)ENERGY:.*$",
+     "parse_name"   : "R1-CCSD(TQ),B : CR-CC(Q) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)R2-CCSD\\(TQ\\),A(\\s*)ENERGY:.*$",
+     "parse_name"   : "R2-CCSD(TQ),A : CR-CC(Q) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)R2-CCSD\\(TQ\\),B(\\s*)ENERGY:.*$",
+     "parse_name"   : "R2-CCSD(TQ),B : CR-CC(Q) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)CR-CCSD\\(TQ\\),A(\\s*)ENERGY:.*$",
+     "parse_name"   : "CR-CCSD(TQ),A : CR-CC(Q) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)CR-CCSD\\(TQ\\),B(\\s*)ENERGY:.*$",
+     "parse_name"   : "CR-CCSD(TQ),B : CR-CC(Q) ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   }
+  ]
+}

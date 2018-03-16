@@ -1,0 +1,57 @@
+!    This job tests the gradient extremal routine
+!
+!    The bifurcation mode along the extremal connecting M4 to SOSP1
+!    is followed.  This extremal leads to transition state TS34.
+!    See K.Bondensgard, F.Jensen, J.Chem.Phys. 104, 8025-8031(1996)
+!
+!    After  9 steps, a GE turning point is found.
+!    After 16 steps, the algorithm switches to a NR search,
+!    which locates a transition structure
+
+!       the results should be
+!    CYCLE    1   ENERGY  -112.23576601   GNORM  0.068674  GE CURVATURE 99.999
+!    CYCLE    2   ENERGY  -112.23996464   GNORM  0.064615  GE CURVATURE  2.534
+!    CYCLE    3   ENERGY  -112.24427388   GNORM  0.060218  GE CURVATURE  1.205
+!    CYCLE    4   ENERGY  -112.24818891   GNORM  0.055970  GE CURVATURE  0.759
+!    CYCLE    5   ENERGY  -112.25161597   GNORM  0.051997  GE CURVATURE  0.543
+!    CYCLE    6   ENERGY  -112.25447541   GNORM  0.048451  GE CURVATURE  0.420
+!    CYCLE    7   ENERGY  -112.25669931   GNORM  0.045511  GE CURVATURE  0.302
+!    CYCLE    8   ENERGY  -112.25814062   GNORM  0.043514  GE CURVATURE  0.521
+!    CYCLE    9   ENERGY  -112.25813208   GNORM  0.043501  GE CURVATURE  4.279
+!    CYCLE    9   ENERGY  -112.25822255   GNORM  0.043393  GE CURVATURE  2.143
+!    CYCLE    9   ENERGY  -112.25822112   GNORM  0.043394  GE CURVATURE  2.298
+!    CYCLE   10   ENERGY  -112.25711942   GNORM  0.044677  GE CURVATURE  8.184
+!    CYCLE   11   ENERGY  -112.25363720   GNORM  0.047346  GE CURVATURE  6.910
+!    CYCLE   12   ENERGY  -112.24894559   GNORM  0.047971  GE CURVATURE  2.135
+!    CYCLE   13   ENERGY  -112.24434537   GNORM  0.045272  GE CURVATURE  1.206
+!    CYCLE   14   ENERGY  -112.24020068   GNORM  0.039516  GE CURVATURE  0.973
+!    CYCLE   15   ENERGY  -112.23675227   GNORM  0.031302  GE CURVATURE  0.810
+!    CYCLE   16   ENERGY  -112.23417425   GNORM  0.021389  GE CURVATURE  0.710
+!      at which point a brief TS search occurs:
+!    NSERCH:   0  E=     -112.2325879533  R.M.S.=  0.0031710
+!    NSERCH:   1  E=     -112.2320590684  R.M.S.=  0.0012871
+!    NSERCH:   2  E=     -112.2320754292  R.M.S.=  0.0000104
+!
+!  This run takes 7 seconds on a 2.66 GHz Cloverton (29 Apr 2015)
+!  No significant change in results since at least 2005.
+!
+ $contrl scftyp=rhf runtyp=gradextr nzvar=6 $end
+ $system mwords=1 $end
+ $zmat   izmat(1)=1,1,2, 1,1,3, 1,2,4, 2,1,2,4, 2,2,1,3,
+                  3,3,1,2,4  $end
+ $scf    nconv=8 $end
+ $gradex stpt=.false. ifolow=-1 $end
+ $basis  gbasis=sto ngauss=3 $end
+ $data
+BP on extremal M4->SOSP1 is followed through a TP to TS34.
+Cn  1
+
+C           6.0   0.0488663633   0.7534716732  -0.0306089778
+O           8.0   0.0294549153  -0.5774575335   0.0362462329
+H           1.0  -0.9085349463   1.3965572154   0.0135168762
+H           1.0  -0.6648823324  -1.3113473551  -0.0191541314
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

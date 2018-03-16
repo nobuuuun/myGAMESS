@@ -1,0 +1,73 @@
+!   H3PO...using Frank Jensen's systematic bases for SCF and DFT.
+!      test created December 2012, revised for PCseg bases in 2015.
+!      test case uses the meta-GGA "revised TPSS".
+!      test exercises h-orbitals in the grid integration code.
+!      test illustrates need to use big grids to converge PCseg series.
+!
+!                  H            O             P           #AOs  #MOs
+!     PCseg-0=   2s           3s2p          4s3p            28    28
+!     PCseg-1=   2s1p         3s2p1d        4s3p1d          49    47
+!     PCseg-2=   3s2p1d       4s3p2d1f      5s4p2d1f       119   106
+!     PCseg-3=   4s4p2d1f     6s4p4d2f1g    6s5p4d2f1g     270   223
+!     PCseg-4=   5s5p3d2f1g   6s5p5d3f2g1h  7s6p6d3f2g1h   508   389
+!
+!     PCseg-4 has FINAL E= -418.6589300084, after 22 iters.
+!
+!     This run takes 1210 seconds on 2.66 GHz Cloverton (31 Mar 2015)
+!
+!   --------------------------------------------------------------------
+!   Note that serious radial grid issues turn up for 3rd row PC4 bases!
+!   The PC bases try to converge the nuclear cusp,
+!   leading to an exponent about 5d+6 for phosphorus for PC4 or PCseg-4.
+!   Some care must be taken with the integration grid for this!
+!   Using coarse grid=99,302 and fine grid=200,590:
+!                                       radial norms for the     total 
+!                                         smallest  biggest     electron
+!                                            exponents           number
+!     PCseg-0:  E= -417.8358054290      1.000000  1.000000   26.0000007112
+!     PCseg-1:  E= -418.5450250752      1.000000  1.000000   26.0000004387
+!     PCseg-2:  E= -418.6423866811      1.000000  1.000000   26.0000006238
+!     PCseg-3:  E= -418.6579311470      1.000000  0.999999   26.0000007265
+!     PCseg-4:  E= -418.6589300084      1.000000  1.000051   26.0000007736
+!
+!   Using default grids,      data was collected for older generation bases!
+!      default coarse grid for metaGGA= 24 radial, 110 Lebedev
+!      default   fine grid for metaGGA= 99 radial, 590 Lebedev
+!                                         radial norms for the
+!                                          smallest  biggest
+!                                              exponent          dipole
+!     PC0: revTPSS E= -418.0583343606      1.000000  1.000000   3.795808
+!     PC1: revTPSS E= -418.5559693616      1.000000  0.999999   3.561750
+!     PC2: revTPSS E= -418.6452211229      1.000000  0.999995   3.582193
+!     PC3: revTPSS E= -418.6582861737      1.000000  1.004286   3.436299
+!     PC4: revTPSS E= -418.6593521314(*)   1.000000  1.068111   3.419307
+!     (*) this number could not be obtained with the default coarse grid,
+!         which must be very bad for the big exponent!  Making the
+!         coarse grid the same size as the fine grid converged well.
+!     Note that the integrated electron count stays close to 26.0000,
+!     but the energy agrees to only 3 decimals.
+!     These radial normalizations are indeed a good check on grid quality.
+!
+!   No attempt made to compare to other programs, since we are using
+!   an advanced functional and a basis that might not exist elsewhere.
+!
+ $contrl scftyp=rhf dfttyp=revTPSS runtyp=energy ispher=1 $end
+ $system mwords=5 $end
+ $guess  guess=huckel $end
+
+!            step basis over PCseg-0, PCseg-1, PCseg-2, PCseg-3, PCseg-4
+ $basis  gbasis=pcseg-4 $end
+!            while being careful with both grids!
+ $dft    nrad0=99 nleb0=302 nrad=200 nleb=590 $end
+ $scf    dirscf=.t. $end
+ $data
+phosphine oxide...RHF/CCT geometry
+Cnv 3
+
+P  15.0   0.0000000000   0.0000000000  -0.0072802162
+O   8.0   0.0000000000   0.0000000000   1.4403431736
+H   1.0   1.2502248316   0.0000000000  -0.6297564435
+ $end
+
+! TRAVIS-CI MEDIUM
+

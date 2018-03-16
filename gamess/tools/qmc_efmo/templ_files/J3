@@ -1,0 +1,18 @@
+    <jastrow name="J3" type="eeI" function="polynomial" source="ion0" print="yes">
+      <correlation ispecies="O" especies="u" isize="3" esize="3" rcut="10">
+        <coefficients id="uuO" type="Array" optimize="yes">
+        </coefficients>
+      </correlation>
+      <correlation ispecies="O" especies1="u" especies2="d" isize="3" esize="3" rcut="10">
+        <coefficients id="udO" type="Array" optimize="yes">
+        </coefficients>
+      </correlation>
+      <correlation ispecies="H" especies="u" isize="3" esize="3" rcut="10">
+        <coefficients id="uuH" type="Array" optimize="yes">
+        </coefficients>
+      </correlation>
+      <correlation ispecies="H" especies1="u" especies2="d" isize="3" esize="3" rcut="10">
+        <coefficients id="udH" type="Array" optimize="yes">
+        </coefficients>
+      </correlation>
+    </jastrow>

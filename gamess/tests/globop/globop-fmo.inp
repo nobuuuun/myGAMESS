@@ -1,0 +1,55 @@
+!  Monte Carlo FMO test case
+!  This is a sample input file for finding the minima of a
+!  water hexamer using the Monte Carlo search.  In this input,
+!  the energy is calculated using RHF/MINI using FMO that is
+!  fragmented with 1 molecule per fragment.
+!
+!  Since the Monte Carlo method involves random movements, it
+!  is impossible to predict the final geometry.  However, the
+!  minimum energy should be within an order of magnitude of:
+!  MINIMUM ENERGY FOUND =           -453.0557050148  AT GEOMETRY NUMBER     77
+!
+!  The output will include the line:
+!  TOTAL NUMBER OF GEOMETRIES =     80
+!
+!
+ $CONTRL SCFTYP=RHF RUNTYP=GLOBOP MAXIT=30 MULT=1 ISPHER=1
+    $END
+ $SYSTEM TIMLIM=525600 MWORDS=400 $END
+ $BASIS GBASIS=MINI $END
+ $SCF DIRSCF=.TRUE. $END
+ $GLOBOP MCTYP=2 RNDINI=.t. NTRAN=2 NROT=2 NBLOCK=20 
+     TEMPI=200 MCMIN=.FALSE.
+     JSTRND=.f. $END 
+ $FMO
+  NFRAG=6 NBODY=2 NACUT=3 RESPAP=0 RESPPC=-1 
+  RESDIM=0 RCORSD=0 RITRIM(1)=2,-1,2.5,2 MODESP=0 $END
+ $DATA
+
+C1
+H 1
+O 8
+ $END
+ $FMOXYZ
+O     8    -1.84679782     2.23116016    -0.31192821
+H     1    -2.23259687     2.50892782    -1.14672530
+H     1    -2.22940755     1.34182882    -0.13609287
+O     8     0.80815905     2.58311296     0.04697235
+H     1    -0.15681353     2.44873357    -0.09081087
+H     1     0.87301040     3.18262029     0.79480898
+O     8     1.36333847    -2.01869607     0.46308863
+H     1     1.74867976    -2.29597974     1.29825509
+H     1     1.74594593    -1.12941432     0.28699148
+O     8     2.42866755     0.42117196     0.00092104
+H     1     1.83418584     1.20489240     0.02542342
+H     1     2.96642685     0.53956872    -0.78626174
+O     8    -1.29129207    -2.37041116     0.10248699
+H     1    -1.35570943    -2.96969914    -0.64555788
+H     1    -0.32639810    -2.23608923     0.24094406
+O     8    -2.91221952    -0.20887621     0.14918172
+H     1    -3.45016551    -0.32784748     0.93616098
+H     1    -2.31754136    -0.99244648     0.12440317
+ $END
+! TRAVIS-CI SKIP
+! NEED DETERMINISTIC OUTPUT FOR	VALIDATION
+

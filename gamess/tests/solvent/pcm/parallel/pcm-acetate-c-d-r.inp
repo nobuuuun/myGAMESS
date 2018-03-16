@@ -1,0 +1,64 @@
+!  acetate ion...C-PCM, using FIXPVA
+!  test of cavitation, dispersion, and repulsion energy/gradient
+!
+!    FINAL E= -225.6708523720, 10 iterations, RMS= 0.044540148
+!
+!    FREE ENERGY IN SOLVENT       =     -141611.76 KCAL/MOL
+!    INTERNAL ENERGY IN SOLVENT   =     -141544.44 KCAL/MOL
+!    DELTA INTERNAL ENERGY        =            .00 KCAL/MOL
+!    ELECTROSTATIC INTERACTION    =         -67.33 KCAL/MOL
+!    PIEROTTI CAVITATION ENERGY   =           9.42 KCAL/MOL  <--check--
+!    DISPERSION FREE ENERGY       =         -10.89 KCAL/MOL  <--check--
+!    REPULSION FREE ENERGY        =           2.62 KCAL/MOL  <--check--
+!    TOTAL INTERACTION            =         -66.18 KCAL/MOL
+!    TOTAL FREE ENERGY IN SOLVENT =     -141610.61 KCAL/MOL
+!  
+!    this run takes 4 seconds on 2.66 GHz Cloverton (8 Aug 2011)
+!
+!   ------------------------------------------------------------
+!   if changed to a tight geometry optimization, the run will:
+!    F_NAL RHF E=   -225.6708523720, 10 iters, r.m.s. grad= 0.0445401
+!    F_NAL RHF E=   -225.6882602727,  8 iters, r.m.s. grad= 0.0131363
+!    F_NAL RHF E=   -225.6847216096,  8 iters, r.m.s. grad= 0.0170141
+!    F_NAL RHF E=   -225.6904574034,  8 iters, r.m.s. grad= 0.0074185
+!    F_NAL RHF E=   -225.6910029038,  8 iters, r.m.s. grad= 0.0046284
+!    F_NAL RHF E=   -225.6911583090,  9 iters, r.m.s. grad= 0.0064154
+!    F_NAL RHF E=   -225.6916771224,  8 iters, r.m.s. grad= 0.0029682
+!    F_NAL RHF E=   -225.6916977182,  8 iters, r.m.s. grad= 0.0031464
+!    F_NAL RHF E=   -225.6918876926,  8 iters, r.m.s. grad= 0.0016114
+!    F_NAL RHF E=   -225.6919067347,  7 iters, r.m.s. grad= 0.0012111
+!    F_NAL RHF E=   -225.6919143718,  7 iters, r.m.s. grad= 0.0006368
+!    F_NAL RHF E=   -225.6919158201,  8 iters, r.m.s. grad= 0.0006011
+!    F_NAL RHF E=   -225.6919210291,  8 iters, r.m.s. grad= 0.0003846
+!    F_NAL RHF E=   -225.6919232458,  7 iters, r.m.s. grad= 0.0002971
+!    F_NAL RHF E=   -225.6919256713,  6 iters, r.m.s. grad= 0.0001414
+!    F_NAL RHF E=   -225.6919260649,  5 iters, r.m.s. grad= 0.0001035
+!    F_NAL RHF E=   -225.6919264155,  5 iters, r.m.s. grad= 0.0000201
+!    F_NAL RHF E=   -225.6919264214,  4 iters, r.m.s. grad= 0.0000100
+!    F_NAL RHF E=   -225.6919264243,  3 iters, r.m.s. grad= 0.0000049
+!    F_NAL RHF E=   -225.6919264247,  3 iters, r.m.s. grad= 0.0000018
+!
+ $CONTRL SCFTYP=RHF RUNTYP=GRADIENT ICHARG=-1 $END
+ $system mwords=1 $end
+
+ $PCM    SOLVNT=WATER ICAV=1 IDISP=1 $END
+ $DISREP ICLAV=1 $END
+ $PCMCAV RADII=SUAHF $END
+ $TESCAV NTSALL=240 $END
+
+ $BASIS  GBASIS=MINI $END
+ $SCF    DIIS=.T. DIRSCF=.T. FDIFF=.F. $END
+ $DATA
+Acetate, Homogenous-CPCM with Cav + Dis + Rep energy/gradients
+C1       0
+H           1.0  -0.1897245234   0.0620463581   0.0345182233
+C           6.0  -0.0247642785  -0.0319868016   1.1053140150
+H           1.0   1.0404873744  -0.1008593759   1.2977233752
+H           1.0  -0.4127598617   0.8728221541   1.5679707571
+C           6.0  -0.7870059993  -1.2516421130   1.6400407477
+O           8.0  -0.1350396308  -2.1247235241   2.2310184944
+O           8.0  -2.0111930008  -1.2576568275   1.4324142872
+ $END
+
+! TRAVIS-CI SMALL
+

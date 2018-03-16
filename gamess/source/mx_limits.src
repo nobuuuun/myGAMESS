@@ -1,0 +1,33 @@
+! MODULE MX_LIMITS
+!>    @author  Vladimir Mironov
+!
+!>    @brief   Contains parameters scattered throughout all
+!>             of the code that define sizes of static
+!>             memory arrays
+!
+!     REVISION HISTORY:
+!>    @date _Jan, 2017_ Initial release
+!
+MODULE mx_limits
+
+    IMPLICIT NONE
+
+    INTEGER, PARAMETER :: &
+        mxatm=2000, &               !< Max. number of atoms in a job
+        mxgtot=20000, &             !< Max. number of primitive Gaussians in basis set
+        mxsh=5000, &                !< Max. number of shells in basis set
+        mxao=8192, &                !< Max. number of atomic orbitals in basis set
+        mxrt=100, &                 !< Max. number of states (roots of Hamiltonian matrix) for post-HF methods
+        mxnoro=250, &               !< Max. number of orbital rotation pairs, omitted from MCSCF optimization
+        mxfrg=1050, &               !< Max. number or EFP framgents in a job
+        mxfgpt=12000, &             !< Max. number of EFP expansion points
+        mxdfg=5, &                  !< Max. number of EFP fragment types
+        mxdppt=mxfrg*mxdfg*12, &    !< Max. number of EFP dynamic polarizable points
+        mxgrid=10, &                !< Max. number of grid-based DFT grids
+
+        mxang=7, &                  !< Max. angular momentum
+        mxang2=mxang*mxang, &
+        mxgsh=30, &                 !< Max. degree of contraction
+        mxg2=mxgsh*mxgsh
+
+END MODULE mx_limits

@@ -1,0 +1,1424 @@
+#ifdef _OPENMP
+
+C>*MODULE RIMP2OMP   *DECK OMPRIMP2DRIVER
+C>
+C>     @BRIEF   DRIVER FOR DDI/OPENMP RI-MP2 ENERGY CODE
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017 
+C>
+C>     @DETAIL  1) GENERATE THE V MATRIX, INVERSE, AND DECOMPOSE IT;
+C>              2) GENERATE 3C2ERI, THEN DO THE DECOMPOSED-V & 
+C>                 MO TRANSFORMATION TO FORM B MATRIX
+C>              3) COMBINE B MATRIX FOR 4C2ERI, FORM MP2 AMPLITUDE
+C>                 AND EVALUATE MP2 CORRELATION ENERGY
+C>
+      SUBROUTINE OMPRIMP2DRIVER
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+CFTNC LOGICAL GOPARR,DSKWRK,MASWRK,SAVDSK
+      LOGICAL GOSMP
+CFTNC LOGICAL GOSMP,GONODE
+      LOGICAL OTHAUX,USEDM,EXTCAB
+C! Buu
+CFTNC LOGICAL LTL
+      INTEGER,ALLOCATABLE :: LOCSPH(:)
+C
+      INTEGER DDI_NP,DDI_ME
+CFTNC INTEGER DDI_NP,DDI_ME,DDI_NN,DDI_MY
+CFTNC INTEGER SMP_NP,SMP_ME
+C
+      PARAMETER (NORIMP=8,NOAUBF=2)
+      DOUBLE PRECISION QRIMP(NORIMP),QAUXBF(NOAUBF)
+      INTEGER KQRIMP(NORIMP),KQAUXBF(NOAUBF)
+C
+      PARAMETER (MXRT=100, MXSH=5000, MXGTOT=20000)
+      PARAMETER (MXAUXSH=10000, MXAXGTOT=20000)
+C
+      COMMON /AUXBAS/ EXAUX(MXAXGTOT),CAUXS(MXAXGTOT),CAUXP(MXAXGTOT),
+     *                CAUXD(MXAXGTOT),CAUXF(MXAXGTOT),CAUXG(MXAXGTOT),
+     *                CAUXH(MXAXGTOT),CAUXI(MXAXGTOT),
+     *                KAUXST(MXAUXSH),KAUXAT(MXAUXSH),KAUXTY(MXAUXSH),
+     *                KAUXNG(MXAUXSH),KAUXLO(MXAUXSH),KAUXMI(MXAUXSH),
+     *                KAUXMX(MXAUXSH),NAUXSH
+      COMMON /BASSPH/ QMTTOL,ISPHER
+      COMMON /ENRGMP/ EMP2,EMP3,EMP4,EMP2A
+      COMMON /ENRGYS/ ENUC,EELEC,ETOT,SZ,SZZ,ECORE,ESCF,EERD,E1,E2,
+     *                VEN,VEE,EPOT,EKIN,ESTATE(MXRT),STATN,EDFT(2),EDISP
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+CFTNC COMMON /MACHIN/ NWDVAR,MAXFM,MAXSM,LIMFM,LIMSM
+      COMMON /MP2PAR/ OSPT,CODEMP,SCSPT,TOL,METHOD,NWDMP2,MEMPRI,MPPROP,
+     *                NACORE,NBCORE,NOA,NOB,NO,NBF,NOMIT,MOCPHF,MAXITC
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /ONEELC/ EONE,E1A,E1B
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+CFTNC COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+      COMMON /SCFWFN/ AROHF(3),BROHF(3),PACAVO(6),IACAVO,IUHFNO,ICUHF,
+     *                MVOQ
+CFTNC COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+CFTNC*                MPLEVL,MPCTYP
+C
+CFTNC COMMON /RIMPFI/ IFILV,IFILT2A,IFILT3A,IFILT2B,IFILT3B
+C
+C     --- DDI ARRAY HANDLES ---
+
+      INTEGER D_V,D_TA,D_TB
+
+      COMMON /RIMPDD/ D_V,D_TA,D_TB
+C
+      PARAMETER (THREE=3.0D+00, P12=1.2D+00)
+C
+CFTNC DATA RHF      /8HRHF     /
+CFTNC DATA UHF      /8HUHF     /
+CFTNC DATA CHECK    /8HCHECK   /
+C
+      DATA RIMP2    /8HRIMP2   /
+      DATA AUXBAS   /8HAUXBAS  /
+      DATA QRIMP    /8HIAUXBF  ,8HIVMTD   ,8HVTOL    ,8HSTOL    ,
+     *               8HOTHAUX  ,8HGOSMP   ,8HMEMSH   ,8HUSEDM   /
+      DATA QAUXBF   /8HCABNAM  ,8HEXTCAB  /
+      DATA KQRIMP   /1,1,3,3,0,0,1,0/
+      DATA KQAUXBF  /5,0/
+      data empty    /8H        /
+C
+      IF (MASWRK) WRITE(IW,1337)
+ 1337 FORMAT(///1X,29('-'),5X,27('-')/
+     *          1X,'OPENMP THREADED RI-MP2 DRIVER',
+     *          5X,'PROGRAM WRITTEN BY BUU PHAM'/
+     *          1X,29('-'),5X,27('-')/)
+
+      CALL DDI_SYNC(5121)
+      CALL DDI_NPROC(DDI_NP,DDI_ME)
+
+C
+C    ----- VARIABLES FOR MP2 ENERGY -----
+C
+      NBASIS = NBF
+      NOCCA  = NOA - NACORE
+      NVIRA  = NO  - NOA
+      NORBA  = NO  - NACORE
+CFTNC NOCCB  = NOB - NBCORE
+CFTNC NVIRB  = NO  - NOB
+CFTNC NORBB  = NO  - NBCORE
+C
+C     INITIALIZE VARIABLES FOR NAMELIST $RIMP2
+C
+      IAUXBF= 0
+      IF(ISPHER .EQ. 1) IAUXBF=1
+      OTHAUX= .FALSE.
+      STOL  = 1.0D-6
+      IVMTD = 0
+      VTOL  = 1.0D-6
+      MEMSH = 0
+      USEDM = .TRUE.
+
+C     read $rimp2 group
+
+      CALL NAMEIO(IR,JRET,RIMP2,NORIMP,QRIMP,KQRIMP,
+     *    IAUXBF,IVMTD,VTOL,STOL,OTHAUX,GOSMP,MEMSH,USEDM,
+     *    0,
+     *    0,0,0,0,0,  0,0,0,0,0,   0,0,0,0,0,
+     *    0,0,0,0,0,  0,0,0,0,0,   0,0,0,0,0,  0,0,0,0,0,
+     *    0,0,0,0,0,  0,0,0,0,0,   0,0,0,0,0,  0,0,0,0,0)
+
+      IF(JRET .EQ. 2) THEN
+         IF (MASWRK) WRITE(IW,9004)
+         CALL ABRT
+      END IF
+
+      IF(IAUXBF.lt.0 .or. IAUXBF.gt.1) THEN
+         IF(MASWRK) WRITE(IW,9015) IAUXBF
+         CALL ABRT
+      END IF
+
+      IF(IAUXBF.EQ.1 .AND. ISPHER.NE.1) THEN
+         IF(MASWRK) THEN
+            WRITE(IW,*)
+     *           ' SPHERICAL HARMONIC AUXILIARY GAUSSIAN BASIS SET'
+            WRITE(IW,*)
+     *           ' CAN NOT BE USED WITH CARTESIAN GAUSSIAN BASIS SET'
+         END IF
+         CALL ABRT
+      END IF
+C
+      IF(IVMTD .LT . 0 .OR. IVMTD .GT. 3) THEN
+         IF(MASWRK) WRITE(IW,9020) IVMTD
+         CALL ABRT
+      END IF
+
+      IF(MASWRK) WRITE(IW,9021) IAUXBF,OTHAUX,STOL,IVMTD,VTOL
+C
+      MEMSH = MEMSH*1000000
+
+C     --- INITIALIZE AND READ VARIABLES IN $AUXBAS GROUP ---
+
+      CABNAM=EMPTY
+
+      EXTCAB=.FALSE.
+
+      CALL NAMEIO(IR,JRET,AUXBAS,NOAUBF,QAUXBF,KQAUXBF,
+     *    CABNAM,EXTCAB,
+     *    0,0,0,0,0,  0,0,
+     *    0,0,0,0,0,  0,0,0,0,0,   0,0,0,0,0,
+     *    0,0,0,0,0,  0,0,0,0,0,   0,0,0,0,0,  0,0,0,0,0,
+     *    0,0,0,0,0,  0,0,0,0,0,   0,0,0,0,0,  0,0,0,0,0)
+
+      IF(JRET .EQ. 2) THEN
+         IF (MASWRK) WRITE(IW,9005)
+         CALL ABRT
+      END IF
+
+      IF (MASWRK) WRITE (IW,9010) CABNAM,EXTCAB
+
+      IF(CABNAM.eq.empty) then
+        IF (MASWRK) WRITE (IW,9012)
+        CALL abrt
+      ENDIF
+
+C     --- PREPARE AUX BASIS SET ---
+
+      CALL RICAUXBAS(CABNAM,EXTCAB,NAUXCAT)
+      CALL FLSHBF(IW)
+
+      NAUXBAS = NAUXCAT
+
+      IF(IAUXBF .EQ. 1) THEN
+        ALLOCATE(LOCSPH(NAUXSH))
+        CALL SPHAUX(LOCSPH,NAUXSPH)
+        NAUXBAS = NAUXSPH
+      END IF
+
+C     --- DDI ARRAYS ---
+
+      CALL DDI_CREATE(NAUXBAS*NVIRA,NOCCA,D_TA)
+
+      CALL DDI_CREATE(NAUXBAS,NAUXBAS,D_V)
+
+
+C     --- FORM DECOMPOSED THE INVERSE OF THE V MATRIX ---
+
+      CALL OMPRIMP2GENVINV(LOCSPH,STOL,VTOL,NAUXBAS,NAUXBASD,IAUXBF,
+     *     IVMTD,OTHAUX,USEDM)
+
+
+C     --- FORM AND TRANSFORM 3C2ERIS ---
+
+      CALL OMPRIMP2INTTRN(LOCSPH,
+     *     NSHELL,NBF,NAUXSH,NAUXBAS,NAUXBASD,
+     *     NORBA,NOCCA,NVIRA,NACORE,IAUXBF,USEDM)
+
+C     --- DESTROY DDI V MATRIX ---
+
+      CALL DDI_DESTROY(D_V)
+
+C     --- FORM 4C2ERIS AND MP2 CC ENERGY ---
+
+      CALL OMPRIMP2ENG(E2,E2T,E2S,
+     *     NBASIS,NAUXBASD,NORBA,NOCCA,NVIRA,NACORE)
+
+
+C     --- DESTROY DDI 3C2ERI ARRAY ---
+
+      CALL DDI_DESTROY(D_TA)
+
+
+C     --- PRINT OUT MP2 CC ENERGY ---
+
+      EHF  = ESCF
+      IF(ICUHF.NE.1) EONE=0.0D+00
+      EMP2 = EHF+E2-EONE
+      SCSE2= E2S*P12+E2T/THREE
+      ESCSMP2=EHF+SCSE2
+      EMP2A=ESCSMP2
+
+      IF(MASWRK) THEN
+         IF(ICUHF.EQ.1) WRITE(IW,9220) -E1A,-E1B,E2
+         WRITE(IW,9200) EHF,E2,EMP2
+         IF(ICUHF.EQ.0) WRITE(IW,9210) E2S,E2T,SCSE2,ESCSMP2
+      END IF
+
+C
+      RETURN
+
+ 9004 FORMAT(1X,'SYNTAX ERROR FOUND IN YOUR $RIMP2 GROUP')
+ 9005 FORMAT(1X,'SYNTAX ERROR FOUND IN YOUR $AUXBAS GROUP')
+ 9010 FORMAT(/5X,23HAUXILIARY BASIS OPTIONS/5X,23(1H-)/
+     *        5X,7HCABNAM=,A8,1X,7HEXTCAB=,L2)
+ 9012 FORMAT(/5X,'CABNAM in $AUXBAS must be assigned a value.',/)
+ 9015 FORMAT(1X,'ILLEGAL VALUE OF IAUXBF IS FOUND: ',I4)
+ 9020 FORMAT(1X,'ILLEGAL VALUE OF IVMTD IS FOUND: ',I4)
+ 9021 FORMAT(1X,'IAUXBF=',I1,3X,'OTHAUX=',L2,
+     *       1X,'STOL=',1P,E9.2,0P,3X,'IVMTD=',I1,1X,'VTOL=',1P,E9.2)
+ 9200 FORMAT(/1X,'RESULTS OF OPENMP THREADED RI-MOLLER-PLESSET 2ND',
+     *       1X,'ORDER CORRECTION ARE'
+     *       ,/,
+     *       12X,'   E(0)=',1X,F20.10/
+     *       12X,'   E(1)=',9X,'0.0'/
+     *       12X,'   E(2)=',1X,F20.10/
+     *       12X,' E(MP2)=',1X,F20.10)
+ 9210 FORMAT( 1X,'SPIN-COMPONENT-SCALED MP2 RESULTS ARE'/
+     *       12X,'  E(2S)=',1X,F20.10/
+     *       12X,'  E(2T)=',1X,F20.10/
+     *       12X,' E(2ST)=',1X,F20.10,' = 6/5 * E(2S) + 1/3 * E(2T)'/
+     *       12X,'SCS-MP2=',1X,F20.10)
+ 9220 FORMAT(/5X,'SINGLE EXCITATION CONTRIBUTION',
+     *       /9X,'ALPHA',1X,F20.10,
+     *       /9X,'BETA ',1X,F20.10,
+     *       /5X,'DOUBLE EXCITATION CONTRIBUTION',
+     *       /15X,F20.10)
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2GENVINV
+C>
+C>     @BRIEF   GENERATE AND DECOMPOSE THE INVERSE OF V MATRIX
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+C>     @DETAIL  V-MATRIX (2C2ERIS) IS GENERATED BY RYS-QUADRATURE METHOD
+C>              THE EIGENVALUE/CHOLESKY DECOMPOSITION IS USED TO
+C>              DECOMPOSE THE V-MATRIX INTO LOWER/HIGHER TRIANGLE MATRIX
+C>
+      SUBROUTINE OMPRIMP2GENVINV(LOCSPH,STOL,VTOL,NAUXBAS,NAUXBASD,
+     *           IAUXBF,IVMTD,OTHAUX,USEDM)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      LOGICAL OTHAUX,USEDM
+      LOGICAL SPHAUX
+C
+      INTEGER LOCSPH(*)
+
+      DOUBLE precision,ALLOCATABLE :: V(:)
+      DOUBLE precision,ALLOCATABLE,dimension(:) :: WRK1,WRK2,WRK3
+      DOUBLE precision,ALLOCATABLE,dimension(:) :: WRK4,WRK5,CC
+C
+      PARAMETER (MXAUXSH=10000, MXAXGTOT=20000)
+C
+      COMMON /AUXBAS/ EXAUX(MXAXGTOT),CAUXS(MXAXGTOT),CAUXP(MXAXGTOT),
+     *                CAUXD(MXAXGTOT),CAUXF(MXAXGTOT),CAUXG(MXAXGTOT),
+     *                CAUXH(MXAXGTOT),CAUXI(MXAXGTOT),
+     *                KAUXST(MXAUXSH),KAUXAT(MXAUXSH),KAUXTY(MXAUXSH),
+     *                KAUXNG(MXAUXSH),KAUXLO(MXAUXSH),KAUXMI(MXAUXSH),
+     *                KAUXMX(MXAUXSH),NAUXSH
+
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+      INTEGER D_V,D_TA,D_TB
+      COMMON /RIMPDD/ D_V,D_TA,D_TB
+C
+      DATA CHECK    /8HCHECK   /
+
+
+
+C     check IF spherical aux basis is used
+      SPHAUX = .FALSE.
+      IF(IAUXBF .EQ. 1) SPHAUX = .TRUE.
+
+
+C     get the highest angular momentum of the aux basis
+      KANG = 0
+      DO II = 1, NAUXSH
+         IF(KAUXTY(II) .GT. KANG) KANG = KAUXTY(II)
+      END DO
+      LMAX = KANG-1
+                    NANGM =  4
+      IF(LMAX.EQ.2) NANGM =  6
+      IF(LMAX.EQ.3) NANGM = 10
+      IF(LMAX.EQ.4) NANGM = 15
+      IF(LMAX.EQ.5) NANGM = 21
+      IF(LMAX.EQ.6) NANGM = 28
+      MAXG = NANGM**2
+C
+      L1 = NAUXBAS*NAUXBAS
+      NAUX2 = (NAUXBAS*NAUXBAS+NAUXBAS)/2
+      NAUXBAS1 = NAUXBAS
+
+C     ALLOCATE V, and buffer arrays to form V
+      ALLOCATE(V(L1))
+
+      ALLOCATE(WRK1(MAXG))
+      ALLOCATE(WRK2(MAXG))
+      ALLOCATE(WRK3(MAXG))
+      ALLOCATE(WRK4(MAXG))
+      ALLOCATE(CC(6))
+
+      CALL OMPRIMP2VGEN(V,WRK1,WRK2,WRK3,WRK4,CC,
+     *     LOCSPH,NAUXSH,NAUXBAS,IW,SPHAUX,maxg)
+
+      DEALLOCATE(WRK1,WRK2,WRK3,WRK4,CC)
+
+C     decompose V using eigenvalue method
+      IF(IVMTD .EQ. 2) THEN
+
+        ALLOCATE(WRK1(L1))
+        ALLOCATE(WRK2(NAUXBAS))
+        ALLOCATE(WRK3(NAUX2))
+        ALLOCATE(WRK4(NAUXBAS))
+        ALLOCATE(WRK5(NAUXBAS*8))
+
+        CALL RIMP2VINV2(V,WRK1,WRK2,WRK3,WRK4,WRK5,
+     *       VTOL,NAUXBAS1,NAUXBASD,IW,MASWRK)
+
+        DEALLOCATE(WRK1,WRK2,WRK3,WRK4,WRK5)
+
+C     decompose V using Cholesky method
+      ELSE
+
+        CALL RIMP2VINV(V,NAUXBAS1,IW,MASWRK)
+        NAUXBASD = NAUXBAS1
+
+      END IF
+
+C     store decompose inversed V matrix
+      CALL DDI_SYNC(5126)
+      IF(MASWRK) CALL DDI_PUT(D_V,1,NAUXBASD,1,NAUXBAS,V)
+      CALL DDI_SYNC(5127)
+
+      RETURN
+
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2VGEN
+C>
+C>     @BRIEF   GENERATE THE V MATRIX
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+C>     @DETAIL  GENERATE V-MATRIX (2C2ERIS) BY THE RYS-QUADRATURE METHOD
+C>
+      SUBROUTINE OMPRIMP2VGEN(V,GHONDO,TI,TJ,W,CC,LOCSPH,NAUXSH,NAUXBAS,
+     *     IW,SPHAUX,maxg)
+
+      use OMP_lib
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL SPHAUX
+CFTNC LOGICAL GOPARR,DSKWRK,MASWRK
+      LOGICAL IANDJ,NORM
+C
+      DOUBLE PRECISION V(NAUXBAS,NAUXBAS),TI(maxg),TJ(maxg)
+      DOUBLE PRECISION W(maxg)
+      DOUBLE PRECISION GHONDO(maxg)
+
+      LOGICAL :: LOMP
+
+      DOUBLE PRECISION CC(3,2)
+      INTEGER LOCSPH(*)
+C
+      PARAMETER (MXATM=2000)
+      PARAMETER (MXAUXSH=10000, MXAXGTOT=20000)
+C
+      COMMON /AUXBAS/ EXAUX(MXAXGTOT),CAUXS(MXAXGTOT),CAUXP(MXAXGTOT),
+     *                CAUXD(MXAXGTOT),CAUXF(MXAXGTOT),CAUXG(MXAXGTOT),
+     *                CAUXH(MXAXGTOT),CAUXI(MXAXGTOT),
+     *                KAUXST(MXAUXSH),KAUXAT(MXAUXSH),KAUXTY(MXAUXSH),
+     *                KAUXNG(MXAUXSH),KAUXLO(MXAUXSH),KAUXMI(MXAUXSH),
+     *                KAUXMX(MXAUXSH),NAUXSHX
+
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+CFTNC COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+
+      INTEGER,ALLOCATABLE :: OMPISE(:,:)
+
+
+      NORM = NORMF .NE. 1 .OR. NORMP .NE. 1
+
+      Nthreads=OMP_get_max_threads()
+      ALLOCATE(OMPISE(0:Nthreads-1,2))
+      CALL WorkSharedArray(OMPISE,Nthreads,1,NAUXSH,LOMP)
+      CALL OMP_set_num_threads(OMP_get_max_threads())
+
+#ifdef __INTEL_COMPILER_BUILD_DATE
+C$OMP parallel
+     & shared (OMPISE,
+     &    KAUXAT,C,KAUXTY,KAUXNG,KAUXMI,KAUXMX,KAUXST,KAUXLO,
+     &    SPHAUX,LOCSPH,
+     &    EXAUX,CAUXI,CAUXH,CAUXG,CAUXF,CAUXD,CAUXP,CAUXS,NORM,
+     &    NAUXBAS,
+     &    V)
+     & private (IthreadID,II,Istart,Iend,
+     &    IAT,CC,LANGI,NGI,MINI,MAXI,I1,LOCI,NI,
+     &    MINIS,MAXIS,LOCIS,NIS,
+     &    JJ,JAT,LANGJ,NGJ,MINJ,MAXJ,J1,LOCJ,NJ,IANDJ,TI,TJ,
+     &    MINJS,MAXJS,LOCJS,NJS,
+     &    GHONDO,W)
+#else
+C$OMP parallel
+C$OMP& shared (OMPISE,
+C$OMP&    KAUXAT,C,KAUXTY,KAUXNG,KAUXMI,KAUXMX,KAUXST,KAUXLO,
+C$OMP&    SPHAUX,LOCSPH,
+C$OMP&    EXAUX,CAUXI,CAUXH,CAUXG,CAUXF,CAUXD,CAUXP,CAUXS,NORM,
+C$OMP&    NAUXBAS,
+C$OMP&    V)
+C$OMP& private (IthreadID,II,Istart,Iend,
+C$OMP&    IAT,CC,LANGI,NGI,MINI,MAXI,I1,LOCI,NI,
+C$OMP&    MINIS,MAXIS,LOCIS,NIS,
+C$OMP&    JJ,JAT,LANGJ,NGJ,MINJ,MAXJ,J1,LOCJ,NJ,IANDJ,TI,TJ,
+C$OMP&    MINJS,MAXJS,LOCJS,NJS,
+C$OMP&    GHONDO,W)
+#endif
+
+      IthreadID=OMP_get_thread_num()
+      LOMPStart=OMPISE(IthreadID,1)
+      LOMPEnd=OMPISE(IthreadID,2)
+
+C      DO II = 1, NAUXSH
+      do ii=LOMPStart,LOMPEnd
+         IAT = KAUXAT(II)
+         CC(1,1) = C(1,IAT)
+         CC(2,1) = C(2,IAT)
+         CC(3,1) = C(3,IAT)
+         LANGI = KAUXTY(II)-1
+         NGI   = KAUXNG(II)
+         MINI  = KAUXMI(II)
+         MAXI  = KAUXMX(II)
+         I1    = KAUXST(II)
+         LOCI  = KAUXLO(II)-MINI
+         NI    = MAXI-MINI+1
+
+         IF(SPHAUX) THEN
+            CALL RIMP2CSTRM(TI,LANGI,MINI,NI,MINIS,MAXIS)
+            LOCIS = LOCSPH(II)-MINIS
+            NIS   = MAXIS-MINIS+1
+         END IF
+
+         DO JJ = 1, II
+            JAT = KAUXAT(JJ)
+            CC(1,2) = C(1,JAT)
+            CC(2,2) = C(2,JAT)
+            CC(3,2) = C(3,JAT)
+            LANGJ = KAUXTY(JJ)-1
+            NGJ   = KAUXNG(JJ)
+            MINJ  = KAUXMI(JJ)
+            MAXJ  = KAUXMX(JJ)
+            J1    = KAUXST(JJ)
+            LOCJ  = KAUXLO(JJ)-MINJ
+            NJ = MAXJ-MINJ+1
+            IANDJ = II .EQ. JJ
+
+            IF(SPHAUX) THEN
+               CALL RIMP2CSTRM(TJ,LANGJ,MINJ,NJ,MINJS,MAXJS)
+               LOCJS = LOCSPH(JJ)-MINJS
+               NJS   = MAXJS-MINJS+1
+            END IF
+
+            CALL GEN2C2ERI(CC,EXAUX(I1),CAUXS(I1),CAUXP(I1),CAUXD(I1),
+     *           CAUXF(I1),CAUXG(I1),CAUXH(I1),CAUXI(I1),
+     *           EXAUX(J1),CAUXS(J1),CAUXP(J1),CAUXD(J1),CAUXF(J1),
+     *           CAUXG(J1),CAUXH(J1),CAUXI(J1),GHONDO,
+     *           LANGI,LANGJ,NGI,NGJ,MINI,MAXI,MINJ,MAXJ,NORM,NORM)
+
+            CALL CP2CAUXINT(GHONDO,V,TI,TJ,W,NAUXBAS,
+     *           LOCI,LOCJ,MINI,MAXI,MINJ,MAXJ,NI,NJ,
+     *           LOCIS,LOCJS,MINIS,MAXIS,MINJS,MAXJS,NIS,NJS,
+     *           SPHAUX,IANDJ)
+
+         END DO
+      END DO
+C$OMP end parallel
+
+      DEALLOCATE(OMPISE)
+
+      CALL FLSHBF(IW)
+
+      RETURN
+      END !**********************************************************
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2INTTRN
+C>
+C>     @BRIEF   DRIVER TO GENERATE AND TRANSFORM 3C2ERIS
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+C>     @DETAIL  1) 3C2ERIS ARE GENERATED BY THE RYS-QUADRATURE METHOD
+C>              2) 3C2ERIS ARE TRANSFORMED INTO THE MO BASIS
+C>              3) MO 3C2ERIS ARE COMBINED WITH THE DECOMPOSED V-MATRIX
+C>
+      SUBROUTINE OMPRIMP2INTTRN(LOCSPH,
+     *     NSHELL,NBASIS,NAUXSH,NAUXBAS,NAUXBASD,
+     *     NORBA,NOCCA,NVIRA,NACORE,IAUXBF,USEDM)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+
+CFTNC LOGICAL GOPARR,DSKWRK,MASWRK
+      LOGICAL SPHAUX,USEDM
+
+      INTEGER LOCSPH(*)
+
+      PARAMETER (MXSH=5000, MXGTOT=20000)
+      PARAMETER (MXAUXSH=10000, MXAXGTOT=20000)
+
+      COMMON /AUXBAS/ EXAUX(MXAXGTOT),CAUXS(MXAXGTOT),CAUXP(MXAXGTOT),
+     *                CAUXD(MXAXGTOT),CAUXF(MXAXGTOT),CAUXG(MXAXGTOT),
+     *                CAUXH(MXAXGTOT),CAUXI(MXAXGTOT),
+     *                KAUXST(MXAUXSH),KAUXAT(MXAUXSH),KAUXTY(MXAUXSH),
+     *                KAUXNG(MXAUXSH),KAUXLO(MXAUXSH),KAUXMI(MXAUXSH),
+     *                KAUXMX(MXAUXSH),NAUXSHX
+
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELLX
+CFTNC COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+CFTNC COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+CFTNC COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+CFTNC*                MPLEVL,MPCTYP
+
+CFTNC COMMON /RIMPFI/ IFILV,IFILT2A,IFILT3A,IFILT2B,IFILT3B
+
+CFTNC INTEGER D_V,D_TA,D_TB
+CFTNC COMMON /RIMPDD/ D_V,D_TA,D_TB
+C
+CFTNC DATA CHECK    /8HCHECK   /
+CFTNC DATA RHF      /8HRHF     /
+CFTNC DATA UHF      /8HUHF     /
+
+      DOUBLE precision,ALLOCATABLE :: VEC(:)
+
+
+      SPHAUX = .FALSE.
+      IF(IAUXBF .EQ. 1) SPHAUX = .TRUE.
+
+C highest angular momentum of atomic/auxiliary basis
+      kang_a=maxval(KTYPE)
+      kang=maxval(KAUXTY)
+      IF(kang.le.kang_a) kang=kang_a
+
+      lmax=kang-1
+      nangm=(lmax+1)*(lmax+2)/2
+CFTNC maxg=nangm*nangm*nangm
+
+C read MO vectors
+      ALLOCATE(VEC(NBASIS*NBASIS))
+      CALL DAREAD(IDAF,IODA,VEC,NBASIS*NBASIS,15,0)
+
+C manipulate MO vectors
+      CALL OMPrimp2mvec(VEC,NBASIS,NACORE,NORBA)
+
+C generate 3C2ERIs, and do MO transformation
+      CALL OMPRIMP2INTTR1(VEC,LOCSPH,
+     *     NSHELL,NBASIS,NAUXSH,NOCCA,NVIRA,NANGM,SPHAUX,USEDM)
+
+      CALL DDI_SYNC(5131)
+
+C do V-transformation to 3C2ERIs
+      CALL OMPRIMP2INTTR2(NAUXBAS,NAUXBASD,NOCCA,NVIRA)
+
+      RETURN
+
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2MVEC
+C>
+C>     @BRIEF   READ AND MANIPULATE MO VECTORS
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+
+      SUBROUTINE OMPRIMP2MVEC(VEC,NBASIS,NACORE,NORBA)
+
+      USE OMP_lib
+
+      IMPLICIT DOUBLE precision(a-h,o-z)
+
+      PARAMETER (MXATM=2000, MXAO=8192)
+
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /IJPAIR/ IA(MXAO)
+
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+
+      DOUBLE precision VEC(NBASIS,NBASIS)
+
+      DOUBLE precision,ALLOCATABLE :: MOLAB(:)
+      DOUBLE precision,ALLOCATABLE :: MOIRP(:)
+      DOUBLE precision,ALLOCATABLE :: MODEG(:)
+      DOUBLE precision,ALLOCATABLE :: Q(:)
+      DOUBLE precision,ALLOCATABLE :: S(:)
+      DOUBLE precision,ALLOCATABLE :: WRK(:)
+
+
+      NBF2   = NBASIS*(NBASIS+1)/2
+      NBF3   = NBASIS*NBASIS
+
+C     --- READ OVERLAP MATRIX --
+
+      ALLOCATE(S(NBF2))
+
+      CALL DAREAD(IDAF,IODA,S,NBF2,12,0)
+
+C     --- READ Q MATRIX ---
+
+      ALLOCATE(Q(NBF3))
+
+      CALL DAREAD(IDAF,IODA,Q,NBF3,45,0)
+
+C     --- TRANSFORMING MOS IN CARTESIAN TO SPHERICAL BASIS ---
+
+      NORB = NORBA+NACORE
+      ALLOCATE(MOLAB(NBASIS))
+      ALLOCATE(MOIRP(NBASIS))
+      ALLOCATE(MODEG(NBASIS))
+      ALLOCATE(WRK(NBASIS))
+      CALL TRFSYM(MOLAB,MOIRP,MODEG,Q,S,
+     *            VEC,WRK,IA,NQMT,NBASIS,NORB,NBASIS)
+      DEALLOCATE(MOLAB,MOIRP,MODEG,Q,S,WRK)
+
+C     --- SHIFTING ACTIVE MOS TO THE CORE ---
+
+      DO J = 1, NORBA
+         DO I = 1, NBASIS
+            VEC(I,J) = VEC(I,J+NACORE)
+         END DO
+      END DO
+
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2ENG
+C>
+C>     @BRIEF   EVALUATE RI-MP2 ENERGY
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+C>     @DETAIL  COMBINING B-MATRIX TO FORM 4C2ERIS, MP2 AMPLITUDE,
+C>              & MP2 CORRELATION ENERGY
+C>
+      SUBROUTINE OMPRIMP2ENG(E2,E2T,E2S,
+     *           NBASIS,NAUXBAS,NORB,NOCC,NVIR,NCOR)
+
+      USE OMP_lib
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      LOGICAL LOMP
+CFTNC LOGICAL USEDM, LOMP
+
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+      ALLOCATABLE :: EIG(:),BI(:),B(:,:),Q (:,:)
+
+      INTEGER,ALLOCATABLE :: DDIISE(:,:),OMPISE(:,:)
+
+      INTEGER D_V,D_TA,D_TB
+      COMMON /RIMPDD/ D_V,D_TA,D_TB
+
+CFTNC PARAMETER (ZERO=0.0D+00,ONE=1.0D+00)
+
+      LENT3 = NAUXBAS*NVIR
+
+C DDI worksharing
+      ALLOCATE(DDIISE(0:NPROC-1,2))
+      CALL WorkSharedArray(DDIISE,NPROC,1,NOCC,LOMP)
+      IF(.not.LOMP) CALL abrt
+
+      LDDIStart=DDIISE(ME,1)
+      LDDIEnd=DDIISE(ME,2)
+      DEALLOCATE(DDIISE)
+
+
+C ALLOCATE(B(LENT3,NOCC))
+      ALLOCATE(B(NAUXBAS*NVIR,LDDIStart:LDDIEnd))
+
+C     CALL DDI_GET(D_TA,1,LENT3,1,NOCC,B)
+      CALL DDI_GET(D_TA,1,NAUXBAS*NVIR,LDDIStart,LDDIEnd,B)
+
+C read MO energy
+      ALLOCATE(EIG(NBASIS))
+      CALL DAREAD(IDAF,IODA,EIG,NBASIS,17,0)
+      DO I = 1, NORB
+        EIG(I)=EIG(I+NCOR)
+      ENDDO
+
+C ALLOCATE arrays
+
+      ALLOCATE(BI(LENT3))
+      ALLOCATE(Q(NVIR,NVIR))
+
+C OMP worksharing
+      Nthreads=OMP_get_max_threads()
+      Nchunks=LDDIEnd-LDDIStart+1
+      IF(Nchunks.LE.Nthreads) Nthreads= Nchunks
+
+      ALLOCATE(OMPISE(0:Nthreads-1,2))
+      CALL WorkSharedArray(OMPISE,Nthreads,LDDIStart,LDDIEnd,LOMP)
+
+      E2T=0.0D+00
+        E2T_t=0.0D+00
+      E2S=0.0D+00
+        E2S_t=0.0D+00
+
+      DO I=1,NOCC
+         IF(I.lt. LDDIStart .OR. I.GT. LDDIEnd) THEN
+            CALL DDI_GET(D_TA,1,LENT3,i,i,BI)
+         ELSE
+            CALL DCOPY(LENT3,B(1,i),1,BI,1)
+         ENDIF
+
+#ifdef __INTEL_COMPILER_BUILD_DATE
+C$OMP PARALLEL num_threads(Nthreads) default(shared),
+     & private(IthreadID,j,LOMPStart,LOMPEnd,
+     &         Q,
+     &         Ia,IaE,Ib,IbE,T2,
+     &         EIG_o)
+     & firstprivate(E2T_t,E2S_t)
+     & reduction(+:E2S,E2T)
+#else
+C$OMP PARALLEL num_threads(Nthreads) default(shared),
+C$OMP& private(IthreadID,j,LOMPStart,LOMPEnd,
+C$OMP&         Q,
+C$OMP&         Ia,IaE,Ib,IbE,T2,
+C$OMP&         EIG_o)
+C$OMP& firstprivate(E2T_t,E2S_t)
+C$OMP& reduction(+:E2S,E2T)
+#endif
+
+      IthreadID=OMP_get_thread_num()
+      LOMPStart=OMPISE(IthreadID,1)
+      LOMPEnd=OMPISE(IthreadID,2)
+
+C         do j=1,NOCC
+C         do j=LDDIStart,LDDIEnd
+         DO J=LOMPStart,LOMPEnd
+
+C private: IthreadID,j,LOMPStart,LOMPEnd
+
+            CALL DGEMM('T','N', NVIR,NVIR,NAUXBAS,
+     *           1.0D+00, B(1,j),NAUXBAS, BI,NAUXBAS,
+     *           0.0D+00, Q,NVIR)
+
+C private: Q
+
+            EIJ=EIG(i)+EIG(j)
+
+            DO Ia=1,NVIR
+               IaE=Ia+NOCC
+               DO Ib=1,NVIR
+                  IbE=Ib+NOCC
+
+CFTNC xxx=EIJ-EIG(IaE)-EIG(IbE)
+
+                  T2=Q(Ia,Ib)/(EIJ-EIG(IaE)-EIG(IbE))
+                  E2T_t=E2T_t+T2*(Q(Ia,Ib)-Q(Ib,Ia))
+                  E2S_t=E2S_t+T2*Q(Ia,Ib)
+               END DO
+            END DO
+
+C private: Ia,IaE,Ib,IbE,T2,Q
+C firstprivate: E2T_t,E2S_t
+
+            E2T=E2T+E2T_t
+               E2T_t=0.0D+00
+            E2S=E2S+E2S_t
+               E2S_t=0.0D+00
+
+         ENDDO !J
+C$OMP end parallel
+
+      ENDDO !I
+
+
+      CALL DDI_GSUMF(3100,E2T,1)
+      CALL DDI_GSUMF(3101,E2S,1)
+      E2= E2T+ E2S
+
+      RETURN
+
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK WorkSharedArray
+C>
+C>     @BRIEF   WORK SHARING AMONG NPROCS PROCESSES/THREADS
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+C>     @DETAIL  A PORTION OF LOOP FROM Lstart TO Lend IS DIVIDED
+C>              AMONG Nprocs (MPI PROCESSES OR THREADS). THE WORK
+C>              SHRING IS STORED IN THE ISE ARRAY
+C>
+      SUBROUTINE WorkSharedArray(ISE,Nprocs,Lstart,Lend,LOMP)
+
+      IMPLICIT DOUBLE precision(a-h,o-z)
+
+      INTEGER,intent(in)  :: Nprocs
+      INTEGER,intent(in)  :: Lstart, Lend
+
+      LOGICAL,intent(out) :: LOMP
+      INTEGER,intent(out) :: ISE(0:Nprocs-1,2)
+
+
+      Nloops=Lend-Lstart+1
+      IF(Nloops.lt.Nprocs) THEN
+         LOMP=.false.
+         RETURN
+      ELSE
+         LOMP=.true.
+      ENDIF
+
+      Nchunk=Nloops/Nprocs
+      Nmod=mod(Nloops,Nprocs)
+
+      ISE(0,1)=Lstart
+      IF(Nmod.gt.0) then
+         ISE(0,2)=Lstart+Nchunk
+      ELSE
+         ISE(0,2)=Lstart+Nchunk-1
+      ENDIF
+      Nmod=Nmod-1
+
+      DO i=1, Nprocs-1
+         ISE(i,1)=ISE(i-1,2)+1
+         IF(Nmod.gt.0) then
+            ISE(i,2)=ISE(i-1,2)+Nchunk+1
+            Nmod=Nmod-1
+         ELSE
+            ISE(i,2)=ISE(i-1,2)+Nchunk
+         ENDIF
+      ENDDO
+
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2INTTR1
+C>
+C>     @BRIEF   GENERATE AND TRANSFORM 3C2ERI TO MO BASIS
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+C>     @DETAIL  1) 3C2ERIS ARE GENERATED USING THE RYS-QUADRATURE METHOD
+C>              2) 3C2ERIS ARE TRANSFORMED INTO MO BASIS
+C>
+      SUBROUTINE OMPRIMP2INTTR1(VEC,LOCSPH,
+     *           NSHELL,NBASIS,NAUXSH,NOCC,NVIR,NANGM,SPHAUX,USEDM)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      LOGICAL SPHAUX,USEDM
+CFTNC LOGICAL SLB,DLB
+      LOGICAL NORM
+
+      DOUBLE PRECISION VEC(NBASIS,NBASIS),CC(3,3)
+
+      INTEGER LOCSPH(*)
+
+      PARAMETER (MXATM=2000)
+      PARAMETER (MXAUXSH=10000, MXAXGTOT=20000)
+
+      COMMON /AUXBAS/ EXAUX(MXAXGTOT),CAUXS(MXAXGTOT),CAUXP(MXAXGTOT),
+     *                CAUXD(MXAXGTOT),CAUXF(MXAXGTOT),CAUXG(MXAXGTOT),
+     *                CAUXH(MXAXGTOT),CAUXI(MXAXGTOT),
+     *                KAUXST(MXAUXSH),KAUXAT(MXAUXSH),KAUXTY(MXAUXSH),
+     *                KAUXNG(MXAUXSH),KAUXLO(MXAUXSH),KAUXMI(MXAUXSH),
+     *                KAUXMX(MXAUXSH),NAUXSHX
+
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+C
+CFTNC INTEGER D_V,D_TA,D_TB
+CFTNC COMMON /RIMPDD/ D_V,D_TA,D_TB
+C
+      DOUBLE precision,ALLOCATABLE :: T0(:,:,:),T1(:),T2(:),TL(:)
+
+      INTEGER,ALLOCATABLE :: DDIISE(:,:)
+
+
+      NORM = NORMF .NE. 1 .OR. NORMP .NE. 1
+
+
+      ALLOCATE(T0(NBASIS,NBASIS,NANGM))
+      ALLOCATE(T1(NOCC*NVIR))
+      ALLOCATE(T2(NOCC*NVIR))
+      ALLOCATE(TL(NANGM*NANGM))
+
+C DDI worksharing
+
+      ALLOCATE(DDIISE(0:NPROC-1,2))
+      CALL WorkSharedArray(DDIISE,NPROC,1,NAUXSH,LOMP)
+
+      LDDIStart=DDIISE(ME,1)
+      LDDIEnd=DDIISE(ME,2)
+      DEALLOCATE(DDIISE)
+
+
+      DO LAUXSH=LDDIStart,LDDIEnd
+         LAT = KAUXAT(LAUXSH)
+         CC(1,3) = C(1,LAT)
+         CC(2,3) = C(2,LAT)
+         CC(3,3) = C(3,LAT)
+         LANGL = KAUXTY(LAUXSH)-1
+         MINL  = KAUXMI(LAUXSH)
+         MAXL  = KAUXMX(LAUXSH)
+         NL    = MAXL-MINL+1
+         NGL   = KAUXNG(LAUXSH)
+         L1    = KAUXST(LAUXSH)
+         LOCL  = KAUXLO(LAUXSH)-MINL
+
+         IF(SPHAUX) THEN
+            CALL RIMP2CSTRM(TL,LANGL,MINL,NL,MINLS,MAXLS)
+            LOCLS = LOCSPH(LAUXSH)-MINLS
+            NLS = MAXLS-MINLS+1
+            MINLT = MINLS
+            MAXLT = MAXLS
+            LOCLT = LOCLS
+         ELSE
+            MINLT = MINL
+            MAXLT = MAXL
+            LOCLT = LOCL
+         END IF
+
+         CALL OMPRIMP2T0GEN(CC,T0,T2,TL,T1,
+     *        NSHELL,NBASIS,NOCC,NVIR,NANGM,
+     *        LANGL,MINL,MAXL,NL,NGL,L1,MINLS,MAXLS,NLS,SPHAUX,NORM)
+
+         CALL RIMP2MOTRNS(T0,VEC,T1,T2,LOCLT,MINLT,MAXLT,
+     *        NBASIS,NOCC,NVIR,NANGM)
+
+      END DO
+
+      RETURN
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK RIMP2MOTRNS
+C>
+C>     @BRIEF   TRANSFORM 3C2ERIS TO MO BASIS
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+C>
+      SUBROUTINE RIMP2MOTRNS(T0,VEC,T1,T2,LOCLT,MINLT,MAXLT,
+     *           NBASIS,NOCC,NVIR,NANGM)
+
+      USE OMP_lib
+
+
+      IMPLICIT DOUBLE precision(a-h,o-z)
+
+CFTNC PARAMETER (ZERO=0.0D+00,ONE=1.0D+00)
+
+      INTEGER D_V,D_TA,D_TB
+      COMMON /RIMPDD/ D_V,D_TA,D_TB
+
+CFTNC COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+      DOUBLE PRECISION T0(NBASIS,NBASIS,nangm),VEC(NBASIS,NBASIS)
+
+      DOUBLE PRECISION T1(NOCC*NBASIS),T2(NOCC*NVIR)
+
+      DOUBLE precision,ALLOCATABLE :: T2_t(:,:)
+      INTEGER,ALLOCATABLE :: OMPISE(:,:)
+
+
+      IStart=NVIR*((LOCLT+MINLT)-1)+1
+      IEnd=NVIR*(LOCLT+MAXLT)
+      ALLOCATE(T2_t(IStart:IEnd,1:NOCC))
+
+C OMP worksharing
+      Nthreads=OMP_get_max_threads()
+      Nchunks=MAXLT-MINLT+1
+
+      IF(Nchunks.le.Nthreads) Nthreads=Nchunks
+      ALLOCATE(OMPISE(0:Nthreads-1,2))
+
+      CALL WorkSharedArray(OMPISE,Nthreads,MINLT,MAXLT,LOMP)
+
+
+C       LL_t=0
+#ifdef __INTEL_COMPILER_BUILD_DATE
+C$OMP parallel num_threads(Nthreads) default(shared)
+     & private(IthreadID,L,LOMPStart,LOMPEnd,
+     &         LL,
+     &         LAUX,T1,T2,
+     &         IBG,IED,
+     &         Irow,mm,kk)
+#else
+C$OMP parallel num_threads(Nthreads) default(shared)
+C$OMP& private(IthreadID,L,LOMPStart,LOMPEnd,
+C$OMP&         LL,
+C$OMP&         LAUX,T1,T2,
+C$OMP&         IBG,IED,
+C$OMP&         Irow,mm,kk)
+#endif
+
+      IthreadID=OMP_get_thread_num()
+
+      LOMPStart=OMPISE(IthreadID,1)
+      LOMPEnd=OMPISE(IthreadID,2)
+
+C       DO L = MINLT, MAXLT
+      DO L=LOMPStart,LOMPEnd
+
+         LL=L-MINLT+1
+
+         CALL DGEMM('N','N', NBASIS,NOCC,NBASIS,
+     *        1.0D+00, T0(1,1,LL),NBASIS, VEC,NBASIS,
+     *        0.0D+00, T1,NBASIS)
+
+         CALL DGEMM('T','N', NVIR,NOCC,NBASIS,
+     *        1.0D+00, VEC(1,NOCC+1),NBASIS, T1,NBASIS,
+     *        0.0D+00, T2,NVIR)
+
+         LAUX = LOCLT+L
+
+         IBG=NVIR*(LAUX-1)+1
+         IED=NVIR*LAUX
+
+         Irow=0
+         DO mm=1,NOCC
+            DO kk=IBG,IED
+               Irow=Irow+1
+               T2_t(kk,mm)=T2(Irow)
+            ENDDO
+         ENDDO
+
+      END DO
+
+C$OMP end parallel
+
+      CALL DDI_PUT(D_TA,IStart,IEnd,1,NOCC,T2_t)
+
+      DEALLOCATE(OMPISE)
+      DEALLOCATE(T2_t)
+
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2T0GEN
+C>
+C>     @BRIEF   GENERATE 3C2ERIS USING THE RYS-QUADRATURE METHOD
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+      SUBROUTINE OMPRIMP2T0GEN(CC,T0,GHONDO,TL,W,
+     *     NSHELL,NBASIS,NOCC,NVIR,NANGM,
+     *     LANGL,MINL,MAXL,NL,NGL,L1,MINLS,MAXLS,NLS,SPHAUX,NORM)
+
+      USE OMP_lib
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL SPHAUX
+      LOGICAL IANDJ
+      LOGICAL NORM
+C
+      DOUBLE PRECISION CC(3,3),T0(NBASIS*NBASIS*nangm)
+      DOUBLE precision GHONDO(NOCC*NVIR)
+      DOUBLE precision TL(NANGM*NANGM),W(NOCC*NVIR)
+
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000)
+      PARAMETER (MXAUXSH=10000, MXAXGTOT=20000)
+C
+      COMMON /AUXBAS/ EXAUX(MXAXGTOT),CAUXS(MXAXGTOT),CAUXP(MXAXGTOT),
+     *                CAUXD(MXAXGTOT),CAUXF(MXAXGTOT),CAUXG(MXAXGTOT),
+     *                CAUXH(MXAXGTOT),CAUXI(MXAXGTOT),
+     *                KAUXST(MXAUXSH),KAUXAT(MXAUXSH),KAUXTY(MXAUXSH),
+     *                KAUXNG(MXAUXSH),KAUXLO(MXAUXSH),KAUXMI(MXAUXSH),
+     *                KAUXMX(MXAUXSH),NAUXSHX
+
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELLX
+
+CFTNC COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+
+      DOUBLE precision,ALLOCATABLE :: XX1(:), XX2(:)
+      INTEGER,ALLOCATABLE :: OMPISE(:,:)
+
+
+      Nthreads=OMP_get_max_threads()
+      Nchunks=NSHELL+1
+      IF(Nchunks.le.Nthreads) Nthreads=Nchunks
+      ALLOCATE(OMPISE(0:Nthreads-1,2))
+      CALL WorkSharedArray(OMPISE,Nthreads,1,NSHELL,LOMP)
+
+
+#ifdef __INTEL_COMPILER_BUILD_DATE
+C$OMP parallel num_threads(Nthreads) default(shared)
+     & private(IthreadID,LOMPStart,LOMPEnd,
+     &         II,IAT,LANGI,MINI,MAXI,NI,NGI,I1,LOCI,
+     &         JJ,JAT,LANGJ,MINJ,MAXJ,NJ,NGJ,J1,LOCJ,IANDJ,
+     &         GHONDO,XX1,XX2,
+     &         W)
+     & firstprivate(TL,CC)
+#else
+C$OMP parallel num_threads(Nthreads) default(shared)
+C$OMP& private(IthreadID,LOMPStart,LOMPEnd,
+C$OMP&         II,IAT,LANGI,MINI,MAXI,NI,NGI,I1,LOCI,
+C$OMP&         JJ,JAT,LANGJ,MINJ,MAXJ,NJ,NGJ,J1,LOCJ,IANDJ,
+C$OMP&         GHONDO,XX1,XX2,
+C$OMP&         W)
+C$OMP& firstprivate(TL,CC)
+#endif
+
+      IthreadID=OMP_get_thread_num()
+      LOMPStart=OMPISE(IthreadID,1)
+      LOMPEnd=OMPISE(IthreadID,2)
+
+      ALLOCATE(XX1(NGL),XX2(NGL*28))
+
+C       DO II = 1, NSHELL
+      DO II=LOMPStart,LOMPEnd
+         IAT = KATOM(II)
+         CC(1,1) = C(1,IAT)
+         CC(2,1) = C(2,IAT)
+         CC(3,1) = C(3,IAT)
+         LANGI = KTYPE(II)-1
+         MINI  = KMIN(II)
+         MAXI  = KMAX(II)
+         NI    = KMAX(II)-KMIN(II)+1
+         NGI   = KNG(II)
+         I1    = KSTART(II)
+         LOCI  = KLOC(II)-MINI
+
+C private: II,IAT,CC,LANGI,MINI,MAXI,NI,NGI,I1,LOCI
+
+         DO JJ = 1, II
+            JAT = KATOM(JJ)
+            CC(1,2) = C(1,JAT)
+            CC(2,2) = C(2,JAT)
+            CC(3,2) = C(3,JAT)
+            LANGJ = KTYPE(JJ)-1
+            MINJ  = KMIN(JJ)
+            MAXJ  = KMAX(JJ)
+            NJ    = KMAX(JJ)-KMIN(JJ)+1
+            NGJ   = KNG(JJ)
+            J1    = KSTART(JJ)
+            LOCJ  = KLOC(JJ)-MINJ
+            IANDJ = II .EQ. JJ
+
+C private: JJ,JAT,LANGJ,MINJ,MAXJ,NJ,NGJ,J1,LOCJ,IANDJ
+
+            CALL GEN3C2ERI(CC,EX(I1),CS(I1),CP(I1),CD(I1),CF(I1),
+     *           CG(I1),CH(I1),CI(I1),EX(J1),CS(J1),CP(J1),CD(J1),
+     *           CF(J1),CG(J1),CH(J1),CI(J1),
+     *           EXAUX(L1),CAUXS(L1),CAUXP(L1),CAUXD(L1),CAUXF(L1),
+     *           CAUXG(L1),CAUXH(L1),CAUXI(L1),GHONDO,
+     *           LANGI,LANGJ,LANGL,NGI,NGJ,NGL,MINI,MAXI,MINJ,MAXJ,
+     *           MINL,MAXL,NORM,NORM,NORM,XX1,XX2)
+
+C private: GHONDO,XX1,XX2
+
+            CALL CP3CAUXINT(GHONDO,T0,TL,W,NBASIS,LOCI,LOCJ,
+     *           MINI,MAXI,MINJ,MAXJ,MINL,MAXL,NI,NJ,NL,MINLS,MAXLS,
+     *           NLS,SPHAUX,IANDJ)
+
+C firstprivate: TL
+C private: W
+
+         END DO
+      END DO
+      DEALLOCATE(XX1,XX2)
+
+C$OMP end parallel
+      DEALLOCATE(OMPISE)
+
+      RETURN
+      END !**********************************************************
+
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2INTTR2
+C>
+C>     @BRIEF   COMBINING MO 3C2ERIS WITH THE DECOMPOSED V-MATRIX
+C>     @AUTHOR  BUU PHAM 
+C>     @DATE    SEP 25, 2017
+C>
+      SUBROUTINE OMPRIMP2INTTR2(NAUXBAS,NAUXBASD,NOCC,NVIR)
+
+      USE OMP_lib
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+CFTNC PARAMETER (ZERO=0.0D+00, ONE=1.0D+00)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+CFTNC LOGICAL USEDM
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+      INTEGER D_V,D_TA,D_TB
+      COMMON /RIMPDD/ D_V,D_TA,D_TB
+C
+      DOUBLE precision,ALLOCATABLE :: V(:,:)
+      DOUBLE precision,ALLOCATABLE :: T2(:,:)
+      DOUBLE precision,ALLOCATABLE :: T2_t(:,:)
+      DOUBLE precision,ALLOCATABLE :: T3(:)
+C
+      INTEGER,ALLOCATABLE :: DDIISE(:,:),OMPISE(:,:)
+
+
+
+
+C DDI worksharing
+      ALLOCATE(DDIISE(0:NPROC-1,2))
+      CALL WorkSharedArray(DDIISE,NPROC,1,NOCC,LOMP)
+      LDDIStart=DDIISE(ME,1)
+      LDDIEnd=DDIISE(ME,2)
+      DEALLOCATE(DDIISE)
+
+      ALLOCATE(T2(NAUXBAS*NVIR,LDDIStart:LDDIEnd))
+      CALL DDI_GET(D_TA,1,NAUXBAS*NVIR,LDDIStart,LDDIEnd,T2)
+C       CALL DDI_sync(5134)
+C       CALL DDI_destroy(D_TA)
+
+
+C
+      Nthreads=OMP_get_max_threads()
+      Nchunks=LDDIEnd-LDDIStart+1
+      IF(Nchunks.le.Nthreads) Nthreads=Nchunks
+      ALLOCATE(OMPISE(0:Nthreads-1,2))
+      CALL WorkSharedArray(OMPISE,Nthreads,LDDIStart,LDDIEnd,LOMP)
+C
+
+#ifdef __INTEL_COMPILER_BUILD_DATE
+C$OMP parallel num_threads(Nthreads) default(shared)
+     & private(IthreadID,i,LOMPStart,LOMPEnd,
+     &         LAUX,ICNT_t,IVIR,ICNT,
+     &         T2_t)
+#else
+C$OMP parallel num_threads(Nthreads) default(shared)
+C$OMP& private(IthreadID,i,LOMPStart,LOMPEnd,
+C$OMP&         LAUX,ICNT_t,IVIR,ICNT,
+C$OMP&         T2_t)
+#endif
+
+      IthreadID=OMP_get_thread_num()
+      LOMPStart=OMPISE(IthreadID,1)
+      LOMPEnd=OMPISE(IthreadID,2)
+
+      ALLOCATE(T2_t(NAUXBAS,NVIR))
+
+C       do i=LDDIStart,LDDIEnd
+      DO I=LOMPStart,LOMPEnd
+         DO LAUX = 1, NAUXBAS
+            ICNT_t=(LAUX-1)*NVIR
+            DO IVIR = 1, NVIR
+               ICNT=ICNT_t+IVIR
+               T2_t(LAUX,IVIR) = T2(ICNT,I)
+            END DO
+         END DO
+C
+         DO IVIR = 1, NVIR
+            ICNT_t=(IVIR-1)*NAUXBAS
+            DO LAUX = 1, NAUXBAS
+               ICNT=ICNT_t+LAUX
+               T2(ICNT,I)=T2_t(LAUX,IVIR)
+            END DO
+         END DO
+      ENDDO
+      DEALLOCATE(T2_t)
+
+C$OMP end parallel
+
+C
+      ALLOCATE(V(NAUXBASD,NAUXBAS))
+      CALL DDI_GET(D_V,1,NAUXBASD,1,NAUXBAS,V)
+
+C
+#ifdef __INTEL_COMPILER_BUILD_DATE
+C$OMP parallel num_threads(Nthreads) default(shared)
+     & private(IthreadID,i,LOMPStart,LOMPEnd,
+     &         LAUX,ICNT_t,IVIR,ICNT,
+     &         T3)
+#else
+C$OMP parallel num_threads(Nthreads) default(shared)
+C$OMP& private(IthreadID,i,LOMPStart,LOMPEnd,
+C$OMP&         LAUX,ICNT_t,IVIR,ICNT,
+C$OMP&         T3)
+#endif
+
+      IthreadID=OMP_get_thread_num()
+      LOMPStart=OMPISE(IthreadID,1)
+      LOMPEnd=OMPISE(IthreadID,2)
+
+      ALLOCATE(T3(NAUXBAS*NVIR))
+
+C       do i=1,NOCC
+C       do i=LDDIStart,LDDIEnd
+      DO I=LOMPStart,LOMPEnd
+
+C private: IthreadID,i,LOMPStart,LOMPEnd
+
+         CALL DGEMM('N','N', NAUXBASD,NVIR,NAUXBAS,
+     *        1.0D+00, V,NAUXBASD, T2(1,i),NAUXBAS,
+     *        0.0D+00, T3,NAUXBASD)
+
+C private: T3
+
+         DO LAUX = 1, NAUXBASD
+            ICNT_t=(LAUX-1)*NVIR
+            DO IVIR = 1, NVIR
+               ICNT = ICNT_t +IVIR
+               T2(ICNT,I) = T3(ICNT)
+            END DO
+         END DO
+
+      ENDDO
+
+      DEALLOCATE(T3)
+
+C$OMP end parallel
+
+      DEALLOCATE(OMPISE)
+      DEALLOCATE(V)
+
+C       CALL DDI_create(NAUXBAS*NVIR,NOCC,D_TA)
+C      CALL DDI_PUT(D_TA,1,LENT3,1,NOCC,T2)
+      CALL DDI_PUT(D_TA,1,NAUXBASD*NVIR,LDDIStart,LDDIEnd,T2)
+
+      DEALLOCATE(T2)
+
+      RETURN
+
+      END !**********************************************************
+#else
+
+C*MODULE RIMP2OMP   *DECK OMPRIMP2DRIVER
+C>
+C>     @BRIEF  DUMMY OMPRIMP2 SUBROUTINE 
+C>     @AUTHOR  SAROM LEANG
+C>     @DATE    SEP 25, 2017
+C>
+C>     @DETAIL  WHEN GMS_OPENMP=.FALSE. THIS PART WILL GENERATE AN 
+C>              EMPTY OMPRIMP2DRIVER BINARY TO DECEIVE THE CALLING
+C>              OF OMPRIMP2DRIVER IN GAMESS
+C>
+      SUBROUTINE OMPRIMP2DRIVER
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      LOGICAL GOPARR,DSKWRK,MASWRK,SAVDSK
+      IF (MASWRK) WRITE(IW,1337)
+        CALL ABRT
+      RETURN
+ 1337 FORMAT(/1X,'YOU FAILED TO SETUP install.info CORRECTLY.',/)
+      END
+#endif

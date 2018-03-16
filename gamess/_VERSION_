@@ -1,0 +1,54 @@
+Feb 14, 2018 R1 Public Release
+
+New public release with:
+
+- This adds code for the analytical gradient for EFMO. 
+  - It is turned on with the IEFMOG flag in $FMO in the input file (see INPUT.DOC).
+  - Described in C. Bertoni and M. S. Gordon, 
+    "Analytic Gradients for the Effective Molecular Orbital Method"
+    Journal of Chemical Theory and Computation 12 (10), 4743-4767 (2016).
+- New target `cray-xc` added.
+  - `GMS_PHI` flag in **install.info** changed from `true|false` to `none|knl|knc`
+
+Along with a few minor fixes:
+
+- Modifications to comp, lked and config (#51)(#50):
+  - Removed flags EFP_OPENMP, MAKEFP_OPENMP and RIMP2_OPENMP from install.info
+  - Threaded codes are now controlled by the flag GMS_OPENMP in install.info
+
+Nov 11, 2017 R3 Public Release
+
+- OpenMP two-electron code (#28)
+  - To build the OpenMP threaded two-electron code set GMS_OPENMP flag to true in install.info and Makefile after running config.
+  - See the INTOMP flag within the $INTGRL group for more information.
+- OpenMP HF algorithm with Fock matrix shared among threads (#28)
+  - See the SHFOCK flag within the $INTGRL group for more information.
+- See repository https://github.com/gms-bbg/gamess-papers/tree/mv/SC17 for more information on the above changes
+
+- GAMESS Release Notes:
+  - https://gamess.gitbooks.io/gamess-release-notes/content
+
+Oct 7, 2017 Hot Fix (A)
+
+Along with a few minor fixes:
+
+- Address issue with using 'compall' for building GAMESS (#39)
+
+Sept 30, 2017 R2 Public Release
+
+New public release with:
+
+- OpenMP threaded RI-MP2 energy (#31)
+- OpenMP threaded EFP Charge Transfer (#2)
+- OpenMP threaded MAKEFP (#35)
+- QMC-EFMO interface between QMCPACK and GAMESS (#36)
+
+Along with a few minor fixes:
+
+- Address issue with SP shells for 2- and 3- center ERI in LIBCCHEM (#29)
+- Address issue with multi-pole moment calculations when running in parallel (#25)
+- Address issue with using 'compall' for building GAMESS (#39)
+
+Platform updates:
+
+- Added support for GNU compilers up to version 7.2 (Linux, OSX)

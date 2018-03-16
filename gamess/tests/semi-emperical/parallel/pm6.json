@@ -1,0 +1,21 @@
+{
+  "name": "pm6.log",
+  "validation": [
+    {
+      "header": "parse_header",
+      "name": "HEAT OF FORMATION",
+      "value": "-112.30232",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "2.462076",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+!
+! rimp2 gradient: urea
+!            OBS : 6-31G(fdp) spherical
+!            ABS : ri-acct cartesian
+!  LIBCCHEM CODE : CPU
+!
+! RESULTS OF MOLLER-PLESSET 2ND ORDER CORRECTION ARE
+!               E(0)=      -224.0027673678
+!               E(1)=         0.0
+!               E(2)=        -0.7017645157
+!             E(MP2)=      -224.7045318835
+!
+!                         ----------------------
+!                         GRADIENT OF THE ENERGY
+!                         ----------------------
+!
+! UNITS ARE HARTREE/BOHR    E'X               E'Y               E'Z
+!    1 HYDROGEN         0.000110980       0.000000000      -0.006819031
+!    2 HYDROGEN        -0.000110980       0.000000000      -0.006819001
+!    3 OXYGEN           0.000000000       0.000000000       0.002291770
+!    4 CARBON           0.000000000       0.000000000       0.004732494
+!    5 NITROGEN         0.001037982       0.000000000      -0.000248749
+!    6 NITROGEN        -0.001037984       0.000000000      -0.000248780
+!    7 HYDROGEN        -0.006420742       0.000000000       0.003555649
+!    8 HYDROGEN         0.006420740       0.000000000       0.003555648
+!
+!
+!
+!  LIBCCHEM CODE : GPU 3-bolt nodes
+!
+! RESULTS OF MOLLER-PLESSET 2ND ORDER CORRECTION ARE
+!               E(0)=      -224.0027673678
+!               E(1)=         0.0
+!               E(2)=        -0.7017644717
+!             E(MP2)=      -224.7045318395
+!
+!                         ----------------------
+!                         GRADIENT OF THE ENERGY
+!                         ----------------------
+!
+! UNITS ARE HARTREE/BOHR    E'X               E'Y               E'Z
+!    1 HYDROGEN         0.000110984       0.000000000      -0.006818983
+!    2 HYDROGEN        -0.000110977       0.000000000      -0.006819010
+!    3 OXYGEN           0.000000000       0.000000000       0.002291535
+!    4 CARBON           0.000000028       0.000000000       0.004732797
+!    5 NITROGEN         0.001037899       0.000000000      -0.000248800
+!    6 NITROGEN        -0.001037961       0.000000000      -0.000248770
+!    7 HYDROGEN        -0.006420678       0.000000000       0.003555611
+!    8 HYDROGEN         0.006420705       0.000000000       0.003555620
+!
+!                   MAXIMUM GRADIENT =    0.006819010
+!                       RMS GRADIENT =    0.003100311
+!
+!
+ $contrl scftyp=rhf mplevl=2 runtyp=gradient ispher=1 $end
+ $contrl nosym=1 $end
+ $scf diis=.t. $end
+ $system mwords=10 memddi=20 $end
+ $mp2 code=ricchem $end
+ $basis gbasis=n31 ngauss=6 npfunc=1 ndfunc=1 nffunc=1 $end
+ $guess  guess=huckel $end
+ $cchemri iauxbf=0 $end
+ $auxbas cabnam=acct $end
+ $data
+rimp2-urea.gradient.631Gfdp_sph-acct_cart.inp
+Cnv 2
+
+HYDROGEN    1.0   1.1706494911    .0000000000  -1.7277523720
+OXYGEN      8.0    .0000000000    .0000000000   1.2568040799
+CARBON      6.0    .0000000000    .0000000000    .0324234675
+NITROGEN    7.0   1.1568642068    .0000000000   -.7190915340
+HYDROGEN    1.0   2.0306752995    .0000000000   -.2127855550
+ $END

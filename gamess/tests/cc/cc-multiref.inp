@@ -1,0 +1,70 @@
+!   test for robustness of CC methods on a multireference molecule,
+!   collected from Aaron in February 2012.
+!
+!   ROHF with Na=Nb is the same as RHF, but executes through
+!   different codes, causing it to find different results below.
+!   See 'cc-compare' for a single reference case, where these
+!   two programs agree perfectly.
+!
+!   RHF and ROHF both have FINAL energy=     -152.6951541172.
+!    RHF-based right-CCSD starts at E(corr)=   -0.4391399016,
+!                         using MP2 doubles amplitudes as its guess,
+!                         converged E(CCSD)= -153.1269835608.
+!   ROHF-based right-CCSD starts at E(corr)=   -0.4353625553
+!                         using an unknown initial guess,
+!                         converged E(CCSD)= -153.1941150500.
+!    This run is chosen to be ROHF, and getw -153.1941149870
+!
+!   We request CR-CCL below to be sure the ROHF runs the left-CCSD.
+!   The triples corrections of course diff, and aren't recorded here.
+!
+!   iterations are numerous,
+!    RHF-based code: right CCSD= 105 iters, left-CCSD= 249 iters,
+!   ROHF-based code: right CCSD=  97 iters, left-CCSD= 456 iters.
+!
+!   orbital 12 is the HOMO, orbital 13 the LUMO of this closed shell.
+!
+!   For the RHF-based implementation, the right-CCSD has two large T1's,
+!        T1 AMPLITUDE IS -0.460944 FOR I=  12 -> A=  13
+!        T1 AMPLITUDE IS  0.109722 FOR I=   9 -> A=  13
+!   and its left-CCSD greatly reduces these, (print bug! there's 3 cores)
+!        LA1=  -0.2428659409 FOR   I -> A   =    9   10
+!        LA1=   0.0657633055 FOR   I -> A   =    6   10
+!   The RHF program can do a density matrix, and prints the fairly
+!   benign looking 17.67 e- in principal and 0.33 in secndary NOs.
+!
+!   For the ROHF-based implementation, the right-CCSD has
+!        T1=   0.8268849275 FOR IA -> AA =  12  13
+!        T1=   0.8268849212 FOR IB -> AB =  12  13
+!        T2=  -0.7456463842 FOR IA,JB -> AA, BB =  12  12  13  13
+!   and its left-CCSD again greatly reduces these amplitudes,
+!        LA1=   0.1364476918 FOR IA -> AA =  12  13
+!        LA1=   0.1364469203 FOR IB -> AB =  12  13
+!        LA2=  -0.1410144061 FOR IA,JB -> AA, BB =  12  12  13  13
+!
+!   These large amplitudes teach us not to trust CC for MR problems.
+!   MWS does not understand why the large amplitudes are much smaller
+!   in the left CCSD solutions.
+!
+!   this run takes 73/309 seconds for RHF/ROHF on 2.66 GHz Clov (18 Jul 2016)
+!   
+ $contrl scftyp=rohf mult=1 cctyp=cr-ccl runtyp=energy ispher=1 $end
+ $system mwords=250 memddi=0 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $scf    diis=.true. ethrsh=4.0 $end
+ $ccinp  ccprp=.true. maxcc=1000 maxccl=1000 $end
+ $data 
+Aaron's point 14...somewhere in the O + C2H4 system
+C1 
+C    6.0  -0.4706570308   0.0256175958   0.3670862862
+C    6.0   0.6466822513   0.0406641713  -0.6532537170
+O    8.0  -0.0846805220   0.1643288330   1.7136275894
+H    1.0  -1.2133938527   0.7872054450   0.1474942637
+H    1.0  -0.9855497080  -0.9337759897   0.3394210955
+H    1.0   1.6650106278  -0.0522002849  -0.3330085039
+H    1.0   0.4045815425  -0.1555071416  -1.6793575318
+ $end 
+
+! TRAVIS-CI MEDIUM
+

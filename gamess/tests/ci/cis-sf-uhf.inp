@@ -1,0 +1,48 @@
+!   Difluoroethene...spin-flip CIS test...test from Noriyuki 4/2011
+!   the reference state is UHF type, target state is the ground state.
+!
+!   reference triplet state FINAL E= -273.7253221160, 15 iters, s**2=2.067
+!   the spin-flip CIS states are
+!      STATE             ENERGY     EXCITATION     S-SQUARED
+!            1 NEGATIVE ROOT(S) FOUND.
+!      1  A         -273.8941634857   -4.594        0.0779
+!      0  A         -273.7253221160    0.000               (REFERENCE STATE)
+!      2  A         -273.7144528166    0.296        2.1511
+!      3  A         -273.6577470498    1.839        1.0435
+!      4  A         -273.6090067634    3.165        1.0349
+!      5  A         -273.5219849937    5.533        1.0541
+!   and the target state 1's RMS gradient=  0.322903102, mu= 0.473612 Debye
+!
+!   since TD-DFT with no functional is equivalent to CIS (w/o frozen core),
+!   the SF-TD-DFT run gives r.m.s. gradient 0.322903091
+!
+!   This run takes 0 seconds on 2.66 GHz Cloverton (13 Apr 2015)
+!   results have not changed since 2011
+!
+ $CONTRL SCFTYP=UHF MULT=3 RUNTYP=GRADIENT CITYP=SFCIS              $END
+x$CONTRL SCFTYP=UHF MULT=3 RUNTYP=GRADIENT DFTTYP=NONE TDDFT=SPNFLP $END
+ $SYSTEM MWORDS=1 $END 
+!-----------------------------------------------------------------------
+! Wave function
+!-----------------------------------------------------------------------
+ $GUESS GUESS=HUCKEL $END 
+ $BASIS GBASIS=N21 NGAUSS=3 $END
+ $CIS   NSTATE=5 IROOT=1 MULT=1 $END
+ $TDDFT NSTATE=5 IROOT=1 MULT=1 $END
+!-----------------------------------------------------------------------
+! Geometry
+!-----------------------------------------------------------------------
+ $DATA  
+cis-DFE Gas RO-SF-CIS/3-21G S0
+C1
+C     6.0  -0.0000000000   0.6505243427  -0.0165521420
+C     6.0   0.0000000000  -0.6505243428  -0.0165521421
+F     9.0  -0.0000000000   1.2156446665  -0.9192030778
+F     9.0   0.0000000000  -1.2156446664  -0.9192030780
+H     1.0  -0.0000000000  -1.3965430797   1.1178852200
+H     1.0   0.0000000000   1.3965430798   1.1178852199
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

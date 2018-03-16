@@ -1,0 +1,81 @@
+!  Criegee intermediate: U-TD-DFT using Tamm/Dancoff approximation.
+!  The ground state is 3-A'', with 13 alpha and 11 beta occupied.
+!  6-31G(d) used in spherical form, so 49 AOs and 46 MOs.
+!
+!  This H2COO radical is an important intermediate in olefin ozonolysis.
+!  See for example R.Criegee, Record Chem. Prog. 18, 111(1957)
+!
+!  This job should produce the first set of results below.
+!  This run takes 139 seconds on 2.66 GHz Cloverton (22 Jul 2014)
+!       (results unchanged since 2010)
+!
+!     normallyu this test runs as Tamm/Dancoff approximation:
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!                   HARTREE          EV         X       Y       Z     STRENGTH
+!  0            -189.4428786428     .000
+!  1    *       -189.3998380477    1.171      .0000   .0000   .0126     .000
+!  2    *       -189.3228865088    3.265     -.1500   .0073   .0000     .002
+!  3    *       -189.2248370381    5.933      .0000   .0000  -.0200     .000
+!  4            -189.2243128285    5.947      .5990   .1825   .0000     .057
+!  5            -189.1818385250    7.103      .0000   .0000   .0791     .001
+!     NWchem gets 0= -189.442878563667 if looking for three e.s. levels
+!                 1= A'  = 1.1712217 eV, <S**2>=2.0062, osc.= 0.00000
+!                 2= A'' = 3.2651126 eV, <S**2>=2.0382, osc.= 0.00180
+!                 3= A'' = 5.9474515 eV, <S**2>=2.0118, osc.= 0.05712
+!    NWchem spots states 0,1,2 as above, and then
+!                 3= A'  = 5.9331719 eV, <S**2>=2.0158, osc.= 0.00006
+!                 4= A'' = 5.9474515 eV, <S**2>=2.0118, osc.= 0.05712
+!                 5= A'  = 7.1030223 eV, <S**2>=2.0113, osc.= 0.00109
+!    when it is told to go after five roots.  Perfect match.
+!    *'s above mark the roots found by GAMESS when asked to find 3 states.
+!
+!     running as full blown TD-DFT:
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!                   HARTREE          EV         X       Y       Z     STRENGTH
+!  0            -189.4428786428    0.000
+!  1    *       -189.4015751193    1.124     0.0000  0.0000  0.0111    0.000
+!  2    *       -189.3242897697    3.227    -0.1328  0.0208  0.0000    0.001
+!  3            -189.2353546059    5.647    -0.5629 -0.1622  0.0000    0.047
+!  4    *       -189.2256567637    5.911     0.0000  0.0000 -0.0205    0.000
+!  5            -189.1843876940    7.034     0.0000  0.0000  0.0768    0.001
+!     NWchem gets 1= A'  = 1.1239537 eV, <S**2>=2.0060, osc.= 0.00000
+!                 2= A'' = 3.2269286 eV, <S**2>=2.0394, osc.= 0.00143
+!                 3= A'' = 5.6469870 eV, <S**2>=2.0102, osc.= 0.04748
+!    *'s above mark the roots found by GAMESS when asked to find 3 states.
+!
+!    Since the input says MULT=3, all determinants used are Ms=1,
+!    and hence the computation can see 'triplet' and 'pentuplet', but
+!    never any of the singlets that must accompany the lowlying triplets.
+!    You would need the initial guess to "norder=1 jorder(12)=13,12"
+!    in case you want the reference to be the heavily spin-contaminated,
+!    so called "singlet" A''.
+!
+ $contrl scftyp=uhf mult=3 dfttyp=b3lyp tddft=excite runtyp=energy
+         ispher=1 nzvar=9 coord=zmt $end
+ $system mwords=5 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $tddft  nstate=5 iroot=1 tammd=.true. $end
+!           use good grids to compare against NWchem
+ $dft    nrad=96 nleb=1202 $end
+ $tddft  nrad=96 nleb=590 $end
+ $data
+Criegee intermediate...optimized geometry for Ms=0 type UHF
+Cs
+
+C
+O 1 rCO
+O 2 rOO 1 aOOC
+H 1 rCH 2 aHCO 3  wHCOO
+H 1 rCH 2 aHCO 3 -wHCOO
+
+rCO=1.3824615
+rOO=1.3105794
+rCH=1.0726882
+aOOC=111.3307543
+aHCO=115.9378659
+wHCOO=76.6711805
+ $end
+
+! TRAVIS-CI SMALL
+

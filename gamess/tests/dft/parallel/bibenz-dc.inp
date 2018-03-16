@@ -1,0 +1,49 @@
+!   B3LYP-D test case from Roberto Peverati...(C6H6)2
+!
+!   Version 1 (2004): F.NAL E= -464.0345394668, RMS grad= 0.047725112
+!   Version 2 (2006): F.NAL E= -464.0503737436, RMS grad= 0.047488976
+!   Version 3 (2010): FINAL E= -464.0414730210, RMS grad= 0.047666857
+!
+!   dispersion correction is added to a base energy of -464.0157445004,
+!       V1= -0.0187949665, V2= -0.0346292432, V3= -0.0257285207
+!
+!   This run takes 39 seconds on 2.66 GHz Cloverton (31 Mar 2015)
+!   answers stationary since ab out 2010.
+!
+!               geometry optimization would proceed as follows:
+!   NSERCH:   0  E= -464.0414730210  GRAD. MAX=  0.1090109  R.M.S.=  0.0476669
+!   NSERCH:   1  E= -464.1268340078  GRAD. MAX=  0.0560527  R.M.S.=  0.0237316
+!   NSERCH:   2  E= -464.1963543614  GRAD. MAX=  0.0199882  R.M.S.=  0.0102458
+!   NSERCH:   3  E= -464.2172229770  GRAD. MAX=  0.0068236  R.M.S.=  0.0031037
+!   NSERCH:   4  E= -464.2205245526  GRAD. MAX=  0.0037186  R.M.S.=  0.0017600
+!   NSERCH:   5  E= -464.2232222221  GRAD. MAX=  0.0034539  R.M.S.=  0.0020983
+!   NSERCH:   6  E= -464.2261386079  GRAD. MAX=  0.0029035  R.M.S.=  0.0016377
+!   NSERCH:   7  E= -464.2285481724  GRAD. MAX=  0.0018396  R.M.S.=  0.0008470
+!   NSERCH:   8  E= -464.2297860840  GRAD. MAX=  0.0007291  R.M.S.=  0.0004745
+!   NSERCH:   9  E= -464.2304786299  GRAD. MAX=  0.0003444  R.M.S.=  0.0001972
+!   NSERCH:  10  E= -464.2307997891  GRAD. MAX=  0.0004617  R.M.S.=  0.0002082
+!   NSERCH:  11  E= -464.2308705317  GRAD. MAX=  0.0002979  R.M.S.=  0.0001371
+!   NSERCH:  12  E= -464.2308836645  GRAD. MAX=  0.0000912  R.M.S.=  0.0000446
+!   NSERCH:  13  E= -464.2308843616  GRAD. MAX=  0.0000157  R.M.S.=  0.0000085
+!   NSERCH:  14  E= -464.2308843673  GRAD. MAX=  0.0000038  R.M.S.=  0.0000021
+!                          to coordinates
+!   C  6.0   1.3985952346   0.0000000000   1.9202896632
+!   H  1.0   2.4914899899   0.0000000000   1.9122856252
+!
+!   version 3 gradient answers changed November 2010, from Dima's bug fix.
+!
+ $CONTRL SCFTYP=RHF DFTTYP=B3LYP RUNTYP=gradient ISPHER=1 $END
+ $SYSTEM MWORDS=2 $END
+ $DFT    DC=.t. idcver=3 $END
+ $BASIS  GBASIS=CCD $END
+ $statpt opttol=1d-5 $end
+ $DATA
+benzene sandwich...dispersion test
+Dnh 6
+
+C           6.0   1.3391541168   0.0000000000   1.5
+H           1.0   2.3177263406   0.0000000000   1.5
+ $END
+
+! TRAVIS-CI SMALL
+

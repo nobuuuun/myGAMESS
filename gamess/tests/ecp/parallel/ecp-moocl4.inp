@@ -1,0 +1,30 @@
+!  ECP gradient test (SOSCF doesn't converge)
+! 
+!  FINAL E= -141.8061756528, 18 iters, RMS grad=0.000003958
+!
+!  This run takes 2 seconds on a 2.66 GHz Cloverton ( 6 APr 2025)
+!  results little changed since 2005
+!
+ $contrl scftyp=rhf coord=zmt nzvar=12 runtyp=gradient pp=sbkjc $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=sbkjc ndfunc=1 $end
+ $scf    diis=.true.  soscf=.false. $end
+ $data
+MoOCl4...SBKJC(d) geometry
+Cnv 4
+
+Mo
+O   1 rMoO
+Cl  1 rMoCl  2 aClMoO
+Cl  1 rMoCl  2 aClMoO  3   90.0
+Cl  1 rMoCl  2 aClMoO  3  180.0
+Cl  1 rMoCl  2 aClMoO  3  -90.0
+
+rMoO=1.6069621
+rMoCl=2.3158023
+aClMoO=104.51837
+ $end
+
+! TRAVIS-CI SMALL
+

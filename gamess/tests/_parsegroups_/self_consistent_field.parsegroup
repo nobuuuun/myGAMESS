@@ -1,0 +1,12 @@
+{
+  "parse_header" : "SELF-CONSISTENT FIELD ENERGY",
+  "parse_group" : [
+   {
+     "regex_string" : "^ FINAL ([\\sA-Z\\-]+)IS(\\s*)([0-9\\.\\-])+",
+     "parse_name"   : "FINAL SCF ENERGY",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   }
+  ]
+}

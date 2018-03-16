@@ -1,0 +1,29 @@
+{
+  "name": "opt-ogeo.log",
+  "validation": [
+    {
+      "header": "parse_header",
+      "name": "SEMI-EMPIRICAL ENERGY",
+      "value": "-125.8446077968",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "parse_header",
+      "name": "HEAT OF FORMATION",
+      "value": "22.82755",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "17.564717",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

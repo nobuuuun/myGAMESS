@@ -1,0 +1,41 @@
+!   F2 in cc-pVDZ basis set, testing quadruples corrections.
+!   There are only 30 AOs and 28 MOs in this run.
+!
+!           REFERENCE ENERGY:     -198.6856703757  *
+!             MBPT(2) ENERGY:     -199.0795859484  *
+!              CCSD   ENERGY:     -199.0884585720  *
+!             CCSD[T] ENERGY:     -199.0979164644  *
+!             CCSD(T) ENERGY:     -199.0974826517  *
+!           R-CCSD[T] ENERGY:     -199.0969858164  *
+!           R-CCSD(T) ENERGY:     -199.0965940187  *
+!          CR-CCSD[T] ENERGY:     -199.0963313224
+!          CR-CCSD(T) ENERGY:     -199.0959605979
+!
+!         CCSD(TQf)   ENERGY:     -199.0988442357  *
+!         CCSD(TQ),b  ENERGY:     -199.0988047379  *  <-- best if CCSD(TQ)
+!      R1-CCSD(TQ),a  ENERGY:     -199.0977932137  *
+!      R1-CCSD(TQ),b  ENERGY:     -199.0977567010  *
+!      R2-CCSD(TQ),a  ENERGY:     -199.0979737182  *
+!      R2-CCSD(TQ),b  ENERGY:     -199.0979071508  *
+!      CR-CCSD(TQ),a  ENERGY:     -199.0977723179
+!      CR-CCSD(TQ),b  ENERGY:     -199.0977198601     <-- best if CR-CC(Q)
+!   * indicates the energies produced by a CCTYP=CCSD(TQ) run.
+!
+!   This run takes 2 seconds on a 2.66 GHz Cloverton (30 Oct 2009)
+!   numerical results have not changed since April 28, 2005
+!  
+ $contrl scftyp=rhf cctyp=cr-cc(q) runtyp=energy ispher=1 $end
+ $system mwords=15 timlim=5 $end
+ $scf    conv=1d-8 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=ccD $end
+ $ccinp  iconv=7 ncore=2 nfzv=0 $end
+ $data
+F2 R=1.41193 cc-PVDZ
+Dnh 2
+
+F 9.0     0.0   0.0   1.41193/2
+ $end
+
+! TRAVIS-CI SMALL
+

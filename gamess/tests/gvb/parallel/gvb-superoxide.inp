@@ -1,0 +1,42 @@
+!  O2 anion, also known as "superoxide".   Test of pi**3 configuration.
+!  illustration of space and/or spin symmetry breaking with cruder wfn.
+!
+!    FINAL  GVB E= -149.5992929321,  8 iters,                 2-Pi
+!    F.NAL ROHF E= -149.6013011577, 13 iters,                 2-"Pi"
+!    F.NAL  UHF E= -149.6136976576, 12 iters, <S**2>=0.790   "2"-"Pi"
+!
+!  The ROHF run utilizes Kurt G's eigenvalue order fixup in its beta space.
+!
+!  This run takes 0 seconds on 2.66 GHz Cloverton (13 Feb 2014)
+!
+ $contrl icharg=-1 runtyp=energy mult=2 ispher=1 $end
+ $system mwords=1 $end
+ $basis  gbasis=accd $end
+ $guess  guess=huckel $end
+
+ $contrl scftyp=gvb nosym=0 $end
+ $scf    nco=7 nseto=1 no(1)=2 couple=.t.
+             f(1)= 1.0,  0.75
+         alpha(1)= 2.0,  1.50,  1.0
+          beta(1)=-1.0, -0.75, -0.5  $end
+
+!            broken space symmetry run:
+x$contrl scftyp=rohf runtyp=energy mult=2 nosym=1 $end
+!
+!            broken spin and broken space symmetry run:
+x$contrl scftyp=uhf runtyp=energy mult=2 nosym=1 $end
+
+!            an independent check on the spin/space symmetry adapted GVB
+x$contrl scftyp=mcscf nosym=0 $end
+x$det    group=c1 ncore=7 nact=2 nels=3 nstate=2 wstate(1)=1,1 $end
+
+ $data
+superoxide...aug-cc-pVDZ basis set for this anion...Wikipedia geometry
+Dnh 4
+
+O  8.0    0 0 1.33/2
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,91 @@
+! Test Monte Carlo optimization, using only EFP1-level particles.
+!
+! This is a sample input file for optimizing a 12-water cluster,
+! from the paper "A study of water clusters using the effective 
+!        fragment potential and Monte Carlo simulated annealing"
+!                P.N.Day, R.Pachter, M.S.Gordon, G.M.Merrill
+!                     J.Chem.Phys. 112, 2063-2073(2000)
+! This input file was created in 2001.
+!
+! This paper lists 10 structures for the (H2O)12 cluster, at energies
+!   (D2d)2     -0.170209
+!   (D2d)(S4)  -0.169933
+!   (S4)2      -0.169724
+!   D3         -0.168289
+!   (C1c)(Cs)  -0.167930
+!   (D2d)(C2)  -0.167796
+!   S6         -0.167761
+!   cage b     -0.167307
+!   cage a     -0.167284
+!   (C1c)(C1c) -0.167261
+! The first three of these, as well as the 5th,6th, and 10th consist
+! of two fused cubes. The D3 and S6 structures are hexagonal prisms.
+!
+! This test example uses a random initialization, so there is no
+! guarantee that the final energy will be any of the top 10 
+! structures.  Instead, look for the line
+!   EFFECTIVE FRAGMENT CALCULATION'S TOTAL ENERGY=
+! and the total energy should be < -0.13
+ $contrl scftyp=rhf runtyp=globop coord=fragonly  $end
+ $system mwords=1 timlim=120 $end
+ $globop nprt=-2 scale(1)=7.5,1.6  ngeopt=300 tempi=200 tempf=50
+         septol=1.3 alpha=0.0 dacrat=0.50 ntran=100 nrot=50
+         xmin=-4.55 xmax=4.55 ymin=-4.55 ymax=4.55 zmin=-4.55 zmax=4.55
+         rndini=.t. MCMIN=.t. JSTRND=.f. NFRMOV=2 $end
+ $basis  gbasis=dh npfunc=1 ndfunc=1 $end
+ $statpt projct=.false. nstep=395 npun=-1 nprt=-2 opttol=0.0001
+         hess=guess movie=.f. $end
+ $efrag
+
+FRAGNAME=H2OEF2
+ZO1            2.9677808413  -2.9498121036  -3.4534224898
+ZH2            2.9031795810  -2.7943417600  -2.5246953482
+ZH3            2.1354049624  -3.2996442051  -3.7284613070
+FRAGNAME=H2OEF2
+ZO1            2.9860461682  -1.9680330182   2.5738063455
+ZH2            3.3020357196  -1.1535416632   2.2165488892
+ZH3            3.1232168996  -1.9264188038   3.5067216159
+FRAGNAME=H2OEF2
+ZO1           -3.1537887700   1.8034155544    .8465469645
+ZH2           -3.7393977977   2.3842431410    .3876571788
+ZH3           -2.3421576736   2.2713994295    .9611092185
+FRAGNAME=H2OEF2
+ZO1           -3.0581362045   -.8575489250  -3.2620877049
+ZH2           -3.2732982833  -1.7705373528  -3.1570359814
+ZH3           -2.8285153365   -.7356113210  -4.1694376549
+FRAGNAME=H2OEF2
+ZO1            2.1822465435   3.2743390727   1.1652654119
+ZH2            2.3280818425   2.5003472604    .6451238984
+ZH3            1.7447788528   3.8975599801    .6075054507
+FRAGNAME=H2OEF2
+ZO1            -.5683057675   1.5550894300  -2.7840864522
+ZH2             .0885255932   2.0820348780  -3.2104425388
+ZH3           -1.0784242986   1.1515998502  -3.4680847689
+FRAGNAME=H2OEF2
+ZO1            2.4377679989   -.9452595110    .1223702908
+ZH2            1.5167770144  -1.1083466721   -.0043445008
+ZH3            2.8242857103  -1.7643622250    .3879889213
+FRAGNAME=H2OEF2
+ZO1             .3919446159    .8900268008   3.2690662197
+ZH2            1.0157987532   1.5921518747   3.3623660056
+ZH3             .1455951847    .6282614254   4.1418028926
+FRAGNAME=H2OEF2
+ZO1           -2.6161251460    .5701920734  -1.2286191304
+ZH2           -3.1864822708   -.1768936930  -1.3148401368
+ZH3           -1.7452756576    .2324229594  -1.0929296010
+FRAGNAME=H2OEF2
+ZO1           -1.0630002836   3.1070187136  -1.2829559920
+ZH2            -.5983537707   2.3557721511   -.9503741608
+ZH3            -.5024226704   3.5095033861  -1.9268793430
+FRAGNAME=H2OEF2
+ZO1            3.0363824049   2.2397080421  -2.7183577488
+ZH2            2.4999963567   1.8479031827  -3.3889227445
+ZH3            2.9635197212   3.1747429059  -2.8245617351
+FRAGNAME=H2OEF2
+ZO1           -2.1130314265   -.7141712125   2.2717007025
+ZH2           -2.4461921200  -1.5972261128   2.2815215681
+ZH3           -1.2321787791   -.7527928931   2.6085766936
+ $END
+! TRAVIS-CI SKIP
+! NEED DETERMINISTIC OUTPUT FOR	VALIDATION
+

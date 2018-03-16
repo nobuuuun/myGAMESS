@@ -1,0 +1,31 @@
+{
+  "parse_header" : "MP2 : SPIN-COMPONENT-SCALED",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)E\\(2S\\)=.*$",
+     "parse_name"   : "E(2S)",
+     "parse_tolerance": -1,
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)E\\(2T\\)=.*$",
+     "parse_name"   : "E(2T)",
+     "parse_tolerance": -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)E\\(2ST\\)=.*$",
+     "parse_name"   : "E(2ST)",
+     "parse_tolerance": -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)SCS-MP2=.*$",
+     "parse_name"   : "E(SCS-MP2)",
+     "parse_tolerance": -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   }
+
+  ]
+}

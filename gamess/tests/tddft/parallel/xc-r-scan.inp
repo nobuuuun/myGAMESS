@@ -1,0 +1,119 @@
+This test case is a scan of some TDDFT functionals, doing some gradients
+      CO closed shell...nicked from exam41.
+Test example created June 2010
+
+Results are given for LDA, GGA, metaGGA, hybrid, and range-corrected cases.xr:
+B3LYP, BLYP (opt), CAMB3LYP (opt), LC-BOP, M08-HX, NONE, PBE, PBE0, SVWN, TPSS
+
+TPSS:         (the usual test case is this one)
+   0  A1  -113.3302518750    0.000
+   1  E   -113.0258003082    8.285     0.6078 -0.2227  0.0000    0.085
+   2  E   -113.0258003082    8.285    -0.2227 -0.6078  0.0000    0.085
+   3  A1  -112.9743321451    9.685     0.0000  0.0000  0.0000    0.000
+
+  This run takes 36 seconds on 2.66 GHz Cloverton (22 Jul 2014)
+
+B3LYP:
+   STATE      ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+             HARTREE          EV         X       Y       Z     STRENGTH
+   0  A1  -113.2648113853     .000
+   1  E   -112.9619866170    8.240      .0443  -.6463   .0000     .085
+   2  E   -112.9619866170    8.240     -.6463  -.0443   .0000     .085
+   3  A1  -112.9217272349    9.336      .0000   .0000   .0000     .000
+
+BLYP:    at the input geometry,
+   0  A1  -113.3036657071     .000
+   1  E   -113.0057495835    8.107     -.6356  -.2153   .0000     .089
+   2  E   -113.0057495835    8.107     -.2153   .6356   .0000     .089
+   3  A1  -112.9579824185    9.407      .0000   .0000   .0000     .000
+          as a geometry optimization,
+    NSERCH=  0     ENERGY=    -113.0057496   r.m.s. grad=  .0916701
+    NSERCH=  1     ENERGY=    -113.0188017   r.m.s. grad=  .0165949
+    NSERCH=  2     ENERGY=    -113.0195726   r.m.s. grad=  .0058358
+    NSERCH=  3     ENERGY=    -113.0196681   r.m.s. grad=  .0007374
+    NSERCH=  4     ENERGY=    -113.0196696   r.m.s. grad=  .0000273
+    NSERCH=  5     ENERGY=    -113.0196696   r.m.s. grad=  .0000001
+          ending at
+   0  A1  -113.2861389315    0.000
+   1  E   -113.0196695974    7.251     0.3841 -0.3600  0.0000    0.049
+   2  E   -113.0196695974    7.251    -0.3600 -0.3841  0.0000    0.049
+   3  A1  -113.0034879939    7.691     0.0000  0.0000  0.0000    0.000
+
+CAMB3LYP:    at the input geometry,
+   0  A1  -113.2726610793    0.000
+   1  E   -112.9672063164    8.312     0.5543  0.3349  0.0000    0.085
+   2  E   -112.9672063164    8.312    -0.3349  0.5543  0.0000    0.085
+   3  A1  -112.9154659105    9.720     0.0000  0.0000  0.0000    0.000
+          as a geometry optimization,
+    NSERCH=  0     ENERGY=    -112.9672063 r.m.s. grad= 0.0825736
+    NSERCH=  1     ENERGY=    -112.9763927 r.m.s. grad= 0.0219025
+    NSERCH=  2     ENERGY=    -112.9776143 r.m.s. grad= 0.0068237
+    NSERCH=  3     ENERGY=    -112.9777264 r.m.s. grad= 0.0010114
+    NSERCH=  4     ENERGY=    -112.9777288 r.m.s. grad= 0.0000378
+    NSERCH=  5     ENERGY=    -112.9777288 r.m.s. grad= 0.0000002
+          ending at
+   0  A1  -113.2535110698     .000
+   1  E   -112.9777288005    7.504     -.0823  -.5320   .0000     .053
+   2  E   -112.9777288005    7.504      .5320  -.0823   .0000     .053
+   3  A1  -112.9667696944    7.803      .0000   .0000   .0000     .000
+
+LC-BOP:
+   0  A1  -113.0774221632     .000
+   1  E   -112.7726357092    8.294     -.6599   .0000   .0000     .088
+   2  E   -112.7726356882    8.294      .0000   .6599   .0000     .088
+   3  A1  -112.6762508814   10.916      .0000   .0000   .0328     .000
+
+M08-HX:
+   0  A1  -113.2722695577     .000
+   1  E   -112.9715441767    8.183      .0000   .6384   .0000     .082
+   2  E   -112.9715441758    8.183     -.6384   .0000   .0000     .082
+   3  A1  -112.8925682878   10.332      .0000   .0000   .1325     .004
+Last one is a different symmetry in C-inf-v point group, with non-zero 
+transition dipole.  Probably it just changes orders of states.  Note
+that LC-BOP does the same thing.
+
+NONE:    namely, TD-HF
+   0  A1  -112.7387771227    0.000
+   1  E   -112.4235082769    8.579     0.6263  0.0483  0.0000    0.083
+   2  E   -112.4235082769    8.579    -0.0483  0.6263  0.0000    0.083
+   3  A1  -112.3879178336    9.547     0.0000  0.0000  0.0000    0.000
+
+for PBE energy,
+   0  A1  -113.1914234501     .000
+   1  E   -112.8931916525    8.115      .5567   .3692   .0000     .089
+   2  E   -112.8931916525    8.115     -.3692   .5567   .0000     .089
+   3  A1  -112.8427298793    9.488      .0000   .0000   .0000     .000
+
+PBE0:
+   0  A1  -113.1873774650     .000
+   1  E   -112.8832138062    8.277      .5039   .3969   .0000     .083
+   2  E   -112.8832138062    8.277     -.3969   .5039   .0000     .083
+   3  A1  -112.8423249907    9.389      .0000   .0000   .0000     .000
+
+SVWN:
+   0  A1  -112.4228954018     .000
+   1  E   -112.1271995684    8.046     -.3946  -.5466   .0000     .090
+   2  E   -112.1271995684    8.046      .5466  -.3946   .0000     .090
+   3  A1  -112.0736248119    9.504      .0000   .0000   .0000     .000
+
+-----------
+
+ $contrl scftyp=rhf dfttyp=tpss tddft=excite runtyp=energy $end
+ $system mwords=10 $end
+ $basis  gbasis=N31 ngauss=6 diffsp=.T. ndfunc=1 $end
+ $guess  guess=huckel $end
+ $scf    soscf=.t. $end
+ $dft    lc=.false. $end
+ $tddft  nstate=3 mult=1 iroot=1 nrad=96 nleb=302 $end
+ $statpt opttol=1d-5 $end
+ $data
+CO...excitation to the three lowest singlet states
+Cnv 4
+
+C    6.0   0.0   0.0   0.0
+O    8.0   0.0   0.0   1.1497297
+ $end 
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

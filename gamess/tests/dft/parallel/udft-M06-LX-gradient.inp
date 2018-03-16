@@ -1,0 +1,21 @@
+ $CONTRL DFTTYP=M06-LX $END
+ $SYSTEM MWORDS=100 $END
+ $CONTRL MAXIT=200 SCFTYP=UHF RUNTYP=gradient ISPHER=1 UNITS=ANGS
+  EXETYP=RUN COORD=UNIQUE ICHARG=0 MULT=3            $END
+ $BASIS GBASIS=MIDI                                  $END
+ $SCF DIRSCF=.TRUE.                                  $END
+ $SCF DIIS=.TRUE.                                    $END
+ $SCF SOSCF=.FALSE.                                  $END
+ $STATPT NSTEP=100 OPTTOL=1D-7                       $END
+ $DFT NRAD=48 NLEB=590                               $END
+ $DATA
+ HFC-NH TRIPLET
+C1
+ H           1.0   0.5272060531  -1.6981903162   0.7745734831
+ N           7.0   0.2139398890  -1.2002485003  -0.0908018321
+ C           6.0  -0.4937258731  -0.0052493598   0.1881706036
+ H           1.0  -1.5086084353   0.0318142577  -0.2223596448
+ F           9.0   0.2289975364   1.1455552686  -0.0745345798
+ $END!
+!TRAVIS-CI SMALL
+! 

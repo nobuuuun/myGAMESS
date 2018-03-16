@@ -1,0 +1,17 @@
+{
+  "parse_header" : "TRUDGE",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)P\\(1\\)=.*$",
+     "parse_name"   : "OPTIMAL ORBITAL EXPONENT",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ TRUDGE ENERGY VALUE AT NSTEP.*$",
+     "parse_name"   : "TRUDGE ENERGY",
+     "parse_recipe" : "lastinstance_firstindex"
+   }
+  ]
+}

@@ -1,0 +1,38 @@
+!   methanol in water...SMD/C-PCM using AS tesselation...RHF hessian run
+!
+!   FINAL RHF E= -115.0440548664
+!   FREQ=  322.25, 1161.08, 1290.29, 1323.25, 1501.84, 1627.51,
+!   FREQ= 1636.41, 1645.05, 3212.30, 3267.93, 3309.87, 4076.38
+!
+!   This run takes 119 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!
+ $CONTRL SCFTYP=RHF RUNTYP=hessian nzvar=0 $end
+ $system mwords=1 $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+
+ $PCM    SOLVNT=WATER SMD=.T. $END
+ $TESCAV MTHALL=2 NTSALL=240 $END
+
+ $ZMAT   IZMAT(1)=1,1,2,  1,2,3,  1,3,4,  1,3,5,  1,3,6,
+                  2,1,2,3,  2,2,3,4,  2,2,3,5,  2,2,3,6,
+                  3,1,2,3,4,  3,1,2,3,5,  3,1,2,3,6 $END
+ $DATA
+SMD/HF/6-31G(d) seminumerical Hessian - methanol in water                    
+C1
+H   1.0   0.8544103328  -1.0492915558   0.0000372959
+O   8.0  -0.0474482437  -0.7514691513  -0.0000025862
+C   6.0  -0.0474115711   0.6605771398   0.0000004129
+H   1.0   0.4440466527   1.0554316208  -0.8830519211
+H   1.0   0.4440671672   1.0554237394   0.8830409397
+H   1.0  -1.0786259268   0.9860852614   0.0000098143
+ $end
+
+Cs symmetry coordinates supplied by Minnesota follow:
+H             1                      0.854518   -1.049727    0.000000
+O             8                     -0.047444   -0.751528    0.000000
+C             6                     -0.047444    0.660548    0.000000
+H             1                      0.444218    1.056076    0.882897
+H             1                     -1.078737    0.986505    0.000000
+
+! TRAVIS-CI SMALL
+

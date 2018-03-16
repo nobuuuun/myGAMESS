@@ -1,0 +1,164 @@
+
+      MODULE EFP_LOGICAL
+
+!> @brief logical variables that can turn on/off terms in EFP
+!>
+!> @author Peng XU
+!> @details
+!>   when MAKEFP:
+!>    IDQDYN : if true, generate LMO dipole-quadrupole polarizability
+!>    IQQDYN : if true, generate LMO quadrupole-quadrupole polarizability
+!>    IDODYN : if true, generate LMO dipole-octopole polarizability
+!>    IDD,IDQ,IQQ,IDO : if true, generate moleclar polarizabilities
+!>    $MAKEFP DISP7=.true. ==> IDQDYN = .true.
+!>    $MAKEFP DISP8 = .true. ==> IDQDYN,IQQDYN,IDODYN = .true.
+!>    $MAKEFP GLOBAL=.true. ==> IDD, IDQ, IQQ, IDO = .true.
+!>   when doing EFP-EFP calculation:
+!>    E7DISP : if true, calculate E7 dispersion
+!>    E8DISP : if true, calculate E8 dispersion
+!>    if the polarizabilities are present,but do not want to calculate
+!>    E7disp and/or E8disp, use NODISP7 and/or NODISP8
+!>    in $EFRAG
+!>    when the polarizabilities are not present,
+!>    change E7DISP and/or E8DISP to false
+!
+!>    for dispersion energy calculated from molecular polarizability
+!>    DISP_GLOBAL ==> global=.t. 
+!>
+!>
+      LOGICAL,PUBLIC :: GLOBAL = .false.
+      LOGICAL,PUBLIC :: IDD=.false.,IDQ=.false.,IQQ=.false.,IDO=.false.
+      LOGICAL,PUBLIC :: DISP7 = .true., DISP8 = .false.
+      LOGICAL,PUBLIC :: IDDDYN = .true.
+      LOGICAL,PUBLIC :: IDQDYN = .false.
+      LOGICAL,PUBLIC :: IQQDYN = .false.
+      LOGICAL,PUBLIC :: IDODYN = .false.
+      LOGICAL,PUBLIC :: E7DISP = .true.
+      LOGICAL,PUBLIC :: E8DISP = .false.
+
+      END MODULE EFP_LOGICAL
+
+      MODULE DYNPOL_MOL
+!> @brief molecular dynamic polarizability (standard and rotated)
+!>
+!> @author Peng Xu 
+!> @date July 14, 2014
+!> @details DYNDD : molecular dipole-dipole polarizability tensor
+!>          DYNDQ : molecular dipole-quadrupole polarizability tensor
+!>          DYNQQ : molecular quadrupole-quadrupole polarizability tensor
+!>          DYNDO : molecular dipole-octopole polarizability tensor
+!>          
+!>          DYNDD_ROT : dipole-dipole
+!>          DYNDQ_ROT : dipole-quadrupole
+!>          DYNQQ_ROT : quadrupole-quadrupole
+!>          DYNDO_ROT : dipole-octopole
+!>          MXLMO : 50 = max number of LMOs allowed(maybe substituted by a variable)
+!>          NFRQ : 12 = number of frequencies
+!>          EFP_MXFRG : 1050 = max number of fragments
+
+      integer, parameter :: EFP_MXFRG=1050
+      integer, parameter :: NFRQ=12
+
+      DOUBLE PRECISION,PUBLIC :: DYNDD(9,NFRQ),DYNDQ(27,NFRQ)
+      DOUBLE PRECISION,PUBLIC :: DYNQQ(81,NFRQ),DYNDO(81,NFRQ)
+      DOUBLE PRECISION,PUBLIC :: DYNDD_ROT(9,NFRQ,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DYNDQ_ROT(27,NFRQ,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DYNQQ_ROT(81,NFRQ,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DYNDO_ROT(81,NFRQ,EFP_MXFRG)
+
+      END MODULE DYNPOL_MOL
+
+      MODULE DYNPOL_DIST
+!> @brief LMO dynamic polarizability tensors (standard and rotated)
+!>
+!> @author Peng Xu
+!> @date July 14, 2014
+!> @details DYNDD_LMO : LMO dipole-dipole polarizability tensor
+!>          DYNDQ_LMO : LMO dipole-quadrupole polarizability tensor
+!>          DYNQQ_LMO : LMO quadrupole-quadrupole polarizability tensor
+!>          DYNDO_LMO : LMO dipole-octopole polarizability tensor
+!> 
+!>          DYNDD_LMO_ROT : dipole-dipole
+!>          DYNDQ_LMO_ROT : dipole-quadrupole
+!>          DYNQQ_LMO_ROT : quadrupole-quadrupole
+!>          DYNDO_LMO_ROT : dipole-octopole
+!>          DER_DYNDD : Rotational derivatives of dipole-dipole polarizability
+!>          DER_DYNDQ: Rotational derivative of dipole-quadrupole polarizability
+!>         
+!>          MXLMO : 50 = max number of LMOs allowed(maybe substituted by a variable)
+!>          NFRQ : 12 = number of frequencies
+!>          EFP_MXFRG : 1050 = max number of fragments
+!> @date January 2016 -E.Guidez-
+!>          DYNDQ_LMO_NEW: 2D array containing dipole-quadrupole polarizability
+!>                         Needed for optimizations and MD simulations
+
+      integer, parameter :: EFP_MXFRG=1050
+      integer, parameter :: MXLMO=50
+      integer, parameter :: NFRQ=12
+
+      DOUBLE PRECISION,PUBLIC :: DYNDD_LMO(9,NFRQ*MXLMO)
+      DOUBLE PRECISION,PUBLIC :: DYNDQ_LMO(27,NFRQ*MXLMO)
+      DOUBLE PRECISION,PUBLIC :: DYNQQ_LMO(81,NFRQ*MXLMO)
+      DOUBLE PRECISION,PUBLIC :: DYNDO_LMO(81,NFRQ*MXLMO)
+      DOUBLE PRECISION,PUBLIC :: DYNDQ_LMO_NEW(27,NFRQ*MXLMO*EFP_MXFRG)
+
+      DOUBLE PRECISION,PUBLIC :: DYNDD_LMO_ROT(9,NFRQ*MXLMO,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DYNDQ_LMO_ROT(27,NFRQ*MXLMO,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DYNQQ_LMO_ROT(81,NFRQ*MXLMO,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DYNDO_LMO_ROT(81,NFRQ*MXLMO,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DER_DYNDD(3,9,NFRQ*MXLMO,EFP_MXFRG)
+      DOUBLE PRECISION,PUBLIC :: DER_DYNDQ(3,27,NFRQ*MXLMO,EFP_MXFRG)
+      END MODULE DYNPOL_DIST
+
+      MODULE EFAIDIS
+!> @brief This module contains global variables necessary for
+!>         computing the EFP-ab initio dispersion energy
+!>
+!> @author Tony Smith
+!> - Jan 10, 2013
+!> @details
+!>    SABEFPAI : THREE-DIMENSIONAL ARRAY OF DOUBLE PRECISION VALUES,
+!>              allocated in SUBROUTINE EFPAIE in source file EFPAUL,
+!>              deallocated in SUBROUTINE EFAIDISP in this module.
+!>              Stores values of EFP-AI overlap integrals. Dimensions
+!>              are (NFRG,NA-MMCORE,MMXMO), where NFRG = number of EFPs,
+!>              NA-MMCORE = number of AI valence orbitals, MMXMO =
+!>              number of dispersion points (centroids) per EFP
+!>    IQMDISP : flag to turn on EFP-AI dispersion calculation
+!>              POSSIBLE VALUES: 0 = off, non-zero = on.
+!>              Set in SUBROUTINE EFINP in source file EFINP.
+!>    IDISDMP : flag to specify type of damping function
+!>              POSSIBLE VALUES: -1 = no damping, 1 = overlap-based,
+!>                    all other values (usually 0) = Tang-Toennies
+!>              Set in SUBROUTINE EFINP in source file EFINP.
+!>    IDSGRD  : flag to skip the dispersion gradient calculation
+!>              POSSIBLE VALUES: 0 = gradient off, non-zero = on.
+!>              Set in SUBROUTINE EFINP in source file EFINP.
+!>    MMCORE : number of core orbitals. Set in RHFCL in source
+!>             file RHFUHF.
+!>    DISPENRG : value of the EFP-AI dispersion energy
+!>    MMXMO  :  number of dispersion points (centroids) per EFP
+!>    MMXBF  :  number of basis functions
+!
+      DOUBLE PRECISION,ALLOCATABLE,SAVE,PUBLIC :: SABEFPAI(:,:,:)
+      INTEGER,SAVE,PUBLIC :: IQMDISP,IDISDMP,IDSGRD,MMCORE
+      DOUBLE PRECISION,SAVE,PUBLIC :: DISPENRG,MMXMO,MMXBF
+      END MODULE EFAIDIS
+C
+
+      MODULE EFAIEXREP
+!> @brief This module contains global variables for
+!>         the EFP-ab initio exchange repulsion energy
+!>
+!> @author Peng Xu 
+!> - July 1, 2015
+!> @details
+!>	EEXCH : EFP-ab initio exchange repulsion energy
+
+	DOUBLE PRECISION,PUBLIC :: EEXCH 
+	
+      END MODULE EFAIEXREP
+
+
+
+ 

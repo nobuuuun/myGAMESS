@@ -1,0 +1,40 @@
+!   TCSCF calculation on the singlet HCCOO anion.
+!   This test can also be a GVB test case, just change SCFTYP.
+!
+!   Peifeng and Hui's Table 2.  The individual components of
+!   the gradient will match what is shown in the table.
+!
+!   FINAL MCSCF E= -226.0342136397, 26 iters, RMS= 0.005415420
+!           GVB E= -226.0342136411, 12 iters,      0.005430094
+!   This will optimize in 5 steps to -226.0345778217, grad= 0.0000153
+!
+!   This run takes 6 seconds on a 2.66 GHz Cloverton (18 Jun 2014)
+!       (no appreciable change in results since at least 2008)
+!
+ $contrl scftyp=mcscf runtyp=gradient icharg=-1 nzvar=9 mult=1 $end
+ $system mwords=30 $end
+ $zmat   auto=.t. dlc=.t. $end
+ $basis  gbasis=N31 NGAUSS=6 NDFUNC=1 $end
+ $guess  guess=huckel $end
+ $statpt nstep= 50 $end
+
+!   either input sets up a TCSCF
+ $scf    nco=14 npair=1 $end
+ $DET    NCORE=14 NACT=2 NELS=2 ISTSYM=1 NSTATE=4 $END
+
+ $pcm    solvnt=water $end
+ $pcmcav radii=suahf $end
+
+ $DATA
+HCCOO anion...Peifeng and Hui's table 2...optimized gas phase geometry
+C1
+C           6.0  -0.1463890589   0.0886633962  -1.3969500428
+C           6.0   0.0627449739   0.0121942463   0.1574685134
+O           8.0   1.2426021182  -0.0328442346   0.5078565289
+O           8.0  -0.9633309107   0.0056602311   0.8484776835
+H           1.0  -1.2439409756   0.1205350433  -1.5020639988
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

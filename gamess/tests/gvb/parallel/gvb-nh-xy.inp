@@ -1,0 +1,30 @@
+!  an open shell SCF computation of the 1-delta state of NH.
+!
+!  The xy component is treated as a degenerate open shell,
+!  by applying the right prescription to Roothaan's A,B open
+!  shell couplings to get the input below.  That differs from
+!  Table B2 in Carbo and Riera, and consequently can utilize
+!  AO integral symmetry.
+!
+!  FINAL E= -54.8873844868 after 8 iters, RMS grad= 0.000778558
+!
+!  This run takes a second on anything (14 Feb 2014)
+!
+ $contrl scftyp=gvb mult=1 runtyp=gradient nosym=0 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $scf    nco=3 nseto=1 no(1)=2 npair=0 couple=.true. 
+             f(1)=1.0, 0.5
+         alpha(1)= 2.00, 1.00, 0.25 
+          beta(1)=-1.00,-0.50, 0.00 $end
+ $guess  guess=huckel $end
+ $data
+imidogen...x1y1 singlet-delta components
+Cnv 4
+
+Nitrogen   7.0
+Hydrogen   1.0  0.0 0.0 1.0220667
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

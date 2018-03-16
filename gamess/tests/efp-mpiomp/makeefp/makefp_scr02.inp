@@ -1,0 +1,37 @@
+!  An example for RHF/6-31+G(d,p) water follows (29 AOs):
+!
+!    To test OpenMP parallelization: run this in serial and in parallel to spot
+!    changes specific to OpenMP as opposed to general newly-introduced bugs
+!    Compare the following output parameters:
+!    optimized screening parameters - twice
+!
+!    The Stone analysis does not do numerical integration, so the
+!    screening region should be smaller (e.g. VDWSCL 0.4 to 0.5)
+!    Bond midpoints are included in the multipole screening.
+!
+!   SINGLE EXPONENTIAL USED AS DAMPING FUNCTION:
+!     O=1.8552, H=2.3826, midpoints=10.0
+!   SINGLE GAUSSIAN USED AS DAMPING FUNCTION:
+!     O=1.3044, H=0.9481, midpoints=10.1969
+!
+!   This run takes 1 second on 2.66 GHz Cloverton ( 6 Oct 2015)
+!   answers unchanged since September 2008
+!
+ $contrl units=bohr runtyp=makefp scftyp=rhf $end
+ $system mwords=2 $end
+ $basis  gbasis=n31 ngauss=6 npfunc=1 ndfunc=1 diffsp=.true. $end
+
+ $makefp frag=water screen=.true. $end
+ $dampgs
+H3=H2
+bo31=bo21
+ $end
+ $pdc  vdwscl=0.5 $end
+
+ $data
+Water - Jan's geom
+C1
+O1 8.0    .0845021753  -2.7438627586    .0000000000
+H2 1.0   -.5862594155  -3.5602398631   1.4351447172
+H3 1.0   -.5887431148  -3.5632627482  -1.4322560819
+ $END

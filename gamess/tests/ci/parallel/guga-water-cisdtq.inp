@@ -1,0 +1,84 @@
+! H2O CISDTQ in DZ (Huzinaga/Dunning) basis set
+! from Mariusz Klobukowski 2/09/90
+!
+! FINAL RHF E=-76.0098391982, CISDTQ's EIGENSTATE=-76.1576271394
+!
+! This run takes 2 seconds on a 2.66 GHz Cloverton (14 Apr 2015)
+! Answers have not changed much since 1990.
+!
+! --------------------------------------------------------------------
+! Mariusz wanted to be sure the GAMESS' code for GUGA ran these
+! excitation levels correctly (getting the DKDR answers).
+!  (a) earlier GUGA results of Laidig, Saxe, and Schaefer,
+!      JCP 73 (1980) 1765;   (LSS)
+!  (b) recent  SGA  results of Duch, Karwowski, Diercksen, and Rettrup,
+!      CPL 144 (1988) 421.   (DKDR)
+!
+! -----------------------------------------------------
+!  Wavefn. Method    CSF  Total engy  E_corr    C_0
+! -----------------------------------------------------
+!
+!  SCF     LSS         1  -76.009838  0.0       1.0
+!          DKDR        1  -76.009838  0.0       1.0
+!          GAMESS      1  -76.009839  0.0       1.0
+!
+!  CIS     LSS        20  -76.009838  0.0       1.0
+!          DKDR       20  -76.009838  0.0       1.0
+!          GAMESS     20  -76.009839  0.0       1.0
+!
+!  CISD    LSS       361  -76.150015  0.140177  0.97874
+!          DKDR      361  -76.150015  0.140177  0.97874
+!          GAMESS    361  -76.150016  0.140177  0.97874
+!
+!  CISDT   LSS      3203  -76.151156  0.141318  0.97819
+!          DKDR     3203  -76.151156  0.141318  0.97819
+!          GAMESS   3203  -76.151158  0.141319  0.97819
+!
+!  CISDTQ  LSS     17678  -76.157603  0.147765  0.97543
+!          DKDR    17678  -76.157626  0.147788  0.97542
+!          GAMESS  17678  -76.157627  0.147788  0.97542
+!
+! -----------------------------------------------------
+!
+ $CONTRL SCFTYP=rhf cityp=guga runtyp=energy UNITS=BOHR $END
+ $system mwords=1 $end
+ $GUESS  GUESS=huckel $END
+ $cidrt  GROUP=C2V IEXCIT=4 NFZC=0 NDOC=5 NVAL=9 $END
+ $DATA
+H2O...1-A1...CI...DZ BASIS
+CNV      2
+ 
+OXYGEN     8.0  0.0                 0.0                -0.009
+  S    6
+   1 7816.54         .002031
+   2 1175.82         .015436
+   3  273.188        .073771
+   4   81.1696       .247606
+   5   27.1836       .611832
+   7    3.4136       .241205
+  S    1
+   1    9.5322      1.0
+  S    1
+   1    0.9398      1.0
+  S    1
+   1    0.2846      1.0
+  P    4
+   1   35.1832       .019580
+   2    7.9040       .124189
+   3    2.3051       .394727
+   4    0.7171       .627375
+ P    1
+   1    0.2137      1.0
+ 
+HYDROGEN   1.0  1.515263            0.000000           -1.058898
+  S    3    1.2
+    1 13.3615         .032828
+    2  2.0133         .231208
+    3  0.4538         .817238
+  S    1    1.2
+    1  0.1233        1.0
+ 
+ $END
+
+! TRAVIS-CI SMALL
+

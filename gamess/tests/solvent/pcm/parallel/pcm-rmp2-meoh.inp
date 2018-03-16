@@ -1,0 +1,42 @@
+!   MP2-level methanol placed in PCM methanol ... created February 2010
+!
+!   the IMS code, run serially:
+!     NSERCH:   0  E=     -115.3566551642  R.M.S.=  0.0106216
+!     NSERCH:   1  E=     -115.3578243451  R.M.S.=  0.0041789
+!     NSERCH:   2  E=     -115.3580788437  R.M.S.=  0.0009161
+!     NSERCH:   3  E=     -115.3580881173  R.M.S.=  0.0003660
+!     NSERCH:   4  E=     -115.3580900894  R.M.S.=  0.0000447
+!     NSERCH:   5  E=     -115.3580901565  R.M.S.=  0.0000214
+!     NSERCH:   6  E=     -115.3580901593  R.M.S.=  0.0000197
+!     NSERCH:   7  E=     -115.3580901853  R.M.S.=  0.0000258
+!     NSERCH:   8  E=     -115.3580902562  R.M.S.=  0.0000392
+!     NSERCH:   9  E=     -115.3580903669  R.M.S.=  0.0000465
+!     NSERCH:  10  E=     -115.3580904451  R.M.S.=  0.0000320
+!     NSERCH:  11  E=     -115.3580904830  R.M.S.=  0.0000099
+!     NSERCH:  12  E=     -115.3580904746  R.M.S.=  0.0000010
+!
+!   this run takes 59 seconds on 2.66 GHz Cloverton ( 2 Oct 2015)
+!
+ $contrl scftyp=rhf mplevl=2 runtyp=optimize ispher=1 nzvar=12 $end
+ $system mwords=5 memddi=5 $end
+ $basis  gbasis=pcseg-1 $end
+ $guess  guess=huckel $end
+ $pcm    solvnt=ch3oh $end
+ $mp2    code=ims $end
+ $zmat   izmat(1)=1,1,4,  1,2,4,  1,3,4,  1,4,5,  1,5,6,
+            2,1,4,5,  2,2,4,5,  2,3,4,5,  2,6,5,4,
+            3,1,4,5,6,  3,2,4,5,6,  3,3,4,5,6  $end
+ $statpt opttol=1d-5 $end
+ $data
+methanol in methanol ... Frank Jensen's DZP level basis set
+C1
+H     1.0    -0.23148933    -0.54925847     0.25605574
+H     1.0    -1.29260743    -1.45378900    -0.83388162
+H     1.0    -1.56952238     0.26318315    -0.56352019
+C     6.0    -0.80685145    -0.49620166    -0.66465724
+O     8.0    -0.00856923    -0.12880918    -1.75578928
+H     1.0     0.66653633    -0.76927090    -1.90209424
+ $end
+
+! TRAVIS-CI SMALL
+

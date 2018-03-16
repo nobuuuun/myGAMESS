@@ -1,0 +1,159 @@
+!    Water...using cc-pVxZ, where x=D,T,Q,5,6 contains d,f,g,h,i as top L.
+!    Using MP2 tests the virtual space, where most of g,h,i AOs live.
+!    Property results are tested as well.
+!
+!               Oxygen          Hydrogen     #AOs #MOs  #a1 #a2 #b1 #b2
+!    cc-pVDZ is 3s2p1d          2s1p           25   24   11   2   4   7
+!    cc-pVTZ is 4s3p2d1f        3s2p1d         65   58   23   7  11  17
+!    cc-pVQZ is 5s4p3d2f1g      4s3p2d1f      140  115   41  17  23  33
+!    cc-pV5Z is 6s5p4d3f2g1h    5s4p3d2f1g    266  201   69  33  42  57
+!    cc-pV6Z is 7s6p5d4f3g2h1i  6s5p4d3f2g1h  462  322  106  57  69  90
+!
+!    CC6's FINAL E= -76.0610888717, E(MP2)= -76.3595697729, mu= 1.911647 Debye
+!    CC6 run takes 2613 seconds on 2.66 GHz Cloverton (8 Jan 2013)
+!
+!    results for all basis sets and many more properties follow:
+!
+!                MP2                  HF-SCF
+!    CCD:   -76.2262059395       -76.0214579776     (GAMESS)
+!
+!    CCT:   -76.3156549110       -76.0510006856     (GAMESS)
+!           -76.315654911084     -76.051000685642   (NWchem)
+!           -76.31565490         -76.05100067       (MOLPRO)
+!
+!    CCQ:   -76.3444946314       -76.0585183156
+!           -76.344494631520     -76.058518315810
+!           -76.34449462         -76.05851830
+!
+!    CC5:   -76.3555185017       -76.0607701778
+!           -76.355518501754     -76.060770177962
+!           -76.35551849         -76.06077016
+!
+!    CC6:   -76.3595697729       -76.0610888717
+!           -76.xxx              -76.xxx           (NWchem stops before i)
+!           -76.35956976         -76.06108886
+!
+!    a full valence MCSCF run with CC6 should give
+!        E(MCSCF)= -76.118616667   E(MRMP)= -76.3555740003
+!
+!    Cartesian GTO energies, which appear to be correctly converging wrt L:
+!                           RHF             MP2          # AOS    max L
+!          vdz      -76.0218188365   -76.2286214944        25       d
+!          vtz      -76.0515432558   -76.3175197603        65       f
+!          vqz      -76.0587787137   -76.3465381938       140       g
+!          v5z      -76.0608624878   -76.3569792071       266       h
+!          v6z      -76.0611177217   -76.3607553646       462       i
+!
+!    Using spherical harmonics, here is the convergence of GTO properties:
+!
+!     dipole (norm), in Debye:
+!                   RHF         MP2       MOLPRO/RHF   NWchem/RHF
+!          vdz   2.103248   1.992303      2.10309448    2.103248
+!          vtz   2.066674   1.949263      2.06652291    2.066674
+!          vqz   2.049569   1.932335      2.04941864    2.049568
+!          v5z   2.044855   1.926628      2.04470552    2.044855
+!          v6z   2.034622   1.911647      2.03447356      n/a
+!     MOLPRO is smaller by a fixed ratio of 1.000073,
+!     so its discrepancy is only a units conversion factor.
+!
+!     GAMESS evaluates moments wrt the center of mass!
+!     quadruple results are skipped here.
+!     octupole, xxz component, in units of x10^34 ESU-cm**3
+!                   RHF         MP2
+!          vdz  -0.956161  -0.865153
+!          vtz  -1.042811  -0.983456
+!          vqz  -1.068827  -1.031421
+!          v5z  -1.067417  -1.039828
+!          v6z  -1.069208  -1.047641
+!
+!     electron density, at O and at H
+!                   --- RHF ---           --- MP2 ---          NWchem/RHF
+!          vdz  297.249120 0.336064   297.235391 0.337465   297.249120 0.336064
+!          vtz  298.670398 0.376393   298.814559 0.377763   298.670398 0.376393
+!          vqz  304.398763 0.391979   304.463568 0.390629   304.398763 0.391979
+!          v5z  306.540440 0.406504   306.616478 0.403493   306.540440 0.406504
+!          v6z  308.205328 0.413412   308.290932 0.409849           n/a
+!     the tightest s GTO is getting an ever bigger exponent in these bases,
+!     so this property, right on the nucleus, is not rapidly convergent.
+!
+!     electrostatic potential, at O and at H:
+!                   --- RHF ---           --- MP2 ---          NWchem/RHF
+!          vdz -22.335352 -0.997218  -22.336416 -0.993259  -22.335352 -0.997218
+!          vtz -22.332195 -1.001433  -22.352785 -0.993755  -22.332195 -1.001433
+!          vqz -22.329912 -0.998351  -22.349940 -0.987561  -22.329912 -0.998351
+!          v5z -22.327324 -0.996155  -22.347025 -0.983258  -22.327324 -0.996155
+!          v6z -22.326621 -0.995660  -22.346285 -0.982022           n/a
+!     This property ignores AOs on the local nucleus, so it is convergent.
+!
+!     electric field and electric field gradient.  If we denote the
+!     electrostatic potential as V, these are its gradient, dV/dq,
+!     and its hessian, d2V/dq1 dq2, wrt Cartesian coordinates q.
+!     The numbers are the field's z component at O,
+!     and the field gradient's xx component at H:
+!                   --- RHF ---          --- MP2 ---            MOLPRO/RHF
+!          vdz  -0.098056  0.219187   -0.100560 0.224151   -0.098056 0.219187
+!          vtz  -0.040160  0.209796   -0.040066 0.215748   -0.040160 0.209796
+!          vqz  -0.007763  0.199952   -0.010368 0.204498   -0.007763 0.199952
+!          v5z   0.006105  0.198810    0.002696 0.202575    0.006105 0.198810
+!          v6z   0.011247  0.198289    0.007445 0.201904    0.011247 0.198289
+!     This property ignores AOs on the local nucleus, so it is semi-convergent.
+!
+!     There is some hessian data at the end.
+!
+ $contrl scftyp=rhf mplevl=2 runtyp=energy units=bohr ispher=+1 $end
+ $system mwords=900 memddi=10 $end
+ $guess  guess=huckel $end
+
+!   next are being very careful about numbers
+ $contrl icut=11 qmttol=1d-9 $end
+ $scf    conv=1d-8 $end
+ $mp2    cutoff=1d-11 code=ddi $end
+!   next ensures we light up all the property integral routines
+ $elmom  iemom=3 $end
+ $elfldg iefld=2 $end
+ $elpot  iepot=1 $end
+ $eldens ieden=1 $end
+!   next turns on MP2 level properties, for the heck of it
+ $mp2    mp2prp=.true. $end
+
+!      Step the basis: CCD, CCT, CCQ, CC5, CC6.
+ $basis  gbasis=cc6 $end
+ $scf    dirscf=.t. $end
+ $data
+water at Molpro's coords in a.u.  (R=1 Angstrom, angle=104)
+Cnv 2
+
+O       8.00     .000000000     .000000000    -.130186057
+H       1.00     .000000000   -1.489124400    1.033245433
+ $end
+
+
+!     test of spdfg 2nd derivative integral package (tops out at CCQ)
+!     each run uses the RHF geometry of its own basis set (Angstroms)
+!     RHF/CCD energy is -76.0270535128 at this geometry:
+O   8.0   0.0000000000   0.0000000000  -0.0441782508
+H   1.0   0.0000000000  -0.7487928738   0.5344133516
+!     RHF/CCT energy is -76.0577697019 at this geometry:
+O   8.0   0.0000000000   0.0000000000  -0.0358219594
+H   1.0   0.0000000000  -0.7512074921   0.5302352059
+!     RHF/CCQ energy is -76.0655188004 at this geometry:
+O   8.0   0.0000000000   0.0000000000  -0.0344558167
+H   1.0   0.0000000000  -0.7514938655   0.5295521346
+!
+!    with the results of
+!    cc-pVDZ: residual FREK= 4.07, 1.25, 0.15, 0.01, 3.65, 7.64
+!    cc-pVDZ:   actual FREK=     1775.81, 4113.76, 4212.09
+!    cc-pVTZ: residual FREK= 1.62, 0.46, 0.01, 0.38, 2.76, 4.76
+!    cc-pVTZ:   actual FREK=     1753.02, 4127.03, 4226.94
+!    cc-pVQZ: residual FREQ= 1.83, 0.43, 0.01, 1.00, 1.43, 2.80
+!    cc-pVQZ:   actual FREQ=     1750.59, 4130.12, 4229.45
+!    cc-pVQZ: seminumerical is   1750.32, 4130.23, 4229.55
+!                and these IR data for the genuine modes (a1,a1,b2):
+!    cc-pVDZ intencity: 1.90985     0.50126     1.43122
+!    cc-pVTZ intencity: 2.13711     0.34484     1.78056
+!    cc-pVQZ intensity: 2.21709     0.35647     2.02432
+!    cc-pVQZ semi-num:  2.21714     0.35634     2.02451
+!        the largest basis set takes just half minute or so.
+
+! TRAVIS-CI LARGE
+

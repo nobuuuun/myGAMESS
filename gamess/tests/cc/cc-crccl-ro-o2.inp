@@ -1,0 +1,55 @@
+!   O2 energy from CR-CCSD(T)_L theory
+!   The aug-cc-pVDZ basis has 50 AOs and 46 MOs
+!
+!   run in D4h symmetry, where the symmetry apparatus in GAMESS ensures
+!   clean pi-x and pi-y orbitals, the energies are
+!      G.S. CR-CC(2,3),A CORRECTION  -.012188, TOTAL E=     -150.0193975132
+!      G.S. CR-CC(2,3),B CORRECTION  -.011545, TOTAL E=     -150.0187550251
+!      G.S. CR-CC(2,3),C CORRECTION  -.014573, TOTAL E=     -150.0217827460
+!      G.S. CR-CC(2,3),D CORRECTION  -.014511, TOTAL E=     -150.0217206344
+!   the standard test reproduces the data just above.
+!
+!   this test takes 16 seconds on 2.66 GHz Cloverton (30 Oct 2009)
+!   results are unchanges since March 2007
+!
+!   ----------------------------------------------------------------------
+!   run in C1 symmetry on an IBM, taking its diagonalization's choice for
+!   how the pi orbitals turn out, we get
+!      G.S. CR-CC(2,3),A CORRECTION  -.012188, TOTAL E=     -150.0193975131
+!      G.S. CR-CC(2,3),B CORRECTION  -.011545, TOTAL E=     -150.0187550250
+!      G.S. CR-CC(2,3),C CORRECTION  -.014605, TOTAL E=     -150.0218152668
+!      G.S. CR-CC(2,3),D CORRECTION  -.014547, TOTAL E=     -150.0217564600
+!   From this we can see the type D energy, which is considered the best
+!   energy result, is not invariant to rotation of degenerate orbitals,
+!   but type A is, and thus is the most suitable for nuclear derivatives.
+!
+!   Therefore, an optimization will work on energy -A- as follows:
+!   NSERCH=  0     ENERGY=    -150.0193975, RMS GRADIENT =  .0097014
+!   NSERCH=  1     ENERGY=    -150.0194739, RMS GRADIENT =  .0068301
+!   NSERCH=  2     ENERGY=    -150.0195718, RMS GRADIENT =  .0002928
+!   NSERCH=  3     ENERGY=    -150.0195721, RMS GRADIENT =  .0000094
+!   converging to R= 1.2188 Angstroms
+!
+ $contrl scftyp=rohf mult=3 cctyp=cr-ccl runtyp=energy ispher=1 $end
+--- $contrl runtyp=optimize numgrd=.true. $end
+ $system mwords=5 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=accd $end
+
+ $data
+O2...test of invariance in open shell CR-CCL energies
+Dnh 4
+
+O   8.0   0.00000000    0.0000000    1.20752/2
+ $end
+
+--- $data
+O2...test of invariance in open shell CR-CCL energies
+C1
+O   8.0   0.00000000    0.0000000   -1.20752/2
+O   8.0   0.00000000    0.0000000    1.20752/2
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

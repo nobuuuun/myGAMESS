@@ -1,0 +1,109 @@
+#  EFP/FMO-MP2 energy run, from Takeshi Nagata.
+#  8 water cluster: 4 waters are in FMO part, and 4 are in EFP1 part.
+#  caution: ab initio waters are far apart, making the results very good.
+#
+#  monomer/dimer calculations have these results:
+!      FINAL energies run -76.0511955504 to -152.0953171968 (17 vals)
+#     with E(MP2) running -76.3130184051 to -152.6160675813 ( 5 vals)
+#  one body results are
+#     Total energy of the molecule: Ecorr  (1)=     -305.271875912
+#     Total energy of the molecule: Euncorr(1)=     -304.230516255
+#     Total energy of the molecule: Edelta (1)=       -1.041359657
+#     Dipole moment D(xyz),DA(1)=   -1.5642858   -5.0257395    0.0265812
+#  two body results are
+#     Total energy of the molecule: Ecorr  (2)=     -305.271528761
+#     Total energy of the molecule: Euncorr(2)=     -304.230137639
+#     Total energy of the molecule: Edelta (2)=       -1.041391122
+#     Dipole moment D(xyz),DA(2)=   -1.5635150   -5.0258565    0.0261033
+#
+#  This run takes 28 seconds on a 2.66 GHz Cloverton (26 Oct 2015)
+#  results unchanged since 2009
+#
+#  -------------------------------------------------------------------
+#  if FMO is not used in the ab initio cluster, by changes to
+#  the input as described below,
+#      F I N A L E= -304.2323703088    E(M P 2)= -305.2788816621
+#      and SCF level dipole vector= -1.567402   -5.033753     .027412
+#  and the run takes 90 s_conds vs. 62 for FMO, on the same hardware.
+#
+ $mp2 code=ddi $end
+ $contrl scftyp=rhf MPLEVL=2 runtyp=energy coord=unique ispher=1 $end
+ $SYSTEM MWORDS=20 MEMDDI=20 $END
+ $basis  gbasis=cct $end
+
+--- $gddi   ngroup=2 $end
+ $fmo    nfrag=4 icharg(1)=0,0,0,0
+         frgnam(1)=frag01,frag02,frag03,frag04
+         indat(1)=1,1,1,
+                  2,2,2,
+                  3,3,3,
+                  4,4,4
+ $end
+ $fmoprp nprint=0 $end
+ $fmoxyz
+O  O        -1.5502205       6.9386743       4.7683417
+H  H        -2.2010799       6.7694047       5.4306164
+H  H        -0.9907992       6.1790918       4.7373555
+O  O         1.3485805      -6.0373719      -6.6179025
+H  H         2.1074566      -5.7576050      -7.1044366
+H  H         0.7045386      -6.3088120      -7.2522590
+O  O         3.2046392       5.7360746       2.0936516
+H  H         3.6524686       5.2113689       2.7378647
+H  H         2.4283408       5.2590505       1.8473048
+O  O        -7.5968087       3.4226601      12.3363345
+H  H        -7.4667925       2.6232748      11.8516111
+H  H        -8.3093341       3.2642290      12.9347365
+ $end
+
+#    use the following input to eliminate FMO use,
+#    so that 4 waters are treated fully ab initio,
+#    and comment out the $FMO group above.
+--- $data
+four water cluster
+C1
+O 8      -1.5502205       6.9386743       4.7683417
+H 1      -2.2010799       6.7694047       5.4306164
+H 1      -0.9907992       6.1790918       4.7373555
+O 8       1.3485805      -6.0373719      -6.6179025
+H 1       2.1074566      -5.7576050      -7.1044366
+H 1       0.7045386      -6.3088120      -7.2522590
+O 8       3.2046392       5.7360746       2.0936516
+H 1       3.6524686       5.2113689       2.7378647
+H 1       2.4283408       5.2590505       1.8473048
+O 8      -7.5968087       3.4226601      12.3363345
+H 1      -7.4667925       2.6232748      11.8516111
+H 1      -8.3093341       3.2642290      12.9347365
+ $end
+
+#    use the following to apply FMO model to 4 waters
+ $data
+Huge water cluster FMO/EFP1 calculation
+C1
+h-1 1
+c-1 6
+n-1 7
+o-1 8
+ $end
+
+ $efrag
+coord=cart 
+fragname=h2orhf
+ZO1          6.2014105      -3.6958301       5.1752946
+ZH2          5.4805182      -3.9850634       5.7115188
+ZH3          5.9346049      -2.8823478       4.7778792
+fragname=h2orhf
+ZO1         -3.3718964      -8.6577874       6.4023369
+ZH2         -2.4382885      -8.7166973       6.5279702
+ZH3         -3.7298939      -8.2928009       7.1957475
+fragname=h2orhf
+ZO1          9.1991659       3.2450423      -1.8627940
+ZH2          9.4947241       3.3488064      -0.9724254
+ZH3          8.9437269       2.3416479      -1.9602984
+fragname=h2orhf
+ZO1        -10.0514808      -8.3632104      -3.7365583
+ZH2        -10.3233385      -8.7783830      -2.9336866
+ZH3         -9.1089863      -8.4084322      -3.7597280
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,31 @@
+!  ZAPT test with 3 unpaired electrons
+!  The electronic state is 4-A'' (oxygen n->pi* excitation)
+!  There are 135 AOs, 115 MOs, occupied= 9 alpha and 6 beta.
+!
+!  FINAL E= -113.1091649405, E(MP2)=  -113.4074590698, RMS=0.165703093
+!
+!  This run takes 75 seconds on a 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results have been essentially unchanging since 2010
+!
+ $contrl scftyp=rohf mult=4 mplevl=2 runtyp=gradient
+         ispher=1 nzvar=3 coord=zmt $end
+ $system parall=.true. mwords=1 memddi=5 $end
+ $mp2    code=ddi ospt=zapt $end
+ $basis  gbasis=acct $end
+ $guess  guess=huckel $end
+ $data
+HC=O ... X-2-A' ROHF/6-31G(d) geometry, far from the 4-A'' geometry!
+Cs
+
+H
+C 1 rCH
+O 2 rCO 1 aHCO
+
+rCH=1.1030586
+rCO=1.1582328
+aHCO=127.044197
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,117 @@
+{
+  "name": "efp1-fo-irc.log",
+  "validation": [
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "ELECTROSTATIC ENERGY",
+      "value": "-0.0590898139",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "REPULSION ENERGY",
+      "value": "0.0219228223",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "POLARIZATION ENERGY",
+      "value": "-0.0100710809",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "EFP-EFP INTERACTION ENERGIES",
+      "name": "FINAL EFP ENERGY",
+      "value": "-0.0501465146",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -5",
+      "value": "-0.0501170",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -4",
+      "value": "-0.0501296",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -3",
+      "value": "-0.0501386",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -2",
+      "value": "-0.0501442",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "TOTAL ENERGY : IRC POINT -1",
+      "value": "-0.0501465",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "PATH DISTANCE STOTAL : IRC",
+      "value": "10.71209",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "IRC",
+      "name": "ENERGY : IRC",
+      "value": "-0.0501465",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "MASS WEIGHTED TANGENT GRAD. NORM : IRC",
+      "value": "0.0000062",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "IRC",
+      "name": "NEXT GEOMETRY STEP PREDICTED ANGLE : IRC",
+      "value": "2.379",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "IRC",
+      "name": "NEXT CARTESIAN RMS DISPLACEMENT : IRC",
+      "value": "0.0013976",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    }
+  ]
+}

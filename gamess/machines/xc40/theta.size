@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+#   The purpose of this script is to minimize the storage for EFP and PCM
+#   solvation models, as the Blue Gene is a small memory system.
+#   Of course, this should be skipped if you want to use EFP or PCM models
+#
+for src in source/*.src; do
+    MODULE=$(echo $src| cut -d "." -f1)
+    sed -e "/MXATM=2000/s//MXATM=2500/" \
+	-e "/MXAO=8192/s//MXAO=33000/" \
+	-e "/MXGSH=30/s//MXGSH=16/" \
+	-e "/MXSH=5000/s//MXSH=9000/" \
+	-e "/MXGTOT=20000/s//MXGTOT=35000/" \
+	-e "/MXRT=100/s//MXRT=100/" \
+	-e "/MXFRG=1050/s//MXFRG=4/" \
+	-e "/MXDFG=5/s//MXDFG=1/" \
+	-e "/MXPT=2000/s//MXPT=8/" \
+	-e "/MXFGPT=12000/s//MXFGPT=6/" \
+	-e "/MXSP=500/s//MXSP=1/" \
+	-e "/MXTS=20000/s//MXTS=1/" \
+	$MODULE.src >> $MODULE.munged
+    mv $MODULE.munged $MODULE.src
+done
+
+for src in source/*.src; do
+    MODULE=$(echo $src| cut -d "." -f1)
+    sed -e "/mxatm=2000/s//mxatm=2500/" \
+        -e "/mxao=8192/s//mxao=33000/" \
+        -e "/mxgsh=30/s//mxgsh=16/" \
+        -e "/mxsh=5000/s//mxsh=9000/" \
+        -e "/mxgtot=20000/s//mxgtot=35000/" \
+        -e "/mxrt=100/s//mxrt=100/" \
+        -e "/mxfrg=1050/s//mxfrg=4/" \
+        -e "/mxdfg=5/s//mxdfg=1/" \
+        -e "/mxpt=2000/s//mxpt=8/" \
+        -e "/mxfgpt=12000/s//mxfgpt=6/" \
+        -e "/mxsp=500/s//mxsp=1/" \
+        -e "/mxts=20000/s//mxts=1/" \
+        $MODULE.src >> $MODULE.munged
+    mv $MODULE.munged $MODULE.src
+done

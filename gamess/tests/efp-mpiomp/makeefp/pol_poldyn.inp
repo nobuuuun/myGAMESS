@@ -1,0 +1,50 @@
+!  Test case for methanol imaginary frequency dependent polarizability
+!
+!    to test OpenMP parallelization: run this in serial and in parallel to spot
+!    changes specific to OpenMP as opposed to general newly-introduced bugs
+!    Compare the following output parameters:
+!    total alpha polarizability tensor - three times
+!
+!   static       MEAN ALPHA POLARIZABILITY =     2.231538051  (total)
+!   imag 1       MEAN ALPHA POLARIZABILITY =     2.231517418  (total)
+!   imag 12      MEAN ALPHA POLARIZABILITY =     0.002283445  (total)
+!
+!  numerical results reviewed March 2013: little changed since 2009.
+!  It is important to realize that the printout gives a ludicrous
+!  number of figures, so the ends of these do change a little.
+!
+!  This run takes 1 second on almost anything (20 Mar 2013)
+!
+ $CONTRL SCFTYP=rhf RUNTYP=energy local=boys NZVAR=12 coord=zmt $END
+ $SYSTEM TIMLIM=2000 mwords=1 $END
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 npfunc=1 $END
+ $GUESS  GUESS=HUCKEL $END
+!
+!   this is at the 1st and last of the 12 magic Gaussian quadrature points
+ $local  poldyn=.true. ndpfrq=2
+         dpfreq(1)=0.00279164292546976127,32.239080141259587698936 $end
+ $cphf   nword=150000 $end
+!
+!        these inputs would check the static polarizability
+---- $contrl runtyp=hessian $end
+---- $cphf   nword=0 cphf=ao polar=.true. $end
+ $DATA
+methanol...RHF/6-31G** structure
+Cs
+ 
+H
+O 1 rOH
+C 2 rCO 1 aCOH
+H 3 rCH 2 aHCO 1 180.0
+H 3 rCHb 2 aHCOb 1  w
+H 3 rCHb 2 aHCOb 1 -w
+
+rOH=0.9422599
+rCO=1.3985152
+rCH=1.0819528
+rCHb=1.0882339
+aCOH=109.6500947
+aHCO=107.3393964
+aHCOb=112.1380879
+w=61.2195401
+ $end

@@ -1,0 +1,62 @@
+!  test of H2O hyperpolarizability...goes back to Henry Kurtz
+!
+!  The xx CPHF equation does not converge for AM1, hence there
+!  are two crazy values for it.  Spherical harmonics may not
+!  be used, so you cannot try to reproduce the first column.
+!
+!  The run should produce the 2nd column, but since these are
+!  high derivatives, the last digits frequently change.
+!
+! ini-b ini-g    <---- shows required inputs to see these values
+!                           5d          6d
+!                        6-31G(d,p)  6-31G(d,p)       AM1
+!    0    0      a(0)=    4.9666       5.0262        3.3281
+!    2    0    b-v(0)=   92.1559      91.4786       64.7917
+!    1    0      b(0)=      ?         18.2957          ?
+!    2    1      g(0)=  109.1510     113.8387       -8.5251
+!    0    0      a(w)=    5.0786       5.1385        3.4929
+!    1    0     a(2w)=    5.4820       5.5423        4.1468
+!    1    0     a(3w)=    6.6515       6.7050    10826.4430
+!    1    0    b(SHG)=  117.4873     116.9179       86.8494
+!    1    0     b(OR)=   99.4414      98.7949       70.7243
+!    1    0   b(EOPE)=   99.4415      98.7949       70.7243
+!    2    1    g(THG)=  270.7320     277.7685   404414.0916
+!    2    1 g(EFISHG)=  160.8828     166.6505        0.2908
+!    2    1   g(IDRI)=  140.7280     146.0819       -3.2594
+!    2    1    g(OKE)=  123.0984     128.1140       -7.0099
+!
+!      the following numbers print very badly in parallel runs,
+!      and even serial runs with direct SCF chosen bomb looking
+!      for AOINTS disk file before starting in on the following.
+!
+!  additional 3rd order properties "via CPHF", if we choose INI-G=2:
+!    SHG  GAMMA ZZZZ(0,0, 0)           71.5687           36.0464
+!    OKE  GAMMA ZZZZ(0,0, W)           82.7488           41.6774
+!  EFISH  GAMMA ZZZZ(0,W, W)          113.7463           57.2896
+!    THG  GAMMA ZZZZ(W,W, W)          197.3178           99.3813
+!   IDRA  GAMMA ZZZZ(W,W,-W)           97.2348           48.9734
+!  DC-OR  GAMMA ZZZZ(0,W,-W)           82.7496           41.6778
+!      the data just shown are for 6-31G(d) Cartesian GTO.
+!
+!  This run takes 5 seconds on a 2.66 GHz Cloverton (14 Jul 2016)
+!
+!  the results have not changed significantly since 1999,
+!  except for the aforenoted sensitivity of the last digits
+!  to the run conditions: parallel, direct, whatever.
+!
+ $contrl scftyp=rhf runtyp=tdhf ispher=0 $end
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $scf    dirscf=.false. $end
+ $tdhf   inib=2 inig=2 atol=1.0d-6 btol=1.0d-6 nfreq=2 freq(1)=0.0,0.1 $end
+ $guess  guess=huckel $end
+ $DATA
+Water...RHF/6-31G** polarizability test
+Cnv 2
+   
+Oxygen     8.0
+Hydrogen   1.0   0.0 -0.7572157 0.5865358
+ $end
+
+! TRAVIS-CI SMALL
+

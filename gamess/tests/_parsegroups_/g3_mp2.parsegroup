@@ -1,0 +1,148 @@
+{
+  "parse_header" : "G3(MP2)",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "MP2/6-31G(D) - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 2,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "CCSD(T)/6-31G(D) - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 2,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "MP2/G3MP2LARGE - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 3,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "BASIS CONTRIBUTION - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 3,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "ZPE(HF/6-31G(D)) - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 4,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "ZPE SCALE FACTOR - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 4,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "HLC - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 5,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "FREE ENERGY - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 5,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "THERMAL ENERGY - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 6,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "THERMAL ENTHALPY - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 6,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "E(G3(MP2)) @ 0K - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 8,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "E(G3(MP2)) @ 298K - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 8,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "H(G3(MP2)) - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 9,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "G(G3(MP2)) - G3(MP2)",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 9,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "HEAT OF FORMATION (0K) - G3(MP2)",
+     "parse_precision" : 2,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 13,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)SUMMARY OF G3\\(MP2\\) CALCULATIONS.*$",
+     "parse_name"   : "HEAT OF FORMATION (298K) - G3(MP2)",
+     "parse_precision" : 2,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 14,
+     "parse_instance" : -1
+   }
+  ]
+}

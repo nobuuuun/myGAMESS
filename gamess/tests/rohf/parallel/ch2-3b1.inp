@@ -1,0 +1,29 @@
+!  Methylene   3-B-1 state
+!  The FINAL energy is -38.4317460579 after 8 iterations.
+!  Schaefer FREQuencies= 1531,    3579,    3826
+!    GAMESS FREQuencies= 1531.07, 3578.73, 3826.48
+!
+!  This run takes 1 seconds on anything ( 8 Nov 2005)
+!
+ $CONTRL SCFTYP=ROHF  MULT=3  RUNTYP=HESSIAN  UNITS=BOHR $END
+ $ZMAT   IZMAT(1)=1,1,2,   1,1,3,   2,2,1,3   $END
+ $GUESS  GUESS=huckel $END
+ $BASIS  GBASIS=STO NGAUSS=3 $END
+
+!            MO-driven hessian code need not be direct mode.
+x$cphf   cphf=mo $end
+!            AO-driven code is the default, and must be forced direct by user.
+ $cphf   cphf=ao $end
+ $scf    dirscf=.true. $end
+
+ $DATA
+METHYLENE...3-B-1 STATE...ROHF...STO-3G BASIS
+Cnv  2
+ 
+CARBON      6.0     0.0000000000      0.0000000000     -0.1390953675
+HYDROGEN    1.0     0.0000000000      1.8036839479      0.8280313535
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

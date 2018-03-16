@@ -1,0 +1,52 @@
+#!/bin/csh
+#
+#    test case 'eda-wat2-ccsdt'
+#    Hui's energy decomposition analysis
+#    system is two waters 
+#    CCSD(T) level test.
+#
+set ierr=0
+set ethrsh=0.01
+#
+#      checking only "own basis" results, which is the first set.
+set  ES0=-8.01
+set  EX0=-6.20
+set REP0=11.85
+set POL0=-3.42
+set DSM0=-1.57
+set DSC0=-1.26
+set TIH0=-5.79
+set TIM0=-7.36
+set TIC0=-7.05
+
+set  ES=`grep "ELECTROSTATIC ENERGY                  ES=" $1 | head -1 | awk '{ print $5 }'`0
+set  EX=`grep "EXCHANGE ENERGY                       EX=" $1 | head -1 | awk '{ print $5 }'`0
+set REP=`grep "REPULSION ENERGY                     REP=" $1 | head -1 | awk '{ print $5 }'`0
+set POL=`grep "POLARIZATION ENERGY                  POL=" $1 | head -1 | awk '{ print $5 }'`0
+set DSM=`grep "MP2 DISPERSION ENERGY               DISP=" $1 | head -1 | awk '{ print $6 }'`0
+set DSC=`grep "CCSD(T) DISPERSION ENERGY           DISP=" $1 | head -1 | awk '{ print $6 }'`0
+set TIH=`grep "TOTAL INTERACTION ENERGY HF OR DFT     E=" $1 | head -1 | awk '{ print $9 }'`0
+set TIM=`grep "TOTAL INTERACTION ENERGY MP2           E=" $1 | head -1 | awk '{ print $7 }'`0
+set TIC=`grep "TOTAL INTERACTION ENERGY CCSD(T)       E=" $1 | head -1 | awk '{ print $7 }'`0
+#
+set ESerr=`$chkabs $ES $ES0 $ethrsh`
+if($status != 0) set ierr=1 
+set EXerr=`$chkabs $EX $EX0 $ethrsh`
+if($status != 0) set ierr=1 
+set REPerr=`$chkabs $REP $REP0 $ethrsh`
+if($status != 0) set ierr=1 
+set POLerr=`$chkabs $POL $POL0 $ethrsh`
+if($status != 0) set ierr=1 
+set DSMerr=`$chkabs $DSM $DSM0 $ethrsh`
+if($status != 0) set ierr=1 
+set DSCerr=`$chkabs $DSC $DSC0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIHerr=`$chkabs $TIH $TIH0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIMerr=`$chkabs $TIM $TIM0 $ethrsh`
+if($status != 0) set ierr=1 
+set TICerr=`$chkabs $TIC $TIC0 $ethrsh`
+if($status != 0) set ierr=1 
+#
+echo -n "ESerr=$ESerr EXerr=$EXerr REPerr=$REPerr POLerr=$POLerr DSMerr=$DSMerr DSCerr=$DSCerr TIHerr=$TIHerr TIMerr=$TIMerr TICerr=$TICerr"
+exit $ierr 

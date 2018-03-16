@@ -1,0 +1,37 @@
+{
+  "name": "efp2-2h2o-meoh.log",
+  "validation": [
+    {
+      "header": "MD",
+      "name": "POTENTIAL ENERGY - MD",
+      "value": "-10.94280357",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "TRANSLATIONAL KINETIC ENERGY - MD",
+      "value": "1.75445807",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "ROTATIONAL KINETIC ENERGY - MD",
+      "value": "1.17049956",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "TOTAL KINETIC ENERGY - MD",
+      "value": "2.92495763",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    }
+  ]
+}

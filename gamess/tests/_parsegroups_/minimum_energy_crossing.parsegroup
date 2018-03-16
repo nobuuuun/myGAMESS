@@ -1,0 +1,24 @@
+{
+  "parse_header" : "MINIMUM ENERGY CROSS (MEX)",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)ENERGY OF FIRST STATE  =.*$",
+     "parse_name"   : "ENERGY OF 1ST STATE - MEX",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)ENERGY OF SECOND STATE =.*$",
+     "parse_name"   : "ENERGY OF 2ND STATE - MEX",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)RMS EFFECTIVE GRADIENT =.*$",
+     "parse_name"   : "RMS EFFECTIVE GRADIENT - MEX",
+     "parse_precision" : 6,
+     "parse_recipe" : "lastinstance_firstindex"
+   }
+  ]
+}

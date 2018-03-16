@@ -1,0 +1,29 @@
+{
+  "name": "opt-n8.log",
+  "validation": [
+    {
+      "header": "parse_header",
+      "name": "SEMI-EMPIRICAL ENERGY",
+      "value": "-47.4339284117",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "parse_header",
+      "name": "HEAT OF FORMATION",
+      "value": "215.73626",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "2.081029",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+!  This is a test of the ZAPT 2nd order ROHF MP2 algorithm.
+!  This is the O2 molecule test of Table 1: T.J.Lee, A.P.Rendell,
+!  K.G.Dyall, D.Jayatilaka   J.Chem.Phys. 100, 7400-9(1994)
+!  There are 78 AOs with Na=9 and Nb=7 occupied MOs.
+!
+!  GAMESS: FINAL E=-149.6515058270, ZAPT E(MP2)= -150.1398572437 @ R=1.2376
+!                                         RMP2 = -150.1457764083 @ R=1.2376
+!                                         RMP2 = -150.1459137301 @ R=1.2499
+!  Literature: R=1.2376 gives ZAPT E(.P2)= -150.139857
+!              R=1.2499 gives  RMP E(.P2)= -150.145914
+!              R=1.3192 gives OPT1 E(.P2)= -150.186394
+!              R=1.2418 gives OPT2 E(.P2)= -150.146244
+!  Only the latter energy cannot be computed with GAMESS.
+!
+!  This run takes 2 seconds on 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results have not changed much since at least 2005.
+!
+ $system mwords=10 memddi=10 $end
+
+!            for ZAPT
+ $contrl scftyp=rohf mult=3 mplevl=2 runtyp=energy $end
+--- $mp2    code=ddi ospt=zapt $end
+--- $guess  guess=huckel $end
+
+!            for RMP, after changing the bond distance below:
+ $contrl scftyp=rohf mult=3 mplevl=2 runtyp=energy nosym=1 $end
+ $mp2    ospt=rmp $end
+ $guess  guess=huckel $end
+
+!            for OPT1, after obtaining a $VEC at the correct distance:
+--- $contrl scftyp=mcscf mult=3 mplevl=2 runtyp=energy nosym=1 $end
+--- $det    ncore=7 nact=2 nels=2 $end
+--- $mcqdpt inorb=1 nmofzc=2 nmodoc=5 nmoact=2 nstate=1 $end
+--- $guess  guess=moread norb=78 $end
+
+ $data
+O2 energy calculation...TZ2Pf basis...[10s,6p,2d,1f]/(5s,4p,2d,1f)
+Dnh 4
+
+O  8.0     0.0  0.0  1.2376/2
+ s 6
+   1 18050.0   0.000757
+   2  2660.0   0.006066
+   3   585.7   0.032782
+   4   160.9   0.132609
+   5    51.16  0.396839
+   6    17.90  0.542572
+ s 2
+   1 17.90  0.262490
+   2  6.639 0.769828
+ s 1 ; 1 2.077  1.0
+ s 1 ; 1 0.7736 1.0
+ s 1 ; 1 0.2558 1.0
+ p 3
+   1 49.83  0.037778
+   2 11.49  0.245844
+   3  3.609 0.806685
+ p 1 ; 1 1.321  1.0
+ p 1 ; 1 0.4821 1.0
+ p 1 ; 1 0.1651 1.0
+ d 1 ; 1 2.314 1.0
+ d 1 ; 1 0.645 1.0
+ f 1 ; 1 1.428 1.0
+
+ $end
+
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

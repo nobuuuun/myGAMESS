@@ -1,0 +1,79 @@
+!   ReBr(CO)5...local unitary transformation LUT-IOTC gradient
+!   PBE0/SPKrDZC (Sapporo relativistic core/valence basis set)
+!   The basis has 315 AOs and 288 MOs, and a very large radial
+!   grid must be used, see below.
+!
+!   FINAL PBE0 E= -19867.5075506152, 22 iters, RMS= 0.022479943 (NRAD=200)
+!   (full IOTC E= -19867.5076398826, 22 iters, grd= 0.022647600)
+!
+!   This run take 1425 seconds on 2.66 GHz Cloverton ( 3 Aug 2015)
+!   (full IOTC is 1879 sconds)
+!   ----------------------------------------------------------------------
+!   As the basis set contains a big exponent, a very large radial grid
+!   is used, to "semi-converge" the tightest s GTO's normalization:
+!        NRAD   normalization      PBE0 energy        gradient
+!          96     1.773099      -19867.5105066107    0.013407042
+!         150     0.865489      -19867.5195572568    0.013406623
+!         175     1.067526      -19867.5281765649    0.013406606
+!         200     1.003533      -19867.5291982214    0.013406714
+!         250     1.003213      -19867.5269597737    0.013406734
+!         300     0.999608      -19867.5277234423    0.013406676
+!   Every atom present, not just Re, gets the same enlarged radial grid!
+!   ----------------------------------------------------------------------
+!   If run as a geometry optimization from the non-rel MIDI geometry,           
+!      NSERCH:   0  E=   -19867.5075506153  R.M.S.=  0.0224799
+!      NSERCH:   1  E=   -19867.5195076984  R.M.S.=  0.0100913
+!      NSERCH:   2  E=   -19867.5261776028  R.M.S.=  0.0151717
+!      NSERCH:   3  E=   -19867.5258494147  R.M.S.=  0.0117860
+!      NSERCH:   4  E=   -19867.5298163655  R.M.S.=  0.0018602
+!      NSERCH:   5  E=   -19867.5300073877  R.M.S.=  0.0007224
+!      NSERCH:   6  E=   -19867.5300187690  R.M.S.=  0.0005681
+!      NSERCH:   7  E=   -19867.5300342895  R.M.S.=  0.0002042
+!      NSERCH:   8  E=   -19867.5300446825  R.M.S.=  0.0000993  <-- best
+!      NSERCH:   9  E=   -19867.5300423538  R.M.S.=  0.0000128
+!      NSERCH:  10  E=   -19867.5300414842  R.M.S.=  0.0000046
+!      NSERCH:  11  E=   -19867.5300383729  R.M.S.=  0.0000019
+!   If run as a seminumerical hessian at the relativistic PBE0 geometry,
+!   namely where the gradient is almost zero, the residuals are very
+!   small, and the true vibrations are:
+!   57.31(b1), 61.33(e), 84.91(e), ... 2142.81(e), 2176.69(b1), 2245.43(a1)
+!
+ $contrl scftyp=rhf dfttyp=pbe0 runtyp=gradient relwfn=LUT-IOTC ispher=1 $end
+ $system mwords=30 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $basis  gbasis=SPKrDZC $end
+ $dft    nrad=200 nrad0=96 $end
+ $statpt opttol=1d-5 $end
+ $data
+BrRe(CO)5...below is the non-relativistic RHF/MIDI geometry
+Cnv 4
+
+Re   75.0   0.0000000000   0.0000000000   0.3621178897
+Br   35.0   0.0000000000   0.0000000000  -2.3344026225
+C     6.0   2.1098268587   0.0000000000   0.2550414199
+O     8.0   3.2351902371   0.0000000000   0.1739099473
+C     6.0   0.0000000000   0.0000000000   2.3726344731
+O     8.0   0.0000000000   0.0000000000   3.5098188388
+ $end
+
+below is the non-relativistic RHF/MIDI geometry
+Re   75.0   0.0000000000   0.0000000000   0.3621178897
+Br   35.0   0.0000000000   0.0000000000  -2.3344026225
+C     6.0   2.1098268587   0.0000000000   0.2550414199
+O     8.0   3.2351902371   0.0000000000   0.1739099473
+C     6.0   0.0000000000   0.0000000000   2.3726344731
+O     8.0   0.0000000000   0.0000000000   3.5098188388
+
+below is the LUT-IOTC PBE0/SPKrDZC geometry
+Re   75.0   0.0000000000   0.0000000000   0.3539998533
+Br   35.0   0.0000000000   0.0000000000  -2.2626866592
+C     6.0   2.0010917488   0.0000000000   0.2600071381
+O     8.0   3.1366632895   0.0000000000   0.1957487435
+C     6.0   0.0000000000   0.0000000000   2.2812267084
+O     8.0   0.0000000000   0.0000000000   3.4304106190
+
+! TRAVIS-CI MEDIUM
+! TRAVIS-CI SKIP
+! ACCURACY BETWEEN INTEL AND GNU DOES NOT MATCH
+

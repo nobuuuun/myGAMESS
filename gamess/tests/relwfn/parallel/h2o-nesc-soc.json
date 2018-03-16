@@ -1,0 +1,85 @@
+{
+  "name": "h2o-nesc-soc.log",
+  "validation": [
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -5",
+      "value": "-74.663663723",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -4",
+      "value": "-75.449387759",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -3",
+      "value": "-74.665456118",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-74.604448197",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-74.499202937",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -5",
+      "value": "335526.765",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -4",
+      "value": "335526.765",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -3",
+      "value": "358625.823",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -2",
+      "value": "358625.823",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -1",
+      "value": "358625.831",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    }
+  ]
+}

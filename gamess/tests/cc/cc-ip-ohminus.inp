@@ -1,0 +1,96 @@
+!   OH- electron detachment to OH radical's ground and excited states
+!
+!   Both doublet and quartet states are solved for, requiring the
+!   initial guess use active doubles to get starting quartets.
+!   The calculation is spin-adapted since it starts from S=0.
+!   Note that the job actually runs through ROHF steps, although
+!   the input group looks like RHF!
+!
+!   The expected results for this run, 2 roots in every irrep, are
+!
+!            ---- SUMMARY OF IP-EOMCCSDt CALCULATIONS ----
+!           SPIN      IONIZATION             TOTAL
+!    SYMM   MULT      ENERGY (H)           ENERGY (H)       ITERATIONS
+!     A1     2       0.0859554406        -75.3092614321     CONVERGED
+!     A1     2       0.3069873947        -75.0882294780     CONVERGED
+!     A2     4       0.0438475587        -75.3513693140     CONVERGED
+!     A2     2       0.0607587565        -75.3344581161     CONVERGED
+!     B1     2      -0.0088917989        -75.4041086716     CONVERGED
+!     B1     4       0.0175355672        -75.3776813054     CONVERGED
+!     B2     2      -0.0088917989        -75.4041086716     CONVERGED
+!     B2     4       0.0175355672        -75.3776813054     CONVERGED
+!
+!   It is interesting that at this level of calculation, the detachment
+!   of a pi electron is seen to lead to a lower energy.  I do not know
+!   what happens using a proper basis set with diffuse functions,
+!   or in case a larger amount of the triples were to be included.
+!
+!   This run takes 5 seconds on a 2.66 GHz Cloverton (15 Aug 2016)
+!   results haven't changed since 2010 (except for exchange of state order)
+!   other than changing the initial guess slightly in 2016.
+!
+!   ------------------------------------------------------------------------
+!   asking for just IP-EOM2, with 4 roots in every irrep, should give
+!
+!          ---- SUMMARY OF IP-EOMCCSD(2H-1P) CALCULATIONS ----
+!          SPIN      IONIZATION             TOTAL
+!   SYMM   MULT      ENERGY (H)           ENERGY (H)       ITERATIONS
+!    A1     2        .1015676158        -75.2936492569     CONVERGED
+!    A1     2        .3508788786        -75.0443379941     CONVERGED
+!    A1     2        .4015004109        -74.9937164617     CONVERGED
+!    A1     2        .4371134245        -74.9581034482     CONVERGED
+!    A2     4        .2963277729        -75.0988890998     CONVERGED
+!    A2     2        .3972293731        -74.9979874996     CONVERGED
+!    A2     2        .4015004109        -74.9937164617     CONVERGED
+!    A2     4       1.2386668744        -74.1565499983     CONVERGED
+!    B1     2        .0173373650        -75.3778795077     CONVERGED
+!    B1     4        .0906149785        -75.3046018942     CONVERGED
+!    B1     2        .1609189758        -75.2342978969     CONVERGED
+!    B1     2        .5027584451        -74.8924584275     CONVERGED
+!    B2     2        .0173373650        -75.3778795077     CONVERGED
+!    B2     4        .0906149785        -75.3046018942     CONVERGED
+!    B2     2        .1609189758        -75.2342978969     CONVERGED
+!    B2     2        .5027584451        -74.8924584275     CONVERGED
+!  (the IP-EOM-CCSD run is very much faster than the active triples run)
+!
+ $contrl scftyp=rhf icharg=-1 cctyp=IP-EOM3A runtyp=energy ISPHER=1 $end
+ $system mwords=1 $end
+!     initial guess involves 8 total orbitals, while the
+!     limited triples come out of the sigma HOMO and pi HOMO-1
+ $eominp meom=0 mult=-1 MINIT=1 NOACT=4 NUACT=4 nact=3 NSTATE(1)=2,2,2,2 $END
+ $GUESS  GUESS=huckel $END
+ $data
+OH, DZ....could this be 6-31G(d)?
+Cnv 2
+
+O   8.0      0.000000 0.00000 0.00000
+ S   6
+  1        5484.671700         0.1831100000E-02
+  2        825.2349500         0.1395010000E-01
+  3        188.0469600         0.6844510000E-01
+  4        52.96450000         0.2327143000
+  5        16.89757000         0.4701930000
+  6        5.799635300         0.3585209000
+ L   3
+  1        15.53961600        -0.1107775000         0.7087430000E-01
+  2        3.599933600        -0.1480263000         0.3397528000
+  3        1.013761800          1.130767000         0.7271586000
+ L   1
+  1       0.2700058000          1.000000000          1.000000000
+ D   1
+  1       0.800000000          1.00000000
+
+H   1.0      0.000000 0.00000 2.00
+ S   3
+  1        18.73113700         0.3349460000E-01
+  2        2.825393700         0.2347269500
+  3       0.6401217000         0.8137573300
+ S   1
+  1       0.1612778000          1.000000000
+ P   1
+  1        1.10000000          1.00000000
+
+ $END
+
+! TRAVIS-CI SMALL
+

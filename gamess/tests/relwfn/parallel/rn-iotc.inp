@@ -1,0 +1,96 @@
+!   Rn atom...this run duplicates the IOTC calculation of
+!      D. Kedziera and M. Barysz, J.Chem.Phys. 121, 6719 (2004),
+!   using uncontracted (28s,24p,18d,12f) well-tempered basis.
+!   Closed shell atom, with presumably minimal SOC effects,
+!   this is a simple way to study DK's convergence towards IOTC.
+!   No gradient (it is an atom!), so test spherical harmonic RI coding.
+!   There are 328 AOs and 274 MOs...test created in 2013.
+!
+!   FINAL RHF ENERGY IS   -23563.5973622722, 12 iters
+!   Total energy for Rn   -23563.597 au  (literature's Table V)
+!                   DKH5= -23564.867
+!                   DKH4= -23561.789
+!                   DKH3= -23566.933
+!                   DKH2= -23533.403
+!
+!   density at the nucleus=  19057028.7
+!   electronic part of elec.pot= -734.674107
+!
+!   This run takes 339 seconds on 2.66 GHz Cloverton (10 Aug 2015)
+!   results haven't changed much since 2013.
+!
+ $contrl scftyp=rhf runtyp=energy relwfn=iotc ispher=1 $end
+ $system mwords=10     $end
+ $guess  guess=huckel  $end
+ $scf    dirscf=.true. $end
+ $elpot  iepot=1       $end
+ $eldens ieden=1       $end
+ $relwfn modeqr=3 $end
+ $data
+Rn IOTC using WTBS (28s,24p,18d,12f)
+Dnh 2
+
+Rn 86.0
+    S    1; 1  98695815.    1.0
+    S    1; 1  21091278.    1.0
+    S    1; 1  5132142.2    1.0
+    S    1; 1  1410319.4    1.0
+    L    1; 1  433531.63    1.0
+    L    1; 1  147500.43    1.0
+    L    1; 1  54913.915    1.0
+    L    1; 1  22109.179    1.0
+    L    1; 1  9514.2752    1.0
+    L    1; 1  4327.2744    1.0
+    L    1; 1  2058.6291    1.0
+    L    1; 1  1014.9288    1.0
+    L    1; 1  514.39844    1.0
+    L    1; 1  266.22284    1.0
+    L    1; 1  139.92336    1.0
+    L    1; 1  74.361553    1.0
+    L    1; 1  39.826146    1.0
+    L    1; 1  21.441926    1.0
+    L    1; 1  11.583686    1.0
+    L    1; 1  6.2713843    1.0
+    L    1; 1  3.3996865    1.0
+    L    1; 1  1.8442936    1.0
+    L    1; 1  1.0008923    1.0
+    L    1; 1 0.54328083    1.0
+    L    1; 1 0.29491399    1.0
+    L    1; 1 0.16009530    1.0
+    L    1; 1 0.086909090   1.0
+    L    1; 1 0.047179407   1.0
+    D    1; 1  22109.179    1.0
+    D    1; 1  9514.2752    1.0
+    D    1; 1  4327.2744    1.0
+    D    1; 1  2058.6291    1.0
+    D    1; 1  1014.9288    1.0
+    D    1; 1  514.39844    1.0
+    D    1; 1  266.22284    1.0
+    D    1; 1  139.92336    1.0
+    D    1; 1  74.361553    1.0
+    D    1; 1  39.826146    1.0
+    D    1; 1  21.441926    1.0
+    D    1; 1  11.583686    1.0
+    D    1; 1  6.2713843    1.0
+    D    1; 1  3.3996865    1.0
+    D    1; 1  1.8442936    1.0
+    D    1; 1  1.0008923    1.0
+    D    1; 1 0.54328083    1.0
+    D    1; 1 0.29491399    1.0
+    F    1; 1  2058.6291    1.0
+    F    1; 1  1014.9288    1.0
+    F    1; 1  514.39844    1.0
+    F    1; 1  266.22284    1.0
+    F    1; 1  139.92336    1.0
+    F    1; 1  74.361553    1.0
+    F    1; 1  39.826146    1.0
+    F    1; 1  21.441926    1.0
+    F    1; 1  11.583686    1.0
+    F    1; 1  6.2713843    1.0
+    F    1; 1  3.3996865    1.0
+    F    1; 1  1.8442936    1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,168 @@
+!  Test case for localized orbital polarizabilities in methanol.
+!  This run shows how to compute static ALPHA by all available means,
+!  so there are no less than six (7) ways to evaluate ALPHA.  Some
+!  of these runs generate additional analysis possibilties, or can
+!  generate frequency dependent alpha or similar beta/gamma quantities.
+!
+!  This run takes just a few seconds no matter what calculation is run.
+!  numerical results were refreshed 26 Mar 2013
+!
+!  The default calculation illustrates analytic POLDCM, used during MAKEFP.
+!  Quick comparison: trace of static ALPHA in consistent units for 6 runs:
+!        anal POLDCM: 2.23154 Angstrom**3
+!         num POLNUM: 2.23140
+!         num POLAPP: 1.83202    i.e. this option is very inaccurate
+!          anal TDHF: 2.23156
+!       anal HESSIAN: 2.23156
+!      energy FFIELD: 2.23159
+!      dipole FFIELD: 2.23158
+!
+!  The order of the orbital results depends on the localization outcome,
+!  which uses a random number to determine the order of the Jacobi
+!  rotations.  The degree of the localization convergence can also
+!  differ (same reason) which can have a small effect on the last
+!  digits of the orbital breakdowns.
+!
+!  analytic POLDCM: ignore 9 repeat values printed after grand total.
+!          MEAN ALPHA POLARIZABILITY =     0.000749676
+!          MEAN ALPHA POLARIZABILITY =     0.171280300
+!          MEAN ALPHA POLARIZABILITY =     0.454354768
+!          MEAN ALPHA POLARIZABILITY =     0.220697042
+!          MEAN ALPHA POLARIZABILITY =     0.464577149
+!          MEAN ALPHA POLARIZABILITY =     0.284021713
+!          MEAN ALPHA POLARIZABILITY =     0.464577148
+!          MEAN ALPHA POLARIZABILITY =     0.171280301
+!         total ALPHA POLARIZABILITY =     2.231538098
+!
+!    Note that the analytic total is 2.23156 from run type hessian,
+!    2.23156 from run type tdhf, and 2.232 from run type ffield.
+!    The latter is a numerical differentiation, and seems reasonable.
+!    Note that the sum of all orbital traces is 2.231538089.
+!
+!    Of the two numerical approximations for POLDCM, it appears
+!    that POLNUM is acceptable, while POLAPP seems rather dodgy.
+!
+!  POLNUM: no total ALPHA is printed, * shows worst comparison to analytic.
+!          individual terms fluctuate after about 6 significant figs.
+!          MEAN ALPHA POLARIZABILITY =     0.000624096
+!          MEAN ALPHA POLARIZABILITY =     0.001644582
+!          MEAN ALPHA POLARIZABILITY =     0.295959771, compare to 0.2840
+!          MEAN ALPHA POLARIZABILITY =     0.455723649, compare to 0.4544
+!          MEAN ALPHA POLARIZABILITY =     0.208383035, compare to 0.2207 (*)
+!          MEAN ALPHA POLARIZABILITY =     0.467004625, compare to 0.4646
+!          MEAN ALPHA POLARIZABILITY =     0.167457408, compare to 0.1713
+!          MEAN ALPHA POLARIZABILITY =     0.467116558, compare to 0.4646
+!          MEAN ALPHA POLARIZABILITY =     0.167550827, compare to 0.1713
+!   TOTAL ISOTROPIC ALPHA POLARIZABILITY=  2.231401333
+!
+!  POLAPP: ignore repeat of 9 values after the grand total.
+!          MEAN ALPHA POLARIZABILITY =     0.000538558
+!          MEAN ALPHA POLARIZABILITY =     0.001284693
+!          MEAN ALPHA POLARIZABILITY =     0.231601690, compare to 0.2840
+!          MEAN ALPHA POLARIZABILITY =     0.361705601, compare to 0.4544
+!          MEAN ALPHA POLARIZABILITY =     0.186708553, compare to 0.2207
+!          MEAN ALPHA POLARIZABILITY =     0.368924460, compare to 0.4646
+!          MEAN ALPHA POLARIZABILITY =     0.156164646, compare to 0.1713
+!          MEAN ALPHA POLARIZABILITY =     0.368924460, compare to 0.4646
+!          MEAN ALPHA POLARIZABILITY =     0.156164646, compare to 0.1713
+!         total ALPHA POLARIZABILITY =     1.832017310
+!
+!           -- analytic versus numerical calculation --
+!    input explicitly includes core orbitals in numerical runs
+ $contrl runtyp=energy local=boys $end
+ $local  poldcm=.true.                fcore=.true.  $end
+
+x$contrl runtyp=energy local=boys $end
+x$local  poldcm=.true. polnum=.true.  fcore=.false. $end
+
+x$contrl runtyp=energy local=boys $end
+x$local  poldcm=.true. polapp=.true.  fcore=.false. $end
+!
+!        an alternate analytic calc. of total static ALPHA polarizability
+!        ALPHA POLARIZABILITY TENSOR (ANGSTROMS**3)
+!                     X              Y              Z
+!        X         2.36094
+!        Y        -0.14563        2.28675
+!        Z         0.00000        0.00000        2.04699
+!        MEAN ALPHA POLARIZABILITY =         2.23156
+x$contrl runtyp=hessian local=none $end
+x$cphf   nword=0 cphf=ao polar=.true. $end
+!
+!        an alternate analytic calc. of total static ALPHA polarizability
+!        ALPHA XX =       15.9324      UA CONV. TO 6.71E-06 IN  10 ITER.
+!        ALPHA YX =       -0.9827
+!        ALPHA ZX =        0.0000
+!        ALPHA YY =       15.4318      UA CONV. TO 7.80E-06 IN  10 ITER.
+!        ALPHA XY =       -0.9827
+!        ALPHA ZY =        0.0000
+!        ALPHA ZZ =       13.8138      UA CONV. TO 9.19E-07 IN  10 ITER.
+!        ALPHA XZ =        0.0000
+!        ALPHA YZ =        0.0000
+!        ISOTROPIC AVERAGE ALPHA =       15.0593 A.U.
+!        multiplication by 0.529177**3 turns that into 2.23156 Angstrom**3.
+x$contrl runtyp=tdhf local=none $end
+x$tdhf   nfreq=1 freq(1)=0.0 inib=0 inig=0 $end
+!
+!        an alternate numerical calc. of total static ALPHA polarizability
+!                  ----ENERGY BASED RESULTS----
+!        ALPHA #        X                  Y                  Z   (A.U.)
+!         X    #   1.5932623E+01     -9.8274030E-01      0.0000000E+00
+!         Y    #  -9.8274030E-01      1.5431961E+01      0.0000000E+00
+!         Z    #   0.0000000E+00      0.0000000E+00      1.3813969E+01
+!                  ----DIPOLE BASED RESULTS----
+!        ALPHA #        X                  Y                  Z   (A.U.)
+!         X    #   1.5932690E+01     -9.8254397E-01      0.0000000E+00
+!         Y    #  -9.8088904E-01      1.5431314E+01      0.0000000E+00
+!         Z    #   0.0000000E+00      0.0000000E+00      1.3814303E+01
+!       the trace of the former divided by three is 15.059518,
+!       the trace of the latter divided by three is 15.059436,
+!       multiplication by 0.529177**3 gives 2.23159 & 2.23158 Angstrom**3.
+!
+!       LOCHYP includes a localized orbital breakdown of ALPHA,
+!       and also provides this for BETA and GAMMA:
+!           ISO-A        0.001369
+!           ISO-A        0.005287
+!           ISO-A        1.129274
+!           ISO-A        3.073495
+!           ISO-A        1.415606
+!           ISO-A        3.151154
+!           ISO-A        2.002840
+!           ISO-A        3.151154 --> 0.46695
+!           ISO-A        1.129257
+!           ISO-A       15.059436 --> 2.23158 Angstrom**3.
+!     other total quantities printed by this run are
+!           B_XYZ     -165.956842      -69.518644       -0.002012
+!           B_VEC      179.929195
+!           ISO-G      367.238041
+!
+x$contrl runtyp=ffield local=boys $end
+x$ffcalc lochyp=.true. offdia=.true. $end
+
+!        input for all tasks...
+ $contrl scftyp=rhf nzvar=12 coord=zmt $end
+ $SYSTEM mwords=1 $END
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 npfunc=1 $END
+ $GUESS  GUESS=HUCKEL $END
+ $DATA
+methanol...RHF/6-31G** structure
+Cs
+ 
+H
+O 1 rOH
+C 2 rCO 1 aCOH
+H 3 rCH 2 aHCO 1 180.0
+H 3 rCHb 2 aHCOb 1  w
+H 3 rCHb 2 aHCOb 1 -w
+
+rOH=0.9422599
+rCO=1.3985152
+rCH=1.0819528
+rCHb=1.0882339
+aCOH=109.6500947
+aHCO=107.3393964
+aHCOb=112.1380879
+w=61.2195401
+ $end
+
+! TRAVIS-CI SMALL
+

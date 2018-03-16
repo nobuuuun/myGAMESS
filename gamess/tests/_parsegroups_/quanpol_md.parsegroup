@@ -1,0 +1,172 @@
+{
+  "parse_header" : "QUANPOL MD",
+  "parse_group" : [
+   {
+     "regex_string" : "^ BOND STRETCHING(\\s*)ENERGY.*$",
+     "parse_name"   : "BOND STRETCHING ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ DIHEDRAL ROTATION(\\s*)ENERGY.*$",
+     "parse_name"   : "DIHEDRAL ROTATION ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ DIHEDRAL BENDING(\\s*)ENERGY.*$",
+     "parse_name"   : "DIHEDRAL BENDING ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ CMAP(\\s*)ENERGY.*$",
+     "parse_name"   : "CMAP ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ WAGGING(\\s*)ENERGY.*$",
+     "parse_name"   : "WAGGING ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ LJ REPULSION(\\s*)ENERGY.*$",
+     "parse_name"   : "LJ REPULSION ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ LJ DISPERSION(\\s*)ENERGY.*$",
+     "parse_name"   : "LJ DISPERSION ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ CHARGE(\\s*)ENERGY.*$",
+     "parse_name"   : "CHARGE ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ INDUCED DIPOLE(\\s*)ENERGY.*$",
+     "parse_name"   : "INDUCED DIPOLE ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ SPHSOL(\\s*)ENERGY.*$",
+     "parse_name"   : "SPHSOL ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ FIXSOL(\\s*)ENERGY.*$",
+     "parse_name"   : "FIXSOL ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ QM CENTER(\\s*)ENERGY.*$",
+     "parse_name"   : "QM CENTER ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ SPHERE(\\s*)ENERGY.*$",
+     "parse_name"   : "SPHERE ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ POTENTIAL(\\s*)ENERGY.*$",
+     "parse_name"   : "POTENTIAL ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ KINETIC(\\s*)ENERGY.*$",
+     "parse_name"   : "KINETIC ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ TOTAL(\\s*)ENERGY.*$",
+     "parse_name"   : "TOTAL ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ AVERAGE POTENTIAL(\\s*)ENERGY.*$",
+     "parse_name"   : "AVERAGE POTENTIAL ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ AVERAGE KINETIC(\\s*)ENERGY.*$",
+     "parse_name"   : "AVERAGE TOTAL ENERGY - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ AVERAGE TEMPERATURE.*$",
+     "parse_name"   : "AVERAGE TEMPERATURE - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ AVERAGE PRESSURE.*$",
+     "parse_name"   : "AVERAGE PRESSURE - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ AVERAGE VOLUME.*$",
+     "parse_name"   : "AVERAGE VOLUME - QUANPOL MD",
+     "parse_type" : "float",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_lastindex"
+   }
+  ]
+}

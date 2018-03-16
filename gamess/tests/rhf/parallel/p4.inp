@@ -1,0 +1,41 @@
+!  This idea comes from a study of P2, P4, and P8 by
+!  M.W.Schmidt & M.S.Gordon, Inorg.Chem., 1985, 24, 4503-4506.
+!
+!  FINAL E= -1363.0558913779, 10 iters, 
+!  VVOs appear at energies 31-33= +0.138 (t1) and 34-36= +0.213 (t2)
+!   loc: DIAGONAL SUM D=        4.7416520799 to start,
+!        DIAGONAL SUM D=        7.0453262263 to end.
+!
+!  This run takes 296 seconds on 2.66 GHz Cloverton (M7 mar 2015)
+!
+!  Canonical VVOs look a little odd to chemists, but localization
+!  gives six equivalent PP antibonds, nicely curved outside
+!  the PP bonds, just like the localized bent PP sigma orbs.
+!
+!  structure needs f orbitals:
+!     RHF/ACCT gets R=2.174,
+!     MP2/ACCT gets R=2.201,
+!       experiment is 2.2258 (J.Raman Spetrosc. 11, 346(1981))
+!
+ $contrl scftyp=rhf mplevl=0 runtyp=energy ispher=1 
+         local=ruednbrg pltorb=.true. $end
+ $system mwords=100 memddi=0 $end
+x$system mwords=10 memddi=500 $end
+ $basis  gbasis=acct $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. vvos=.true. $end
+ $data   
+tetrahedral P4...MP2/ACCT geometry
+Td
+ 
+P  15.0  0.7784633440 0.7784633440 0.7784633440 
+ $end
+
+!    RHF/ACCT geom:   RHF E= -1363.0569745108
+P  15.0  0.7685847608 0.7685847608 0.7685847608
+
+!    MP2/ACCT geom:   RHF E= -1363.0558913770   MP2 E= -1363.6548837219
+P  15.0  0.7784633440 0.7784633440 0.7784633440 
+
+! TRAVIS-CI SMALL
+

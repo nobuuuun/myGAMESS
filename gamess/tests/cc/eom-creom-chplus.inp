@@ -1,0 +1,246 @@
+!   excited states of methylidyne cation...CH+
+!   This is primarily a test of the CC codes in GAMESS, but
+!   there are inputs to run CIS, TDDFT, and FCI included below.
+!
+!   the coordinate origin is set at the center of mass, so that
+!   the dipole integrals inside the CCSD codes match the origin
+!   that is used by the property package.  This is a charged
+!   molecule, so state dipoles depend on the origin!
+!
+!   The basis set and geometry are specified in a FCI study by
+!   J.Olsen, A.M.Sanchez de Meras, H.J.Aa.Jensen, P.Jorgensen
+!   Chem.Phys.Lett. 154, 380-386(1989), who report the ground
+!   state E(RHF)= -37.902768, E(FCI)= -38.019638, and vertical
+!   FCI excitations to A-1-pi= 3.2296 and to B-1-delta= 6.9642
+!
+!   Huber and Herzberg list Te values for the states of CH+ as
+!      X-1-sigma-plus         0 cm**-1
+!      a-3-pi
+!      A-1-pi           (24,111) => 2.989 eV
+!      b-3-sigma-minus  (38,200) => 4.736
+!      B-1-delta        (52,534) => 6.513
+!
+!   The A and a states are singly excited, (sigma)1(pi)1 config.
+!   The B and b states are doubly excited, (sigma)0(pi)2 config,
+!   and therefore represent a challenge to CIS (both as a
+!   method, and even for the initial guess for amplitudes).
+!
+!   In the point group C2v, the states resolve as
+!      X-1-sigma-plus -> A1
+!      A-1-pi         -> B1+B2
+!      B-1-delta      -> A1+A2
+!   so to pick up the X,A,B states we should use NSTATE(1)=2,1,1,1
+!   but the run below uses 5,2,2,2 to pick up even higher states.
+!   The results for the lowest states are:
+!                         EOM-CCSD          EOM-CCSD(T) type III     FCI
+!   X-1-sigma-plus  -38.01767017  (0.0)    -38.0193439123 (0.0)
+!   A-1-pi          -37.89784130  (3.261)  -37.9000829757 (3.245)   3.2296
+!   B-1-delta       -37.72780918  (7.888)  -37.7622410323 (6.996)   6.9643
+!   The FCI values are taken from the literature.
+!
+!   The ground state's CCSD dipole moment is 0.6453 a.u.
+!   The EOM-CCSD dipole of the lowest B2 state (IROOT input) is 0.6432.
+!   The transition moments for A->B transitions (meaning 3.261 ==> 7.888 EV)
+!   are found to have only one nonzero component, -0.32552097/-0.28479975,
+!   with oscillator strength component 0.01050892.
+!
+!   Since the states are degenerate, the program switches over to
+!   computing properties for IROOTCC(1)=3,1 instead of the input.
+!   The results are dipole= 1.634917 Debye /2.541766 = 0.6432 (check)
+!   and Qzz= 2.285728 and Ozzz= 2.983533.  At the carbon atom,
+!        electron density: 120.960969
+!        electrostatic potential: -14.201322
+!        electric field z component: -0.013655
+!        electric field gradient: xx=-1.237849  yy=1.001822  zz=0.236027
+!
+!   This test takes 5 seconds on a 2.66 GHz Cloverton ( 3 Apr 2015)
+!   This test results are basically unchanged since 2006
+!
+!   the EOM-CC literature on CH+ includes the following papers:
+!   from MSU: JCP 115,2966(2001), CPL 347,237(2001), JCP 115,643(2001)
+!   from QTP: CPL 258,581(1996), JCP 101,3073(1994)
+!   The first of the latter reports the following excitation energies:
+!          CCSD   CCSD(T)  CCSD(T') CCSD(T-wiggle) CCSDT-3   FCI
+!   X->A   3.261   3.246    3.214      3.217        3.244    3.230
+!   X->B   7.888   7.247    7.243      7.241        7.279    6.964
+!   Since they do not give any total energies, it is not clear how
+!   any of these values relate to the MSU theory's results, except
+!   that the B state in QTP's results is consistently higher.
+!
+ $contrl icharg=1 scftyp=rhf cctyp=cr-eom runtyp=energy units=bohr $end
+ $system mwords=25 timlim=20 $end
+ $guess  guess=huckel $end
+ $scf    conv=1d-8 $end
+
+!  We can obtain the correct results for this basis set by running
+!  the FCI calculation, using two different CI codes:
+!  ORMAS/ALDET verify      E(CISD)          E(FCI)      E(FCI), in eV
+!      1-sigma-plus    -38.0142010129   -38.0196384907   0.0
+!      3-pi            -37.9262606092   -37.9778217506   1.1379
+!      1-pi            -37.8504012202   -37.9009546901   3.2296
+!      3-sigma-minus   -37.7761983523   -37.8398538142   4.8923
+!      1-delta         -37.7041175706   -37.7637114708   6.9643
+!      5-sigma-minus   -37.6692422339   -37.7083464227   8.4709
+--- $contrl cityp=ormas cctyp=none $end
+--- $cidet  group=c1 ncore=0 nact=26 nels=6 nstate=10 $end
+--- $ormas  nspace=2 mstart(1)=1,4 mine(1)=4,0 maxe(1)=6,2 $end
+
+--- $contrl cityp=aldet cctyp=none $end
+--- $system mwords=280 timlim=99999 $end
+--- $cidet  group=c1 ncore=0 nact=26 nels=6 nstate=10 $end
+
+!   This part is about various arcane CC energies that can be obtained.
+!   Running with CCTYP=CR-CC gives    E(CCSD)= -38.0176701664
+!                                  E(CCSD(T))= -38.0191804382
+!                               E(CR-CCSD(T))= -38.0190235326
+!   None of the ground state energies matches either of these (T) values:
+! GROUND STATE CR-CCSD(T)IA  CORRECTION  -.001328, TOTAL e=    -38.0189980516
+! GROUND STATE CR-CCSD(T)IB  CORRECTION  -.001282, TOTAL e=    -38.0189519386
+! GROUND STATE CR-CCSD(T)IC  CORRECTION  -.001721, TOTAL e=    -38.0193911976
+! GROUND STATE CR-CCSD(T)ID  CORRECTION  -.001711, TOTAL e=    -38.0193814952
+! GROUND STATE CR-CCSD(T)IIA CORRECTION  -.001326, TOTAL e=    -38.0189957313
+! GROUND STATE CR-CCSD(T)IIB CORRECTION  -.001279, TOTAL e=    -38.0189496174
+! GROUND STATE CR-CCSD(T)IIC CORRECTION  -.001719, TOTAL e=    -38.0193888844
+! GROUND STATE CR-CCSD(T)IID CORRECTION  -.001709, TOTAL e=    -38.0193791818
+! GROUND STATE CR-CCSD(T)III CORRECTION  -.001674, TOTAL e=    -38.0193438846
+!   These are all similar values, but excited state E's can vary a lot:
+! TOTAL EOM-CCSD ENERGY               -37.7278091820 Hartree  (B-1-delta)
+! CR-EOMCCSD(T)IA  TOTAL ENERGY       -37.7511227963 Hartree
+! CR-EOMCCSD(T)IB  TOTAL ENERGY       -37.7499147344 Hartree
+! CR-EOMCCSD(T)IC  TOTAL ENERGY       -37.7625361163 Hartree
+! CR-EOMCCSD(T)ID  TOTAL ENERGY       -37.7621919898 Hartree
+! CR-EOMCCSD(T)IIA TOTAL ENERGY       -37.7520255537 Hartree
+! CR-EOMCCSD(T)IIB TOTAL ENERGY       -37.7508169448 Hartree
+! CR-EOMCCSD(T)IIC TOTAL ENERGY       -37.7634440477 Hartree
+! CR-EOMCCSD(T)IID TOTAL ENERGY       -37.7630997575 Hartree
+! CR-EOMCCSD(T)III TOTAL ENERGY       -37.7622409780 Hartree
+!     Recall from above that FCI was  -37.763711 for this state.
+!
+!     The summary of results chooses the most sensible differences,
+!     the first column is standard EOM-CCSD, the rest are triples corrected.
+! STATE    EOMCCSD   ID/IA     IID/IA    ID/IB     IID/IB    III    TILDE(T)/A
+!   B1     3.261     3.226     3.226     3.225     3.224     3.245     3.207
+!   A1     7.888     6.988     6.963     6.987     6.962     6.996     7.229
+!     Subtracting the state's IIIs gives the excitation energy marked III.
+!     Column XX/YY means subtract ground state YY from excited state XX,
+!     and note that we do not ever use the nutty IA,IB,IIA,IIB values.
+
+!  For testing the various options within the EOM-CCSD and MMCC(2,3) codes:
+!    meom=0/1 is for EOM step only, controls EOM iteration solver
+!        0=single root united subspace
+!        1=single root separate subspace
+!        2=multiroot
+!    mci=1/2 is for MMCC(2,3) step only, controls CISD solver
+!        1=single root solver
+!        2=multiroot solver
+!    minit=1/2 is initial guess at amplitudes/CI coefficients
+!        1= EOMSd/CISd guess in the EOM/MM23 steps,
+!        2=  CIS guess for both
+!    mtrip=1/2/3/4 is four different triples correction codes in MM23
+!        1 omits type III,
+!        2 gives all results,
+!        3 gives only III,
+!        4 means run mtrip=1 and then 3, so it gets all results too.  
+!
+ $ccinp  maxcc=500 iconv=10 nfzv=0 ncore=0 ccprp=.true. $end
+ $eominp meom=0 mci=1 minit=1 mtrip=2 ccprpe=.true.
+         maxeom=200 noact=3 nuact=7 
+         iroot(1)=4,1 nstate(1)=5,2,2,2 $end
+
+!    combining results from two TDDFT runs, we learn that the 
+!    a-3-pi (1.15, FCI=1.14) and A-1-pi (2.56, FCI=3.23 eV) are
+!    obtained fairly well.  However, the doubly excited states
+!    b-3-sigma-minus (FCI=6.96) and B-1-delta (FCI=8.47 eV) are
+!    missing from the TDDFT results.
+!  STATE         ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!               HARTREE          EV         X       Y       Z     STRENGTH
+!  0  3-A1     -37.9560277967     .000
+!  1  3-??"?   -37.9137742169    1.150      .0000   .0000   .0000     .000
+!  2  3-??g?   -37.9137800847    1.150      .0000   .0000   .0000     .000
+!  1  1-B2     -37.8620795976    2.556      .0000   .3055   .0000     .006
+!  2  1-B1     -37.8620795971    2.556      .3055   .0000   .0000     .006
+!  3  3-B2     -37.6143925718    9.296      .0000   .0000   .0000     .000
+!  4  3-B1     -37.6143925710    9.296      .0000   .0000   .0000     .000
+!  5  3-A1     -37.5577325497   10.838      .0000   .0000   .0000     .000
+!  3  1-A      -37.4955947661   12.529      .0000   .0000  -.8793     .237
+!  4  1-B2     -37.4540567330   13.659      .0000  -.9167   .0000     .281
+!  5  1-B1     -37.4540567326   13.659     -.9167   .0000   .0000     .281
+!  6  3-A1     -37.4285678379   14.353      .0000   .0000   .0000     .000
+!    note that B3LYP does a little better for the A-1-pi state, 2.82 eV.
+
+--- $contrl dfttyp=blyp tddft=excite cctyp=none $end
+--- $dft    lc=.true. $end
+--- $tddft  mult=1 nstate=11 $end
+
+!    combining results from two CIS runs, we learn that the CIS
+!    method sees both a-3-pi and A-1-pi, but whiffs on the doubly
+!    excited states b-3-sigma-minus or B-1-delta.
+! STATE       HARTREE        EV
+! -------------------------------
+!  3A1     .0086371779      .2350
+!  3A1     .0086371779      .2350
+!  1A1     .1076392154     2.9290
+!  1A1     .1076392154     2.9290
+!  3A1     .3678191017    10.0089
+!  3A1     .3678191017    10.0089
+!  3A1     .4198522687    11.4248
+!  1A1     .5053328882    13.7508
+!  1A1     .5602042860    15.2439
+!  1A1     .5602042860    15.2439
+
+--- $contrl cctyp=none cityp=cis $end
+--- $cis    mult=3 nstate=11 $end
+
+ $ELMOM  IEMOM=3 $END
+ $ELDENS IEDEN=1 $END
+ $ELPOT  IEPOT=1 $END
+ $ELFLDG IEFLD=2 $END
+
+ $data
+CH+ ion at X's Re=2.13713 a.u. = 1.13092 Ang ... basis set=CPL 154,380(1989)
+Cnv    2
+
+Carbon       6.   0 0 -0.165581
+  S    6
+    1   4231.610       0.002029
+    2    634.882       0.015535
+    3    146.097       0.075411
+    4     42.4974      0.257121
+    5     14.1892      0.596555
+    6      1.9666      0.242517
+  S    1
+    1      5.1477      1.000000
+  S    1
+    1      0.4962      1.000000
+  S    1
+    1      0.1533      1.000000
+  S    1
+    1      0.0150      1.000000
+  P    4
+    1     18.1557      0.018534
+    2      3.9864      0.115442
+    3      1.1429      0.386206
+    4      0.3594      0.640089
+  P    1
+    1      0.1146      1.000000
+  P    1
+    1      0.011       1.000000
+  D    1
+    1      0.75        1.000000
+
+Hydrogen   1.  0.0  0.0 1.971549  !    2.137130 = 1.971549 + 0.165581
+  S    3
+    1   1.924060D+01   3.282800D-02
+    2   2.899200D+00   2.312080D-01
+    3   6.534000D-01   8.172380D-01
+  S    1
+    1   1.776000D-01   1.000000D+00
+  S    1
+    1   0.02500000     1.000000D+00
+  P    1
+    1   1.000000D+00   1.000000D+00
+
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,31 @@
+#!/bin/csh
+#
+#    test case 'rvs-f-wat3'
+#    Morokuma and RVS energy decomposition, on F- in three waters.
+#    RHF level test
+#
+set ierr=0
+set ethrsh=0.01
+#
+#      checking only "RVS" results, only thing present in this run.
+set ESX0=-34.48
+set POL0=-20.78
+set REP0=-12.18
+set TIH0=-66.27
+
+set ESX=`grep "         TOTAL COULOMB/EXCHANGE  " $1 | head -1 | awk '{ print $4 }'`0
+set POL=`grep "         TOTAL POLARIZATION      " $1 | head -1 | awk '{ print $4 }'`0
+set REP=`grep "         TOTAL CHARGE TRANSFER   " $1 | head -1 | awk '{ print $5 }'`0
+set TIH=`grep "         TOTAL INTERACTION ENERGY" $1 | head -1 | awk '{ print $5 }'`0
+#
+set ESXerr=`$chkabs $ESX $ESX0 $ethrsh`
+if($status != 0) set ierr=1 
+set POLerr=`$chkabs $POL $POL0 $ethrsh`
+if($status != 0) set ierr=1 
+set REPerr=`$chkabs $REP $REP0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIHerr=`$chkabs $TIH $TIH0 $ethrsh`
+if($status != 0) set ierr=1 
+#
+echo -n "ESXerr=$ESXerr POLerr=$POLerr REPerr=$REPerr TIHerr=$TIHerr"
+exit $ierr 

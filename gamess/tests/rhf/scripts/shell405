@@ -1,0 +1,19 @@
+#!/bin/bash
+
+rhf0=-2958.8410551703
+
+rhf=`grep "FINAL RHF ENERGY " $1 | tail -n 1 | awk '{print $5}'`
+
+tolE0=$tolE
+
+error=0
+
+#rhf energy
+diffrhf=`$chkabs $rhf $rhf0 $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+
+printf "RHF=%12.8f\n" $diffrhf
+exit $error

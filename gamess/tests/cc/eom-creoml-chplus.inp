@@ -1,0 +1,83 @@
+!   excited states of CH+  ...  see also the test input cc-eom.inp
+!   Computes 'CCL' type triples corrections to excited states,
+!   and this run also prints all results for CR-EOM type triples.
+!
+!        SUMMARY OF CR-EOMCCSD(T) RESULTS FOR ALL STATES
+!  STATE  EOMCCSD     ID/IA      IID/IA     ID/IB     IID/IB    (T)/R
+!    B1    3.261      3.226      3.226      3.225      3.224      3.207
+!    A1    7.888      6.988      6.963      6.987      6.962      7.229
+!    A1    9.109      8.656      8.638      8.654      8.637      8.762
+!    A1   13.580     13.525     13.526     13.524     13.525     13.508
+!    B1   14.454     14.229     14.221     14.228     14.219     14.285
+!    B1   17.341     16.857     16.905     16.856     16.904     17.005
+!    A2   17.689     16.820     16.790     16.819     16.789     17.069
+!    A2   19.716     18.013     17.980     18.012     17.978     18.594
+!
+!        SUMMARY OF CR-EOMCC(2,3) RESULTS FOR ALL STATES
+!  STATE  EOMCCSD   (2,3),D    (2,3),A    (2,3),B    (2,3),C
+!    B1    3.261      3.247      3.254      3.255      3.246
+!    A1    7.888      6.996      7.279      7.310      6.987
+!    A1    9.109      8.659      8.793      8.809      8.654
+!    A1   13.580     13.545     13.559     13.561     13.545
+!    B1   14.454     14.262     14.367     14.373     14.245
+!    B1   17.341     16.874     17.009     17.028     16.871
+!    A2   17.689     16.803     17.107     17.136     16.794
+!    A2   19.716     17.999     18.636     18.696     17.978
+! 
+!    this run takes 3 seconds on a 2.66 GHz Cloverton ( 6 Apr 2015)
+!    results haven't changed since 2009
+!
+ $contrl icharg=+1 scftyp=rhf cctyp=cr-eoml runtyp=energy units=bohr $end
+ $system mwords=2 $end
+ $guess  guess=huckel $end
+ $ccinp  ncore=0 $end
+ $eominp minit=1 noact=2 nuact=7 nstate(1)=3,3,3,3 $end
+ $data
+CH+ molecule at R=2.13713...basis set from CPL 154,380(1989)
+Cnv    2
+
+Carbon       6.
+  S    6
+    1   4231.610       0.002029
+    2    634.882       0.015535
+    3    146.097       0.075411
+    4     42.4974      0.257121
+    5     14.1892      0.596555
+    6      1.9666      0.242517
+  S    1
+    1      5.1477      1.000000
+  S    1
+    1      0.4962      1.000000
+  S    1
+    1      0.1533      1.000000
+  S    1
+    1      0.0150      1.000000
+  P    4
+    1     18.1557      0.018534
+    2      3.9864      0.115442
+    3      1.1429      0.386206
+    4      0.3594      0.640089
+  P    1
+    1      0.1146      1.000000
+  P    1
+    1      0.011       1.000000
+  D    1
+    1      0.75        1.000000
+
+Hydrogen   1.  0.0  0.0 2.13713
+  S    3
+    1   1.924060D+01   3.282800D-02
+    2   2.899200D+00   2.312080D-01
+    3   6.534000D-01   8.172380D-01
+  S    1
+    1   1.776000D-01   1.000000D+00
+  S    1
+    1   2.500000D-02   1.000000D+00
+  P    1
+    1   1.000000D+00   1.000000D+00
+
+ $end
+
+
+! TRAVIS-CI SMALL
+

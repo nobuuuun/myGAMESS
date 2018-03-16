@@ -1,0 +1,58 @@
+!  PCM + UMP2 geometry optimization test
+!  triplet state of the substituted carbene (NH2)-C-(OH).
+!  a test case with soft torsions and out of plane bend modes.
+!  there are just 75 AOs and MOs.      test created October 2010.
+!
+!  the optimization should go like this:
+!     NSERCH:   0  E=     -169.3399634423  R.M.S.=  0.0384596
+!     NSERCH:   1  E=     -169.3517575131  R.M.S.=  0.0122599
+!     NSERCH:   2  E=     -169.3509760744  R.M.S.=  0.0098565
+!     NSERCH:   3  E=     -169.3539952761  R.M.S.=  0.0025009
+!     NSERCH:   4  E=     -169.3542689083  R.M.S.=  0.0009873
+!              ...snipped...
+!     NSERCH:  16  E=     -169.3543695804  R.M.S.=  0.0001399
+!     NSERCH:  17  E=     -169.3543704128  R.M.S.=  0.0001495
+!     NSERCH:  18  E=     -169.3543709936  R.M.S.=  0.0000895
+!     NSERCH:  19  E=     -169.3543712423  R.M.S.=  0.0000113
+!     NSERCH:  20  E=     -169.3543711826  R.M.S.=  0.0000018
+!  at the end, w(NCOH)= 150.9 degrees.
+!
+!  This run takes 230 seconds on 2.66 GHZ Cloverton ( 2 Oct 2015)
+!
+!  in the gas phase, optimization gives a planar structure:
+!   nserch=0  E(MPtwo)=      -169.3313035482 r.m.s GRADIENT = 0.0380979
+!          1  E(MPtwo)=      -169.3431590807 r.m.s GRADIENT = 0.0124325
+!          2  E(MPtwo)=      -169.3426043946 r.m.s GRADIENT = 0.0091984
+!          3  E(MPtwo)=      -169.3453632009 r.m.s GRADIENT = 0.0021781
+!             ...
+!         22  E(MPtwo)=      -169.3458273771 r.m.s GRADIENT = 0.0000154
+!         23  E(MPtwo)=      -169.3458273785 r.m.s GRADIENT = 0.0000039
+!         24  E(MPtwo)=      -169.3458273907 r.m.s GRADIENT = 0.0000009
+!       at w(NCOH)= -179.997
+!
+ $contrl scftyp=uhf mult=3 mplevl=2 runtyp=optimize nzvar=12 $end
+ $system mwords=10 memddi=10 $end
+
+ $pcm    solvnt=water $end
+
+ $mp2    code=serial $end
+ $statpt opttol=1d-5 $end
+ $basis  gbasis=n311 ngauss=6 ndfunc=1 npfunc=1 $end
+ $guess  guess=huckel $end
+ $zmat   izmat(1)=1,1,3,  1,2,3,  1,3,4,  1,4,5,  1,5,6,
+            2,1,3,4,  2,2,3,4,  2,3,4,5,  2,4,5,6,
+            4,4,3,1,2,  3,1,3,4,5,  3,3,4,5,6 $end
+!   start at gas phase ROHF/PM3 geom...last atom Y's sign is
+!   changed to ensure NCOH starts out non-planar.
+ $data
+triplet carbene (NH2)C(OH)
+C1
+H    1.0  -1.6577431843  -0.5025725456  -0.4415734284
+H    1.0  -1.6581299091   0.9462551641   0.3709622446
+N    7.0  -1.3407620634   0.0047368019   0.3519614311
+C    6.0  -0.0342516255  -0.1652219263   0.6554376853
+O    8.0   1.1200820225   0.1480628181   0.0984423983
+H    1.0   1.7666223714  +0.1920919188   0.7084152842
+ $end
+
+! TRAVIS-CI SMALL

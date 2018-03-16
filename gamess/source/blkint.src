@@ -1,0 +1,1095 @@
+!*MODULE BKLINT
+!>    @brief   Contains subroutines to sort shell according to their
+!!             angular momentum.
+!>    @details Most of module subroutines are not used for now, however
+!!             they've all been tested in custom GAMESS modifications.\n
+!!             The followind indices will be used for different shell types
+!>             in this module:
+!>
+!> Shell type | S | P | L | D | F | G | H | I
+!> -----------|---|---|---|---|---|---|---|--
+!>     ISHTYP | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+!
+!>    @author  Vladimir Mironov
+!>    @date    2017
+!
+MODULE blkint
+
+    USE prec, ONLY: fp
+    USE mx_limits, ONLY: mxsh, mxgtot, mxgsh, mxg2
+
+    IMPLICIT NONE
+
+    PRIVATE
+    PUBLIC  blkint_shlsrt , &
+            blkint_shrevert, &
+            blkint_split_l, &
+            blkint_aomtrx_fwd, &
+            blkint_aomtrx_rev, &
+            blkint_shmtrx_fwd, &
+            blkint_shmtrx_rev, &
+            blkint_mtrx_permute, &
+            blkint_mtrx_unpack, &
+            blkint_mtrx_pack, &
+            blkint_mtrx_spack, &
+            blkint_mtrx_sspack, &
+
+            blkint_shsorted, &
+            blkint_saved, &
+            ishbeg, ishend,ishtyp,iaobeg, &
+            iaoend,nshtyp,naos,nprim
+
+    INTEGER, PARAMETER :: &
+        izero = 0, &                         !< Integer zero
+        iaonum(8) = (/1,3,4,6,10,15,21,28/)  !< Numbers of AOs for different shell types
+
+    REAL(KIND=fp), PARAMETER :: &
+        dzero = 0.0_fp                       !< Double precision zero
+
+    CHARACTER(LEN=*), PARAMETER :: &
+
+        fmt_split_err = '(/,&
+                  &" ERROR DURING L-TYPE SHELL ELIMINATION:&
+                  &TOO MANY SHELLS OR PRIMITIVES",/,&
+                  &" POSSIBLE SOLUTION IS TO INCREASE&
+                  &MXSH AND/OR MXGTOT PARAMETERS AND RECOMPILE GAMESS"&
+        &)', &
+
+        fmt_split_stats = '(/,&
+                   &" L-TYPE SHELLS WERE SPLIT INTO S- AND P-TYPE SHELLS",/,&
+                   &" OLD NUMBER OF BASIS SET SHELLS = ",I4,/,&
+                   &" NEW NUMBER OF BASIS SET SHELLS = ",I4&
+        &)', &
+
+        fmt_split_notfound = '(/,&
+                   &" NO L-TYPE SHELLS FOUND"&
+        &)'
+
+    !> @typedef blkint_basis_set_backup
+    TYPE blkint_basis_set_backup
+    !   Data in /NSHEL / common block
+    !    REAL(KIND=fp), DIMENSION(mxgtot) :: &
+        REAL(KIND=fp), DIMENSION(:), ALLOCATABLE :: &
+            ex, & !< Array of primitive Gaussian exponents
+            cs, & !< Array of S-type primitive Gaussian contraction coefficients
+            cp, & !< Array of P-type primitive Gaussian contraction coefficients
+            cd, & !< Array of D-type primitive Gaussian contraction coefficients
+            cf, & !< Array of F-type primitive Gaussian contraction coefficients
+            cg, & !< Array of G-type primitive Gaussian contraction coefficients
+            ch, & !< Array of H-type primitive Gaussian contraction coefficients
+            ci    !< Array of I-type primitive Gaussian contraction coefficients
+    !    INTEGER, DIMENSION(mxsh) :: &
+        INTEGER, DIMENSION(:), ALLOCATABLE :: &
+            kstart, & !< Locations of the first Gaussian in shells
+            katom, &  !< Tells which atom the shell is centered on
+            ktype, &  !< Array of shell types, is 1,2,3,4,5,6,7 for S,P,D,F,G,H,I
+            kng, & !< Array of contraction degrees
+            kloc, & !< Indices of shells in the total AO basis
+            kmin, & !< Starting indices of shells
+            kmax !< Ending indices of shells
+        INTEGER :: &
+            nshell !< Number of shells in the basis set
+    !   Data in /MAXC  /common block
+    !    REAL(KIND=fp), DIMENSION(mxgtot) :: &
+        REAL(KIND=fp), DIMENSION(:), ALLOCATABLE :: &
+            cmax !< Maximum value of cs, cp, and/or cd coefficients used for screenings
+    !   Data in /B     / common block
+    !    REAL(KIND=fp), DIMENSION(mxsh,3) :: &
+        REAL(KIND=fp), DIMENSION(:,:), ALLOCATABLE :: &
+            co !< Coordinates of atoms associated with shells
+    END TYPE blkint_basis_set_backup
+
+
+!   Information about sorted shells
+    INTEGER, SAVE :: &
+        ishfwd(mxsh), & !< Sorted shell indexes in `/NSHEL /` for unsorted->sorted transformation
+        ishrev(mxsh), & !< Sorted shell indexes for backward transformation
+        iaofwd(mxgtot), & !< Sorted AO indexes in `/NSHEL /` for unsorted->sorted transformation
+        iaorev(mxgtot), & !< Sorted AO indexes for backward transformation
+        ishbeg(8), & !< Indexes of the first shell of that type in sorted list
+        ishend(8), & !< Indexes of the last shell of that type in sorted list
+        ishtyp(8), & !< List of shell types found
+        iaobeg(8), & !< Indexes of the first AO of that type in sorted list
+        iaoend(8), & !< Indexes of the last AO of that type in sorted list
+        nshtyp, & !< Number of shell types found
+        naos, & !< Number of AOs in basis set
+        nprim !< Number of Gaussian primitives in basis set
+
+    TYPE(blkint_basis_set_backup),SAVE :: &
+        backup  !< Backup of the basis set information
+                !< Used for switching beween sorted and
+                !< unsorted representation
+
+!   Current state of shell order
+    LOGICAL, SAVE :: &
+        blkint_shsorted        = .FALSE., &  !< Current state of shell order
+        blkint_saved           = .FALSE.     !< `.TRUE.` if the original `/NSHEL /` content was saved
+
+
+!*MODULE BLKINT   *DECK BLKINT_MTRX_PERMUTE
+!>  @brief   Permute rows and columns of the symmetric matrix
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   v(:[,:]) symmetric square or triangle matrix
+!>  @param[in]      ind      permutation vector
+!>  @param[in]      ld       leading dimension of matrix V
+!>  @param[in]      square   (optional) set to `.TRUE.` for the case of
+!>                           square matrix. Default: `.FALSE.`
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+INTERFACE blkint_mtrx_permute
+    MODULE PROCEDURE blkint_mtrx_permute_1d
+    MODULE PROCEDURE blkint_mtrx_permute_2d
+END INTERFACE blkint_mtrx_permute
+
+!*MODULE BLKINT   *DECK BLKINT_AOMTRX_FWD
+!>  @brief   Permute matrix in atomic orbital basis to match sorted shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   ao(:[,:])  symmetric matrix (square or triangle)
+!>  @param[in]      square     (optional) set to `.TRUE.` for the case of
+!>                             unpacked 1D square matrix. Default: `.FALSE.`
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+
+INTERFACE blkint_aomtrx_fwd
+    MODULE PROCEDURE blkint_aomtrx_fwd_1d
+    MODULE PROCEDURE blkint_aomtrx_fwd_2d
+END INTERFACE blkint_aomtrx_fwd
+
+!*MODULE BLKINT   *DECK BLKINT_AOMTRX_REV
+!>  @brief   Permute matrix in atomic orbital basis back to original shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   ao(:[,:])   symmetric square or triangle matrix
+!>  @param[in]      square      (optional) set to `.TRUE.` for the case of
+!>                              unpacked 1D square matrix. Default: `.FALSE.`
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+INTERFACE blkint_aomtrx_rev
+    MODULE PROCEDURE blkint_aomtrx_rev_1d
+    MODULE PROCEDURE blkint_aomtrx_rev_2d
+END INTERFACE blkint_aomtrx_rev
+CONTAINS
+
+!*MODULE BLKINT   *DECK BLKINT_MAKE_BACKUP
+!>  @brief   Sorts shells according to their angular momentum.
+!>  @details This routine sorts content of `/NSHEL /` common block
+!>           according to angular momentum of shells in basis set.
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!     PARAMETERS:
+!
+!   PARAMETERS:
+!>  @param[out]   backup   Backup of the basis set information
+!>  @param[out]   naos     Number of atomic orbitals in the basis
+!>  @param[out]   nprim    Number of Gaussian primitives in the basis
+!
+!     REVISION HISTORY:
+!     -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_make_backup(backup, naos, nprim)
+
+    TYPE(blkint_basis_set_backup), INTENT(inout) :: backup
+    INTEGER, INTENT(out) :: naos, nprim
+
+!   GAMESS common blocks specification
+    COMMON /NSHEL / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),     &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),     &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh),  &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+
+    COMMON /MAXC  / cmax(mxgtot),cmaxa(mxgsh),cmaxb(mxgsh),          &
+                    cmaxc(mxgsh),cmaxd(mxgsh),ismlp(mxg2),ismlq
+        INTEGER :: ismlp,ismlq
+        REAL(KIND=fp) :: cmax,cmaxa,cmaxb,cmaxc,cmaxd
+!$omp threadprivate(/maxc  /)
+
+    COMMON /B     / co(mxsh,3)
+        REAL(KIND=fp) :: co
+
+    naos = kloc(nshell) + kmax(nshell) - kmin(nshell)
+    nprim = kstart(nshell) + kng(nshell) - 1
+
+    allocate( &
+        backup%kstart(nshell), &
+        backup%katom (nshell), &
+        backup%ktype (nshell), &
+        backup%kng   (nshell), &
+        backup%kloc  (nshell), &
+        backup%kmin  (nshell), &
+        backup%kmax  (nshell) )
+
+    allocate( &
+        backup%ex(nprim), &
+        backup%cs(nprim), &
+        backup%cp(nprim), &
+        backup%cd(nprim), &
+        backup%cf(nprim), &
+        backup%cg(nprim), &
+        backup%ch(nprim), &
+        backup%ci(nprim) )
+
+    allocate(backup%co(nshell,3))
+    allocate(backup%cmax(nprim))
+
+!   Backup NSHEL content
+    backup%kstart(1:nshell) = kstart(1:nshell)
+    backup%katom (1:nshell) = katom (1:nshell)
+    backup%ktype (1:nshell) = ktype (1:nshell)
+    backup%kng   (1:nshell) = kng   (1:nshell)
+    backup%kloc  (1:nshell) = kloc  (1:nshell)
+    backup%kmin  (1:nshell) = kmin  (1:nshell)
+    backup%kmax  (1:nshell) = kmax  (1:nshell)
+
+    backup%ex(1:nprim) = ex(1:nprim)
+    backup%cs(1:nprim) = cs(1:nprim)
+    backup%cp(1:nprim) = cp(1:nprim)
+    backup%cd(1:nprim) = cd(1:nprim)
+    backup%cf(1:nprim) = cf(1:nprim)
+    backup%cg(1:nprim) = cg(1:nprim)
+    backup%ch(1:nprim) = ch(1:nprim)
+    backup%ci(1:nprim) = ci(1:nprim)
+
+    backup%nshell = nshell
+
+!   Backup CMAX array
+    backup%cmax(1:nprim) = cmax(1:nprim)
+
+!   Backup CO array
+    backup%co(1:nshell,1:3) = co(1:nshell,1:3)
+
+END SUBROUTINE blkint_make_backup
+
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_SHLSRT
+!>  @brief   Sorts shells according to their angular momentum.
+!>  @details This routine sorts content of `/NSHEL /` common block
+!>           according to angular momentum of shells in basis set.
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!     PARAMETERS:
+!     This subroutine has no parameters
+!
+!     REVISION HISTORY:
+!     -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_shlsrt
+
+!   GAMESS common blocks specification
+    COMMON /NSHEL / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),     &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),     &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh),  &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+
+    COMMON /MAXC  / cmax(mxgtot),cmaxa(mxgsh),cmaxb(mxgsh),          &
+                    cmaxc(mxgsh),cmaxd(mxgsh),ismlp(mxg2),ismlq
+        INTEGER :: ismlp,ismlq
+        REAL(KIND=fp) :: cmax,cmaxa,cmaxb,cmaxc,cmaxd
+!$omp threadprivate(/maxc  /)
+
+    COMMON /B     / co(mxsh,3)
+        REAL(KIND=fp) :: co
+
+!   Internal variables
+    INTEGER :: &
+        ishcnt, iprcnt, itype, ishel, iao, &
+        ind1, ind2, ind3, i
+
+    LOGICAL :: &
+        found
+
+    ishcnt = 0
+    iao = 0
+    iprcnt = 0
+    nshtyp = 0
+
+    IF (.NOT.blkint_saved) THEN
+        CALL blkint_make_backup(backup,naos,nprim)
+        blkint_saved = .TRUE.
+
+!       Sort shell according to their angular momentum
+        kloc(1) = 1
+
+!        DO itype = 8, 1, -1
+        DO itype = 1, 8
+            found = .FALSE.
+
+            DO ishel = 1, nshell
+
+                IF (iaonum(itype).EQ.(backup%kmax(ishel)-backup%kmin(ishel)+1)) THEN
+
+                    ishcnt = ishcnt + 1
+
+                    ishfwd(ishcnt) = ishel
+                    ishrev(ishel) = ishcnt
+
+                    ! Some useful indices
+                    ind1 = backup%kstart(ishel)
+                    ind2 = backup%kng(ishel)
+                    ind3 = backup%kloc(ishel)
+
+                    IF (.NOT.found) THEN
+                        found = .TRUE.
+                        nshtyp = nshtyp + 1
+                        ishtyp(nshtyp) = itype
+                        ishbeg(nshtyp) = ishcnt
+                        iaobeg(nshtyp) = iao + 1
+                    END IF
+
+                    ! Position independent data:
+                    katom(ishcnt)  = backup%katom(ishel)
+                    kng(ishcnt)    = backup%kng(ishel)
+                    ktype(ishcnt)  = backup%ktype(ishel)
+                    kmin(ishcnt)   = backup%kmin(ishel)
+                    kmax(ishcnt)   = backup%kmax(ishel)
+
+
+                    co(ishcnt,1:3) = backup%co(ishel,1:3)
+
+                    kstart(ishcnt) = iprcnt + 1
+                    IF (ishcnt.ne.1) THEN
+                          kloc(ishcnt) = kloc(ishcnt-1) +  &
+                                         kmax(ishcnt-1) -  &
+                                         kmin(ishcnt-1) + 1
+                    END IF
+
+                    ! Reordering of primitive Gaussians
+                    ex(iprcnt+1:iprcnt+ind2) = backup%ex(ind1:ind1+ind2-1)
+                    cs(iprcnt+1:iprcnt+ind2) = backup%cs(ind1:ind1+ind2-1)
+                    cp(iprcnt+1:iprcnt+ind2) = backup%cp(ind1:ind1+ind2-1)
+                    cd(iprcnt+1:iprcnt+ind2) = backup%cd(ind1:ind1+ind2-1)
+                    cf(iprcnt+1:iprcnt+ind2) = backup%cf(ind1:ind1+ind2-1)
+                    cg(iprcnt+1:iprcnt+ind2) = backup%cg(ind1:ind1+ind2-1)
+                    ch(iprcnt+1:iprcnt+ind2) = backup%ch(ind1:ind1+ind2-1)
+                    ci(iprcnt+1:iprcnt+ind2) = backup%ci(ind1:ind1+ind2-1)
+
+                    cmax(iprcnt+1:iprcnt+ind2) = backup%cmax(ind1:ind1+ind2-1)
+
+                    iprcnt = iprcnt + backup%kng(ishel)
+
+                    DO i = 0, iaonum(itype)-1
+                        iao = iao + 1
+                        iaorev(ind3+i) = iao
+                        iaofwd(iao) = ind3+i
+                    END DO
+
+                END IF
+
+            END DO
+
+            IF (found) THEN
+                ishend(nshtyp) = ishcnt
+                iaoend(nshtyp) = iao
+            END IF
+
+        END DO
+
+!        DO i = 1, nshell
+!            write(*,'(3I3,2(I3,E14.7))') &
+!                i, ishfwd(i), ishrev(i), ktype(i),ex(kstart(i)),backup%ktype(i),backup%ex(backup%kstart(i))
+!        END DO
+
+!        DO ishel = 1, nshell
+!            do i = kstart(ishel), kstart(ishel)+kng(ishel)-1
+!                write(*,'(2I5,E14.7)') ishel, i, ex(i)
+!            end do
+!        END DO
+
+        blkint_shsorted = .TRUE.
+
+    ELSE
+
+        CALL blkint_shrevert
+
+    END IF
+
+END SUBROUTINE blkint_shlsrt
+
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_SHLREVERT
+!>  @brief   Swap shell state from sorted to original and backward
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!     PARAMETERS:
+!     This subroutine has no parameters
+!
+!     REVISION HISTORY:
+!     -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_shrevert
+
+    COMMON /NSHEL / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),     &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),     &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh),  &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+        INTEGER :: kstart,katom,ktype,kng,kloc,kmin,kmax,nshell
+        REAL(KIND=fp) :: ex,cs,cp,cd,cf,cg,ch,ci
+
+    COMMON /MAXC  / cmax(mxgtot),cmaxa(mxgsh),cmaxb(mxgsh),          &
+                    cmaxc(mxgsh),cmaxd(mxgsh),ismlp(mxg2),ismlq
+        INTEGER :: ismlp,ismlq
+        REAL(KIND=fp) :: cmax,cmaxa,cmaxb,cmaxc,cmaxd
+!$omp threadprivate(/maxc  /)
+
+    COMMON /B     / CO(MXSH,3)
+        REAL(KIND=fp) :: co
+
+!   Swap NSHEL and backup content
+    CALL iswap(nshell,kstart,1,backup%kstart,1)
+    CALL iswap(nshell,katom, 1,backup%katom ,1)
+    CALL iswap(nshell,ktype, 1,backup%ktype ,1)
+    CALL iswap(nshell,kng,   1,backup%kng   ,1)
+    CALL iswap(nshell,kloc,  1,backup%kloc  ,1)
+    CALL iswap(nshell,kmin,  1,backup%kmin  ,1)
+    CALL iswap(nshell,kmax,  1,backup%kmax  ,1)
+
+    CALL dswap(nprim,backup%ex,1,ex,1)
+    CALL dswap(nprim,backup%cs,1,cs,1)
+    CALL dswap(nprim,backup%cp,1,cp,1)
+    CALL dswap(nprim,backup%cd,1,cd,1)
+    CALL dswap(nprim,backup%cf,1,cf,1)
+    CALL dswap(nprim,backup%cg,1,cg,1)
+    CALL dswap(nprim,backup%ch,1,ch,1)
+    CALL dswap(nprim,backup%ci,1,ci,1)
+
+    CALL dswap(nprim,backup%cmax,1,cmax,1)
+
+    CALL dswap(nshell,backup%co(:,1),1,co(:,1),1)
+    CALL dswap(nshell,backup%co(:,2),1,co(:,2),1)
+    CALL dswap(nshell,backup%co(:,3),1,co(:,3),1)
+
+    blkint_shsorted = .NOT.blkint_shsorted
+
+END SUBROUTINE blkint_shrevert
+
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_SPLIT_L
+!>  @brief   Splits L-shells into S- and P-type shells
+!>  @details This subroutine eliminates L-type shells in basis set
+!>           by spliting them into S- and P-type shells
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!     PARAMETERS:
+!     This subroutine has no parameters
+!
+!     REVISION HISTORY:
+!     -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_split_l
+
+!   GAMESS common blocks specification
+    COMMON /NSHEL / ex(mxgtot),cs(mxgtot),cp(mxgtot),cd(mxgtot),     &
+                    cf(mxgtot),cg(mxgtot),ch(mxgtot),ci(mxgtot),     &
+                    kstart(mxsh),katom(mxsh),ktype(mxsh),kng(mxsh),  &
+                    kloc(mxsh),kmin(mxsh),kmax(mxsh),nshell
+    COMMON /PAR   / me,master,nproc,ibtyp,iptim,goparr,dskwrk,maswrk
+    COMMON /IOFILE/ ir,iw,ip,is,ipk,idaf,nav,ioda(950)
+
+    INTEGER :: &
+        kstart, katom, ktype, kng, kloc, kmin, kmax, nshell, &
+        me,master,nproc,ibtyp,iptim, &
+        ir,iw,ip,is,ipk,idaf,nav,ioda
+
+    LOGICAL :: &
+        goparr, dskwrk, maswrk
+
+    REAL(KIND=fp) :: &
+        ex, cs, cp, cd, cf, cg, ch, ci
+
+!   Internal variables
+    REAL(KIND=fp), DIMENSION(mxgtot) :: &
+        ex1,cs1,cp1,cd1,cf1,cg1,ch1,ci1
+
+    INTEGER, DIMENSION(mxsh) :: &
+        kstart1,katom1,ktype1,    &
+        kng1,kloc1,kmin1,kmax1
+
+    INTEGER :: &
+        nshell1, iprcnt, ind1, ind2, &
+        iprim, ish, iaocnt, ishel
+
+    LOGICAL :: &
+        found
+
+    DO iprim = 1, mxgtot
+        ex1(iprim) = dzero
+        cs1(iprim) = dzero
+        cp1(iprim) = dzero
+        cd1(iprim) = dzero
+        cf1(iprim) = dzero
+        cg1(iprim) = dzero
+        ch1(iprim) = dzero
+        ci1(iprim) = dzero
+    END DO
+
+    DO ish = 1, mxsh
+        kstart1(ish) = izero
+        katom1(ish)  = izero
+        ktype1(ish)  = izero
+        kng1(ish)    = izero
+        kloc1(ish)   = izero
+        kmin1(ish)   = izero
+        kmax1(ish)   = izero
+    END DO
+
+    found = .FALSE.
+
+    nshell1 = 0
+    iprcnt  = 0
+    iaocnt  = 1
+
+    kloc1(1)   = 1
+
+    DO ishel = 1, nshell
+
+!       Check for L-shell
+!       If not L-shell:
+        IF ((kmax(ishel)-kmin(ishel)+1).NE.4) THEN
+
+            nshell1 = nshell1+1
+
+            katom1(nshell1)  = katom(ishel)
+            kng1(nshell1)    = kng(ishel)
+            ktype1(nshell1)  = ktype(ishel)
+            kmin1(nshell1)   = kmin(ishel)
+            kmax1(nshell1)   = kmax(ishel)
+
+            kstart1(nshell1) = iprcnt + 1
+
+            kloc1(nshell1)   = iaocnt
+            iaocnt = iaocnt + kmax(ishel) - kmin(ishel) + 1
+
+            ind1 = kstart(ishel)
+            ind2 = kng(ishel)
+
+            ex1(iprcnt+1:iprcnt+ind2) = ex(ind1:ind1+ind2-1)
+            cs1(iprcnt+1:iprcnt+ind2) = cs(ind1:ind1+ind2-1)
+            cp1(iprcnt+1:iprcnt+ind2) = cp(ind1:ind1+ind2-1)
+            cd1(iprcnt+1:iprcnt+ind2) = cd(ind1:ind1+ind2-1)
+            cf1(iprcnt+1:iprcnt+ind2) = cf(ind1:ind1+ind2-1)
+            cg1(iprcnt+1:iprcnt+ind2) = cg(ind1:ind1+ind2-1)
+            ch1(iprcnt+1:iprcnt+ind2) = ch(ind1:ind1+ind2-1)
+            ci1(iprcnt+1:iprcnt+ind2) = ci(ind1:ind1+ind2-1)
+
+            iprcnt = iprcnt + kng(ishel)
+
+!       If L-shell was found:
+        ELSE
+
+            found = .TRUE.
+
+            ind1 = kstart(ishel)
+            ind2 = kng(ishel)
+
+!           S part
+            nshell1 = nshell1+1
+
+            katom1(nshell1)  = katom(ishel)
+            kng1(nshell1)    = kng(ishel)
+            ktype1(nshell1)  = 1
+            kmin1(nshell1)   = 1
+            kmax1(nshell1)   = 1
+            kstart1(nshell1) = iprcnt + 1
+            kloc1(nshell1)   = iaocnt
+
+            ex1(iprcnt+1:iprcnt+ind2) = ex(ind1:ind1+ind2-1)
+            cs1(iprcnt+1:iprcnt+ind2) = cs(ind1:ind1+ind2-1)
+
+            iaocnt = iaocnt + 1
+            iprcnt = iprcnt + ind2
+
+!           P part
+            nshell1 = nshell1+1
+
+            IF ((nshell1.GT.mxsh).OR.((iprcnt+ind2).GT.mxgtot)) THEN
+                IF (maswrk) WRITE(iw,fmt_split_err)
+                CALL ABRT
+            END IF
+
+            katom1(nshell1)  = katom(ishel)
+            kng1(nshell1)    = kng(ishel)
+            ktype1(nshell1)  = 2
+            kmin1(nshell1)   = 2
+            kmax1(nshell1)   = 4
+            kstart1(nshell1) = iprcnt + 1
+            kloc1(nshell1)   = iaocnt
+
+            ex1(iprcnt+1:iprcnt+ind2) = ex(ind1:ind1+ind2-1)
+            cp1(iprcnt+1:iprcnt+ind2) = cp(ind1:ind1+ind2-1)
+
+            iaocnt = iaocnt + 3
+            iprcnt = iprcnt + ind2
+
+        END IF
+    END DO
+
+    kstart(1:nshell1) =  kstart1(1:nshell1)
+    katom(1:nshell1)  =  katom1(1:nshell1)
+    ktype(1:nshell1)  =  ktype1(1:nshell1)
+    kng(1:nshell1)    =  kng1(1:nshell1)
+    kloc(1:nshell1)   =  kloc1(1:nshell1)
+    kmin(1:nshell1)   =  kmin1(1:nshell1)
+    kmax(1:nshell1)   =  kmax1(1:nshell1)
+
+    ex(1:iaocnt) = ex1(1:iaocnt)
+    cs(1:iaocnt) = cs1(1:iaocnt)
+    cp(1:iaocnt) = cp1(1:iaocnt)
+    cd(1:iaocnt) = cd1(1:iaocnt)
+    cf(1:iaocnt) = cf1(1:iaocnt)
+    cg(1:iaocnt) = cg1(1:iaocnt)
+    ch(1:iaocnt) = ch1(1:iaocnt)
+    ci(1:iaocnt) = ci1(1:iaocnt)
+
+    IF (found) THEN
+        WRITE(iw,fmt_split_stats) nshell, nshell1
+    ELSE
+        WRITE(iw,fmt_split_notfound)
+    END IF
+
+    nshell = nshell1
+
+END SUBROUTINE blkint_split_l
+
+!-----------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_AOMTRX_FWD_1D
+!>  @brief   Permute matrix in atomic orbital basis to match sorted shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   ao(:)  symmetric matrix (square or triangle)
+!>  @param[in]      square (optional) set to `.TRUE.` for the case of
+!>                         unpacked square matrix. Default: `.FALSE.`
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_aomtrx_fwd_1d (ao,square)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        ao(:)
+
+    LOGICAL, INTENT(IN), OPTIONAL :: &
+        square
+
+    LOGICAL :: sq
+
+    sq = .FALSE.
+    IF (PRESENT(square)) sq = square
+
+    CALL blkint_mtrx_permute(ao,iaofwd,naos,sq)
+
+END SUBROUTINE blkint_aomtrx_fwd_1d
+
+!*MODULE BLKINT   *DECK BLKINT_AOMTRX_FWD_2D
+!>  @brief   Permute matrix in atomic orbital basis to match sorted shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   ao(:,:) matrix in triangle form
+!>  @param[in]      square  (optional) is present for compatibility
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_aomtrx_fwd_2d (ao,square)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        ao(:,:)
+
+    LOGICAL, INTENT(IN), OPTIONAL :: &
+        square
+
+    CALL blkint_mtrx_permute(ao,iaofwd,naos,square=.true.)
+
+END SUBROUTINE blkint_aomtrx_fwd_2d
+
+!-----------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_AOMTRX_REV_1D
+!>  @brief   Permute matrix in atomic orbital basis back to original shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   ao(:)   symmetric square or triangle matrix
+!>  @param[in]      square  (optional) set to `.TRUE.` for the case of
+!>                          unpacked square matrix. Default: `.FALSE.`
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_aomtrx_rev_1d (ao,square)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        ao(:)
+
+    LOGICAL, INTENT(IN), OPTIONAL :: &
+        square
+
+    LOGICAL :: sq
+
+    sq = .FALSE.
+    IF (PRESENT(square)) sq = square
+
+    CALL blkint_mtrx_permute(ao,iaorev,naos,sq)
+
+END SUBROUTINE blkint_aomtrx_rev_1d
+
+!*MODULE BLKINT   *DECK BLKINT_AOMTRX_REV_2D
+!>  @brief   Permute matrix in atomic orbital basis back to original shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   ao(:,:) symmetric matrix
+!>  @param[in]      square  (optional) is present for compatibility
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_aomtrx_rev_2d (ao,square)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        ao(:,:)
+
+    LOGICAL, INTENT(IN), OPTIONAL :: &
+        square
+
+    CALL blkint_mtrx_permute(ao,iaorev,naos,square=.true.)
+
+END SUBROUTINE blkint_aomtrx_rev_2d
+
+!-----------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_SHMTRX_FWD
+!>  @brief   Permute shell-packed matrix to match sorted shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   sh(:)   matrix in triangle form packed to shells
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_shmtrx_fwd (sh)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        sh(:)
+
+    CALL blkint_mtrx_permute(sh,ishfwd,backup%nshell)
+
+END SUBROUTINE blkint_shmtrx_fwd
+
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_SHMTRX_REV
+!>  @brief   Permute shell-packed matrix back to original shell order
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   sh(:)   matrix in triangle form packed to shells
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_shmtrx_rev (sh)
+
+    REAL(KIND=fp), INTENT(INOUT) :: &
+        sh(:)
+
+    CALL blkint_mtrx_permute(sh,ishrev,backup%nshell)
+
+END SUBROUTINE blkint_shmtrx_rev
+
+!-----------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_MTRX_PERMUTE_1D
+!>  @brief   Permute rows and columns of the symmetric matrix
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   v(:)   symmetric square or triangle matrix as a 1D array
+!>  @param[in]      ind    permutation vector
+!>  @param[in]      ld     leading dimension of matrix V
+!>  @param[in]      square (optional) set to `.TRUE.` for the case of
+!>                         square matrix. Default: `.FALSE.`
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_mtrx_permute_1d (v, ind, ld, square)
+
+    REAL(KIND=fp), INTENT(INOUT), TARGET :: &
+        v(:)
+
+    INTEGER, INTENT(IN) :: &
+        ind(:)
+
+    INTEGER, INTENT(IN) :: &
+        ld
+
+    LOGICAL, INTENT(IN), OPTIONAL :: &
+        square
+
+    LOGICAL :: sq
+
+!    REAL(KIND=fp), ALLOCATABLE :: &
+    REAL(KIND=fp), POINTER :: &
+        xx(:,:)
+
+    INTEGER :: &
+        loadfm
+
+    sq = .FALSE.
+    IF (PRESENT(square)) sq = square
+
+    IF (.not.sq) THEN
+        ALLOCATE(xx(ld,ld))
+        CALL blkint_mtrx_unpack(v, xx, ld)
+    ELSE
+        xx(1:ld,1:ld) => v(1:ld*ld)
+    END IF
+
+!   fast enough on -O3 optimization level vs ad hoc routines
+    xx(1:ld,1:ld) = xx(ind(1:ld),ind(1:ld))
+
+    IF (.not.sq) THEN
+        CALL blkint_mtrx_pack(xx, v, ld)
+        DEALLOCATE(xx)
+    END IF
+
+END SUBROUTINE blkint_mtrx_permute_1d
+
+
+!-----------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_MTRX_PERMUTE_2D
+!>  @brief   Permute rows and columns of the symmetric matrix
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[inout]   v(:,:) symmetric square matrix as a 2D array
+!>  @param[in]      ind    permutation vector
+!>  @param[in]      ld     leading dimension of matrix V
+!>  @param[in]      square (optional) set to `.TRUE.` for the case of
+!>                         square matrix. Default: `.FALSE.`
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_mtrx_permute_2d (v, ind, ld, square)
+
+    REAL(KIND=fp), INTENT(INOUT), TARGET :: &
+        v(:,:)
+
+    INTEGER, INTENT(IN) :: &
+        ind(:)
+
+    INTEGER, INTENT(IN) :: &
+        ld
+
+    LOGICAL, INTENT(IN), OPTIONAL :: &
+        square
+
+    INTEGER :: &
+        loadfm
+
+    IF (size(v,1).ne.size(v,2)) THEN
+        write(*,*) "Error during matrix permutation: array is not square, aborting"
+        !call exit(1)
+        call abrt
+    END IF
+
+!   fast enough on -O3 optimization level vs ad hoc routines
+    v(1:ld,1:ld) = v(ind(1:ld),ind(1:ld))
+
+END SUBROUTINE blkint_mtrx_permute_2d
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_MTRX_UNPACK
+!>  @brief   Unpack symmetric square matrix from triangle to square form
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[in]      v(:)   symmetric matrix in triangle form
+!>  @param[out]     v2(:)  square symmetric matrix
+!>  @param[in]      ld     leading dimension of matrices V and V2
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_mtrx_unpack(v, v2, ld)
+
+    INTEGER, INTENT(IN) :: &
+        ld
+
+    REAL(KIND=fp), INTENT(IN) :: &
+        v(:)
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+        v2(:,:)
+
+    INTEGER :: &
+        i, j
+
+    j = 0
+    DO i = 1, ld
+        v2(1:i,i) = v(j+1:j+i)
+        v2(i,1:i-1) = v(j+1:j+i-1)
+        j = j + i
+    END DO
+
+END SUBROUTINE blkint_mtrx_unpack
+
+
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_MTRX_PACK
+!>  @brief   Pack symmetric matrix to triangle form
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[in]      v2(:)  square symmetric matrix
+!>  @param[out]     v(:)   v2 matrix in triangle form
+!>  @param[in]      ld     leading dimension of matrices V and V2
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_mtrx_pack(v2, v, ld)
+
+    INTEGER, INTENT(IN) :: &
+        ld
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+        v(:)
+
+    REAL(KIND=fp), INTENT(IN) :: &
+        v2(:,:)
+
+    INTEGER :: &
+        i, j
+
+    j = 0
+    DO i = 1, ld
+        v(j+1:j+i) = v2(1:i,i)
+        j = j + i
+    END DO
+
+END SUBROUTINE blkint_mtrx_pack
+
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_MTRX_SPACK
+!>  @brief   Symmetrize and pack matrix to triangle form
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[in]      v2(:)  square matrix
+!>  @param[out]     v(:)   symmetrized v2 matrix in triangle form
+!>  @param[in]      ld     leading dimension of matrices V and V2
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_mtrx_spack(v2, v, ld)
+
+    INTEGER, INTENT(IN) :: &
+        ld
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+        v(:)
+
+    REAL(KIND=fp), INTENT(IN) :: &
+        v2(:,:)
+
+    INTEGER :: &
+        i, j
+
+    j = 0
+    DO i = 1, ld
+        ! sum off-diagonal values
+        v(j+1:j+i-1) = v2(1:i-1,i) + v2(i,1:i-1)
+        ! leave diagonal intact
+        v(j+i) = v2(i,i)
+        j = j + i
+    END DO
+
+END SUBROUTINE blkint_mtrx_spack
+
+!------------------------------------------------------------------
+
+!*MODULE BLKINT   *DECK BLKINT_MTRX_SSPACK
+!>  @brief   Symmetrize and pack matrix to triangle form, and sum
+!>           it with the existed triangle matrix
+!>  @author  Vladimir Mironov
+!>  @date    2017
+!
+!   PARAMETERS:
+!>  @param[in]      v2(:)  square matrix
+!>  @param[inout]   v(:)   symmetrized v2 matrix in triangle form
+!>  @param[in]      ld     leading dimension of matrices V and V2
+!
+!   REVISION HISTORY:
+!   -Jun, 2017- Initial release
+!
+SUBROUTINE blkint_mtrx_sspack(v2, v, ld)
+
+    INTEGER, INTENT(IN) :: &
+        ld
+
+    REAL(KIND=fp), INTENT(OUT) :: &
+        v(:)
+
+    REAL(KIND=fp), INTENT(IN) :: &
+        v2(:,:)
+
+    INTEGER :: &
+        i, j
+
+    j = 0
+    DO i = 1, ld
+        ! sum off-diagonal values
+        v(j+1:j+i-1) = v(j+1:j+i-1) + v2(1:i-1,i) + v2(i,1:i-1)
+        ! leave diagonal intact
+        v(j+i) = v(j+i) + v2(i,i)
+        j = j + i
+    END DO
+
+END SUBROUTINE blkint_mtrx_sspack
+
+END MODULE blkint

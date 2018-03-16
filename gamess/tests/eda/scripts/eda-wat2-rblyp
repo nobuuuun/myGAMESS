@@ -1,0 +1,40 @@
+#!/bin/csh
+#
+#    test case 'eda-wat2-rblyp'
+#    Hui's energy decomposition analysis
+#    system is two waters 
+#    closed shell DFT test.
+#
+set ierr=0
+set ethrsh=0.01
+#
+#      checking only "own basis" results, which is the first set.
+set  ES0=-7.14
+set  EX0=-0.58
+set REP0=8.89
+set POL0=-6.74
+set DSD0=-2.63
+set TID0=-8.20
+
+set  ES=`grep "ELECTROSTATIC ENERGY                  ES=" $1 | head -1 | awk '{ print $5 }'`0
+set  EX=`grep "EXCHANGE ENERGY                       EX=" $1 | head -1 | awk '{ print $5 }'`0
+set REP=`grep "REPULSION ENERGY                     REP=" $1 | head -1 | awk '{ print $5 }'`0
+set POL=`grep "POLARIZATION ENERGY                  POL=" $1 | head -1 | awk '{ print $5 }'`0
+set DSD=`grep "DFT DISPERSION ENERGY               DISP=" $1 | head -1 | awk '{ print $6 }'`0
+set TID=`grep "TOTAL INTERACTION ENERGY HF OR DFT     E=" $1 | head -1 | awk '{ print $9 }'`0
+#
+set ESerr=`$chkabs $ES $ES0 $ethrsh`
+if($status != 0) set ierr=1 
+set EXerr=`$chkabs $EX $EX0 $ethrsh`
+if($status != 0) set ierr=1 
+set REPerr=`$chkabs $REP $REP0 $ethrsh`
+if($status != 0) set ierr=1 
+set POLerr=`$chkabs $POL $POL0 $ethrsh`
+if($status != 0) set ierr=1 
+set DSDerr=`$chkabs $DSD $DSD0 $ethrsh`
+if($status != 0) set ierr=1 
+set TIDerr=`$chkabs $TID $TID0 $ethrsh`
+if($status != 0) set ierr=1 
+#
+echo -n "ESerr=$ESerr EXerr=$EXerr REPerr=$REPerr POLerr=$POLerr DSDerr=$DSDerr TIDerr=$TIDerr"
+exit $ierr 

@@ -1,0 +1,37 @@
+{
+  "name": "efp1-fo-md.log",
+  "validation": [
+    {
+      "header": "MD",
+      "name": "POTENTIAL ENERGY - MD",
+      "value": "-6.57879679",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "TRANSLATIONAL KINETIC ENERGY - MD",
+      "value": "3.67216552",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "ROTATIONAL KINETIC ENERGY - MD",
+      "value": "3.52322790",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    },
+    {
+      "header": "MD",
+      "name": "TOTAL KINETIC ENERGY - MD",
+      "value": "7.19539342",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    }
+  ]
+}

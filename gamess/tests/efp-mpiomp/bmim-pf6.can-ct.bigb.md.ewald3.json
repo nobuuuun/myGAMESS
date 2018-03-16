@@ -1,0 +1,13 @@
+{
+  "name": "bmim-pf6.can-ct.bigb.md.ewald3.log",
+  "validation": [
+    {
+      "header": "MD",
+      "name": "POTENTIAL ENERGY - MD",
+      "value": "511.42120057",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 4.9999999999999996e-06
+    }
+  ]
+}

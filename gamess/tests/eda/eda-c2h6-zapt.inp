@@ -1,0 +1,35 @@
+Takes about 2 minutes on a 2.67GHz Sandy Bridge processor
+
+ -------------
+ ALL BASIS SET                                       HARTREE          KCAL/MOL
+ -------------
+ ELECTROSTATIC E.ERGY                  ES=         -0.234295           -147.02
+ EXCHANGE E.ERGY                       EX=         -0.309505           -194.22
+ REPULSION E.ERGY                     REP=          0.648591            407.00
+ POLARIZATION E.ERGY                  POL=         -0.236727           -148.55
+ MP2 DISPERSION E.ERGY               DISP=         -0.040920            -25.68
+ TOTAL INTERACTION E.ERGY HF OR DFT     E=         -0.131936            -82.79
+ TOTAL INTERACTION E.ERGY MP2           E=         -0.172856           -108.47
+
+
+ $CONTRL SCFTYP=ROHF RUNTYP=eda mult=1 ICHARG=0 mplevl=2 ispher=1 $end
+ $SYSTEM MWORDS=50 MEMDDI=0 $END
+ $LMOEDA MATOM(1)=4 4 MCHARG(1)=0 0 MMULT(1)=2 -2 $END
+ $BASIS  GBASIS=accd $END
+ $SCF    DIIS=.T. SOSCF=.F. DIRSCF=.T. FDIFF=.F. NPUNCH=1 $END
+ $mpd    code=serial ospt=zapt $end
+ $DATA
+rotated by 60 degrees from mp2/accq staggered geometry
+C1
+C     6.0    -0.49027225     0.46910772    -0.00444996
+H     1.0    -0.22655283     1.07803512     0.85698873
+H     1.0    -1.10423672    -0.35536841     0.35016090
+H     1.0    -1.10425293     1.07811451    -0.66366345
+C     6.0     0.75166166    -0.03806581    -0.72153479
+H     1.0     0.78037816    -1.12496066    -0.73800385
+H     1.0     1.65830922     0.30850673    -0.23127511
+H     1.0     0.78075457     0.30863136    -1.75175524
+ $END
+
+! TRAVIS-CI SMALL
+

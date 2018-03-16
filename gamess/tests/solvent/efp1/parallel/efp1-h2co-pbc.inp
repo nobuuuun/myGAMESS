@@ -1,0 +1,38 @@
+!   H2CO RMP2 plus 2 DFT-level EFP1 waters, with periodic boundary conditions
+!   the cc-pVDZ basis has 40 AOs and 38 MOs
+!   test case from Hui, October 2010
+!
+! with PBC: FINAL E= -113.7892775176, E(MP2)= -114.1333796460, RMS= 0.047924187
+!  w/o PBC: F.NAL E= -113.8082898459, E(MP2)= -114.1522837334, RMS= 0.046821694
+!
+!   this run takes 4 seconds on 2.66 GHz Cloverton (26 Oct 2015)
+!   results have not changed since 2010.
+!
+ $contrl scftyp=RHF mplevl=2 runtyp=gradient ispher=1 $end
+ $system mwords=5 memddi=20 $end
+ $mp2    code=ims $end
+ $scf    dirscf=.T. $end
+ $basis  gbasis=ccd $end
+ $guess  guess=huckel $end
+ $data
+formaldehyde plus 2 EFP1 waters, using PBC
+C1
+C     6.0    -0.03715368    -0.88761163    -0.07265162
+H     1.0     0.16333988    -1.49875712    -0.97532099
+H     1.0     0.03131483    -1.28773999     0.97122431
+O     8.0     0.06868605     0.52629000    -0.23047969
+ $end
+ $efrag
+xbox=10.0 ybox=10.0 zbox=10.0 swr1=3.5  swr2=5.0
+ FRAGNAME=H2ODFT
+O1            3.79385781     0.10807202     0.18833692
+H2            4.28378797     0.04818169    -0.61618787
+H3            3.03872299     0.64444971     0.00681956
+ FRAGNAME=H2ODFT
+O1           -3.86300993     0.15448226     0.17073008
+H2           -4.07425261    -0.34664595    -0.60071379
+H3           -2.99373686     0.49861780     0.04106229
+ $end
+
+! TRAVIS-CI SMALL
+

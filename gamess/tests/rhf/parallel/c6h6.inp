@@ -1,0 +1,31 @@
+!   EXAM49.
+!   Single point calculatio of benzene (C6H6) with RHF-D3(BJ)/6-31G(d)
+!  
+!   Final energy is -230.7916322157 (Hartree) after 8 SCF iterations.
+!   Grimme's dispersion energy is -0.0896400767 (Hartree).
+!
+ $CONTRL RUNTYP=ENERGY NPRINT=-5 $END
+ $SYSTEM MWORDS=40 $END
+ $SCF DIRSCF=.TRUE. DIIS=.TRUE. $END
+ $BASIS GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+ $DFT DC=.TRUE. IDCVER=4 $END
+ $DATA
+ C12H12
+C1
+C           6.0     -0.030544037         0.000000000        -1.409121795
+C           6.0     -1.186612730        -0.354690359        -0.710957795
+C           6.0      1.125524656         0.354690359        -0.710957795
+H           1.0     -2.086037837        -0.630640582        -1.254130795
+H           1.0      2.024949762         0.630640582        -1.254130795
+C           6.0     -1.186612730        -0.354690359         0.685372205
+C           6.0      1.125524656         0.354690359         0.685372205
+H           1.0     -2.086037837        -0.630640582         1.228545205
+H           1.0      2.024949762         0.630640582         1.228545205
+C           6.0     -0.030544037         0.000000000         1.383536205
+H           1.0     -0.030544037         0.000000000         2.469883205
+H           1.0     -0.030544037         0.000000000        -2.495468795
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

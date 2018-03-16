@@ -1,0 +1,29 @@
+{
+  "name": "exam25.log",
+  "validation": [
+    {
+      "header": "parse_header",
+      "name": "SEMI-EMPIRICAL ENERGY",
+      "value": "-48.7022570475",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "parse_header",
+      "name": "HEAT OF FORMATION",
+      "value": "-7.56646",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "2.315141",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

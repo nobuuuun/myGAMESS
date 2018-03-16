@@ -1,0 +1,173 @@
+{
+  "name": "mc-coni-ch2nh2-protect.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-94.2573265101",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -5",
+      "value": "-93.8369929281",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -4",
+      "value": "-94.2622233519",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -3",
+      "value": "-94.2573321788",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-94.2573208414",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-93.8091039984",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "NACME",
+      "name": "NACME X : ATOM 1",
+      "value": "3.7040502",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME X : ATOM 2",
+      "value": "-0.9116867",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME X : ATOM 3",
+      "value": "-74.5644908",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME X : ATOM 4",
+      "value": "70.8685783",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME X : ATOM 5",
+      "value": "3598.9589397",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Y : ATOM 1",
+      "value": "-51.0556699",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Y : ATOM 2",
+      "value": "26.2617079",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Y : ATOM 3",
+      "value": "3250.0163099",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Y : ATOM 4",
+      "value": "-3235.0718594",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Y : ATOM 5",
+      "value": "42.2472191",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Z : ATOM 1",
+      "value": "-1214.6175529",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Z : ATOM 2",
+      "value": "622.6491855",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Z : ATOM 3",
+      "value": "47.9470967",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Z : ATOM 4",
+      "value": "337.0237247",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "NACME",
+      "name": "NACME Z : ATOM 5",
+      "value": "101.9954757",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    }
+  ]
+}

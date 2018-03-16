@@ -1,0 +1,36 @@
+#!/bin/bash
+
+mcscf0=-415.7570626817
+mcscf=`grep "FINAL MCSCF " $1 | tail -n 1 | awk '{print $5}'`
+
+state1E0=-416.6000986681
+state1E=`grep "CI STATE    1                MCQDPT E(MP2)" $1 | tail -n 1 | awk '{print $7}'`
+
+state2E0=-416.4069013208
+state2E=`grep "CI STATE    3                MCQDPT E(MP2)" $1 | tail -n 1 | awk '{print $7}'`
+
+tolE0=$tolE
+
+error=0
+
+#mcscf energy
+diffm=`$chkabs $mcscf0 $mcscf $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$((error + 1))
+fi
+#state1
+diff1=`$chkabs $state1E0 $state1E $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$((error + 1))
+fi
+#state2
+diff2=`$chkabs $state2E0 $state2E $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$((error + 1))
+fi
+
+printf "mcscf=%12.8f; state1=%12.8f; state2=%12.8f\n" $diffm $diff1 $diff2
+exit $error

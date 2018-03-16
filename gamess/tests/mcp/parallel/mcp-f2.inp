@@ -1,0 +1,29 @@
+!   Analytic RHF geom. opt. of F2 using the MCP basis set ZFK3-DK3
+!           There are 132 AOs and 114 MOs in this run.
+!
+!   FINAL RHF E=   -47.8527439621, 9 iters, RMS GRADIENT = 0.0411279
+!   FINAL RHF E=   -47.8496313439, 7 iters, RMS GRADIENT = 0.0713208
+!   FINAL RHF E=   -47.8588975077, 6 iters, RMS GRADIENT = 0.0008557
+!   FINAL RHF E=   -47.8588992952, 5 iters, RMS GRADIENT = 0.0001990
+!   FINAL RHF E=   -47.8588993979, 4 iters, RMS GRADIENT = 0.0000005
+!           The optimized bondlength is 1.3278399 Angs 
+!
+!   This run takes 65 seconds on 2.66 GHz Cloverton ( 7 Apr 2015)
+!   results unchanged since 2010
+!
+ $contrl scftyp=rhf runtyp=optimize pp=mcp ispher=1 $end
+ $system mwords=3 $end
+ $basis  gbasis=zfk3-dk3 $end
+ $statpt opttol=1.0d-5 $end
+ $scf    dirscf=.true. $end
+
+ $data
+F2...rhf/zfk3-dk3
+Dnh  2
+
+F  9.0  0.0 0.0 1.4119/2
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

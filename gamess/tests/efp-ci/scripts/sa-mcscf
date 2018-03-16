@@ -1,0 +1,19 @@
+#!/bin/bash
+
+finalE0=-415.7570626907
+
+finalE=`grep "FINAL MCSCF " $1 | tail -n 1 | awk '{print $5}'`
+
+tolE0=$tolE
+
+error=0
+
+#total energy
+diffe=`$chkabs $finalE0 $finalE $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$((error + 1))
+fi
+
+printf "finalE=%12.8f\n" $diffe
+exit $error

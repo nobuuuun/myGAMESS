@@ -1,0 +1,44 @@
+!    cubic [Ga(C(SiH3)3)]4Se4...tetrahedral symmetry...spd-rich basis.
+!    The molecule does exists, with CH3 rather than H's on the Si atoms.
+!    60 atoms, 244 occupied MOs, of which 156 are chemical cores.
+!
+!    CCD: FINAL E= -20932.2123417264, 12 iters, RMS= 0.003895915
+!
+!    cc-pVDZ run takes 691 seconds on 2.66 GHz Cloverton (17 Mar 2015)
+!    --------------------------------------------------------------------
+!    Devised as an AO integral test involving contracted d orbitals,
+!    since these are actually occupied for Se and Ge.   Fall 2004
+!    This is a thorough workout of the sp- and spd-rotated axis integrals.
+!
+!    note that the first two are not to be used in spherical harmonic form
+!    3-21G(d)     568 AOs, 568 MOs, maximum d contraction length=3
+!    6-31G(d)     640 AOs, 640 MOs, maximum d contraction length=3
+!    cc-pVDZ      772 AOs, 728 MOs, maximum d contraction length=5
+!    integral evaluation writes to disk file.
+!
+!    basis    # 2e- ints  t(ints)     Energy      #iters     RMS       t(grad)
+!    3-21G(d)  126670433   15.54  -20832.8809388786  12  0.000001896    27.67
+!    6-31G(d)  235621236   31.86  -20929.8565692283  12  0.003742447    81.88
+!    cc-pVDZ   362869655  211.64  -20932.2123417274  12  0.003895915   301.28
+!
+!
+ $contrl scftyp=rhf runtyp=gradient ispher=1 $end
+ $system mwords=25 $end
+x$basis  gbasis=n21 ngauss=3 ndfunc=1 $end
+x$basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $basis  gbasis=ccd                   $end
+ $guess  guess=huckel $end
+ $data
+Se4Ga4(C(SiH3)3)4...geometry below is RHF/3-21G(d)
+Td
+
+SE         34.0  -1.3211408740  -1.3211408740  -1.3211408740
+GA         31.0   1.0994747011   1.0994747011   1.0994747011
+C           6.0   2.2407702921   2.2407702921   2.2407702921
+SI         14.0   1.8041235287   1.8041235287   4.0205287463
+H           1.0   2.5982416329   2.5982416329   4.9886444121
+H           1.0    .3693314860   2.0655994318   4.2765200778
+ $end
+
+! TRAVIS-CI MEDIUM
+

@@ -1,0 +1,28 @@
+!   SR-CISD plus Davidson correction...nitrogen atom ground state
+!     19 AOs, 18 MOs, 376 determinants
+!
+!   FINAL E(ROHF)= -54.3828887521, 11 iterations
+!        E(CI-SD)= -54.4732989363
+!      E(CI-SD+Q)= -54.4763926009  ref.wt.= 0.9669
+!
+!   This run takes 0 seconds on 2.66 GHz Cloverton (10 Nov 2009)
+!
+ $contrl scftyp=rohf mult=4 cityp=ormas runtyp=energy ispher=1 $end
+ $system mwords=1 memddi=5 $end
+ $basis  gbasis=n31 ngauss=6 diffsp=.t. ndfunc=1 $end
+ $guess  guess=huckel $end
+!    the 4-S-u term arises from b1u*b2u*b3u=au in D2h
+ $cidet  stsym=Au ncore=1 nact=17 nels=5 $end
+ $ormas  nspace=3 qcorr=.true.  mstart(1)=2,3,6
+                                  mine(1)=0,1,0
+                                  maxe(1)=2,5,2 $end
+ $data
+nitrogen atom...4-S...open shell CI-SD
+Dnh 2
+
+N 7.0 
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

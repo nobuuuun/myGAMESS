@@ -1,0 +1,33 @@
+!*MODULE PARAMS
+!>    @author  Vladimir Mironov
+!
+!>    @brief   (Dummy) module to store input parameters
+!
+!     REVISION HISTORY:
+!>    @date _May, 2016_ Initial release
+!>    @date _Jun, 2017_ Update for shared Fock matrix HF method
+!
+MODULE params
+
+    IMPLICIT NONE
+
+    INTEGER :: &
+        intomp      !< Flag to select algorithm for calculating HF 2-electron contribution.
+                    !< Possible values:
+                    !< - 0 - MPI-only algorithm,
+                    !< - 1 - MPI over I loop, OpenMP over JK loops,
+                    !< - 2 - MPI over IJ loops, OpenMP over KL loops.
+                    !<
+                    !< Default:
+                    !< - 0 - for MPI build,
+                    !< - 1 - for MPI/OpenMP build.
+
+    LOGICAL :: &
+        shfock      !< .TRUE. for shared Fock matrix algorithm
+                    !< Significantly reduces memory footprint for
+                    !< highly parallel machines, but may affect scaling. Use with care. \n
+                    !< Default: .FALSE.
+
+    PUBLIC
+
+END MODULE params

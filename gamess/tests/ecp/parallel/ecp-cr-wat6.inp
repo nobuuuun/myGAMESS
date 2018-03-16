@@ -1,0 +1,72 @@
+!  How to put a core potential on the metal, but a full basis on ligands.
+!  Or any other kind of atom-customized basis set...
+!
+!  The molecule is the "octahedral" Cr(H2O)6 +3 ion, which really has
+!  the symmetry group Th.  d3,s0 ion leads to a half-filled tg orbital.
+!  148 AOs, 139 MOs in sherical harmonic space, 37 alpha and 34 beta e-
+!
+!  FINAL energy= -541.1049518451, 12 iters, RMS=0.000010226
+!
+!  Note that neither BASNAM nor $ECP know about the symmetry equivalent
+!  atoms, so there's a lot of tedious repetition in both.
+!
+!  This run takes 3 seconds on 2.66 GHz Cloverton ( 6 Apr 2015)
+!  results are little changed since 2010
+!
+ $contrl scftyp=rohf icharg=+3 mult=4 runtyp=gradient pp=read ispher=1 $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+ $basis  basnam(1)=metal, ligO,ligO,ligO,ligO,ligO,ligO,
+          ligH,ligH,ligH,ligH,ligH,ligH,ligH,ligH,ligH,ligH,ligH,ligH $end
+ $data
+Cr+3(H2O)6 complex...SBKJC/6-31G(d) geometry
+Th
+
+CHROMIUM   24.0    .0000000000    .0000000000    .0000000000
+OXYGEN      8.0    .0000000000    .0000000000   2.0398916104
+HYDROGEN    1.0    .7757887450    .0000000000   2.6122732372
+ $end
+!
+!       core potential basis for Chromium
+ $metal
+sbkjc
+
+ $end
+!
+!       normal 6-31G(d) for oxygens
+ $ligO
+n31 6
+d 1 ; 1 0.8 1.0
+ 
+ $end
+!
+!       unpolarized basis for hydrogens
+ $ligH
+n31 6
+ 
+ $end
+
+ $ecp
+Cr-ecp SBKJC
+O-ecp none
+O-ecp none
+O-ecp none
+O-ecp none
+O-ecp none
+O-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+ $end
+
+! TRAVIS-CI SMALL
+

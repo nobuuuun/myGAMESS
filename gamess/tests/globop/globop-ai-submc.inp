@@ -1,0 +1,52 @@
+!  Monte Carlo AI test case
+!  This is a sample input file for finding the minima of a
+!  water pentamer using the Monte Carlo search.  In this input,
+!  the energy is calculated using RHF/MINI.  The system is
+!  segmented with each molecule as a group.
+!
+!  Since the Monte Carlo method involves random movements, it
+!  is impossible to predict the final geometry.  However, the
+!  lowest energy should be within a Hartree of:
+!  MINIMUM ENERGY FOUND =   -377.5693586933
+!
+!  The output will include the line:
+!  TOTAL NUMBER OF GEOMETRIES =     80
+!
+!  This run performs a secondary Monte Carlo search as part of
+!  each step on the fragment that is being moved.  The output
+!  must include:
+!
+!   Number of atoms in fragment is                    3
+!  -------Sub MC results----------
+!
+ $CONTRL SCFTYP=RHF RUNTYP=GLOBOP MAXIT=30 MULT=1 ISPHER=1 $END
+ $SYSTEM TIMLIM=525600 MWORDS=100 MEMDDI=300 $END
+ $BASIS GBASIS=MINI $END
+ $GLOBOP MCTYP=1 NTRAN=2 NROT=2 NBLOCK=10 NTEMPS=2 TEMPI=2000 RNDINI=.f.
+       MCMIN=.f. JSTRND=.f. NAIFG=5 TEMPF=20
+      NSMSTP=10 SMTEMP=2001 $END
+ $GLBFRG NAICUT=3 $END
+ $SCF DIRSCF=.TRUE. $END
+ $STATPT NSTEP=200 $END
+ $DATA
+Title
+C1
+ O           8.0  -8.4842218050  -1.0134428881  -2.6103544458
+ H           1.0  -7.9431282905  -0.9548804564  -3.4017310633
+ H           1.0  -9.3795815081  -0.9953854603  -2.9158701607
+ O           8.0  -6.7722426929  -0.6356938187  -4.8084057067
+ H           1.0  -6.1666670105   0.0305407058  -4.4792179977
+ H           1.0  -6.2160110020  -1.3435058030  -5.1018889899
+ O           8.0  -5.0534821918   1.1074034668  -3.4162842435
+ H           1.0  -4.9483311878   2.0428982759  -3.5108765185
+ H           1.0  -5.4185226002   0.9826259040  -2.5388434650
+ O           8.0  -6.9482438035  -2.1658491674  -0.4134561481
+ H           1.0  -7.5481871183  -2.0309564574  -1.1416684693
+ H           1.0  -7.4975727768  -2.4049872074   0.3190732586
+ O           8.0  -6.5508921981   0.6499107013  -1.0545682936
+ H           1.0  -6.3620775963  -0.1696437634  -0.6065866032
+ H           1.0  -7.3819460459   0.4622486950  -1.4767871849
+ $END
+! TRAVIS-CI SKIP
+! NEED DETERMINISTIC OUTPUT FOR	VALIDATION
+

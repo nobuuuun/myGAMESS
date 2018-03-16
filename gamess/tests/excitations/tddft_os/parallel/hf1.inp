@@ -1,0 +1,48 @@
+!
+! The test case computes the excited-to-excited transition dipole moments and 
+! oscillator strengths of the HF molecule with SVWN/6-311G(p)++. Below are some
+! of the expected results:
+!
+! TRANSITION        EXCITATION            TRANSITION DIPOLE, A.U.     OSCILLATOR
+!                       EV              X       Y       Z       DIP    STRENGTH
+!  1  ->  9           5.947          0.0000  0.0000  1.3288   1.3288    0.2573
+!  1  -> 10           5.947          0.0000  0.0000 -0.4360   0.4360    0.0277
+!  2  ->  9           5.947          0.0000  0.0000  0.4360   0.4360    0.0277
+!  2  -> 10           5.947          0.0000  0.0000  1.3288   1.3288    0.2573
+! 17  -> 18           1.754          0.0000  0.0000 -1.5998   1.5998    0.1100
+!
+! Each of the pairs of states 1, 2 and 9, 10 above are degenerate, hence the 
+! first four transitions are degenerate as well. On some machines these four 
+! degenerate transitions might have different values of transition dipole 
+! moments and oscillator strengths such as
+!
+!  1  ->  9           5.947          0.0000  0.0000 -1.3985   1.3985    0.2850
+!  1  -> 10           5.947          0.0000  0.0000 -0.0018   0.0018    0.0000
+!  2  ->  9           5.947          0.0000  0.0000  0.0018   0.0018    0.0000
+!  2  -> 10           5.947          0.0000  0.0000 -1.3985   1.3985    0.2850
+!
+! and
+!
+!  1  ->  9           5.947          0.0000  0.0000  1.3958   1.3958    0.2839
+!  1  -> 10           5.947          0.0000  0.0000 -0.0865   0.0865    0.0011
+!  2  ->  9           5.947          0.0000  0.0000 -0.0865   0.0865    0.0011
+!  2  -> 10           5.947          0.0000  0.0000 -1.3958   1.3958    0.2839
+!
+! Nevertheless, the sum of the four oscillator strengths is always 0.5700. In 
+! fact, only the sum of the four oscillator strengths is an experimentally 
+! measurable quantity.
+!
+ $contrl units=angs dfttyp=svwn tddft=excite units=bohr $end
+ $tddft mult=1 nstate=20 $end
+ $basis gbasis=n311 ngauss=6 ndfunc=0 npfunc=1 diffs=.t. diffsp=.t. $end
+ $data
+  
+c1
+       H     1     0.0  0.0  0.7    
+       F     9     0.0  0.0 -0.7  
+ $end
+
+
+! TRAVIS-CI SMALL
+! 
+

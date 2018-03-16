@@ -1,0 +1,57 @@
+!  H3CN radical by open shell SCF on the xy component of a 1-E state
+!  from its e**2 configuration.  See similar input for xx-yy component.
+!  Spherical harmonics are in use: 45 AOs, 43 MOs
+!
+!     NSERCH: 0  FINAL E= -93.9349198442  R.M.S.=  0.0042621
+!     NSERCH: 1  FINAL E= -93.9350521932  R.M.S.=  0.0012063
+!     NSERCH: 2  FINAL E= -93.9350914770  R.M.S.=  0.0008854
+!     NSERCH: 3  FINAL E= -93.9351124686  R.M.S.=  0.0000398
+!     NSERCH: 4  FINAL E= -93.9351124921  R.M.S.=  0.0000066
+!     NSERCH: 5  FINAL E= -93.9351124928  R.M.S.=  0.0000009
+!
+!  This run takes 1 seconds on a 2.66 GHz Cloverton (12 Feb 2014)
+!
+ $contrl scftyp=gvb mult=1 runtyp=optimize ispher=1 nosym=0 $end
+ $system mwords=1 $end
+ $statpt opttol=0.00001 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+
+!           Here the e**2 is treated as a degenerate shell,
+!           whose density is consequently totally symmetric,
+!           allowing AO integral symmmetry to be used.
+ $scf    nco=7 nseto=1 no(1)=2 npair=0 couple=.true.
+             f(1)=1.0, 0.5
+         alpha(1)= 2.00, 1.00, 0.25 
+          beta(1)=-1.00,-0.50, 0.00 $end
+
+!            MCSCF matches exactly the GVB above: E= -93.9349198441 in 5 iters
+!            SOSCF works, but takes 26 iters to find this identical energy.
+x$contrl scftyp=mcscf runtyp=energy $end
+x$mcscf  fullnr=.true. $end
+x$det    group=c1 ncore=7 nact=2 nels=2 nstate=4 wstate(1)=1,1 $end
+!
+!           Treating 'e' as if two different non-degenerate orbitals
+!           causes unsymmerical shell densities, and that requires
+!           turning off AO integral symmetry.  Perhaps as a result,
+!           this finds a bit lower energy than the degenerate 
+!           orbital run below, and also agrees with the similar
+!           no-symmetry calculation on the xx-yy component.
+!              N-SERCH: 0 E=-93.9349418102, 10 iters, r.m.s. grad=0.0043151
+!              N-SERCH: 7 E=-93.9351405952,  2 iters, r.m.s. grad=0.0000013
+!           and last geometry has three slightly different CH distances.
+x$contrl nosym=1 $end
+x$scf    nco=7 nseto=2 no(1)=1,1 npair=0 $end
+
+ $data
+H3CN...3-A-2 ROHF/6-31G** starting geometry
+Cnv  3
+
+CARBON      6.0    .0000000000    .0000000000    .0859766812
+NITROGEN    7.0    .0000000000    .0000000000   1.5214006190
+HYDROGEN    1.0   1.0204763376    .0000000000   -.2885202335
+ $end      
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,117 @@
+{
+  "parse_header" : "EFP-EFP INTERACTION ENERGIES",
+  "parse_group" : [
+   {
+     "regex_string" : "^                 CHARGE-CHARGE         =.*$",
+     "parse_name"   : "CHARGE-CHARGE",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 CHARGE-DIPOLE         =.*$",
+     "parse_name"   : "CHARGE-DIPOLE",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 CHARGE-QUADRUPOLE     =.*$",
+     "parse_name"   : "CHARGE-QUADRUPOLE",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 DIPOLE-DIPOLE         =.*$",
+     "parse_name"   : "DIPOLE-DIPOLE",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 DIPOLE-QUADRUPOLE     =.*$",
+     "parse_name"   : "DIPOLE-QUADRUPOLE",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 QUADRUPOLE-QUADRUPOLE =.*$",
+     "parse_name"   : "QUADRUPOLE-QUADRUPOLE",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 OVERLAP PEN. ENERGY   =.*$",
+     "parse_name"   : "OVERLAP PEN. ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 ELECTROSTATIC ENERGY  =.*$",
+     "parse_name"   : "ELECTROSTATIC ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 REPULSION ENERGY      =.*$",
+     "parse_name"   : "REPULSION ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 POLARIZATION ENERGY   =.*$",
+     "parse_name"   : "POLARIZATION ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 TOTAL DISPERSION ENERGY\\(E6+E7+E8\\) =.*$",
+     "parse_name"   : "TOTAL DISPERSION ENERGY(E6+E7+E8)",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 E8 DISPERSION ENERGY     =.*$",
+     "parse_name"   : "E8 DISPERSION ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 E7 DISPERSION ENERGY     =.*$",
+     "parse_name"   : "E7 DISPERSION ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 E6 DISPERSION ENERGY     =.*$",
+     "parse_name"   : "E6 DISPERSION ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 CHARGE TRANSFER ENRGY =.*$",
+     "parse_name"   : "CHARGE TRANSFER ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^                 FINAL EFP ENERGY      =.*$",
+     "parse_name"   : "FINAL EFP ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_instance" : -1
+   }
+  ]
+}

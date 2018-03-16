@@ -1,0 +1,23 @@
+!
+! A simple direct RHF test for the H2 molecule
+! This test checks if everything is generally OK
+!
+! Method: RHF/3-21G with p b.f.
+! Final energy:
+!   FINAL RHF ENERGY IS       -1.1269274373
+!
+ $CONTRL
+  SCFTYP=RHF
+  RUNTYP=Energy
+  nprint=4
+ $END
+ $SYSTEM TIMLIM=5 MEMORY=1000000 $END
+ $SCF    DIRSCF=.TRUE. CONV=1.0d-7 FDIFF=.false. $END
+ $BASIS  GBASIS=n21 NGAUSS=3 npfunc=1 $END
+ $GUESS  GUESS=huckel $END
+ $DATA
+Hydrogen molecule
+C1
+HYDROGEN    1.0     -0.37065       0.0         0.0
+HYDROGEN    1.0      0.37065       0.0         0.0
+ $END

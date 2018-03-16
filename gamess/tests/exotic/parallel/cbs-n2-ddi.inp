@@ -1,0 +1,54 @@
+!    N2...using cc-pVxZ, where x=D,T,Q,5,6 contains d,f,g,h,i as top L.
+!    Using MP2 tests the virtual space, where most of g,h,i AOs live.
+!        cc-pVDZ is 3s2p1d
+!        cc-pVTZ is 4s3p2d1f
+!        cc-pVQZ is 5s4p3d2f1g
+!        cc-pV5Z is 6s5p4d3f2g1h
+!        cc-pV6Z is 7s6p5d4f3g2h1i    420 AOs, 280 MOs, 1 lin.dep. warning
+!
+!    CC6 run has FINAL E= -108.9891349069, 12 iters, E(MP2)= -109.4071955657
+!    CC6 run takes 1086 seconds on 2.66 GHz Cloverton (8 Jan 2013)
+!
+!    results for all basis sets follow:
+!
+!                 MP2                 HF-SCF
+!    CCD:   -109.2623348866     -108.9511800678     (GAMESS)
+!           -109.262334886344   -108.951180067637   (NWchem)
+!           -109.26233489       -108.95118007       (MOLPRO)
+!
+!    CCT:   -109.3577563477     -108.9796631678
+!           -109.357756347628   -108.979663167766
+!           -109.35775635       -108.9796631
+!
+!    CCQ:   -109.3901905312     -108.9871514356
+!           -109.390190531126   -108.987151435576
+!           -109.39019053       -108.98715144
+!
+!    CC5:   -109.4021813604     -108.9888163896
+!           -109.402181360444   -108.988816389725
+!           -109.40218136       -108.98881639
+!
+!    CC6:   -109.4071955657     -108.9891349069
+!           -109.xxx            -108.xxx            (NWchem stops after h)
+!           -109.40719557       -108.98913491
+!
+ $contrl scftyp=rhf mplevl=2 runtyp=energy units=bohr ispher=1 $end
+ $system mwords=900 memddi=10 $end
+ $guess  guess=huckel $end
+
+!   next are being careful about accuracy for possible near linear dependence
+ $contrl icut=11 qmttol=1d-9 $end
+ $scf    conv=1d-8 dirscf=.t. $end
+ $mp2    cutoff=1d-11 code=ddi $end
+
+!      Step the basis: CCD, CCT, CCQ, CC5, CC6.
+ $basis  gbasis=cc6 $end
+ $data
+nitrogen at MP2/CCT geometry (given in Bohr units)
+Dnh 4
+
+N  7.00    0.0  0.0 1.0522211618
+ $end
+
+! TRAVIS-CI MEDIUM
+

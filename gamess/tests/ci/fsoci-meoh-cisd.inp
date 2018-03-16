@@ -1,0 +1,41 @@
+!   Methanol...CI-SD demonstration...CCD has 50 AOs and 48 MOs
+!   There are 2 cores, 7 filled valence, and 39 external orbitals.
+!   The fastest way to do single reference CI-SD should be FSOCI,
+!   at scale, this should be about half the run time of ORMAS.
+!   The input to run two other ways is also included.
+!   The SR-CISD has 53,964 determinants
+!
+!     FINAL RHF E= -115.0477745978 after 11 iterations
+!   CI EIGENSTATE= -115.3823794999, 11 Davidson cycles.
+!
+!   this FSOCI run takes 13 seconds on 2.66 GHz Cloverton (14 Apr 2015)
+!
+ $contrl scftyp=rhf cityp=fsoci runtyp=energy ispher=1 $end
+ $system mwords=10 $end
+ $basis  gbasis=ccd $end
+ $guess  guess=huckel $end
+
+!          input to test determinants (read if CITYP is FSOCI)
+ $cidet  group=Cs stsym=ap ncore=2 nact=7 nels=14 $end
+ $sodet  $end
+
+!          input to test determinants (read if CITYP is ORMAS)   (7+39=46 MOs)
+x$cidet  group=Cs stsym=ap ncore=2 nact=46 nels=14 $end
+x$ormas  nspace=2 mstart(1)=3,10 mine(1)=12,0 maxe(1)=14,2 $end
+
+!          input to test GUGA         (read if CITYP is GUGA)
+x$CIDRT  group=Cs stsym=ap NFZC=2 SOCI=.TRUE. NDOC=7 NVAL=0 NEXT=39 $end
+
+ $data
+methanol at RHF/3-21G structure
+Cs
+
+O    8.0  -0.7041598922  -0.0720755226   0.0000000000
+H    1.0  -1.0936881336   0.8116752769   0.0000000000
+C    6.0   0.7341616331   0.0146203119   0.0000000000
+H    1.0   1.0983181110  -1.0006979347   0.0000000000
+H    1.0   1.1151391674   0.5189764667   0.8820153105
+ $end
+
+! TRAVIS-CI SMALL
+

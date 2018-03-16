@@ -1,0 +1,68 @@
+C*MODULE LOCATD   *DECK LOCATD_FIND2POS
+C> @brief      Given triangular position ijpos, find i and j.
+C>
+C> @author     Aaron West
+C>             -June 04, 2015
+C>
+C> @param IJPOS   is position in triangular matrix.
+C> @param IPOS    is the first index.
+C> @param JPOS    is less than or equal to ipos.
+      SUBROUTINE LOCATD_FIND2POS(IJPOS,IPOS,JPOS)
+      IMPLICIT NONE
+      INTEGER IJPOS,IPOS,JPOS
+C--------------------------------------------------------------------
+      INTEGER NERR0,IDUM,JDUM,ITMP
+      DOUBLE PRECISION :: TMP,RT1,RT2
+C--------------------------------------------------------------------
+      DOUBLE PRECISION :: ONE,TWO,EIGHT
+      PARAMETER(ONE=1.0D+00,TWO=2.0D+00,EIGHT=8.0D+00)
+C--------------------------------------------------------------------
+      INTEGER IW,IDAF,IODA,IP,IJKT,IR,IS,NAV
+      INTEGER ME,MASTER,NPROC,IBTYP,IPTIM
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C---------------------------------------------------------------------
+      COMMON /IOFILE/ IR,IW,IP,IS,IJKT,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C--------------------------------------------------------------------
+C     CHECK ON THE IJKPOS INPUT.
+      NERR0=0
+      IF(IJPOS.EQ.0) THEN
+        NERR0=NERR0+1
+        GO TO 888
+      ENDIF
+C     FIND IPOS,JPOS FROM IJPOS.
+      TMP=SQRT(ONE+EIGHT*IJPOS)
+      RT1=ABS((TMP-ONE)/TWO)
+      RT2=ABS((-TMP-ONE)/TWO)
+C
+      IDUM=INT(RT1)
+      JDUM=IDUM*(IDUM-1)/2
+      JDUM=IJPOS-JDUM
+      IPOS=MAX(IDUM,JDUM)
+      JPOS=MIN(IDUM,JDUM)
+      ITMP=IPOS*(IPOS-1)/2+JPOS
+      IF(IPOS.GT.0.AND.JPOS.GT.0.AND.ITMP.EQ.IJPOS) RETURN
+C
+      IDUM=INT(RT2)
+      JDUM=IDUM*(IDUM-1)/2
+      JDUM=IJPOS-JDUM
+      IPOS=MAX(IDUM,JDUM)
+      JPOS=MIN(IDUM,JDUM)
+      ITMP=IPOS*(IPOS-1)/2+JPOS
+      IF(IPOS.GT.0.AND.JPOS.GT.0.AND.ITMP.EQ.IJPOS) RETURN
+C
+C     PERFORM ERROR OUT.
+  888 CONTINUE
+      IF(MASWRK) THEN
+        WRITE(IW,9000)
+        IF(NERR0.NE.0) WRITE(IW,9010)
+      ENDIF
+      CALL FLSHBF(IW)
+      CALL ABRT
+      STOP
+C
+ 9000 FORMAT(/1X,'LOCATD_FIND2POS ERROR:',
+     *       /1X,'PROBLEMS HERE WITH IPOS,JPOS.')
+ 9010 FORMAT(/1X,'LOCATD_FIND2POS ERROR:',
+     *       /1X,'IJPOS=0 UPON INPUT.')
+      END

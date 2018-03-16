@@ -1,0 +1,171 @@
+!             example 12 converted into excited states
+!
+!     Note that although $CONTRL requests "singlet" UHF, both ground
+!     and excited states obey only Ms=0, and the latter will contain
+!     both singlets and triplets.
+!
+!     Numerical results are saved at the end.  Beyond saving this file
+!     to show that UHF has no good spin properties, there is an extra
+!     curiosity in this run.  The high molecular symmetry and the
+!     unsophistication of using singly excited states only, produces
+!     an accidental degeneracy of a singlet and triplet state!
+!
+!     FINAL U-B3LYP ENERGY IS      -77.2201870523, 15 iters
+!     spin assignments t=triplet and s=singlet are by skilled user:
+!  STATE        ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!  0        -77.2201870523    0.000
+!  1  *t*   -77.1295827468    2.465     0.0000  0.0000  0.0000    0.000
+!  2  *t*   -77.0875162655    3.610     0.0000  0.0000  0.0000    0.000
+!  3  *t*   -77.0875128154    3.610     0.0000  0.0000  0.0000    0.000
+!  4  *t*   -77.0411777269    4.871     0.0000  0.0000  0.0000    0.000  <--
+!  5  *s*   -77.0411777261    4.871     0.0000  0.0000  0.0000    0.000  <--
+!  6  *s*   -77.0299116316    5.178     0.0000  0.0000  0.0000    0.000
+!  7  *s*   -77.0299099657    5.178     0.0000  0.0000  0.0000    0.000
+!  8  *t*   -76.9779274894    6.592     0.0000  0.0000  0.0000    0.000
+!  9  *t*   -76.9779274539    6.592     0.0000  0.0000  0.0000    0.000
+! 10  *s*   -76.9398646993    7.628     0.0000  0.0000  0.0000    0.000
+! 11  *s*   -76.9398646689    7.628     0.0000  0.0000  0.0000    0.000
+! 12  *t*   -76.8866144606    9.077     0.0000  0.0000  0.0000    0.000
+! 13  *t*   -76.8866144268    9.077     0.0000  0.0000  0.0000    0.000
+! 14  *s*   -76.8722002890    9.469    -0.1166  0.0000  0.0000    0.003
+! 15  *s*   -76.8722002699    9.469     0.0000 -0.1166  0.0000    0.003
+! 16  *s*   -76.8718985927    9.477     0.0000  0.0000 -1.6007    0.595
+!
+!     this run takes 25 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!
+!     RHF+TDDFT sees only singlet or triplet states, as we choose.
+x$CONTRL SCFTYP=RHF        DFTTYP=b3lyp tddft=excite RUNTYP=energy NZVAR=5 $END
+x$TDDFT  mult=1 NSTATE=16 $END
+x$TDDFT  mult=3 NSTATE=16 $END
+
+!     UHF+TDDFT reference uses Ms=(mult-1)/2 determinants so it sees
+!     spin multiplicities of S=Ms and also S=Ms+1 in the same run.
+ $CONTRL SCFTYP=uhf mult=1 DFTTYP=b3lyp tddft=excite RUNTYP=energy NZVAR=5 $END
+ $TDDFT  NSTATE=16 $END
+
+!     CIS (the first $ORMAS below) sees a degenerate singlet and triplet,
+!     as was noted during the TD-DFT run.  CISD raises that degeneracy.
+x$CONTRL SCFTYP=RHF        cityp=ormas               RUNTYP=energy NZVAR=5 $END
+x$cidet ncore=2 nact=32 nels=10 group=c1 nstate=15 $end
+x$ormas nspace=2 mstart(1)=3,8 mine(1)=9,0 maxe(1)=10,1 $end
+x$ormas nspace=2 mstart(1)=3,8 mine(1)=8,0 maxe(1)=10,2 $end
+
+         ---------input common to all runs ----------
+ $SYSTEM mwords=10 $END
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+ $GUESS  GUESS=HUCKEL $END
+ $DATA
+Acetylene geometry optimization in internal coordinates
+Dnh      4
+
+CARBON      6.0    0.0  0.0  0.70
+HYDROGEN    1.0    0.0  0.0  1.78
+ $END
+ $ZMAT  IZMAT(1)=1,1,2,   1,1,3,   1,2,4,
+                 5,1,2,4,    5,2,1,3  $END
+ $LIBE  APTS(1)=1.0,0.0,0.0,1.0,0.0,0.0 $END
+
+
+Here are the U-TDDFT results,
+   STATE        ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+               HARTREE          EV         X       Y       Z     STRENGTH
+   0        -77.2201870523    0.000
+   1  *t*   -77.1295827468    2.465     0.0000  0.0000  0.0000    0.000
+   2  *t*   -77.0875162655    3.610     0.0000  0.0000  0.0000    0.000
+   3  *t*   -77.0875128154    3.610     0.0000  0.0000  0.0000    0.000
+   4  *t*   -77.0411777269    4.871     0.0000  0.0000  0.0000    0.000  <--
+   5  *s*   -77.0411777261    4.871     0.0000  0.0000  0.0000    0.000  <--
+   6  *s*   -77.0299116316    5.178     0.0000  0.0000  0.0000    0.000
+   7  *s*   -77.0299099657    5.178     0.0000  0.0000  0.0000    0.000
+   8  *t*   -76.9779274894    6.592     0.0000  0.0000  0.0000    0.000
+   9  *t*   -76.9779274539    6.592     0.0000  0.0000  0.0000    0.000
+  10  *s*   -76.9398646993    7.628     0.0000  0.0000  0.0000    0.000
+  11  *s*   -76.9398646689    7.628     0.0000  0.0000  0.0000    0.000
+  12  *t*   -76.8866144606    9.077     0.0000  0.0000  0.0000    0.000
+  13  *t*   -76.8866144268    9.077     0.0000  0.0000  0.0000    0.000
+  14  *s*   -76.8722002890    9.469    -0.1166  0.0000  0.0000    0.003
+  15  *s*   -76.8722002699    9.469     0.0000 -0.1166  0.0000    0.003
+  16  *s*   -76.8718985927    9.477     0.0000  0.0000 -1.6007    0.595
+This molecule is simple, so UHF does not produce inequivalent alpha
+and beta orbitals.
+
+Running SCFTYP=RHF, $TDDFT MULT=1, and chopping the printout at 9.5 eV:
+   0  A1G   -77.2201870523    0.000
+   1  A1U   -77.0411776967    4.871     0.0000  0.0000  0.0000    0.000
+   2  A1U   -77.0299115308    5.178     0.0000  0.0000  0.0000    0.000
+   3  A1U   -77.0299103216    5.178     0.0000  0.0000  0.0000    0.000
+   4  EG    -76.9398632050    7.628     0.0000  0.0000  0.0000    0.000
+   5  EG    -76.9398632050    7.628     0.0000  0.0000  0.0000    0.000
+   6  EU    -76.8721993415    9.469     0.0939  0.0691  0.0000    0.003
+   7  EU    -76.8721993415    9.469    -0.0691  0.0939  0.0000    0.003
+   8  ????  -76.8718991319    9.477     0.0000  0.0000  1.6007    0.595
+
+Running SCFTYP=RHF, $TDDFT MULT=3, and chopping the printout at 9.5 eV:
+   0  A1G   -77.2201870523    0.000
+   1  ????  -77.1295837076    2.465     0.0000  0.0000  0.0000    0.000
+   2  ????  -77.0875164386    3.610     0.0000  0.0000  0.0000    0.000
+   3  ????  -77.0875143990    3.610     0.0000  0.0000  0.0000    0.000
+   4  A1U   -77.0411776967    4.871     0.0000  0.0000  0.0000    0.000
+   5  EG    -76.9779269026    6.592     0.0000  0.0000  0.0000    0.000
+   6  EG    -76.9779269026    6.592     0.0000  0.0000  0.0000    0.000
+   7  EU    -76.8866132256    9.077     0.0000  0.0000  0.0000    0.000
+   8  EU    -76.8866132256    9.077     0.0000  0.0000  0.0000    0.000
+
+Now we can mark the U-TDDFT states with    *x*   depending on whether
+they show up in triplet or singlet runs.   Every state is accounted for.
+
+Now, how can a singlet and a triplet be degenerate?  First, CIS with ORMAS:
+ STATE   1  E=  -76.7420704205  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE   2  E=  -76.6639585344  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE   3  E=  -76.6252659939  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE   4  E=  -76.6252659939  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE   5  E=  -76.5915102906  S=  0.65  SZ=  0.00  SPACE SYM=A
+ STATE   6  E=  -76.5915102906  S=  0.59  SZ=  0.00  SPACE SYM=A
+ STATE   7  E=  -76.5731192459  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE   8  E=  -76.5731192459  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE   9  E=  -76.4847772966  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  10  E=  -76.4847772966  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  11  E=  -76.4324272974  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE  12  E=  -76.4324272974  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE  13  E=  -76.3664089538  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  14  E=  -76.3664089538  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  15  E=  -76.3498737270  S=  0.00  SZ=  0.00  SPACE SYM=A
+Note that states 5 and 6 got spin-mixed.  This would make sense, as
+if the states are degenerate, but have different spins, they should
+get mixed by the diagonalization.
+
+The excited configuration (pi-u)**3 (pi*-g)**1 should have the following
+terms, from multiplying inequivalent terms 2-Pi-u times 2-Pi-g from each
+shell:
+   1,3-sigma-minus-u   1,3-delta-u    1,3-sigma-plus-u
+
+Changing to CISD gives us a more sophisticated Hamiltonian, and
+as we expect, raises the degeneracy of that singlet and triplet:
+ STATE   1  E=  -77.0071728721  S=  0.00  SZ=  0.00  SPACE SYM=A
+      next state is a different config, (sig)1(pi)4(pi*)1
+ STATE   2  E=  -76.7152149117  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE   3  E=  -76.6825294868  S=  1.00  SZ=  0.00  SPACE SYM=A   3-delta
+ STATE   4  E=  -76.6825294868  S=  1.00  SZ=  0.00  SPACE SYM=A   3-delta
+ STATE   5  E=  -76.6585200507  S=  1.00  SZ=  0.00  SPACE SYM=A   3-sig-minus
+ STATE   6  E=  -76.6542782506  S=  0.00  SZ=  0.00  SPACE SYM=A   1-sig-minus
+ STATE   7  E=  -76.6383715012  S=  0.00  SZ=  0.00  SPACE SYM=A   1-delta
+ STATE   8  E=  -76.6383715012  S=  0.00  SZ=  0.00  SPACE SYM=A   1-delta
+ STATE   9  E=  -76.5768292266  S=  2.00  SZ=  0.00  SPACE SYM=A
+ STATE  10  E=  -76.5622948962  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  11  E=  -76.5622948962  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  12  E=  -76.5336393439  S=  0.00  SZ=  0.00  SPACE SYM=A
+ STATE  13  E=  -76.5169449534  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  14  E=  -76.5169449534  S=  1.00  SZ=  0.00  SPACE SYM=A
+ STATE  15  E=  -76.5164617894  S=  0.00  SZ=  0.00  SPACE SYM=A
+so I think roots 5 and 6 are meant to be close, but not degenerate,
+unless extremely simple trial functions limited to single excitations
+are used.
+
+It is my guess from coefficients that the two states which are no
+longer degenerate are the two sigma-minus-u terms.  The algebra
+was not rigourously done!
+
+It isn't clear where the two sigma-plus-u terms are.
+
+! TRAVIS-CI SMALL
+

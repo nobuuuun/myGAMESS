@@ -1,0 +1,39 @@
+!   Test of NMR shielding computation on NH2OH (24 AOs)
+!
+!   The isotropic shieldings of the five atoms are
+!       168.5831, 278.1729, 32.2834, 29.7276, 29.7276
+!   The anisotropies of the atoms are
+!       156.9166,  76.9809, 15.8259, 10.1570, 10.1570
+!   The diamagnetic part of the isotropic shielding is
+!       313.0975, 386.1087, 30.0376, 29.9814,  29.9814
+!   The paramagnetic part of the isotropic shielding is
+!      -144.5144, -107.9358, 2.2458, -0.2538,  -0.2538
+!
+!   This run takes 22 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!   results have not changed significantly since at least 2003
+!
+!   --------------------------------------------------------------
+!   This run takes the following time on a IBM J50 (24 Sep 2003)
+!    inmem=.f.  angint=.t.   takes  474 s.conds (default path)
+!    inmem=.t.  angint=.t.   takes  484 s.conds
+!    inmem n/a  angint=.f.   takes 7835 s.conds
+!   and the latter run creates six disk files of 22 MBytes each.
+!
+ $contrl scftyp=rhf runtyp=nmr $end
+ $system mwords=6 $end
+ $basis  gbasis=n31 ngauss=6 $end
+ $nmr    inmem=.f. angint=.t. piter=.f. pdia=.t. ppara=.t. pevec=.t. $end
+ $guess  guess=huckel $end
+ $data
+Hydroxylamine 6-31G Opt. Geom.
+C1
+N           7.0   -.0728650793    .1670920874    .0000000000
+O           8.0   1.2824470816   -.2510952124    .0000000000
+H           1.0   1.3511630828  -1.2042411302    .0000000000
+H           1.0   -.5303725425   -.1058778724   -.8423365784
+H           1.0   -.5303725425   -.1058778724    .8423365784
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

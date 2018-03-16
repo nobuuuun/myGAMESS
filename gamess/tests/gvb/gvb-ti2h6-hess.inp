@@ -1,0 +1,55 @@
+!   This is taken from "Molecular Electronic Structure and
+!   Energetics of the isomers of Ti2H6"
+!   S.P.Webb, M.S.Gordon  J.Am.Chem.Soc. 120, 3846-3857(1998)
+!
+!   The response equation convergence is slow, 83 iters required.
+!   
+!   The molecule is the Cs 1A'' lowest single state, 140 AOs.
+!   The run reproduces the top part of Table 2, after applying
+!   a scale factor of 0.948 to the frequencies and multiplying
+!   by 42.255 to convert the intensities to km/mole. 
+!
+!           FINAL E=-1700.2175540467 after 26 iterations
+!     FREQ= 126.98, 224.35, 299.88, 330.93, 342.06, 371.43,
+!     FREQ= 624.93, 743.67, 831.35, 922.72, 994.72, 1204.26,
+!     FREQ= 1376.68, 1452.41, 1556.80, 1656.70, 1706.91, 1734.07
+!     IR INTENSITY: 0.78846, 3.13893, 0.16296, 0.39545, 9.78040, 1.25609,
+!     IR INTENSITY: 7.00407, 9.51620, 8.97026, 0.54426, 2.47700, 17.68787,
+!     IR INTENSITY: 9.35857, 1.48104, 43.61504, 22.04351, 8.30571, 1.75834
+!
+!   This run takes 150 seconds on 2.66 GHz Cloverton (10 Sep 2013)
+!
+ $contrl scftyp=gvb mult=1 runtyp=hessian coord=zmt nzvar=18 maxit=40 $end
+ $system mwords=5 $end
+ $basis  gbasis=tzv npfunc=1 $end
+ $scf    nco=24 nseto=2 no(1)=1,1 $end
+ $guess  guess=huckel tolz=1.0d-4 $end
+ $data
+Ti2H6...1A'' state of the Cs triply bridged isomer
+Cs
+
+H
+Ti 1 ra
+H  2 rb  1 a1
+H  2 rc  1 a2  3  w1
+H  2 rc  1 a2  3 -w1
+Ti 3 rd  2 a3  1 180.0
+H  6 rf  3 a5  2  w2
+H  6 rf  3 a5  2 -w2
+
+ra=1.7954740
+rb=1.8651082
+a1=127.5378811
+rc=1.8359213
+a2=136.4144970
+w1=117.3248684
+rd=1.9945702
+a3=93.5609954
+rf=1.7711732
+a5=113.6267618
+w2=114.2796949
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

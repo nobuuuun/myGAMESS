@@ -1,0 +1,71 @@
+!    CCl4 ... analytic frequency dependent Raman and hyper-Raman spectra.
+!       O.Quinet, B.Champagne  J.Chem.Phys. 115, 6293(2001)
+!       O.Quinet, B.Champagne  J.Chem.Phys. 117, 2481(2002)  
+!    
+!    Raman Intensity at omega =   0.040000
+!        Freq  |Mult|  Intensity     (%)  |l-depol ratio|n-depol ratio
+!        --------------------------------------------------------------
+!         237.9|  2.|        11.17 ( 21.7)|     0.750000|     0.857143
+!         346.6|  3.|        20.71 ( 40.2)|     0.750000|     0.857143
+!         518.2|  1.|        27.62 ( 53.6)|     0.000000|     0.000000
+!         912.5|  3.|        51.57 (100.0)|     0.750000|     0.857143
+!    hyper Raman Intensity at omega =   0.040000
+!        Freq  |Mult|  Intensity     (%)  |n-depol ratio|p-depol ratio
+!        --------------------------------------------------------------
+!         237.9|  2.|         0.00 (  0.0)| 99999.999999|     0.000000
+!         346.6|  3.|       148.08 (  2.0)|     0.189068|     0.104404
+!         518.2|  1.|       126.86 (  1.7)|     0.800000|     0.666667
+!         912.5|  3.|      7364.45 (100.0)|     0.235269|     0.133317
+!
+!    This run took 550 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!    results haven't changed since 2006
+!
+!    -----------------------------------------------------------------
+!    back in 2006, this did not run on IBM equipment, dying like this:
+!         TDXIO:ReadDataHeader 5 : 3 ;D       =D        11163 = 11163
+!         module TDHFX
+!         GetDJKa: 3
+!         DDI Process 0: trapped a segmentation fault (SIGSEGV).
+!    although this was fixable by switching JDDFCK to -O2
+!    The run was fine on HP-UX (1596 secs on 900 MHz Itan2 node)
+!
+ $CONTRL SCFTYP=RHF RUNTYP=TDHFX $END
+ $system mwords=10 $end
+ $SCF    DIRSCF=.T. DIIS=.T. FDIFF=.F. RSTRCT=.F. $END
+ $guess  guess=huckel $end
+ $CONTRL MAXIT=100 $END
+ $FORCE  METHOD=ANALYTIC  $END
+ $CPHF   POLAR=.F. CPHF=AO $END
+ $TDHFX
+   FREQ2
+   DADX 0.04
+   DADX_NI 0.04
+   DBDX 0.04 0.02
+   DBDX_NI 0.04 0.02
+   RAMAN 0.04
+   HRAMAN 0.04
+   D2ADX2_NI 0.04
+   D2BDX2_NI 0.04 0.02
+ $END
+ $data
+CCL4...RHF/6-31G
+C1
+c    6            0.000000    0.000000    0.000000
+ N31, 6
+ 
+cl 17     1.022194    1.022194    1.022194
+ N31, 6
+ 
+cl 17    -1.022194   -1.022194    1.022194
+ N31, 6
+ 
+cl 17    -1.022194    1.022194   -1.022194
+ N31, 6
+ 
+cl 17     1.022194   -1.022194   -1.022194
+ N31, 6
+ 
+ $END
+
+! TRAVIS-CI MEDIUM
+

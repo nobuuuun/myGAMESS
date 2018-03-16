@@ -1,0 +1,3673 @@
+C 21 Jun 15 - YN  - implement local unitary transformation for IOTC
+C
+C*MODULE QREL     *DECK LUTX
+C>
+C>    @brief   The main driver for LUT scheme with IOTC method
+C>
+C>    @details The program performs efficient infinite order two-
+C>             component (IOTC) transformation using the local unitary
+C>             transformation (LUT) scheme. Theoretically, the LUT
+C>             scheme can be combined with any two-component
+C>             relativistic methods such as finite- order Douglas-
+C>             Kroll-Hess. Please refer to the following papers.
+C>             LUT:
+C>              J. Seino, H. Nakai, J. Chem. Phys. 136, 244102 (2012).
+C>             Combination with DC
+C>              J. Seino, H. Nakai, J. Chem. Phys. 139, 034109 (2013).
+C>             Review:
+C>              J. Seino, H. Nakai, Int.J.Quantum Chem. 115, 253 (2015).
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- output --
+C>    @param   HAO   : 1e-Hamiltonian matrix w/relativistic correction
+C>
+C>    -- input --
+C>    @param   LL1   : contracted basis set size
+C>    @param   LL2   : triangular matrix size, (LL1*LL1+LL1)/2
+C>    @param   DBUG  : flag of debug print
+C>    @param   ISAVE : option for MOROKUMA decompositions
+C>
+      SUBROUTINE LUTX(HAO,LL1,LL2,DBUG)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL SOME,DBUG
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      LOGICAL SVDSKW
+      LOGICAL QUADRE
+      PARAMETER (NDQ=2)
+C
+      DIMENSION HAO(LL2)
+C
+      PARAMETER (MXATM=2000)
+      PARAMETER (ONE=1.0D+00, ZERO=0.0D+00)
+      PARAMETER (UNIT=0.52917724924D+00)
+C
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /FMCOM / X(1)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /RELWFN/ RMETHOD,QRQMT,CLIG,CLIG2,QRTOL,TAU,
+     *                IQRORD,MODQR,NESOC,NRATOM,
+     *                NUMU,NQMTR,NQRDAF,MORDA,NDARELB
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUB
+C
+      DATA DEBUG/8HDEBUG   /,DBUGME/8HLUTX    /
+C
+      SOME = MASWRK .AND. .NOT. (NPRINT.EQ.-5)
+      DBUG = MASWRK .AND.
+     *       (NPRINT.EQ.3 .OR. EXETYP.EQ.DEBUG .OR. EXETYP.EQ.DBUGME)
+C
+      QUADRE = MOD(MODQR/8,2).EQ.1
+C
+      SVDSKW = DSKWRK
+      DSKWRK = .TRUE.
+C
+C     SET SUBSYSTEM INFORMATION RELATED TO BASIS SET
+      CALL SETSUB
+C
+C     OPEN SEQUENTIAL FILES TO SAVE RELATIVISTIC UNITARY TRANSFORMATION
+C
+      NUNV  = 45
+      NUNPV = 46
+      CALL SEQOPN(NUNV ,'UNV' ,'UNKNOWN',.FALSE.,'UNFORMATTED')
+      CALL SEQOPN(NUNPV,'UNPV','UNKNOWN',.FALSE.,'UNFORMATTED')
+C     SUBSYSTEM CONTRIBUTION TO TOTAL HAMILTONIAN IS SAVED IN DAF.
+      NDAF = 396
+      NDAFTH = 11
+C
+C     ALLOCATE MEMORY FOR HAO MATRIX
+      L1U = NUMU
+      L3U = L1U * L1U
+      L2U = (L1U + L3U) / 2
+C
+      CALL VALFM(LOADFM)
+      LHU   = LOADFM + 1
+      LHC   = LHU    + L2U
+      LUC   = LHC    + L3U
+      LWRK  = LUC    + L1U * LL1
+      LAST  = LWRK   + L3U
+      NEED0 = LAST-LOADFM - 1
+      CALL GETFM(NEED0)
+C
+      CALL VCLR(X(LHU),1,L2U)
+      CALL DAREAD(IDAF,IODA,X(LUC),L1U*LL1,NDARELB+19,0)
+      IF(DBUG) CALL DPRTMATL(X(LUC),L1U,LL1,L1U,'U2CON     ')
+C
+C     CHECK MAX L1 FOR SAVE OVERLAP AND KINETIC ENERGY MATRIX
+C     IN THE SAME SIZE IN THE SUBROUTINE "QSANDTL"
+      IF(QUADRE) THEN
+        MAXL1 = NNUM(1)
+        DO ISUB = 2, NAT
+          L1 = NNUM(ISUB)
+          IF(MAXL1 .LT. L1) MAXL1 = L1
+        END DO
+        MAXL2 = (MAXL1*MAXL1+MAXL1)/2
+      END IF
+C
+C     CALCULATE ATOMIC UNITARY TRANSFORMATION
+      DO ISUB = 1, NAT
+C
+        IF(SOME) WRITE(IW,9999) ISUB
+C
+C       SET MATRIX DIMENSION FOR THE SUBSYSTEM
+        L1 = NNUM(ISUB)
+        L3 = L1 * L1
+        L2 = (L1 + L3) / 2
+C
+C       ALLOCATE MEMORY
+        CALL VALFM(LOADFM)
+        LH   = LOADFM + 1
+        LS   = LH     + L2
+        LT   = LS     + L2
+        LV   = LT     + L2
+        LPV  = LV     + L2
+        LAST = LPV    + L2
+        LQQ = LAST
+        IF(QUADRE) THEN
+          IF(LQQ.EQ.2*(LQQ/2)) LQQ = LQQ + 1
+          LAST = LQQ + MAXL2 * NDQ * 2
+        END IF
+        NEED = LAST-LOADFM-1
+        CALL GETFM(NEED)
+C
+        ISUBX = ISUB
+C
+C       NON-RELATIVISTIC INTEGRALS WITHIN THE SUBSYSTEM
+        CALL HSANDTL(X(LS),X(LT),X(LH),ISUBX,DBUG,L1,L2)
+C       PVP INTEGRALS WITHIN THE SUBSYSTEM
+        CALL PVPL(X(LPV),ISUBX,DBUG,L1,L2)
+C
+        IF(QUADRE)
+     *  CALL QSANDTL(X(LS),X(LT),X(LQQ),X(LQQ+L2*NDQ),
+     *               ISUBX,L1,L2,MAXL2,DBUG)
+C
+C       IOTC TRANSFORMATION
+        CALL QRELX_IOTC(X(LH),X(LS),X(LT),X(LPV),L1,L2,DBUG,0)
+C       CALL INTEGH(X(LH),HAO,ISUBX,ISUBX,L2,LL1,LL2,NDAF,DBUG)
+        CALL INTEGHV2(X(LH),X(LHU),ISUBX,ISUBX,L2,L1U,L2U,DBUG)
+C
+C       DEALLOCATE MEMORY
+        CALL RETFM(NEED)
+      END DO
+C
+C     RELATIVISTIC TRANSFORMATION FOR POTENTIAL BETWEEN ATOMS
+      CALL DERCHK(NDER)
+      CALL SEQREW(NUNV)
+      CALL SEQREW(NUNPV)
+      IF(SOME) CALL TRNATM
+      DO ISUB = 1, NAT
+        XI = C(1,ISUB)
+        YI = C(2,ISUB)
+        ZI = C(3,ISUB)
+        LI1 = NNUM(ISUB)
+        LI3 = LI1 * LI1
+C--     LI2 = (LI1 + LI3) / 2
+C
+C       ALLOCATE MEMORY FOR ISUB
+        CALL VALFM(LOADFM)
+        LUNTVI  = LOADFM  + 1
+        LUNTPVI = LUNTVI  + LI3
+        LAST    = LUNTPVI + LI3
+        NEEDI   = LAST - LOADFM - 1
+        CALL GETFM(NEEDI)
+C
+C       READ UNITARY TRANSFORMATION FOR ISUB
+        CALL SQREAD(NUNV ,X(LUNTVI) ,LI3)
+        CALL SQREAD(NUNPV,X(LUNTPVI),LI3)
+C
+        CALL SEQREW(NUNV)
+        CALL SEQREW(NUNPV)
+        DO JSUB = 1, ISUB
+          XJ = C(1,JSUB)
+          YJ = C(2,JSUB)
+          ZJ = C(3,JSUB)
+C
+C         DISTANCE BETWEEN THE ATOMS, ISUB & JSUB
+          RX = XJ - XI
+          RY = YJ - YI
+          RZ = ZJ - ZI
+          RR = RX * RX + RY * RY + RZ * RZ
+          R  = SQRT(RR)
+          R  = R * UNIT
+C
+          LJ1 = NNUM(JSUB)
+          LJ3 = LJ1 * LJ1
+C--       LJ2 = (LJ1 + LJ3) / 2
+          LIJ3 = LI1 * LJ1
+C
+C         ALLOCATE MEMORY FOR JSUB
+          CALL VALFM(LOADFM)
+          LH      = LOADFM  + 1
+          LS      = LH      + LIJ3
+          LT      = LS      + LIJ3
+          LV      = LT      + LIJ3
+          LPV     = LV      + LIJ3
+          LUNTVJ  = LPV     + LIJ3
+          LUNTPVJ = LUNTVJ  + LJ3
+          LWRK3   = LUNTPVJ + LJ3
+          LAST    = LWRK3   + LIJ3
+          NEEDJ   = LAST - LOADFM - 1
+          CALL GETFM(NEEDJ)
+C
+          CALL SQREAD(NUNV ,X(LUNTVJ) ,LJ3)
+          CALL SQREAD(NUNPV,X(LUNTPVJ),LJ3)
+C
+C         IF ISUB AND JSUB IS IDENTICAL, SKIP
+          IF(ISUB.EQ.JSUB.OR.R.GT.TAU) THEN
+            CALL RETFM(NEEDJ)
+            IF(DBUG .AND. ISUB.NE.JSUB) THEN
+              WRITE(IW,9998) ISUB,JSUB,R
+            END IF
+            CYCLE
+          END IF
+C
+C         IF(SOME) WRITE(IW,9997) ISUB,JSUB,R
+C
+C         WRITE(IW,'(/,A)')
+C    *    '<< UNITARY TRANSFORMATION FOR V : JSUB >>'
+C         CALL DPRTMAT(X(LUNTVJ),LJ1,LJ1,LJ1)
+C         WRITE(IW,'(/,A)')
+C    *    '<< UNITARY TRANSFORMATION FOR V : ISUB >>'
+C         CALL DPRTMAT(X(LUNTVI),LI1,LI1,LI1)
+C         WRITE(IW,'(/,A)')
+C    *    '<< UNITARY TRANSFORMATION FOR P*VP : JSUB >>'
+C         CALL DPRTMAT(X(LUNTPVJ),LJ1,LJ1,LJ1)
+C         WRITE(IW,'(/,A)')
+C    *    '<< UNITARY TRANSFORMATION FOR P*VP : ISUB >>'
+C         CALL DPRTMAT(X(LUNTPVI),LI1,LI1,LI1)
+C
+          ISUBX=ISUB
+          JSUBX=JSUB
+          CALL HSANDTL2(X(LS),X(LT),X(LV),ISUBX,JSUBX,DBUG,LI1,LJ1,LIJ3)
+          CALL PVPL2(X(LPV),ISUBX,JSUBX,DBUG,LI1,LJ1,LIJ3)
+          CALL LUTTRN(X(LH),X(LV),X(LPV),X(LUNTVI),X(LUNTVJ),
+     *                X(LUNTPVI),X(LUNTPVJ),X(LWRK3),
+     *                LI1,LJ1,LI3,LJ3,LIJ3)
+C         CALL INTEGH(X(LH),HAO,ISUB,JSUB,LIJ3,LL1,LL2,NDAF,DBUG)
+          CALL INTEGHV2(X(LH),X(LHU),ISUB,JSUB,LIJ3,L1U,L2U,DBUG)
+C
+          CALL RETFM(NEEDJ)
+C
+          IF(DBUG) WRITE(IW,9997) ISUB,JSUB,R
+C
+        END DO
+        CALL RETFM(NEEDI)
+      END DO
+C
+C     CONTRACTION
+      CALL CPYTSQ(X(LHU),X(LHC),L1U,1) !HERE, X(LHC) AS WORK.
+      IF(DBUG) CALL DPRTMATL(X(LHC),L1U,L1U,L1U,'SQ-RELH   ')
+C
+      CALL DGEMM('T','N',LL1,L1U,L1U,ONE,X(LUC),L1U,X(LHC),L1U,ZERO,
+     *           X(LWRK),LL1)
+      CALL DGEMM('N','N',LL1,LL1,L1U,ONE,X(LWRK),LL1,X(LUC),L1U,ZERO,
+     *           X(LHC),LL1)
+      IF(DBUG) CALL DPRTMATL(X(LHC),LL1,LL1,L1U,'CONT. RELH')
+C
+C     SAVE RELATIVISTICALLY TRANSFORMED 1E-HAMILTONIAN IN DAF
+      CALL CPYSQT(X(LHC),X(LWRK),LL1,1)
+      CALL DAREAD(IDAF,IODA,X(LHC),LL2,NDAF,0)
+C     CALL PRTRIEXL(X(LHC),LL1,'NR-H.     ')
+      CALL DAXPY(LL2,ONE,X(LWRK),1,X(LHC),1)
+      IF(DBUG) CALL PRTRIEXL(X(LHC),LL1,'ONE-HAMIL.')
+C     CALL DAWRIT(IDAF,IODA,HAO,LL2,NDAFTH,0)
+      CALL DCOPY(LL2,X(LHC),1,HAO,1)
+      CALL DAWRIT(IDAF,IODA,HAO,LL2,NDAFTH,0)
+C
+      CALL RETFM(NEED0)
+C
+C     IF DERIVATIVE OF HAMILTONIAN IS REQUIRED, THE UNITARY
+C     TRANSFORMATIONS OBTAINED IN THIS ROUTINE FOR V AND PVP ARE SAVED.
+      IF(NDER.EQ.0) THEN
+        CALL SEQCLO(NUNV ,'DELETE')
+        CALL SEQCLO(NUNPV,'DELETE')
+      ELSE
+        CALL SEQCLO(NUNV ,'KEEP')
+        CALL SEQCLO(NUNPV,'KEEP')
+      ENDIF
+C
+      DSKWRK = SVDSKW
+C
+      RETURN
+ 9999 FORMAT(1X,"LUT-IOTC TRANSFORMATION FOR ATOM:",1X,I4)
+ 9998 FORMAT(1X,"LUT-IOTC TRANSFORMATION FOR ATOM-PAIR: (",
+     *       1X,I4,",",1X,I4,")",3X,"DISTANCE :",F7.3,1X,"ANGS.",
+     *       1X,"-- SKIPPED (MORE THAN TAU)")
+ 9997 FORMAT(1X,"LUT-IOTC TRANSFORMATION FOR ATOM-PAIR: (",
+     *       1X,I4,",",1X,I4,")",3X,"DISTANCE :",F7.3,1X,"ANGS.",
+     *       1X,"-- DONE")
+      END
+C
+C*MODULE QREL     *DECK SETSUB
+C>
+C>    @brief   Set the basis set information for subsystem (atom) in the
+C>             LUT calculation
+C>
+C>    @details This subroutine sets the basis set information for LUT
+C>             calculaction from the common block, NSHEL. The info
+C>             is saved in the common block, SETATM. SETATM has for
+C>             arrays, NSHEL, NBSF, NNUM, and NLOC. THe meanings are as
+C>             follows.
+C>             - NSHL : the end of shell number on n-th atom in total
+C>                      system
+C>             - NBSF : # of the exponents in n-th atom
+C>             - NNUM : # of the primitive basis functions in n-th atom
+C>             - NLOC : the starting number of primitive basis in total
+C>                      system of n-th atom
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+      SUBROUTINE SETSUB
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000)
+C
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     &                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     &                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     &                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUB
+C
+      CALL VICLR(NNUM,1,NAT)
+C
+      DO IC = 1, NAT
+        NX = 0
+        DO ISH = 1, NSHELL
+          KAT  = KATOM(ISH)
+          K1   = KSTART(ISH)
+          K2   = K1 + KNG(ISH) - 1
+          MINI = KMIN(ISH)
+          MAXI = KMAX(ISH)
+          MDEL = MAXI - MINI + 1
+          IF(IC.EQ.KAT) THEN
+            NSHL(IC) = ISH
+            NBSF(IC) = K2
+            NNUM(IC) = NNUM(IC) + MDEL
+            IF(NX.EQ.0) NLOC(IC) = KLOC(ISH)
+            NX = NX + 1
+          END IF
+        END DO
+      END DO
+      NLOC(NAT+1) = NLOC(NAT) + NNUM(NAT)
+C
+      IF(MASWRK) THEN
+        WRITE(IP,9999)
+        WRITE(IP,9997) 'IATM','NSHL','NBSF','NLOC','NNUM'
+C       DO ISH = 1 ,NSHELL
+C         IATM = KATOM(ISH)
+C         WRITE(IP,9998) ISH,KTYPE(ISH),IATM,KMIN(ISH),
+C    *                   KMAX(ISH),KNG(ISH),KSTART(ISH),
+C    *                   NSHL(IATM),NBSF(IATM),NLOC(IATM),NNUM(IATM)
+        DO IATM = 1 ,NAT
+          WRITE(IP,9996)
+     *    IATM,NSHL(IATM),NBSF(IATM),NLOC(IATM),NNUM(IATM)
+        END DO
+      END IF
+C
+      RETURN
+ 9999 FORMAT('--- NUMBER OF BASIS SET FUNCTIONS IN EACH SUBSYSTEM ---')
+C9998 FORMAT(1X,"ISH=",I5,2X,"KTYPE=",I5,2X,"KATOM=",I5,2X,"KMIN=",I5,
+C    *       2X,"KMAX=",I5,2X,"KNG=",I5,2X,"KSTART=",I5,2X,"NSHL=",I5,
+C    *       2X,"NBSF=",I5,2X,"NLOC=",I5,2X,"NNUM=",I5)
+ 9997 FORMAT(3X,2X,5A7)
+ 9996 FORMAT(3X,2X,5I7)
+      END
+C
+C*MODULE LUT      *DECK STLUT
+C>
+C>    @brief   Set indices in the one-electron integral for the LUT
+C>             scheme
+C>
+C>    @details This subroutine sets the indices in subsystem for one-
+C>             electron integrals.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- output --
+C>    @param   ISTART : start index for i-shell
+C>    @param   IEND   : end of index for i-shell
+C>    @param   JSTART : start index for j-shell
+C>    @param   JEND   : end of index for j-shell
+C>    @param   NATST  : start index for atom in nuclear-attraction ints
+C>    @param   NATED  : end index for atom in nuclear-attraction ints
+C>    -- input --
+C>    @param   ISUB   : # of subsystem in LUT
+C>    @param   JSUB   : # of subsystem in LUT
+C>
+      SUBROUTINE STLUT(ISTART,IEND,JSTART,JEND,NATST,NATED,ISUB,JSUB)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (MXATM=2000)
+C
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /RELWFN/ RMETHOD,QRQMT,CLIG,CLIG2,QRTOL,TAU,
+     *                IQRORD,MODQR,NESOC,NRATOM,
+     *                NUMU,NQMTR,NQRDAF,MORDA,NDARELB
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+      DATA RLUT /8HLUT-IOTC/
+C
+      IF(RMETHOD.NE.RLUT) RETURN
+C
+      ISTART = 1
+      JSTART = 1
+      IEND = NSHL(ISUB)
+      JEND = NSHL(JSUB)
+      NATST = 1
+      NATED = NAT
+C
+      IF(ISUB.GT.1) ISTART = ISTART + NSHL(ISUB-1)
+      IF(JSUB.GT.1) JSTART = JSTART + NSHL(JSUB-1)
+C
+      IF(ISUB.EQ.JSUB) THEN
+        NATST = ISUB
+        NATED = NATST
+      END IF
+C
+      RETURN
+      END
+C
+C*MODULE LUT      *DECK HSANDTL
+C>
+C>    @brief   Non-relativistic one-electron integral evaluation
+C>             for atomic IOTC transformation
+C>
+C>    @details Thie is a modified version of HSANDT to obtain
+C>             one-electron integrals foratomic transformation.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+      SUBROUTINE HSANDTL(S,T,H,ISUB,DBUG,L1,L2)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      LOGICAL DBUG
+      LOGICAL IANDJ,DOUBLE,GOPARR,DSKWRK,MASWRK
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000, MAXSH=84)
+C
+      DIMENSION H(L2),S(L2),T(L2)!,Z(L2),ESP1E(L2),NLCT(L2),
+C     *          ATCHRG(*)
+      DIMENSION SBLK(784),TBLK(784),VBLK(784),
+     *          FT(784),DIJ(784),IJX(784),IJY(784),IJZ(784),
+     *          XIN(343),YIN(343),ZIN(343),CONI(MAXSH),CONJ(MAXSH),
+     *          IX(84),IY(84),IZ(84),JX(84),JY(84),JZ(84)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /ROOT  / XX,U(13),W(13),NROOTS
+      COMMON /SHLNRM/ PNRM(84)
+      COMMON /STV   / XINT,YINT,ZINT,TAA,X0,Y0,Z0,
+     *                XI,YI,ZI,XJ,YJ,ZJ,NI,NJ
+      COMMON /SYMIND/ TOL,II,JJ,LIT,LJT,MINI,MINJ,MAXI,MAXJ,IANDJ
+C                          JUST THE 1ST ELEMENT IS USED, W/O /HERMIT/
+      COMMON /WERMIT/ W1,W2(2),W3(3),W4(4),W5(5),W6(6),W7(7),
+     *                W8(8),W9(9),W10(10),
+     *                W11(11),W12(12),W13(13),W14(14),W15(15)
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+      PARAMETER (ZERO=0.0D+00, PT5=0.5D+00, ONE=1.0D+00, TWO=2.0D+00,
+     *           PI212=1.1283791670955D+00, RLN10=2.30258D+00)
+C
+      DATA JX / 0, 1, 0, 0, 2, 0, 0, 1, 1, 0,
+     *          3, 0, 0, 2, 2, 1, 0, 1, 0, 1,
+     *          4, 0, 0, 3, 3, 1, 0, 1, 0, 2,
+     *          2, 0, 2, 1, 1,
+     *          5, 0, 0, 4, 4, 1, 0, 1, 0, 3,
+     *          3, 2, 0, 2, 0, 3, 1, 1, 2, 2,
+     *          1,
+     *          6, 0, 0, 5, 5, 1, 0, 1, 0, 4,
+     *          4, 2, 0, 2, 0, 4, 1, 1, 3, 3,
+     *          0, 3, 3, 2, 1, 2, 1, 2/
+      DATA IX / 1, 8, 1, 1,15, 1, 1, 8, 8, 1,
+     *         22, 1, 1,15,15, 8, 1, 8, 1, 8,
+     *         29, 1, 1,22,22, 8, 1, 8, 1,15,
+     *         15, 1,15, 8, 8,
+     *         36, 1, 1,29,29, 8, 1, 8, 1,22,
+     *         22,15, 1,15, 1,22, 8, 8,15,15,
+     *          8,
+     *         43, 1, 1,36,36, 8, 1, 8, 1,29,
+     *         29,15, 1,15, 1,29, 8, 8,22,22,
+     *          1,22,22,15, 8,15, 8,15/
+      DATA JY / 0, 0, 1, 0, 0, 2, 0, 1, 0, 1,
+     *          0, 3, 0, 1, 0, 2, 2, 0, 1, 1,
+     *          0, 4, 0, 1, 0, 3, 3, 0, 1, 2,
+     *          0, 2, 1, 2, 1,
+     *          0, 5, 0, 1, 0, 4, 4, 0, 1, 2,
+     *          0, 3, 3, 0, 2, 1, 3, 1, 2, 1,
+     *          2,
+     *          0, 6, 0, 1, 0, 5, 5, 0, 1, 2,
+     *          0, 4, 4, 0, 2, 1, 4, 1, 3, 0,
+     *          3, 2, 1, 3, 3, 1, 2, 2/
+      DATA IY / 1, 1, 8, 1, 1,15, 1, 8, 1, 8,
+     *          1,22, 1, 8, 1,15,15, 1, 8, 8,
+     *          1,29, 1, 8, 1,22,22, 1, 8,15,
+     *          1,15, 8,15, 8,
+     *          1,36, 1, 8, 1,29,29, 1, 8,15,
+     *          1,22,22, 1,15, 8,22, 8,15, 8,
+     *         15,
+     *          1,43, 1, 8, 1,36,36, 1, 8,15,
+     *          1,29,29, 1,15, 8,29, 8,22, 1,
+     *         22,15, 8,22,22, 8,15,15/
+      DATA JZ / 0, 0, 0, 1, 0, 0, 2, 0, 1, 1,
+     *          0, 0, 3, 0, 1, 0, 1, 2, 2, 1,
+     *          0, 0, 4, 0, 1, 0, 1, 3, 3, 0,
+     *          2, 2, 1, 1, 2,
+     *          0, 0, 5, 0, 1, 0, 1, 4, 4, 0,
+     *          2, 0, 2, 3, 3, 1, 1, 3, 1, 2,
+     *          2,
+     *          0, 0, 6, 0, 1, 0, 1, 5, 5, 0,
+     *          2, 0, 2, 4, 4, 1, 1, 4, 0, 3,
+     *          3, 1, 2, 1, 2, 3, 3, 2/
+      DATA IZ / 1, 1, 1, 8, 1, 1,15, 1, 8, 8,
+     *          1, 1,22, 1, 8, 1, 8,15,15, 8,
+     *          1, 1,29, 1, 8, 1, 8,22,22, 1,
+     *         15,15, 8, 8,15,
+     *          1, 1,36, 1, 8, 1, 8,29,29, 1,
+     *         15, 1,15,22,22, 8, 8,22, 8,15,
+     *         15,
+     *          1, 1,43, 1, 8, 1, 8,36,36, 1,
+     *         15, 1,15,29,29, 8, 8,29, 1,22,
+     *         22, 8,15, 8,15,22,22,15/
+C
+C     ----- COMPUTE CONVENTIONAL H, S, AND T INTEGRALS -----
+C
+      TOL = RLN10*ITOL
+C     NORM = NORMF .NE. 1 .OR. NORMP .NE. 1
+      CALL STLUT(ISTART,IEND,JSTART,JEND,NATST,NATED,ISUB,ISUB)
+C
+      IF(DBUG) THEN
+        WRITE(IW,'(/,3X,5(2X,A7,2X))')
+     *     'ISUB','ISTART','IEND'
+        WRITE(IW,'(3X,5(2X,I7,2X))') ISUB,ISTART,IEND
+C
+        WRITE(IW,'(2X,1X,15(2X,A6,2X),2(2X,A5,A25))')
+     *  'II','I1','I2','LIT','MINI','MAXI','LOCI','IPOS',
+     *  'JJ','J1','J2','LJT','MINJ','MAXJ','LOCJ',
+     *  'IG','AI','JG','AJ'
+      END IF
+C
+      IF(GOPARR) THEN
+         CALL VCLR(H ,1,L2)
+         CALL VCLR(S ,1,L2)
+         CALL VCLR(T ,1,L2)
+      END IF
+C
+C     ----- INTIALIZE PARALLEL -----
+C
+      IPCOUNT = ME - 1
+C
+      LOCIJ=0
+C
+C     ----- I SHELL -----
+C
+      DO 720 II = ISTART,IEND
+         I = KATOM(II)
+         XI = C(1,I)
+         YI = C(2,I)
+         ZI = C(3,I)
+         I1 = KSTART(II)
+         I2 = I1+KNG(II)-1
+         LIT = KTYPE(II)
+         MINI = KMIN(II)
+         MAXI = KMAX(II)
+         LOCI = KLOC(II)-MINI-LOCIJ-NLOC(ISUB)+1
+         IPOS = (KLOC(II)*(KLOC(II)-1))/2
+C
+C     ----- J SHELL -----
+C
+         DO 700 JJ = JSTART,II
+C
+C     ----- GO PARALLEL! (STATIC LOAD BALANCING) -----
+C
+            IF (GOPARR) THEN
+               IPCOUNT = IPCOUNT + 1
+               IF (MOD(IPCOUNT,NPROC).NE.0) GO TO 700
+            END IF
+C
+            J = KATOM(JJ)
+            XJ = C(1,J)
+            YJ = C(2,J)
+            ZJ = C(3,J)
+            J1 = KSTART(JJ)
+            J2 = J1+KNG(JJ)-1
+            LJT = KTYPE(JJ)
+            MINJ = KMIN(JJ)
+            MAXJ = KMAX(JJ)
+            LOCJ = KLOC(JJ)-MINJ-LOCIJ-NLOC(ISUB)+1
+            NROOTS = (LIT+LJT-2)/2+1
+            RR = (XI-XJ)**2+(YI-YJ)**2+(ZI-ZJ)**2
+            IANDJ = II .EQ. JJ
+C
+C     ----- PREPARE INDICES FOR PAIRS OF (I,J) FUNCTIONS
+C
+            IJ = 0
+            MAX = MAXJ
+            DO 160 I = MINI,MAXI
+               NX = IX(I)
+               NY = IY(I)
+               NZ = IZ(I)
+               IF (IANDJ) MAX = I
+               DO 140 J = MINJ,MAX
+                  IJ = IJ+1
+                  IJX(IJ) = NX+JX(J)
+                  IJY(IJ) = NY+JY(J)
+                  IJZ(IJ) = NZ+JZ(J)
+                  FT (IJ) = 2*(JX(J)+JY(J)+JZ(J)) + 3
+  140          CONTINUE
+  160       CONTINUE
+C
+            CALL VCLR( SBLK,1,IJ)
+            CALL VCLR( TBLK,1,IJ)
+            CALL VCLR( VBLK,1,IJ)
+C
+C     ----- I PRIMITIVE
+C
+            JGMAX = J2
+            DO 520 IG = I1,I2
+               AI = EX(IG)
+               ARRI = AI*RR
+               AXI = AI*XI
+               AYI = AI*YI
+               AZI = AI*ZI
+               CALL SETCONI(CONI,IG,0)
+C
+C     ----- J PRIMITIVE
+C
+               IF (IANDJ) JGMAX = IG
+               DO 500 JG = J1,JGMAX
+                  AJ = EX(JG)
+                  AA = AI+AJ
+                  AA1 = ONE/AA
+                  DUM = AJ*ARRI*AA1
+                  IF (DUM .GT. TOL) GO TO 500
+                  FAC = EXP(-DUM)
+                  CALL SETCONI(CONJ,JG,0)
+                  AX = (AXI+AJ*XJ)*AA1
+                  AY = (AYI+AJ*YJ)*AA1
+                  AZ = (AZI+AJ*ZJ)*AA1
+      IF(DBUG) THEN
+         WRITE(IW,'(/,2X,1X,15(2X,A6,2X),2(2X,A5,A25))')
+     *   'II','I1','I2','LIT','MINI','MAXI','LOCI','IPOS',
+     *   'JJ','J1','J2','LJT','MINJ','MAXJ','LOCJ',
+     *   'IG','AI','JG','AJ'
+      WRITE(IW,'(2X,1X,15(2X,I6,2X),2(2X,I5,F25.12))')
+     *              II,I1,I2,LIT,MINI,MAXI,LOCI,IPOS,
+     *              JJ,J1,J2,LJT,MINJ,MAXJ,LOCJ,
+     *              IG,AI,JG,AJ
+      END IF
+C
+C     ----- DENSITY FACTOR
+C
+C     THE ONLY REASON WHY -ILZ WORKS WITH THIS DENSITY THAT ASSUMES
+C     HERMITICITY IS BECAUSE <I|-ILZ|I>=0 (MOMENTUM QUENCHING).
+C
+                  DOUBLE=IANDJ.AND.IG.NE.JG
+                  MAX = MAXJ
+                  NN = 0
+                  DTWO=ONE
+                  IF(DOUBLE) DTWO=TWO
+C                 NOTE THAT PNRM FACTORS FOR S AND P SHELLS ARE 1.
+                  SPDIJ=CS(IG)*CP(JG)*FAC
+C                 SPDIJ=CS(INBSF)*CP(JNBSF)*FAC
+                  DO 220 I = MINI,MAXI
+                     IF (IANDJ) MAX = I
+                     FACI=FAC*CONI(I)*PNRM(I)*DTWO
+                     NN1=NN+1
+                     DO 200 J = MINJ,MAX
+                        NN = NN+1
+                        DIJ(NN)=FACI*CONJ(J)*PNRM(J)
+  200                CONTINUE
+C            CORRECT FOR L-SHELL DOUBLE COUNTING OF THE SP
+C            OFF-DIAGONAL TERMS (FOR NON-L SHELLS CSI*CPJ IS ZERO).
+C            NN1 POINTS TO THE APPROPRIATE DENSITY ELEMENT
+                     IF(MINJ.LE.1.AND.I.GT.1.AND.DOUBLE)
+     *                 DIJ(NN1)=DIJ(NN1)*PT5+SPDIJ
+  220             CONTINUE
+C
+C     ----- OVERLAP AND KINETIC ENERGY
+C
+                  TAA = SQRT(AA1)
+                  T1 = -TWO*AJ*AJ*TAA
+                  T2 = -PT5*TAA
+                  X0 = AX
+                  Y0 = AY
+                  Z0 = AZ
+                  IN = -7
+                  DO 320 I = 1,LIT
+                     IN = IN+7
+                     NI = I
+                     DO 300 J = 1,LJT
+                        JN = IN+J
+                        NJ = J
+                        CALL STVINT
+                        XIN(JN) = XINT*TAA
+                        YIN(JN) = YINT*TAA
+                        ZIN(JN) = ZINT*TAA
+C
+                        NJ = J+2
+                        CALL STVINT
+                        XIN(JN+49) = XINT*T1
+                        YIN(JN+49) = YINT*T1
+                        ZIN(JN+49) = ZINT*T1
+                        NJ = J-2
+                        IF (NJ .GT. 0) THEN
+                           CALL STVINT
+                        ELSE
+                           XINT = ZERO
+                           YINT = ZERO
+                           ZINT = ZERO
+                        END IF
+                        N = (J-1)*(J-2)
+                        DUM = N * T2
+                        XIN(JN+98) = XINT*DUM
+                        YIN(JN+98) = YINT*DUM
+                        ZIN(JN+98) = ZINT*DUM
+  300                CONTINUE
+  320             CONTINUE
+                  DO 340 I = 1,IJ
+                     NX = IJX(I)
+                     NY = IJY(I)
+                     NZ = IJZ(I)
+                     DUM = XIN(NX)*YIN(NY)*ZIN(NZ)
+                     SBLK(I) =  SBLK(I) + DIJ(I)* DUM
+                     DUM1X = (XIN(NX+49)+XIN(NX+98))*YIN(NY)*ZIN(NZ)
+                     DUM1Y = (YIN(NY+49)+YIN(NY+98))*XIN(NX)*ZIN(NZ)
+                     DUM1Z = (ZIN(NZ+49)+ZIN(NZ+98))*XIN(NX)*YIN(NY)
+                     DUM1  = DUM1X + DUM1Y + DUM1Z
+                      TBLK(I) =  TBLK(I) + DIJ(I)*(DUM*AJ*FT (I)+DUM1 )
+  340             CONTINUE
+C
+C     ----- NUCLEAR ATTRACTION
+C     EL SIGUIENTE DO SOLO EN CASO NO SCREEN.
+C
+                  DUM = PI212*AA1
+                  DO 400 I = 1,IJ
+                    DIJ(I) = DIJ(I)*DUM
+  400             CONTINUE
+C
+                  AAX = AA*AX
+                  AAY = AA*AY
+                  AAZ = AA*AZ
+C
+                  DO 460 IC = NATST,NATED
+                    ZNUC = -ZAN(IC)
+                    CX = C(1,IC)
+                    CY = C(2,IC)
+                    CZ = C(3,IC)
+                    XX = AA*((AX-CX)**2+(AY-CY)**2+(AZ-CZ)**2)
+                    IF (NROOTS.LE.3) CALL RT123
+                    IF (NROOTS.EQ.4) CALL ROOT4
+                    IF (NROOTS.EQ.5) CALL ROOT5
+                    IF (NROOTS.GE.6) CALL ROOT6
+                    MM = 0
+                    DO 430 K = 1,NROOTS
+                      UU = AA*U(K)
+                      WW = W(K)*ZNUC
+                      TT = ONE/(AA+UU)
+                      TAA = SQRT(TT)
+                      X0 = (AAX+UU*CX)*TT
+                      Y0 = (AAY+UU*CY)*TT
+                      Z0 = (AAZ+UU*CZ)*TT
+                      IN = -7+MM
+                      J0 = 2
+C
+C                     J0 SKIPS THE TRIVIAL COMBINATION NI=NJ=1
+C                     THAT IS DONE EXPLICITLY NOW
+C
+                      XIN(IN+8) = W1
+                      YIN(IN+8) = W1
+                      ZIN(IN+8) = W1*WW
+                      DO 420 I = 1,LIT
+                        IN = IN+7
+                        NI = I
+                        DO 410 J = J0,LJT
+                           JN = IN+J
+                           NJ = J
+                           CALL STVINT
+                           XIN(JN) = XINT
+                           YIN(JN) = YINT
+                           ZIN(JN) = ZINT*WW
+  410                   CONTINUE
+                        J0 = 1
+  420                 CONTINUE
+                      MM = MM+49
+  430               CONTINUE
+                    DO 450 I = 1,IJ
+                      NX = IJX(I)
+                      NY = IJY(I)
+                      NZ = IJZ(I)
+                      DUM = ZERO
+                      MM = 0
+                      DO 440 K = 1,NROOTS
+                         DUM = DUM+XIN(NX+MM)*YIN(NY+MM)*ZIN(NZ+MM)
+                         MM = MM+49
+  440                 CONTINUE
+                      VBLK(I) = VBLK(I) + DUM*DIJ(I)
+  450               CONTINUE
+  460             CONTINUE
+C
+C     ----- END OF PRIMITIVE LOOPS -----
+C
+  500          CONTINUE
+  520       CONTINUE
+C
+C     ----- SET BLOCK OF NUCLEAR ATTRACTION, OVERLAP, AND KINETIC ENERGY
+C
+      IF(DBUG) THEN
+            WRITE(IW,'(3X,9(2X,A6,2X))')
+     *           'I','LOCI','LI','IN','J','LOCJ','LJ','JN','NN'
+      END IF
+            MAX = MAXJ
+            NN = 0
+            DO 620 I = MINI,MAXI
+              LI = LOCI+I
+              IN = (LI*(LI-1))/2
+              IF (IANDJ) MAX = I
+              DO 600 J = MINJ,MAX
+                LJ = LOCJ+J
+                JN = LJ+IN
+                NN = NN+1
+      IF(DBUG) THEN
+            WRITE(IW,'(3X,9(2X,I6,2X))') I,LOCI,LI,IN,J,LOCJ,LJ,JN,NN
+      END IF
+                H(JN) = VBLK(NN)
+                S(JN) = SBLK(NN)
+                T(JN) = TBLK(NN)
+  600         CONTINUE
+  620       CONTINUE
+C
+C     ----- END OF SHELL LOOPS -----
+C
+  700   CONTINUE
+  720 CONTINUE
+C
+C     ----- SUM UP PARTIAL CONTRIBUTIONS IF PARALLEL -----
+C
+      IF(GOPARR) THEN
+         CALL DDI_GSUMF(910,H,L2)
+         CALL DDI_GSUMF(911,S,L2)
+         CALL DDI_GSUMF(912,T,L2)
+      END IF
+C
+C     ----- DEBUG -----
+C
+      IF(DBUG) THEN
+         CALL PRTRIEXL(S,L1,'OVL. MAT  ')
+         CALL PRTRIEXL(H,L1,'NUC. ATRCT')
+         CALL PRTRIEXL(T,L1,'KIN. ENE. ')
+      END IF
+C
+      CALL VADD(H,1,T,1,H,1,L2)
+C
+      RETURN
+C
+      END
+C
+C*MODULE LUT      *DECK PVPL
+C>
+C>    @brief   One-electron pVp (Dawrin-like) integral evaluation
+C>             for atomic IOTC transformation
+C>
+C>    @details This is a modified version of PVPINT to obtain
+C>             one-electron integrals for atomic IOTC transformation
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+      SUBROUTINE PVPL(PVP2,ISUB,DBUG,L1,L2)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL DBUG
+      LOGICAL IANDJ,NORM
+      LOGICAL GOPARR,DSKWRK,MASWRK,NXT
+C
+      DIMENSION PVP2(L2)
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000)
+C
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /ROOT  / XX,U(13),W(13),NROOTS
+      COMMON /STV   / XINT,YINT,ZINT,T,X0,Y0,Z0,XI,YI,ZI,XJ,YJ,ZJ,NI,NJ
+      COMMON /SYMIND/ TOL,II,JJ,LIT,LJT,MINI,MINJ,MAXI,MAXJ,IANDJ
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+      DIMENSION DIJ(225),PVP(225)
+      DIMENSION IJX(35),IJY(35),IJZ(35)
+      DIMENSION     XV(7,6,6),    YV(7,6,6),    ZV(7,6,6)
+C     DIMENSION     XV(7,6,5),    YV(7,6,5),    ZV(7,6,5)
+C                     (6,6,5) IS ACTUALLY NEEDED, BUT QRDDERIJ USES LD=7
+      DIMENSION DXVDIJ(5,5,6),DYVDIJ(5,5,6),DZVDIJ(5,5,6)
+C     DIMENSION DXVDIJ(5,5,5),DYVDIJ(5,5,5),DZVDIJ(5,5,5)
+C
+      DATA MAXRYS /9/
+      DATA RLN10  /2.30258D+00/
+      DATA ZERO   /0.0D+00/
+      DATA ONE    /1.0D+00/
+      DATA PI212  /1.1283791670955D+00/
+      DATA SQRT3  /1.73205080756888D+00/
+      DATA SQRT5  /2.23606797749979D+00/
+      DATA SQRT7  /2.64575131106459D+00/
+      DATA IJX    / 1, 2, 1, 1, 3, 1, 1, 2, 2, 1,
+     1              4, 1, 1, 3, 3, 2, 1, 2, 1, 2,
+     2              5, 1, 1, 4, 4, 2, 1, 2, 1, 3,
+     3              3, 1, 3, 2, 2/
+      DATA IJY    / 1, 1, 2, 1, 1, 3, 1, 2, 1, 2,
+     1              1, 4, 1, 2, 1, 3, 3, 1, 2, 2,
+     2              1, 5, 1, 2, 1, 4, 4, 1, 2, 3,
+     3              1, 3, 2, 3, 2/
+      DATA IJZ    / 1, 1, 1, 2, 1, 1, 3, 1, 2, 2,
+     1              1, 1, 4, 1, 2, 1, 2, 3, 3, 2,
+     2              1, 1, 5, 1, 2, 1, 2, 4, 4, 1,
+     3              3, 3, 2, 2, 3/
+C
+      TOL=RLN10*ITOL
+      NORM=NORMF.NE.1.OR.NORMP.NE.1
+      CALL STLUT(ISTART,IEND,JSTART,JEND,NATST,NATED,ISUB,ISUB)
+C
+      CALL VCLR(PVP2,1,L2)
+C
+      NXT = IBTYP.EQ.1
+      NEXT = -1
+      MINE = -1
+      ICOUNT=0
+C
+C     ----- CALCULATE -PVP- TERM -----
+C
+      LOCIJ=0
+C
+C     ----- ISHELL -----
+C
+      DO 9000 II=ISTART,IEND
+C
+          IF(GOPARR.AND.NXT) THEN
+            MINE = MINE + 1
+            IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+            IF(NEXT.NE.MINE) GO TO 9000
+          END IF
+C
+      I=KATOM(II)
+      XI=C(1,I)
+      YI=C(2,I)
+      ZI=C(3,I)
+      I1=KSTART(II)
+      I2=I1+KNG(II)-1
+      LIT=KTYPE(II)
+      MINI=KMIN(II)
+      MAXI=KMAX(II)
+      LOCI = KLOC(II)-MINI-LOCIJ-NLOC(ISUB)+1
+C
+      LITDER=LIT+1
+C
+C     ----- JSHELL -----
+C
+      DO 8000 JJ=JSTART,II
+        ICOUNT=ICOUNT+1
+        IF(GOPARR.AND..NOT.NXT.AND.MOD(ICOUNT,NPROC).NE.ME) GOTO 8000
+      J=KATOM(JJ)
+      XJ=C(1,J)
+      YJ=C(2,J)
+      ZJ=C(3,J)
+      J1=KSTART(JJ)
+      J2=J1+KNG(JJ)-1
+      LJT=KTYPE(JJ)
+      MINJ=KMIN(JJ)
+      MAXJ=KMAX(JJ)
+      LOCJ = KLOC(JJ)-MINJ-LOCIJ-NLOC(ISUB)+1
+C
+      LJTDER=LJT+1
+C
+      IANDJ=II.EQ.JJ
+      RR=(XI-XJ)**2+(YI-YJ)**2+(ZI-ZJ)**2
+      NROOTS=(LITDER+LJTDER-2)/2+1
+      IF(NROOTS.GT.MAXRYS) THEN
+         WRITE(IW,9997) MAXRYS,LITDER,LJTDER,NROOTS
+         STOP 1234
+      ENDIF
+C
+      IJ=(MAXI-MINI+1)*(MAXJ-MINJ+1)
+      CALL VCLR(PVP,1,IJ)
+C
+C     ----- I PRIMITIVE -----
+C
+      DO 7000 IG=I1,I2
+      AI=EX(IG)
+      ARRI=AI*RR
+      AXI=AI*XI
+      AYI=AI*YI
+      AZI=AI*ZI
+      CSI=CS(IG)
+      CPI=CP(IG)
+      CDI=CD(IG)
+      CFI=CF(IG)
+      CGI=CG(IG)
+C
+C     ----- J PRIMITIVE -----
+C
+      JGMAX=J2
+      DO 6000 JG=J1,JGMAX
+      AJ=EX(JG)
+      AA=AI+AJ
+      AA1=ONE/AA
+      DUM=AJ*ARRI*AA1
+      IF(DUM.GT.TOL) GO TO 6000
+      FAC= EXP(-DUM)
+      CSJ=CS(JG)
+      CPJ=CP(JG)
+      CDJ=CD(JG)
+      CFJ=CF(JG)
+      CGJ=CG(JG)
+      AX=(AXI+AJ*XJ)*AA1
+      AY=(AYI+AJ*YJ)*AA1
+      AZ=(AZI+AJ*ZJ)*AA1
+      IF(DBUG) THEN
+         WRITE(IW,'(/,2X,1X,14(2X,A6,2X),2(2X,A5,A25))')
+     *   'II','I1','I2','LIT','MINI','MAXI','LOCI',
+     *   'JJ','J1','J2','LJT','MINJ','MAXJ','LOCJ',
+     *   'IG','AI','JG','AJ'
+      WRITE(IW,'(2X,1X,14(2X,I6,2X),2(2X,I5,F25.12))')
+     *              II,I1,I2,LIT,MINI,MAXI,LOCI,
+     *              JJ,J1,J2,LJT,MINJ,MAXJ,LOCJ,
+     *              IG,AI,JG,AJ
+      END IF
+C
+C     ----- DENSITY FACTOR -----
+C
+      IJ=0
+      DO 360 I=MINI,MAXI
+      GO TO (110,120,220,220,130,220,220,140,220,220,
+     1       150,220,220,160,220,220,220,220,220,170,
+     2       180,220,220,190,220,220,220,220,220,200,
+     3       220,220,210,220,220),I
+  110 DUM1=CSI*FAC
+      GO TO 220
+  120 DUM1=CPI*FAC
+      GO TO 220
+  130 DUM1=CDI*FAC
+      GO TO 220
+  140 IF(NORM) DUM1=DUM1*SQRT3
+      GO TO 220
+  150 DUM1=CFI*FAC
+      GO TO 220
+  160 IF(NORM) DUM1=DUM1*SQRT5
+      GO TO 220
+  170 IF(NORM) DUM1=DUM1*SQRT3
+      GO TO 220
+  180 DUM1=CGI*FAC
+      GO TO 220
+  190 IF(NORM) DUM1=DUM1*SQRT7
+      GO TO 220
+  200 IF(NORM) DUM1=DUM1*SQRT5/SQRT3
+      GO TO 220
+  210 IF(NORM) DUM1=DUM1*SQRT3
+  220 CONTINUE
+C
+      JMAX=MAXJ
+      IF(IANDJ) JMAX=I
+      DO 360 J=MINJ,JMAX
+      GO TO (230,250,350,350,260,350,350,270,350,350,
+     1       280,350,350,290,350,350,350,350,350,300,
+     2       310,350,350,320,350,350,350,350,350,330,
+     3       350,350,340,350,350),J
+  230 DUM2=DUM1*CSJ
+      GO TO 350
+  250 DUM2=DUM1*CPJ
+      GO TO 350
+  260 DUM2=DUM1*CDJ
+      GO TO 350
+  270 IF(NORM) DUM2=DUM2*SQRT3
+      GO TO 350
+  280 DUM2=DUM1*CFJ
+      GO TO 350
+  290 IF(NORM) DUM2=DUM2*SQRT5
+      GO TO 350
+  300 IF(NORM) DUM2=DUM2*SQRT3
+      GO TO 350
+  310 DUM2=DUM1*CGJ
+      GO TO 350
+  320 IF(NORM) DUM2=DUM2*SQRT7
+      GO TO 350
+  330 IF(NORM) DUM2=DUM2*SQRT5/SQRT3
+      GO TO 350
+  340 IF(NORM) DUM2=DUM2*SQRT3
+  350 CONTINUE
+C
+      IJ=IJ+1
+  360 DIJ(IJ)=DUM2
+C
+C     ----- PVP -----
+C
+      AAX=AA*AX
+      AAY=AA*AY
+      AAZ=AA*AZ
+      DO 500 KAT=NATST,NATED
+      ZNUC=-ZAN(KAT)
+      CX=C(1,KAT)
+      CY=C(2,KAT)
+      CZ=C(3,KAT)
+      XX=AA*((AX-CX)**2+(AY-CY)**2+(AZ-CZ)**2)
+      IF(NROOTS.LE.3) CALL RT123
+      IF(NROOTS.EQ.4) CALL ROOT4
+      IF(NROOTS.EQ.5) CALL ROOT5
+      IF (NROOTS.GE.6) CALL ROOT6
+      DO 420 IROOT=1,NROOTS
+      UU=U(IROOT)*AA
+      WW=W(IROOT)*ZNUC
+      TT=ONE/(AA+UU)
+      T = SQRT(TT)
+      X0=(AAX+UU*CX)*TT
+      Y0=(AAY+UU*CY)*TT
+      Z0=(AAZ+UU*CZ)*TT
+C
+      DO 410 J=1,LJTDER
+      NJ=J
+      DO 410 I=1,LITDER
+      NI=I
+      CALL STVINT
+      XV(I,J,IROOT)=XINT
+      YV(I,J,IROOT)=YINT
+      ZV(I,J,IROOT)=ZINT*WW
+  410 CONTINUE
+C
+      CALL QRDDERIJ
+     $           (DXVDIJ(1,1,IROOT),DYVDIJ(1,1,IROOT),DZVDIJ(1,1,IROOT),
+     1                XV(1,1,IROOT),    YV(1,1,IROOT),    ZV(1,1,IROOT),
+     2            LIT,LJT,AI,AJ,5)
+C
+  420 CONTINUE
+C
+      IJ=0
+      DO 450 I=MINI,MAXI
+      IX=IJX(I)
+      IY=IJY(I)
+      IZ=IJZ(I)
+      JMAX=MAXJ
+      IF(IANDJ) JMAX=I
+      DO 440 J=MINJ,JMAX
+      JX=IJX(J)
+      JY=IJY(J)
+      JZ=IJZ(J)
+      IJ=IJ+1
+C
+C     DUMII STANDS FOR PI*V*PI INTEGRAL
+C
+      DUMXX=ZERO
+      DUMYY=ZERO
+      DUMZZ=ZERO
+      DO 434 K=1,NROOTS
+        DUMXX=DUMXX + DXVDIJ(IX,JX,K)* YV   (IY,JY,K)* ZV   (IZ,JZ,K)
+        DUMYY=DUMYY +  XV   (IX,JX,K)*DYVDIJ(IY,JY,K)* ZV   (IZ,JZ,K)
+        DUMZZ=DUMZZ +  XV   (IX,JX,K)* YV   (IY,JY,K)*DZVDIJ(IZ,JZ,K)
+  434 CONTINUE
+      DUM=(DUMXX+DUMYY+DUMZZ)*(AA1*PI212)
+      PVP(IJ)=PVP(IJ)+DUM*DIJ(IJ)
+  440 CONTINUE
+  450 CONTINUE
+C
+  500 CONTINUE
+C
+ 6000 CONTINUE
+ 7000 CONTINUE
+C
+C     ----- SET UP PVP MATRICES -----
+C
+CYN-- IF(DBUG) THEN
+CYN--   WRITE(IW,'(3X,5(2X,A6,2X))')
+CYN-- *       'I','LOCI','J','LOCJ','NN'
+CYN-- END IF
+      IJ=0
+      DO 7500 I=MINI,MAXI
+      JMAX=MAXJ
+      IF(IANDJ) JMAX=I
+      DO 7500 J=MINJ,JMAX
+      IJ=IJ+1
+      NN=((LOCI+I)*(LOCI+I-1))/2+(LOCJ+J)
+      IF(DBUG) THEN
+            WRITE(IW,'(3X,5(2X,I6,2X))') I,LOCI,J,LOCJ,NN
+      END IF
+      PVP2(NN)= PVP(IJ)
+ 7500 CONTINUE
+ 8000 CONTINUE
+ 9000 CONTINUE
+      IF(GOPARR.AND.NXT) CALL DDI_DLBRESET
+      IF(GOPARR) CALL DDI_GSUMF(910,PVP2,L2)
+C
+      IF(DBUG) THEN
+         CALL PRTRIEXL(PVP2,L1,'PVP MAT   ')
+      END IF
+C
+      RETURN
+C9999 FORMAT(/,10X,24(1H-),/,10X,'1 ELECTRON PVP INTEGRALS',
+C    2       /,10X,24(1H-))
+ 9997 FORMAT(' IN -PVPINT- THE RYS QUADRATURE IS NOT IMPLEMENTED',
+     1       ' BEYOND -NROOTS- = ',I2,/,
+     2       ' LIT,LJT,NROOTS= ',3I3)
+      END
+C
+C*MODULE LUT      *DECK UNTRAN
+C>
+C>    @brief   Get atomic unitary transformations matrix in the LUT
+C>             scheme
+C>
+C>    @details This subroutine calculates the atomic unitary
+C>             transformation for the LUT scheme. The transformations
+C>             can be applied to nuclear-attraction and the relativistic
+C>             Darwin-like terms to obtain interatomic transformation
+C>             later. This matrix include Hess'transformation, and
+C>             therefor, has (L1,L1) dimension.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- output in sequential file--
+C>    @param   WRK32 : total unitary transformation matrix for nuclear-
+C>                     attraction integrals
+C>    -- input --
+C>    @param   XU    : Hess' transformation matrix (in momentum space)
+C>                     for external potential
+C>    @param   SXU   : backward transformation matrix to uncontracted
+C>                     basis
+C>    @param   OMG   : Omega matrix in the IOTC method (input)
+C>    @param   UNTV  : unitary transformation matrix for
+C>                     non-relativistic nuclear-attraction integrals
+C>    @param   UNTPV : unitary transformation matrix for pVp
+C>                     (Darwin-like) integrals
+C>    -- scratch --
+C>    @param   WRK3  : scratch array for the calculation
+C>
+      SUBROUTINE UNTRAN(XU,UNTV,UNTPV,OMG,SXU,WRK3,WRK32,
+     *                  L1,L0,L10,L3,L03)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (ONE=1.0D+00, ZERO=0.0D+00)
+      PARAMETER (MXATM=2000)
+C
+      DIMENSION XU(L10)
+      DIMENSION SXU(L10)
+      DIMENSION OMG(L03)
+      DIMENSION UNTV(L03)
+      DIMENSION UNTPV(L03)
+      DIMENSION WRK3(L3)
+      DIMENSION WRK32(L3)
+C
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUB
+C
+C     CALL DPRTMATL(UNTV,L0,L0,L0,'M         ')
+      CALL DGEMM('N','N',L1,L0,L0,ONE,XU   ,L1,UNTV,L0,ZERO,WRK32,L1)
+      CALL DGEMM('N','N',L1,L0,L0,ONE,WRK32,L1,OMG ,L0,ZERO,WRK3 ,L1)
+      CALL DGEMM('N','T',L1,L1,L0,ONE,WRK3 ,L1,SXU ,L1,ZERO,WRK32,L1)
+C     CALL DPRTMATL(WRK32,L1,L1,L1,'UNITRA. V ')
+      CALL SQWRIT(NUNV,WRK32,L3)
+C
+C     CALL DPRTMATL(UNTPV,L0,L0,L0,'PI        ')
+      CALL DGEMM('N','N',L1,L0,L0,ONE,XU   ,L1,UNTPV,L0,ZERO,WRK32,L1)
+      CALL DGEMM('N','N',L1,L0,L0,ONE,WRK32,L1,OMG  ,L0,ZERO,WRK3 ,L1)
+      CALL DGEMM('N','T',L1,L1,L0,ONE,WRK3 ,L1,SXU  ,L1,ZERO,WRK32,L1)
+C     CALL DPRTMATL(WRK32,L1,L1,L1,'UNITRA.pVp')
+      CALL SQWRIT(NUNPV,WRK32,L3)
+C
+      RETURN
+      END
+C
+C--C*MODULE LUT      *DECK INTEGH
+C--C>
+C--C>    @brief   Add the contributions of subsystems to total one-
+C--C>             electron Hamiltonian matrix
+C--C>
+C--C>    @details This subroutine adds the contribution of the subsystem
+C--C>             to total one-electron Hamiltonian matrix after each
+C--C>             atomic relativistic transformation is performed in
+C--C>             LUT-IOTC.
+C--C>
+C--C>    @author  Yuya Nakajima, June, 2015
+C--C>
+C--C>    -- output --
+C--C>    @param   HAO    : total one-electron Hamiltonian
+C--C>    -- input --
+C--C>    @param   H      : subsystem contribution to Hamiltonian
+C--C>    @param   JSUB   : # of the subsystem
+C--C>    @param   ISUB   : # of the subsystem
+C--C>    @param   LENGTH : the size of array H
+C--C>    @param   LL1    : uncontracted basis set size
+C--C>    @param   LL2    : triangular matrix size, (LL1*LL1+LL1)/2
+C--C>    @param   NDAF   : # of DAF file to save Hamiltonian
+C--C>    @param   DBUG   : flag of a debug print
+C--C>
+C--      SUBROUTINE INTEGH(H,HAO,JSUB,ISUB,LENGTH,LL1,LL2,NDAF,DBUG)
+C--C
+C--      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C--C
+C--      LOGICAL DBUG,IANDJ
+C--C
+C--      PARAMETER (MXAO=8192, MXATM=2000)
+C--C
+C--      DIMENSION H(LENGTH)
+C--      DIMENSION HAO(LL2)
+C--C
+C--      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+C--      COMMON /IJPAIR/ IA(MXAO)
+C--      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),
+C--     *                NLOC(MXATM),NUNV,NUNPV,ISUBX
+C--C
+C--      ISTART = NLOC(ISUB)
+C--      IEND   = NLOC(ISUB+1) - 1
+C--      JSTART = NLOC(JSUB)
+C--      JEND   = NLOC(JSUB+1) - 1
+C--      IANDJ  = ISUB.EQ.JSUB
+C--C
+C--      IF(DBUG) THEN
+C--        WRITE(IW,9999) ISTART,IEND,JSTART,JEND,NDAF,LENGTH,LL1,LL2
+C--      END IF
+C--C
+C--      CALL DAREAD(IDAF,IODA,HAO,LL2,NDAF,0)
+C--C
+C--      IF(DBUG) THEN
+C--        CALL PRTRIEXL(HAO,LL1,'INI.TOT.H ')
+C--      END IF
+C--C
+C--CYN-- IF(DBUG) THEN
+C--CYN--   WRITE(IW,'(/,2(2X,A7,2X),3(2X,A25,2X))')
+C--CYN--*        'IJ','NN','HAO+H','HAO','H'
+C--CYN-- END IF
+C--      IF(.NOT.IANDJ) THEN
+C--        NN = 0
+C--        DO J = JSTART, JEND
+C--          DO I = ISTART, IEND
+C--            IJ = IA(J) + I
+C--            NN = NN + 1
+C--CYN--       AUX = HAO(IJ)
+C--            HAO(IJ) = HAO(IJ) + H(NN)
+C--CYN--       IF(DBUG) THEN
+C--CYN--         WRITE(IW,'(2(2X,I7,2X),3(2X,F25.15,2X))')
+C--CYN--*             IJ,NN,HAO(IJ),AUX,H(NN)
+C--CYN--       END IF
+C--          END DO
+C--        END DO
+C--      ELSE
+C--        NN = 0
+C--        DO J = JSTART, JEND
+C--          DO I = ISTART, J
+C--            IJ = IA(J) + I
+C--            NN = NN + 1
+C--            HAO(IJ) = HAO(IJ) + H(NN)
+C--CYN--       IF(DBUG) THEN
+C--CYN--         WRITE(IW,'(2(2X,I7,2X),3(2X,F25.15,2X))')
+C--CYN--*             IJ,NN,HAO(IJ),HAO(IJ)-H(NN),H(NN)
+C--CYN--       END IF
+C--          END DO
+C--        END DO
+C--      END IF
+C--C
+C--      IF(DBUG) THEN
+C--        CALL PRTRIEXL(HAO,LL1,'TOTAL HAO ')
+C--      END IF
+C--C
+C--      CALL DAWRIT(IDAF,IODA,HAO,LL2,NDAF,0)
+C--C
+C--      RETURN
+C-- 9999 FORMAT(1X,"ISTART=",I6,2X,"IEND=",I6,2X,"JSTART=",I6,2X,
+C--     *          "JEND=",I6/
+C--     *       1X,"NDAF=",I6,2X,"LENGTH=",I6,2X,"LL1=",I6,2X,"LL2=",I6)
+C--      END
+C
+C*MODULE LUT      *DECK INTEGHV2
+C>
+C>    @brief   Add the contributions of subsystems to total one-
+C>             electron Hamiltonian matrix
+C>
+C>    @details This subroutine is a modified version of INTEGH.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- output --
+C>    @param   HAO    : total one-electron Hamiltonian
+C>    -- input --
+C>    @param   H      : subsystem contribution to Hamiltonian
+C>    @param   JSUB   : # of the subsystem
+C>    @param   ISUB   : # of the subsystem
+C>    @param   LENGTH : the size of array H
+C>    @param   LL1    : uncontracted basis set size
+C>    @param   LL2    : triangular matrix size, (LL1*LL1+LL1)/2
+C>    @param   DBUG   : flag of a debug print
+C>
+      SUBROUTINE INTEGHV2(H,HAO,JSUB,ISUB,LENGTH,LL1,LL2,DBUG)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL DBUG,IANDJ
+C
+      PARAMETER (MXAO=8192, MXATM=2000)
+C
+      DIMENSION H(LENGTH)
+      DIMENSION HAO(LL2)
+C
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+      ISTART = NLOC(ISUB)
+      IEND   = NLOC(ISUB+1) - 1
+      JSTART = NLOC(JSUB)
+      JEND   = NLOC(JSUB+1) - 1
+      IANDJ  = ISUB.EQ.JSUB
+C
+      IF(DBUG) THEN
+        WRITE(IW,9999) ISTART,IEND,JSTART,JEND,LENGTH,LL1,LL2
+      END IF
+C
+      IF(DBUG) THEN
+        CALL PRTRIEXL(HAO,LL1,'INI.TOT.H ')
+      END IF
+C
+CYN-- IF(DBUG) THEN
+CYN--   WRITE(IW,'(/,2(2X,A7,2X),3(2X,A25,2X))')
+CYN--*        'IJ','NN','HAO+H','HAO','H'
+CYN-- END IF
+      IF(.NOT.IANDJ) THEN
+        NN = 0
+        DO J = JSTART, JEND
+          DO I = ISTART, IEND
+            IJ = IA(J) + I
+            NN = NN + 1
+CYN--       AUX = HAO(IJ)
+            HAO(IJ) = HAO(IJ) + H(NN)
+CYN--       IF(DBUG) THEN
+CYN--         WRITE(IW,'(2(2X,I7,2X),3(2X,F25.15,2X))')
+CYN--*             IJ,NN,HAO(IJ),AUX,H(NN)
+CYN--       END IF
+          END DO
+        END DO
+      ELSE
+        NN = 0
+        DO J = JSTART, JEND
+          DO I = ISTART, J
+            IJ = IA(J) + I
+            NN = NN + 1
+            HAO(IJ) = HAO(IJ) + H(NN)
+CYN--       IF(DBUG) THEN
+CYN--         WRITE(IW,'(2(2X,I7,2X),3(2X,F25.15,2X))')
+CYN--*             IJ,NN,HAO(IJ),HAO(IJ)-H(NN),H(NN)
+CYN--       END IF
+          END DO
+        END DO
+      END IF
+C
+      IF(DBUG) THEN
+        CALL PRTRIEXL(HAO,LL1,'TOTAL HAO ')
+      END IF
+C
+      RETURN
+ 9999 FORMAT(1X,"ISTART=",I6,2X,"IEND=",I6,2X,"JSTART=",I6,2X,"JEND=",I6
+     *     ,/1X,"LENGTH=",I6,2X,"LL1=",I6,2X,"LL2=",I6)
+      END
+C
+C*MODULE LUT      *DECK HSANDTL2
+C>
+C>    @brief   Non-relativistic one-electron integral evaluation
+C>             in interatomic interaction for the LUT scheme
+C>
+C>    @details This is a modified version of HSANDT, to obtain
+C>             one-electron integrals for interatomic IOTC
+C>             transformation.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+      SUBROUTINE HSANDTL2(S,T,V,ISUB,JSUB,DBUG,LI1,LJ1,LIJ3)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C     DOUBLE PRECISION MOROKM
+C
+C     LOGICAL SOME
+      LOGICAL DBUG
+C     LOGICAL LZINT
+C     LOGICAL UNCON
+C     LOGICAL DOESP0
+C     LOGICAL DOESP1
+C     LOGICAL DCCUT
+C     LOGICAL DAMPALL
+C     LOGICAL DODAMP
+      LOGICAL IANDJ,DOUBLE,GOPARR,DSKWRK,MASWRK
+C     LOGICAL SCREEN
+C     LOGICAL DCFSKP,fastvesp
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000, MAXSH=84)
+C
+      DIMENSION V(LIJ3),S(LIJ3),T(LIJ3)!,Z(L2),ESP1E(L2),NLCT(L2),
+C     *          ATCHRG(*)
+      DIMENSION SBLK(784),TBLK(784),VBLK(784),
+     *          FT(784),DIJ(784),IJX(784),IJY(784),IJZ(784),
+     *          XIN(343),YIN(343),ZIN(343),CONI(MAXSH),CONJ(MAXSH),
+     *          IX(84),IY(84),IZ(84),JX(84),JY(84),JZ(84)
+C
+C       ---- CALCULATE THE BASIC H, S, AND T 1E- INTEGRALS -----
+C
+C     THE LINES MARKED -TXYZ- CAN BE USED TO FORM THE THREE SEPARATE
+C     TERMS OF THE KINETIC ENERGY. (FROM MIKE SCHMIDT)
+C     THE LINES MARKED -LXYZ- CAN BE USED TO FORM THE THREE SEPARATE
+C     TERMS OF THE POLYATOMIC ANGULAR MOMENTUM. (FROM TOBY ZENG)
+C     THESE INTEGRALS COULD BE USED FOR MAGNETIC CALCULATIONS SOMEDAY.
+C     NOTE: THE EXISTING CODE IN -LZINT- CODE BLOCKS COMPUTES LZ FOR
+C     THE SPECIAL CASE OF LINEAR OR ATOMIC SYMMETRY.
+C
+C     IF EITHER/BOTH OF THESE ARE EVER TO BE USED, YOU MUST ALSO
+C        A) ALLOCATE THE NECESSARY -L2- SIZED STORAGE DYNAMICALLY,
+C           AND PASS IT IN, FROM THIS ROUTINE'S CALLER.
+C        B) SAVE TO THE DIRECT ACCESS FILE AT SOME UNUSED RECORDS.
+C
+C-TXYZ-  DIMENSION TX(L2),TY(L2),TZ(L2)
+C-TXYZ-  DIMENSION TXBLK(784),TYBLK(784),TZBLK(784)
+C-TXYZ-  DIMENSION FTX(784),FTY(784),FTZ(784)
+C
+C-LXYZ   DOUBLE PRECISION LX,LY,LZ,LXBLK,LYBLK,LZBLK
+C-LXYZ-  DIMENSION LX(L2),LY(L2),LZ(L2)
+C-LXYZ-  DIMENSION LXBLK(784),LYBLK(784),LZBLK(784)
+C
+C     PARAMETER (MXCHRM=1)
+C
+C     COMMON /CHMGMS/ XCHM(MXCHRM),YCHM(MXCHRM),ZCHM(MXCHRM),
+C    *                DXELMM(MXCHRM),DYELMM(MXCHRM),DZELMM(MXCHRM),
+C    *                QCHM(MXCHRM),NCHMAT,KCHRMM
+C     COMMON /CONV  / DENTOL,EN,ETOT,EHF,EHF0,DIFF,ITER,ICALP,ICBET
+C     COMMON /EFMO  / EFMOETOT,EFMOESERG,EFMOPOLERG,EFMODISERG,
+C    *                EFMOREPNRG,EFMOCHTNRG,EFMOEPEN,EFMOPCMG,
+C    *                IEFMORUN,IMODEFP,IEFMORT,IEFMOCFRG,IEFMONFRG,
+C    *                IEFMODIM(2),IMODEFE,NATEFMO,IMODEFD,IMODEFER,
+C    *                IMODEFCT,IDIMTYP
+C     COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+C     COMMON /FMOOPT/ ESPSCA(9),RESPAP(2),RESPPC(2),RESDIM,RESTRI(4),
+C    *                RCORSD,RESPCT,CONVFG,CNVDMP,COROFF,RFLMO(4),
+C    *                ORSHFT,ORSHFT2,CNVAFO,ASCREEN(4),IXESP,MXITFG,
+C    *                NGUESS,NBSSE,MODORB,MODPAR,IRSTSTP,IRSTLAY,NPRFMO,
+C    *                NFMOPAL,MODPRP,MAXL1C,IPIEDA,MODGRD,MODESP,IVMUL,
+C    *                MODLMO,NOPDEN,MOFOCK,MODFD,modfmm,ncentm
+C     COMMON /FMOPNT/ LICHFG,LMULFG,LIDMREC,LFRGNAM,LLAYFRG,LINDAT,
+C    *                LNCBS,LFMOZAN,LFMOC,LFMOMAS,LIZBAS,LIAGLOB,LIBDGH,
+C    *                LIABDFG,LJABDFG,LNCAO,LIDXCAO,LIAPRJO,LJAPRJO,
+C    *                LCOREAO,LOCCCOR,LSHIFTB,LIODFMO,LFMODA,LFMODB,
+C    *                LFMOESPA,LFMOESPB,LLOCFMO,LSCFFRG,LFMOSCF,LRIJ,
+C    *                LPOPMUL,LPOPMAT,LIALOC,LINDBD,LIATFRG,LINDFRG,
+C    *                LINDGFRG,LNATFRG,LNAT0FRG,LIANFRG,LZANFRG,LCFRG,
+C    *                LLIBISH,LLIBNSH,LLIBNG,LINDATG,LFMOBUF(3),LFMODE,
+C    *                LNUMFRG,LLOCTAT,LIAOGLOB,LLOADM,LFMOGE,LDGRID,
+C    *                LIODCFMO,LJOB2GRP,LFMOPG,LEMOCDR,LUNTXYZ,LUNTROT,
+C    *                LSTONEP,LMAPSU,LFRGMUL,LCLMO,LIALMO,LINDLMO,
+C    *                LATCLMO,LLMOBDF,LFGFLMO,LNFGLMO,LLFGLMO,LPFGLMO,
+C    *                LPOPDMAT,LIDMPNT,LIDDPNT,LIVMPNT,LIACTFG,lcrfrg,
+C    *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+C     COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+C    *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+C    *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+C    *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+C    *                IDDCUR,NDDLEFT,IVMFMO,NZMTFMO,IFMOBAS,ITMFMO(2)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /ROOT  / XX,U(13),W(13),NROOTS
+      COMMON /STV   / XINT,YINT,ZINT,TAA,X0,Y0,Z0,
+     *                XI,YI,ZI,XJ,YJ,ZJ,NI,NJ
+      COMMON /SHLNRM/ PNRM(84)
+      COMMON /SYMIND/ TOL,II,JJ,LIT,LJT,MINI,MINJ,MAXI,MAXJ,IANDJ
+C                          JUST THE 1ST ELEMENT IS USED, W/O /HERMIT/
+      COMMON /WERMIT/ W1,W2(2),W3(3),W4(4),W5(5),W6(6),W7(7),
+     *                W8(8),W9(9),W10(10),
+     *                W11(11),W12(12),W13(13),W14(14),W15(15)
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+C     COSMO INFORMATION
+C
+C     PARAMETER (MAXDEN=25*MXATM, MXABC=6000)
+C     LOGICAL ISEPS, USEPS
+C     COMMON /ISEPS / ISEPS,USEPS
+C     LOGICAL COSBUG,COSWRT,DCOSMO,PRFCND,IOUTCH
+C     COMMON /COSDAT/ SE2,SECORR,QVCOSMO,ELAST,EMP2COS,EMP2LAST,
+C    *                COSVOL,COSSAR,EDIEL,EOC1,DEOC_RS,SUMQSC,
+C    *                SUMQSCOLD,ZSUM,ZSUM2,ZSUM3,FEPSI,RDS,DISEX2,
+C    *                EPSI,COSRAD,DISEX,OUTCHG,EDIEL_SAVE,
+C    *                MAXNPS,ICORR,ITRIP,NQS,MP2TRIP,MP2ITER,
+C    *                ICFREQ,NSPA,NSPH,NPSD,NPS,NPS2,NDEN,NPSPHER,
+C    *                COSBUG,COSWRT,DCOSMO,PRFCND,IOUTCH
+C     COMMON /COSVCE/ QSCNET(MXABC),CORZAN(3,MXABC),
+C    *                QDEN(MAXDEN),QSCNET_SAVE(MXABC),IATSP(MXABC+1)
+C
+      PARAMETER (ZERO=0.0D+00, PT5=0.5D+00, ONE=1.0D+00, TWO=2.0D+00,
+     *           PI212=1.1283791670955D+00, RLN10=2.30258D+00)
+C
+      DATA JX / 0, 1, 0, 0, 2, 0, 0, 1, 1, 0,
+     *          3, 0, 0, 2, 2, 1, 0, 1, 0, 1,
+     *          4, 0, 0, 3, 3, 1, 0, 1, 0, 2,
+     *          2, 0, 2, 1, 1,
+     *          5, 0, 0, 4, 4, 1, 0, 1, 0, 3,
+     *          3, 2, 0, 2, 0, 3, 1, 1, 2, 2,
+     *          1,
+     *          6, 0, 0, 5, 5, 1, 0, 1, 0, 4,
+     *          4, 2, 0, 2, 0, 4, 1, 1, 3, 3,
+     *          0, 3, 3, 2, 1, 2, 1, 2/
+      DATA IX / 1, 8, 1, 1,15, 1, 1, 8, 8, 1,
+     *         22, 1, 1,15,15, 8, 1, 8, 1, 8,
+     *         29, 1, 1,22,22, 8, 1, 8, 1,15,
+     *         15, 1,15, 8, 8,
+     *         36, 1, 1,29,29, 8, 1, 8, 1,22,
+     *         22,15, 1,15, 1,22, 8, 8,15,15,
+     *          8,
+     *         43, 1, 1,36,36, 8, 1, 8, 1,29,
+     *         29,15, 1,15, 1,29, 8, 8,22,22,
+     *          1,22,22,15, 8,15, 8,15/
+      DATA JY / 0, 0, 1, 0, 0, 2, 0, 1, 0, 1,
+     *          0, 3, 0, 1, 0, 2, 2, 0, 1, 1,
+     *          0, 4, 0, 1, 0, 3, 3, 0, 1, 2,
+     *          0, 2, 1, 2, 1,
+     *          0, 5, 0, 1, 0, 4, 4, 0, 1, 2,
+     *          0, 3, 3, 0, 2, 1, 3, 1, 2, 1,
+     *          2,
+     *          0, 6, 0, 1, 0, 5, 5, 0, 1, 2,
+     *          0, 4, 4, 0, 2, 1, 4, 1, 3, 0,
+     *          3, 2, 1, 3, 3, 1, 2, 2/
+      DATA IY / 1, 1, 8, 1, 1,15, 1, 8, 1, 8,
+     *          1,22, 1, 8, 1,15,15, 1, 8, 8,
+     *          1,29, 1, 8, 1,22,22, 1, 8,15,
+     *          1,15, 8,15, 8,
+     *          1,36, 1, 8, 1,29,29, 1, 8,15,
+     *          1,22,22, 1,15, 8,22, 8,15, 8,
+     *         15,
+     *          1,43, 1, 8, 1,36,36, 1, 8,15,
+     *          1,29,29, 1,15, 8,29, 8,22, 1,
+     *         22,15, 8,22,22, 8,15,15/
+      DATA JZ / 0, 0, 0, 1, 0, 0, 2, 0, 1, 1,
+     *          0, 0, 3, 0, 1, 0, 1, 2, 2, 1,
+     *          0, 0, 4, 0, 1, 0, 1, 3, 3, 0,
+     *          2, 2, 1, 1, 2,
+     *          0, 0, 5, 0, 1, 0, 1, 4, 4, 0,
+     *          2, 0, 2, 3, 3, 1, 1, 3, 1, 2,
+     *          2,
+     *          0, 0, 6, 0, 1, 0, 1, 5, 5, 0,
+     *          2, 0, 2, 4, 4, 1, 1, 4, 0, 3,
+     *          3, 1, 2, 1, 2, 3, 3, 2/
+      DATA IZ / 1, 1, 1, 8, 1, 1,15, 1, 8, 8,
+     *          1, 1,22, 1, 8, 1, 8,15,15, 8,
+     *          1, 1,29, 1, 8, 1, 8,22,22, 1,
+     *         15,15, 8, 8,15,
+     *          1, 1,36, 1, 8, 1, 8,29,29, 1,
+     *         15, 1,15,22,22, 8, 8,22, 8,15,
+     *         15,
+     *          1, 1,43, 1, 8, 1, 8,36,36, 1,
+     *         15, 1,15,29,29, 8, 8,29, 1,22,
+     *         22, 8,15, 8,15,22,22,15/
+C
+C     DATA MOROKM/8HMOROKUMA/
+C     DATA NONE,RNONE/4HNONE,8HNONE    /
+C
+C     ----- COMPUTE CONVENTIONAL H, S, AND T INTEGRALS -----
+C
+C     UNCON=RMETHOD.NE.RNONE.AND.MOD(MODQR,2).EQ.1
+      TOL = RLN10*ITOL
+C     NORM = NORMF .NE. 1 .OR. NORMP .NE. 1
+C     IF(SOME  .AND.  SCREEN) WRITE(IW,9010) VLAMB
+C     IF(DOESP1.AND.LZINT) THEN
+C        ZBLK IS REUSED FOR SOME OTHER PURPOSE.
+C        WRITE(IW,*) 'STORAGE NOT ALLOCATED IN HSANDT'
+C        CALL ABRT
+C     END IF
+C     DAMPALL=DOESP1.AND.IAND(MODESP,64).NE.0
+C     DODAMP=DOESP1.AND.ASCREEN(1).NE.0.AND.(NBDFG.NE.0.OR.DAMPALL).AND.
+C    *       IFMOSTP.NE.6.AND.IFMOSTP.NE.7.AND.IEFMORUN.EQ.0
+C     FRACESP=0
+C     FRACV=0
+C
+C     EXCLUDE 1E POTENTIAL IN ESDIM, BECAUSE DENSITY IS USED,
+C     NOT POINT CHARGES
+C
+C     ----- MOPAC INTEGRALS ARE DONE ELSEWHERE -----
+C
+C     IF(MPCTYP.NE.NONE) THEN
+C        CALL MPCINT
+C        RETURN
+C     END IF
+C
+C     FOR COSMO DIRECT SCF, WE NEED THE DIFFERENCE OF H BETWEEN THE SCF
+C     ITERATIONS IN RHFCL, SO HOLD IS COPIED INTO SECTION 87
+C     AND HNEW IS IN SECTION 11 AS USUAL, BEGINNING IN SCF-CYCLE 2
+C
+C     IF(ISEPS  .AND.  ITER.GT.0) THEN
+C        CALL DAREAD(IDAF,IODA,H,L2,11,0)
+C        CALL DAWRIT(IDAF,IODA,H,L2,87,0)
+C     END IF
+C
+C     ----- RESET SOME PARAMETERS FOR MOROKUMA DECOMPOSITIONS -----
+C     ISAVE .EQ. 0 : SAVE S, H, AND T TO DAF 12, 11, AND 13
+C     ISAVE .EQ. 1 : SAVE S, H, AND T TO DAF 12, 11, AND 13
+C                    AND SAVE S AND H TO DAF 312 AND 311
+C     NOTE THAT L2 IS ALWAYS (NUM*NUM+NUM)/2,
+C     L1,L2 MAY BE SMALLER THAN USUAL FOR A MONOMER IN A MOROKUMA RUN
+C
+C     IF (RUNTYP.EQ.MOROKM) THEN
+C        CALL STINT1(ISTART,IEND,JSTART,LOCIJ,NATST,NATED,ISAVE,L1,L2)
+C     ELSE
+CC        ISTART = 1
+C         ISTART = 1
+C         IF(ISUB.NE.1) ISTART = ISTART + NSHL(ISUB-1)
+CC        IEND   = NSHELL
+C         IEND = NSHL(ISUB)
+CC        JSTART = 1
+C         JSTART = 1
+C         IF(JSUB.NE.1) JSTART = JSTART + NSHL(JSUB-1)
+C         JEND = NSHL(JSUB)
+         LOCIJ  = 0
+CC        NATST  = 1
+CC        NATED  = NAT!+NCHMAT
+CC
+C         NATST  = 1
+C         NATED  = NAT
+CC        NATED  = NSHL(ISUB)
+CC        IF(ISUB.NE.1) NATST = NATST + NSHL(ISUB-1)
+CC        IEND   = NATED - NATST + 1
+      CALL STLUT(ISTART,IEND,JSTART,JEND,NATST,NATED,ISUB,JSUB)
+      IF(DBUG) THEN
+         WRITE(IW,'(/,3X,6(2X,A7,2X))')
+     *        'ISUB','ISTART','IEND','JSUB','JSTART','JEND'
+         WRITE(IW,'(3X,6(2X,I7,2X))') ISUB,ISTART,IEND,JSUB,JSTART,JEND
+C
+C        WRITE(IW,'(2X,1X,15(2X,A6,2X),2(2X,A5,A25))')
+C    *   'II','I1','I2','LIT','MINI','MAXI','LOCI','IPOS',
+C    *   'JJ','J1','J2','LJT','MINJ','MAXJ','LOCJ',
+C    *   'IG','AI','JG','AJ'
+      END IF
+C        IF(ISEPS) NATED = NAT+NPS
+C        IF(DOESP0) NATED=NAT+NAT1E
+C        IF(DOESP1) NATED=NAT1E
+C--      ISAVE  = 0
+C        L1 = NUM
+C        IF(UNCON) L1=NUMU
+C        L2 = (L1*(L1+1))/2
+C     END IF
+C     if(nfg.ne.0) call setatz(1,NATED,fastvesp,lfvesp,needfv)
+c     setatz allocates memory. One should be careful in returning it.
+C
+      IF(GOPARR) THEN
+         CALL VCLR(V ,1,LIJ3)
+         CALL VCLR(S ,1,LIJ3)
+         CALL VCLR(T ,1,LIJ3)
+C-TXYZ-  CALL VCLR(TX,1,L2)
+C-TXYZ-  CALL VCLR(TY,1,L2)
+C-TXYZ-  CALL VCLR(TZ,1,L2)
+C-LXYZ-  CALL VCLR(LX,1,L2)
+C-LXYZ-  CALL VCLR(LY,1,L2)
+C-LXYZ-  CALL VCLR(LZ,1,L2)
+C        IF(LZINT)  CALL VCLR(Z,1,L2)
+C        IF(DOESP1) CALL VCLR(ESP1E,1,L2)
+      END IF
+C
+C     IF(DCCUT) CALL DAREAD(IDAF,IODA,NLCT,L2,272,1)
+C     DCFSKP=.FALSE.
+C
+C     ----- INTIALIZE PARALLEL -----
+C
+      IPCOUNT = ME - 1
+C
+C     ----- I SHELL -----
+C
+      DO 720 II = ISTART,IEND
+         I = KATOM(II)
+         XI = C(1,I)
+         YI = C(2,I)
+         ZI = C(3,I)
+         I1 = KSTART(II)
+         I2 = I1+KNG(II)-1
+         LIT = KTYPE(II)
+         MINI = KMIN(II)
+         MAXI = KMAX(II)
+C        LOCI = KLOC(II)-MINI-LOCIJ
+         LOCI = KLOC(II)-MINI-LOCIJ-NLOC(ISUB)+1
+C
+C
+C     ----- J SHELL -----
+C
+         DO 700 JJ = JSTART,JEND
+C
+C     ----- GO PARALLEL! (STATIC LOAD BALANCING) -----
+C
+            IF (GOPARR) THEN
+               IPCOUNT = IPCOUNT + 1
+               IF (MOD(IPCOUNT,NPROC).NE.0) GO TO 700
+            END IF
+C
+            J = KATOM(JJ)
+            XJ = C(1,J)
+            YJ = C(2,J)
+            ZJ = C(3,J)
+            J1 = KSTART(JJ)
+            J2 = J1+KNG(JJ)-1
+            LJT = KTYPE(JJ)
+            MINJ = KMIN(JJ)
+            MAXJ = KMAX(JJ)
+C           LOCJ = KLOC(JJ)-MINJ-LOCIJ
+            LOCJ = KLOC(JJ)-MINJ-LOCIJ-NLOC(JSUB)+1
+            NROOTS = (LIT+LJT-2)/2+1
+            RR = (XI-XJ)**2+(YI-YJ)**2+(ZI-ZJ)**2
+            IANDJ = II .EQ. JJ
+C
+C           IF(DCCUT) DCFSKP = NLCT(IPOS+KLOC(JJ)).EQ.0
+C
+C     ----- PREPARE INDICES FOR PAIRS OF (I,J) FUNCTIONS
+C
+            IJ = 0
+            MAX = MAXJ
+            DO 160 I = MINI,MAXI
+               NX = IX(I)
+               NY = IY(I)
+               NZ = IZ(I)
+               IF (IANDJ) MAX = I
+               DO 140 J = MINJ,MAX
+                  IJ = IJ+1
+                  IJX(IJ) = NX+JX(J)
+                  IJY(IJ) = NY+JY(J)
+                  IJZ(IJ) = NZ+JZ(J)
+                  FT (IJ) = 2*(JX(J)+JY(J)+JZ(J)) + 3
+C-TXYZ-           FTX(IJ) = 2* JX(J)              + 1
+C-TXYZ-           FTY(IJ) = 2*       JY(J)        + 1
+C-TXYZ-           FTZ(IJ) = 2*             JZ(J)  + 1
+  140          CONTINUE
+  160       CONTINUE
+C
+            CALL VCLR( SBLK,1,IJ)
+            CALL VCLR( TBLK,1,IJ)
+            CALL VCLR( VBLK,1,IJ)
+C-TXYZ-     CALL VCLR(TXBLK,1,IJ)
+C-TXYZ-     CALL VCLR(TYBLK,1,IJ)
+C-TXYZ-     CALL VCLR(TZBLK,1,IJ)
+C-LXYZ-     CALL VCLR(LXBLK,1,IJ)
+C-LXYZ-     CALL VCLR(LYBLK,1,IJ)
+C-LXYZ-     CALL VCLR(LZBLK,1,IJ)
+C           IF(LZINT.OR.DOESP1) CALL VCLR(ZBLK,1,IJ)
+C
+C     ----- I PRIMITIVE
+C
+            JGMAX = J2
+            DO 520 IG = I1,I2
+               AI = EX(IG)
+               ARRI = AI*RR
+               AXI = AI*XI
+               AYI = AI*YI
+               AZI = AI*ZI
+               CALL SETCONI(CONI,IG,0)
+C              CALL SETCONI(CONI,INBSF,0)
+C
+C     ----- J PRIMITIVE
+C
+               IF (IANDJ) JGMAX = IG
+               DO 500 JG = J1,JGMAX
+                  AJ = EX(JG)
+                  AA = AI+AJ
+                  AA1 = ONE/AA
+                  DUM = AJ*ARRI*AA1
+                  IF (DUM .GT. TOL) GO TO 500
+                  FAC = EXP(-DUM)
+                  CALL SETCONI(CONJ,JG,0)
+C                 CALL SETCONI(CONJ,JNBSF,0)
+                  AX = (AXI+AJ*XJ)*AA1
+                  AY = (AYI+AJ*YJ)*AA1
+                  AZ = (AZI+AJ*ZJ)*AA1
+      IF(DBUG) THEN
+         IPOS=0
+         WRITE(IW,'(/,2X,1X,15(2X,A6,2X),2(2X,A5,A25))')
+     *   'II','I1','I2','LIT','MINI','MAXI','LOCI','IPOS',
+     *   'JJ','J1','J2','LJT','MINJ','MAXJ','LOCJ',
+     *   'IG','AI','JG','AJ'
+      WRITE(IW,'(2X,1X,15(2X,I6,2X),2(2X,I5,F25.12))')
+     *              II,I1,I2,LIT,MINI,MAXI,LOCI,IPOS,
+     *              JJ,J1,J2,LJT,MINJ,MAXJ,LOCJ,
+     *              IG,AI,JG,AJ
+      END IF
+C
+C     ----- DENSITY FACTOR
+C
+C     THE ONLY REASON WHY -ILZ WORKS WITH THIS DENSITY THAT ASSUMES
+C     HERMITICITY IS BECAUSE <I|-ILZ|I>=0 (MOMENTUM QUENCHING).
+C
+                  DOUBLE=IANDJ.AND.IG.NE.JG
+C                 DOUBLE=IANDJ.AND.INBSF.NE.JNBSF
+                  MAX = MAXJ
+                  NN = 0
+                  DTWO=ONE
+                  IF(DOUBLE) DTWO=TWO
+C                 NOTE THAT PNRM FACTORS FOR S AND P SHELLS ARE 1.
+                  SPDIJ=CS(IG)*CP(JG)*FAC
+C                 SPDIJ=CS(INBSF)*CP(JNBSF)*FAC
+                  DO 220 I = MINI,MAXI
+                     IF (IANDJ) MAX = I
+                     FACI=FAC*CONI(I)*PNRM(I)*DTWO
+                     NN1=NN+1
+                     DO 200 J = MINJ,MAX
+                        NN = NN+1
+                        DIJ(NN)=FACI*CONJ(J)*PNRM(J)
+C                    WRITE(6,*) 'WWWDIJ',NN,I,J,II,JJ,DIJ(NN)
+  200                CONTINUE
+C            CORRECT FOR L-SHELL DOUBLE COUNTING OF THE SP
+C            OFF-DIAGONAL TERMS (FOR NON-L SHELLS CSI*CPJ IS ZERO).
+C            NN1 POINTS TO THE APPROPRIATE DENSITY ELEMENT
+                     IF(MINJ.LE.1.AND.I.GT.1.AND.DOUBLE)
+     *                 DIJ(NN1)=DIJ(NN1)*PT5+SPDIJ
+  220             CONTINUE
+C
+C     ----- OVERLAP AND KINETIC ENERGY
+C
+                  TAA = SQRT(AA1)
+                  T1 = -TWO*AJ*AJ*TAA
+                  T2 = -PT5*TAA
+                  X0 = AX
+                  Y0 = AY
+                  Z0 = AZ
+                  IN = -7
+                  DO 320 I = 1,LIT
+                     IN = IN+7
+                     NI = I
+                     DO 300 J = 1,LJT
+                        JN = IN+J
+                        NJ = J
+                        CALL STVINT
+                        XIN(JN) = XINT*TAA
+                        YIN(JN) = YINT*TAA
+                        ZIN(JN) = ZINT*TAA
+C
+C                 --- SKIP CALCULATION OF ELEMENTS
+C                     WHICH ARE NOT INCLUDED IN DC-FOCK (T AND V)
+C
+C                     IF(.NOT.DCFSKP) THEN
+                        NJ = J+2
+                        CALL STVINT
+                        XIN(JN+49) = XINT*T1
+                        YIN(JN+49) = YINT*T1
+                        ZIN(JN+49) = ZINT*T1
+                        NJ = J-2
+                        IF (NJ .GT. 0) THEN
+                           CALL STVINT
+                        ELSE
+                           XINT = ZERO
+                           YINT = ZERO
+                           ZINT = ZERO
+                        END IF
+                        N = (J-1)*(J-2)
+                        DUM = N * T2
+                        XIN(JN+98) = XINT*DUM
+                        YIN(JN+98) = YINT*DUM
+                        ZIN(JN+98) = ZINT*DUM
+C                       IF(LZINT) THEN
+C                          NJ = J+1
+C                          CALL STVINT
+C                          XIN(JN+147) = XINT*TAA
+C                          YIN(JN+147) = YINT*TAA
+C-LXYZ-                    ZIN(JN+147) = ZINT*TAA
+C                          NJ = J-1
+C                          IF (NJ .GT. 0) THEN
+C                             CALL STVINT
+C                          ELSE
+C                             XINT = ZERO
+C                             YINT = ZERO
+C-LXYZ-                       ZINT = ZERO
+C                          END IF
+C                          XIN(JN+196) = XINT*TAA*NJ
+C                          YIN(JN+196) = YINT*TAA*NJ
+C-LXYZ-                    ZIN(JN+196) = ZINT*TAA*NJ
+C                       END IF
+C                     END IF
+  300                CONTINUE
+  320             CONTINUE
+                  DO 340 I = 1,IJ
+                     NX = IJX(I)
+                     NY = IJY(I)
+                     NZ = IJZ(I)
+                     DUM   =             XIN(NX)    *YIN(NY)*ZIN(NZ)
+                      SBLK(I) =  SBLK(I) + DIJ(I)* DUM
+C
+C              --- SKIP CALCULATION OF ELEMENTS
+C                  WHICH ARE NOT INCLUDED IN DC-FOCK (T AND V)
+C
+C                  IF(.NOT.DCFSKP) THEN
+                     DUM1X = (XIN(NX+49)+XIN(NX+98))*YIN(NY)*ZIN(NZ)
+                     DUM1Y = (YIN(NY+49)+YIN(NY+98))*XIN(NX)*ZIN(NZ)
+                     DUM1Z = (ZIN(NZ+49)+ZIN(NZ+98))*XIN(NX)*YIN(NY)
+                     DUM1  = DUM1X + DUM1Y + DUM1Z
+                      TBLK(I) =  TBLK(I) + DIJ(I)*(DUM*AJ*FT (I)+DUM1 )
+C-TXYZ-              TXBLK(I) = TXBLK(I) + DIJ(I)*(DUM*AJ*FTX(I)+DUM1X)
+C-TXYZ-              TYBLK(I) = TYBLK(I) + DIJ(I)*(DUM*AJ*FTY(I)+DUM1Y)
+C-TXYZ-              TZBLK(I) = TZBLK(I) + DIJ(I)*(DUM*AJ*FTZ(I)+DUM1Z)
+C-LXYZ-              DUM2 = YIN(NY+147)*ZIN(NZ+196)
+C-LXYZ-             *     - ZIN(NZ+147)*YIN(NY+196)
+C-LXYZ-             *     + YJ*YIN(NY)*ZIN(NZ+196)
+C-LXYZ-             *     - ZJ*ZIN(NZ)*YIN(NY+196)
+C-LXYZ-             *     - TWO*AJ*YJ*YIN(NY)*ZIN(NZ+147)
+C-LXYZ-             *     + TWO*AJ*ZJ*ZIN(NZ)*YIN(NY+147)
+C-LXYZ-              LXBLK(I) = LXBLK(I) + DIJ(I)*DUM2*XIN(NX)
+C-LXYZ-              DUM2 = ZIN(NZ+147)*XIN(NX+196)
+C-LXYZ-              *    - XIN(NX+147)*ZIN(NZ+196)
+C-LXYZ-              *    + ZJ*ZIN(NZ)*XIN(NX+196)
+C-LXYZ-              *    - XJ*XIN(NX)*ZIN(NZ+196)
+C-LXYZ-              *    - TWO*AJ*ZJ*ZIN(NZ)*XIN(NX+147)
+C-LXYZ-              *    + TWO*AJ*XJ*XIN(NX)*ZIN(NZ+147)
+C-LXYZ-              LYBLK(I) = LYBLK(I) + DIJ(I)*DUM2*YIN(NY)
+C-LXYZ-              DUM2 = XIN(NX+147)*YIN(NY+196)
+C-LXYZ-             *     - YIN(NY+147)*XIN(NX+196)
+C-LXYZ-             *     + XJ*XIN(NX)*YIN(NY+196)
+C-LXYZ-             *     - YJ*YIN(NY)*XIN(NX+196)
+C-LXYZ-             *     - TWO*AJ*XJ*XIN(NX)*YIN(NY+147)
+C-LXYZ-             *     + TWO*AJ*YJ*YIN(NY)*XIN(NX+147)
+C-LXYZ-              LZBLK(I) = LZBLK(I) + DIJ(I)*DUM2*ZIN(NZ)
+C                    IF(LZINT) THEN
+C                       DUM2 = XIN(NX+147)*YIN(NY+196)
+C    *                       - XIN(NX+196)*YIN(NY+147)
+C                       ZBLK(I) = ZBLK(I) + DIJ(I)*DUM2*ZIN(NZ)
+C                    END IF
+C                  END IF
+  340             CONTINUE
+C
+C     ----- NUCLEAR ATTRACTION
+C     EL SIGUIENTE DO SOLO EN CASO NO SCREEN.
+C
+C            --- SKIP CALCULATION OF ELEMENTS
+C                WHICH ARE NOT INCLUDED IN DC-FOCK (T AND V)
+C
+C               IF(.NOT.DCFSKP) THEN
+C                 IF (.NOT.SCREEN) THEN
+                     DUM = PI212*AA1
+                     DO 400 I = 1,IJ
+                        DIJ(I) = DIJ(I)*DUM
+  400                CONTINUE
+C                 END IF
+C
+                  AAX = AA*AX
+                  AAY = AA*AY
+                  AAZ = AA*AZ
+C
+C     -NCHMAT- IS NONZERO IF THERE ARE EXTERNAL CHARGES WHICH
+C     PERTURB THE SYSTEM, SUCH AS IF CHARMM IS IN USE.  NOTE
+C     THAT THERE IS ALSO A NUCLEAR REPULSION TERM WHICH IS NOT
+C     INCLUDED HERE, IT IS IN THE CHARMM INTERFACE CODE.
+C
+                  DO 460 IC = NATST,NATED
+C                    IF(IC.LE.NAT) THEN
+                        ZNUC = -ZAN(IC)
+                        CX = C(1,IC)
+                        CY = C(2,IC)
+                        CZ = C(3,IC)
+C                    ELSE
+C
+C     COSMO OR CHARMM POINT CHARGES
+C
+C                       IF(ISEPS) THEN
+C                          ZNUC = -QSCNET(IC-NAT)
+C                          CX = CORZAN(1,IC-NAT)
+C                          CY = CORZAN(2,IC-NAT)
+C                          CZ = CORZAN(3,IC-NAT)
+C                       ELSE IF(DOESP0) THEN
+C                          ZNUC = -ATCHRG(IC-NAT)
+C                          IF(ZNUC.EQ.0) GOTO 460
+C                          INDC=(IC-NAT-1)*3
+C                          CX = X(LFMOC+INDC)
+C                          CY = X(LFMOC+INDC+1)
+C                          CZ = X(LFMOC+INDC+2)
+C                       ELSE
+C                          ZNUC = -QCHM(IC-NAT)
+C                          CX = XCHM(IC-NAT)
+C                          CY = YCHM(IC-NAT)
+C                          CZ = ZCHM(IC-NAT)
+C                       END IF
+C                    END IF
+C                    IF(DOESP1) THEN
+C                      if(fastvesp) then
+C                        icind=lfvesp+(ic-1)*6
+C                        FRACV=x(icind)
+C                        FRACESP=x(icind+1)
+C                        ZNUC=x(icind+2)
+C                        CX=x(icind+3)
+C                        CY=x(icind+4)
+C                        CZ=x(icind+5)
+C                      else
+C                      CALL FMOATFRG(IC,X(LINDAT),X(LINDATG),X(LIAGLOB),
+C    *                               X(LIALOC),X(LIABDFG),X(LJABDFG),
+C    *                               X(LINDBD),X(LFMOZAN),X(LFMOC),
+C    *                               NATFMO+NBDFG,X(LUNTXYZ),X(LPOPMAT),
+C    *                               KATOM(II),KATOM(JJ),FRACV,FRACESP,
+C    *                               KFG,ZNUC,CX,CY,CZ)
+C                      endif
+c                      WRITE(6,*) 'WWWATOM',IC,FRACV,FRACESP,int(ZNUC)
+C                      IF(FRACV.EQ.ZERO.AND.FRACESP.EQ.ZERO) GOTO 460
+C                    END IF
+C
+C         CHECKING IF IT IS AN SCREENED CALCULATION, IF SO CALL SCR1,
+C         OTHERWISE, FOLLOW THE GAMESS CODE.
+C
+C                 IF (SCREEN) THEN
+C                     NN=0
+C                     DO 425 I=MINI,MAXI
+C                        L1A=JX(I)
+C                        M1A=JY(I)
+C                        N1A=JZ(I)
+C                        MAX=MAXJ
+C                        IF(IANDJ) MAX=I
+C                        DO 415 J=MINJ,MAX
+C                           NN=NN+1
+C                           L2B=JX(J)
+C                           M2B=JY(J)
+C                           N2B=JZ(J)
+C                           VAL=FDNAI(VLAMB,AI,AJ,
+C    *                                L1A,M1A,N1A,L2B,M2B,N2B,
+C    *                                XI,YI,ZI,XJ,YJ,ZJ,CX,CY,CZ)
+C                           VBLK(NN) = VBLK(NN) + DIJ(NN)*VAL*ZNUC
+C
+C 415                    CONTINUE
+C 425                 CONTINUE
+C                 ELSE
+                     XX = AA*((AX-CX)**2+(AY-CY)**2+(AZ-CZ)**2)
+                     IF (NROOTS.LE.3) CALL RT123
+                     IF (NROOTS.EQ.4) CALL ROOT4
+                     IF (NROOTS.EQ.5) CALL ROOT5
+                     IF (NROOTS.GE.6) CALL ROOT6
+                     MM = 0
+                     DO 430 K = 1,NROOTS
+                        UU = AA*U(K)
+                        WW = W(K)*ZNUC
+                        TT = ONE/(AA+UU)
+                        TAA = SQRT(TT)
+                        X0 = (AAX+UU*CX)*TT
+                        Y0 = (AAY+UU*CY)*TT
+                        Z0 = (AAZ+UU*CZ)*TT
+                        IN = -7+MM
+                        J0 = 2
+C
+C                       J0 SKIPS THE TRIVIAL COMBINATION NI=NJ=1
+C                       THAT IS DONE EXPLICITLY NOW
+C
+                        XIN(IN+8) = W1
+                        YIN(IN+8) = W1
+                        ZIN(IN+8) = W1*WW
+                        DO 420 I = 1,LIT
+                           IN = IN+7
+                           NI = I
+                           DO 410 J = J0,LJT
+                              JN = IN+J
+                              NJ = J
+                              CALL STVINT
+                              XIN(JN) = XINT
+                              YIN(JN) = YINT
+                              ZIN(JN) = ZINT*WW
+  410                      CONTINUE
+                           J0 = 1
+  420                   CONTINUE
+                        MM = MM+49
+  430                CONTINUE
+                     DO 450 I = 1,IJ
+                        NX = IJX(I)
+                        NY = IJY(I)
+                        NZ = IJZ(I)
+                        DUM = ZERO
+                        MM = 0
+                        DO 440 K = 1,NROOTS
+                           DUM = DUM+XIN(NX+MM)*YIN(NY+MM)*ZIN(NZ+MM)
+                           MM = MM+49
+  440                   CONTINUE
+C                       IF(DOESP1) THEN
+C                          DUMIJ=DUM*DIJ(I)
+C                          VBLK(I) = VBLK(I) + FRACV*  DUMIJ
+C                          ZBLK(I) = ZBLK(I) + FRACESP*DUMIJ
+C                       ELSE
+                           VBLK(I) = VBLK(I) + DUM*DIJ(I)
+C                       END IF
+  450                CONTINUE
+C                  END IF
+C
+C                  IF(DODAMP.AND.(FRACV.NE.0.AND.FRACV.NE.1.OR.DAMPALL))
+C                  IF(DODAMP.AND.FRACESP.NE.0.AND.
+C    *                (FRACV.NE.0.AND.FRACV.NE.1.OR.DAMPALL)) THEN
+C                     DAMP ONLY BDA ATOMS UNLESS DAMPALL
+C                     WRITE(6,*) 'DAMPING',IC,ZNUC*FRACESP
+C                     CALL DAMPCH(ASCREEN(1),ASCREEN(2),IJ,AA,AAX,AAY,
+C    *                            AAZ,AX,AY,AZ,ZNUC*FRACESP,CX,CY,CZ,
+C    *                            DIJ,XIN,YIN,ZIN,IJX,IJY,IJZ,ZBLK)
+C                    THE FMO DAMPING TERM ALWAYS GOES TO THE ESP (ZBLK)
+C                  ENDIF
+  460              CONTINUE
+C
+C     ----- END OF PRIMITIVE LOOPS -----
+C
+C               END IF
+  500          CONTINUE
+  520       CONTINUE
+C
+C     ----- SET BLOCK OF NUCLEAR ATTRACTION, OVERLAP, AND KINETIC ENERGY
+C
+      IF(DBUG) THEN
+            WRITE(IW,'(3X,9(2X,A6,2X))')
+     *           'I','LOCI','LI','IN','J','LOCJ','LJ','JN','NN'
+      END IF
+            MAX = MAXJ
+            NN = 0
+            DO 620 I = MINI,MAXI
+C              LI = LOCI+I
+C              IN = (LI*(LI-1))/2
+               LI = LOCI+I-1
+               IN = LI * NNUM(JSUB)
+               IF (IANDJ) MAX = I
+               DO 600 J = MINJ,MAX
+                  LJ = LOCJ+J
+                  JN = LJ+IN
+                  NN = NN+1
+C                 IF(DCFSKP) THEN
+C                   H(JN) = ZERO
+C                   S(JN) = SBLK(NN)
+C                   T(JN) = ZERO
+C-TXYZ-             TX(JN) = ZERO
+C-TXYZ-             TY(JN) = ZERO
+C-TXYZ-             TZ(JN) = ZERO
+C-LXYZ-             LX(JN) = ZERO
+C-LXYZ-             LY(JN) = ZERO
+C-LXYZ-             LZ(JN) = ZERO
+C                   IF(LZINT) Z(JN) = ZERO
+C                   IF(DOESP1) ESP1E(JN)=ZERO
+C                 ELSE
+      IF(DBUG) THEN
+            WRITE(IW,'(3X,9(2X,I6,2X))') I,LOCI,LI,IN,J,LOCJ,LJ,JN,NN
+      END IF
+                     V(JN) =  VBLK(NN)
+                     S(JN) =  SBLK(NN)
+                     T(JN) =  TBLK(NN)
+C-TXYZ-             TX(JN) = TXBLK(NN)
+C-TXYZ-             TY(JN) = TYBLK(NN)
+C-TXYZ-             TZ(JN) = TZBLK(NN)
+C-LXYZ-             LX(JN) = LXBLK(NN)
+C-LXYZ-             LY(JN) = LYBLK(NN)
+C-LXYZ-             LZ(JN) = LZBLK(NN)
+C                   IF(LZINT) Z(JN) = ZBLK(NN)
+C                   IF(DOESP1) ESP1E(JN)=ZBLK(NN)
+C                 END IF
+  600          CONTINUE
+  620       CONTINUE
+           IF(DBUG) THEN
+             WRITE(IW,'(A)') ' '
+           END IF
+C
+C     ----- END OF SHELL LOOPS -----
+C
+  700    CONTINUE
+  720 CONTINUE
+C     if(nfg.ne.0.and.fastvesp) call retfm(needfv)
+C
+C     ----- SUM UP PARTIAL CONTRIBUTIONS IF PARALLEL -----
+C
+      IF (GOPARR) THEN
+         CALL DDI_GSUMF(910,V,LIJ3)
+         CALL DDI_GSUMF(911,S,LIJ3)
+         CALL DDI_GSUMF(912,T,LIJ3)
+C-TXYZ-  CALL DDI_GSUMF(921,TX,L2)
+C-TXYZ-  CALL DDI_GSUMF(922,TY,L2)
+C-TXYZ-  CALL DDI_GSUMF(923,TZ,L2)
+C-LXYZ-  CALL DDI_GSUMF(924,LX,L2)
+C-LXYZ-  CALL DDI_GSUMF(925,LY,L2)
+C-LXYZ-  CALL DDI_GSUMF(926,LZ,L2)
+C        IF(LZINT)  CALL DDI_GSUMF(913,Z,L2)
+C        IF(DOESP1) CALL DDI_GSUMF(913,ESP1E,L2)
+      END IF
+C
+C        FORM ONE ELECTRON H = T + VNE
+C
+C
+C     ----- SAVE H, S, AND T MATRICES ON THE DAF -----
+C
+C     CALL DAWRIT(IDAF,IODA,H,L2,11,0)
+C     CALL DAWRIT(IDAF,IODA,S,L2,12,0)
+C     CALL DAWRIT(IDAF,IODA,T,L2,13,0)
+C
+C        VARIOUS SOLVENT MODELS UNFORTUNATELY MESS UP RECORD 11,
+C        SO KEEP A PRISTINE COPY.
+C        IT WILL LACK ANY CORRECTIONS FOR CORE POTENTIALS OR
+C        FOR SCALAR RELATIVITY, HOWEVER!
+C     CALL DAWRIT(IDAF,IODA,H,L2,290,0)
+C
+C     IF(LZINT) CALL DAWRIT(IDAF,IODA,Z,L2,379,0)
+C
+C     IF (ISAVE.EQ.1) THEN
+C        CALL DAWRIT(IDAF,IODA,H,L2,311,0)
+C        CALL DAWRIT(IDAF,IODA,S,L2,312,0)
+C     END IF
+C
+C     IF(DOESP1) CALL DAWRIT(IDAF,IODA,ESP1E,L2,311,0)
+C
+C     ----- OPTIONAL DEBUG PRINTOUT -----
+C
+      IF(DBUG) THEN
+         CALL DPRTMATL(S,LJ1,LI1,LJ1,'OVL. I*J  ')
+         CALL DPRTMATL(V,LJ1,LI1,LJ1,'NUC.AT I*J')
+         CALL DPRTMATL(T,LJ1,LI1,LJ1,'KIN. I*J  ')
+C        IF(LZINT.OR.DOESP1) THEN
+C           WRITE(IW,*) 'Z-ANGULAR MOMENTUM INTEGRALS'
+C           CALL PRTRIL(Z,L1)
+C        END IF
+      END IF
+      RETURN
+      END
+C
+C*MODULE LUT      *DECK PVPL2
+C>
+C>    @brief   One-electron pVp (Darwin-like) integral evaluation
+C>              in interatomic interaction for the LUT transformation
+C>
+C>    @details This is a modified version of PVPINT, to obtain
+C>             one-electron pVp (Darwin-like) integrals for interatomic
+C>             IOTC transformation.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+      SUBROUTINE PVPL2(PVP2,ISUB,JSUB,DBUG,LI1,LJ1,LIJ3)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL DBUG
+      LOGICAL IANDJ,NORM
+C     LOGICAL UNCON
+      LOGICAL GOPARR,DSKWRK,MASWRK,NXT
+C     DOUBLE PRECISION MOROKM
+C
+      DIMENSION PVP2(LIJ3)
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000)
+C
+C     COMMON /CHMGMS/ XCHM(MXCHRM),YCHM(MXCHRM),ZCHM(MXCHRM),
+C    *                DXELMM(MXCHRM),DYELMM(MXCHRM),DZELMM(MXCHRM),
+C    *                QCHM(MXCHRM),NCHMAT,KCHRMM
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /ROOT  / XX,U(13),W(13),NROOTS
+      COMMON /STV   / XINT,YINT,ZINT,T,X0,Y0,Z0,XI,YI,ZI,XJ,YJ,ZJ,NI,NJ
+      COMMON /SYMIND/ TOL,II,JJ,LIT,LJT,MINI,MINJ,MAXI,MAXJ,IANDJ
+C
+C COSMO INFORMATION
+C
+C     LOGICAL ISEPS,USEPS
+C     COMMON /ISEPS / ISEPS,USEPS
+C     LOGICAL COSBUG,COSWRT,DCOSMO,PRFCND,IOUTCH
+C     COMMON /COSDAT/ SE2,SECORR,QVCOSMO,ELAST,EMP2COS,EMP2LAST,
+C    *                COSVOL,COSSAR,EDIEL,EOC1,DEOC_RS,SUMQSC,
+C    *                SUMQSCOLD,ZSUM,ZSUM2,ZSUM3,FEPSI,RDS,DISEX2,
+C    *                EPSI,COSRAD,DISEX,OUTCHG,EDIEL_SAVE,
+C    *                MAXNPS,ICORR,ITRIP,NQS,MP2TRIP,MP2ITER,
+C    *                ICFREQ,NSPA,NSPH,NPSD,NPS,NPS2,NDEN,NPSPHER,
+C    *                COSBUG,COSWRT,DCOSMO,PRFCND,IOUTCH
+C
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+      DIMENSION DIJ(225),PVP(225)
+      DIMENSION IJX(35),IJY(35),IJZ(35)
+      DIMENSION     XV(7,6,6),    YV(7,6,6),    ZV(7,6,6)
+C     DIMENSION     XV(7,6,5),    YV(7,6,5),    ZV(7,6,5)
+C                     (6,6,5) IS ACTUALLY NEEDED, BUT QRDDERIJ USES LD=7
+      DIMENSION DXVDIJ(5,5,6),DYVDIJ(5,5,6),DZVDIJ(5,5,6)
+C     DIMENSION DXVDIJ(5,5,5),DYVDIJ(5,5,5),DZVDIJ(5,5,5)
+C
+      DATA MAXRYS /9/
+      DATA RLN10  /2.30258D+00/
+      DATA ZERO   /0.0D+00/
+      DATA ONE    /1.0D+00/
+      DATA PI212  /1.1283791670955D+00/
+      DATA SQRT3  /1.73205080756888D+00/
+      DATA SQRT5  /2.23606797749979D+00/
+      DATA SQRT7  /2.64575131106459D+00/
+      DATA IJX    / 1, 2, 1, 1, 3, 1, 1, 2, 2, 1,
+     1              4, 1, 1, 3, 3, 2, 1, 2, 1, 2,
+     2              5, 1, 1, 4, 4, 2, 1, 2, 1, 3,
+     3              3, 1, 3, 2, 2/
+      DATA IJY    / 1, 1, 2, 1, 1, 3, 1, 2, 1, 2,
+     1              1, 4, 1, 2, 1, 3, 3, 1, 2, 2,
+     2              1, 5, 1, 2, 1, 4, 4, 1, 2, 3,
+     3              1, 3, 2, 3, 2/
+      DATA IJZ    / 1, 1, 1, 2, 1, 1, 3, 1, 2, 2,
+     1              1, 1, 4, 1, 2, 1, 2, 3, 3, 2,
+     2              1, 1, 5, 1, 2, 1, 2, 4, 4, 1,
+     3              3, 3, 2, 2, 3/
+C     DATA MOROKM/8HMOROKUMA/,ANONE/8HNONE    /
+C
+      TOL=RLN10*ITOL
+      NORM=NORMF.NE.1.OR.NORMP.NE.1
+C     UNCON=RMETHOD.NE.ANONE.AND.MOD(MODQR,2).EQ.1
+C     IF (RUNTYP.EQ.MOROKM) THEN
+C        CALL STINT1(ISTART,IEND,JSTART,LOCIJ,NATST,NATED,ISAVE,L1,L2)
+C     ELSE
+CC        ISTART = 1
+C         ISTART = 1
+C         IF(ISUB.NE.1) ISTART = ISTART + NSHL(ISUB-1)
+CC        IEND   = NSHELL
+C         IEND = NSHL(ISUB)
+CC        JSTART = 1
+C         JSTART = 1
+C         IF(JSUB.NE.1) JSTART = JSTART + NSHL(JSUB-1)
+C         JEND = NSHL(JSUB)
+         LOCIJ  = 0
+CC        NATST  = 1
+CC        NATED  = NAT+NCHMAT
+C         NATST  = 1
+C         NATED  = NAT
+CC        ISAVE  = 0
+CC        L1 = NUM
+CC        IF(UNCON) L1=NUMU
+CC        L2 = (L1*(L1+1))/2
+CC        IF(ISEPS) NATED = NAT+NPS
+C     END IF
+      CALL STLUT(ISTART,IEND,JSTART,JEND,NATST,NATED,ISUB,JSUB)
+C
+      CALL VCLR(PVP2,1,LIJ3)
+C
+      NXT = IBTYP.EQ.1
+      NEXT = -1
+      MINE = -1
+      ICOUNT=0
+C
+C     ----- CALCULATE -PVP- TERM -----
+C
+C     IF(DBUG) WRITE(IW,9999)
+C
+C     ----- ISHELL -----
+C
+      DO 9000 II=ISTART,IEND
+C
+          IF(GOPARR.AND.NXT) THEN
+            MINE = MINE + 1
+            IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+            IF(NEXT.NE.MINE) GO TO 9000
+          END IF
+C
+      I=KATOM(II)
+      XI=C(1,I)
+      YI=C(2,I)
+      ZI=C(3,I)
+      I1=KSTART(II)
+      I2=I1+KNG(II)-1
+      LIT=KTYPE(II)
+      MINI=KMIN(II)
+      MAXI=KMAX(II)
+C     LOCI = KLOC(II)-MINI-LOCIJ
+      LOCI = KLOC(II)-MINI-LOCIJ-NLOC(ISUB)+1
+C
+      LITDER=LIT+1
+C
+C     ----- JSHELL -----
+C
+      DO 8000 JJ=JSTART,JEND
+        ICOUNT=ICOUNT+1
+        IF(GOPARR.AND..NOT.NXT.AND.MOD(ICOUNT,NPROC).NE.ME) GOTO 8000
+      J=KATOM(JJ)
+      XJ=C(1,J)
+      YJ=C(2,J)
+      ZJ=C(3,J)
+      J1=KSTART(JJ)
+      J2=J1+KNG(JJ)-1
+      LJT=KTYPE(JJ)
+      MINJ=KMIN(JJ)
+      MAXJ=KMAX(JJ)
+C     LOCJ = KLOC(JJ)-MINJ-LOCIJ
+      LOCJ = KLOC(JJ)-MINJ-LOCIJ-NLOC(JSUB)+1
+C
+      LJTDER=LJT+1
+C
+      IANDJ=II.EQ.JJ
+C     IANDJ=.FALSE.
+      RR=(XI-XJ)**2+(YI-YJ)**2+(ZI-ZJ)**2
+      NROOTS=(LITDER+LJTDER-2)/2+1
+      IF(NROOTS.GT.MAXRYS) THEN
+         WRITE(IW,9997) MAXRYS,LITDER,LJTDER,NROOTS
+         STOP 1234
+      ENDIF
+C
+      IJ=(MAXI-MINI+1)*(MAXJ-MINJ+1)
+      CALL VCLR(PVP,1,IJ)
+C
+C     ----- I PRIMITIVE -----
+C
+      DO 7000 IG=I1,I2
+      AI=EX(IG)
+      ARRI=AI*RR
+      AXI=AI*XI
+      AYI=AI*YI
+      AZI=AI*ZI
+      CSI=CS(IG)
+      CPI=CP(IG)
+      CDI=CD(IG)
+      CFI=CF(IG)
+      CGI=CG(IG)
+C
+C     ----- J PRIMITIVE -----
+C
+      JGMAX=J2
+      DO 6000 JG=J1,JGMAX
+      AJ=EX(JG)
+      AA=AI+AJ
+      AA1=ONE/AA
+      DUM=AJ*ARRI*AA1
+      IF(DUM.GT.TOL) GO TO 6000
+      FAC= EXP(-DUM)
+      CSJ=CS(JG)
+      CPJ=CP(JG)
+      CDJ=CD(JG)
+      CFJ=CF(JG)
+      CGJ=CG(JG)
+      AX=(AXI+AJ*XJ)*AA1
+      AY=(AYI+AJ*YJ)*AA1
+      AZ=(AZI+AJ*ZJ)*AA1
+      IF(DBUG) THEN
+         WRITE(IW,'(/,2X,1X,14(2X,A6,2X),2(2X,A5,A25))')
+     *   'II','I1','I2','LIT','MINI','MAXI','LOCI',
+     *   'JJ','J1','J2','LJT','MINJ','MAXJ','LOCJ',
+     *   'IG','AI','JG','AJ'
+      WRITE(IW,'(2X,1X,14(2X,I6,2X),2(2X,I5,F25.12))')
+     *              II,I1,I2,LIT,MINI,MAXI,LOCI,
+     *              JJ,J1,J2,LJT,MINJ,MAXJ,LOCJ,
+     *              IG,AI,JG,AJ
+      END IF
+C
+C     ----- DENSITY FACTOR -----
+C
+      IJ=0
+      DO 360 I=MINI,MAXI
+      GO TO (110,120,220,220,130,220,220,140,220,220,
+     1       150,220,220,160,220,220,220,220,220,170,
+     2       180,220,220,190,220,220,220,220,220,200,
+     3       220,220,210,220,220),I
+  110 DUM1=CSI*FAC
+      GO TO 220
+  120 DUM1=CPI*FAC
+      GO TO 220
+  130 DUM1=CDI*FAC
+      GO TO 220
+  140 IF(NORM) DUM1=DUM1*SQRT3
+      GO TO 220
+  150 DUM1=CFI*FAC
+      GO TO 220
+  160 IF(NORM) DUM1=DUM1*SQRT5
+      GO TO 220
+  170 IF(NORM) DUM1=DUM1*SQRT3
+      GO TO 220
+  180 DUM1=CGI*FAC
+      GO TO 220
+  190 IF(NORM) DUM1=DUM1*SQRT7
+      GO TO 220
+  200 IF(NORM) DUM1=DUM1*SQRT5/SQRT3
+      GO TO 220
+  210 IF(NORM) DUM1=DUM1*SQRT3
+  220 CONTINUE
+C
+      JMAX=MAXJ
+      IF(IANDJ) JMAX=I
+      DO 360 J=MINJ,JMAX
+      GO TO (230,250,350,350,260,350,350,270,350,350,
+     1       280,350,350,290,350,350,350,350,350,300,
+     2       310,350,350,320,350,350,350,350,350,330,
+     3       350,350,340,350,350),J
+  230 DUM2=DUM1*CSJ
+      GO TO 350
+  250 DUM2=DUM1*CPJ
+      GO TO 350
+  260 DUM2=DUM1*CDJ
+      GO TO 350
+  270 IF(NORM) DUM2=DUM2*SQRT3
+      GO TO 350
+  280 DUM2=DUM1*CFJ
+      GO TO 350
+  290 IF(NORM) DUM2=DUM2*SQRT5
+      GO TO 350
+  300 IF(NORM) DUM2=DUM2*SQRT3
+      GO TO 350
+  310 DUM2=DUM1*CGJ
+      GO TO 350
+  320 IF(NORM) DUM2=DUM2*SQRT7
+      GO TO 350
+  330 IF(NORM) DUM2=DUM2*SQRT5/SQRT3
+      GO TO 350
+  340 IF(NORM) DUM2=DUM2*SQRT3
+  350 CONTINUE
+C
+      IJ=IJ+1
+  360 DIJ(IJ)=DUM2
+C
+C     ----- PVP -----
+C
+      AAX=AA*AX
+      AAY=AA*AY
+      AAZ=AA*AZ
+      DO 500 KAT=NATST,NATED
+      ZNUC=-ZAN(KAT)
+      CX=C(1,KAT)
+      CY=C(2,KAT)
+      CZ=C(3,KAT)
+      XX=AA*((AX-CX)**2+(AY-CY)**2+(AZ-CZ)**2)
+      IF(NROOTS.LE.3) CALL RT123
+      IF(NROOTS.EQ.4) CALL ROOT4
+      IF(NROOTS.EQ.5) CALL ROOT5
+      IF (NROOTS.GE.6) CALL ROOT6
+      DO 420 IROOT=1,NROOTS
+      UU=U(IROOT)*AA
+      WW=W(IROOT)*ZNUC
+      TT=ONE/(AA+UU)
+      T = SQRT(TT)
+      X0=(AAX+UU*CX)*TT
+      Y0=(AAY+UU*CY)*TT
+      Z0=(AAZ+UU*CZ)*TT
+C
+      DO 410 J=1,LJTDER
+      NJ=J
+      DO 410 I=1,LITDER
+      NI=I
+      CALL STVINT
+      XV(I,J,IROOT)=XINT
+      YV(I,J,IROOT)=YINT
+      ZV(I,J,IROOT)=ZINT*WW
+  410 CONTINUE
+C
+      CALL QRDDERIJ
+     $           (DXVDIJ(1,1,IROOT),DYVDIJ(1,1,IROOT),DZVDIJ(1,1,IROOT),
+     1                XV(1,1,IROOT),    YV(1,1,IROOT),    ZV(1,1,IROOT),
+     2            LIT,LJT,AI,AJ,5)
+C
+  420 CONTINUE
+C
+      IJ=0
+      DO 450 I=MINI,MAXI
+      IX=IJX(I)
+      IY=IJY(I)
+      IZ=IJZ(I)
+      JMAX=MAXJ
+      IF(IANDJ) JMAX=I
+      DO 440 J=MINJ,JMAX
+      JX=IJX(J)
+      JY=IJY(J)
+      JZ=IJZ(J)
+      IJ=IJ+1
+C
+C     DUMII STANDS FOR PI*V*PI INTEGRAL
+C
+      DUMXX=ZERO
+      DUMYY=ZERO
+      DUMZZ=ZERO
+      DO 434 K=1,NROOTS
+        DUMXX=DUMXX + DXVDIJ(IX,JX,K)* YV   (IY,JY,K)* ZV   (IZ,JZ,K)
+        DUMYY=DUMYY +  XV   (IX,JX,K)*DYVDIJ(IY,JY,K)* ZV   (IZ,JZ,K)
+        DUMZZ=DUMZZ +  XV   (IX,JX,K)* YV   (IY,JY,K)*DZVDIJ(IZ,JZ,K)
+  434 CONTINUE
+      DUM=(DUMXX+DUMYY+DUMZZ)*(AA1*PI212)
+      PVP(IJ)=PVP(IJ)+DUM*DIJ(IJ)
+  440 CONTINUE
+  450 CONTINUE
+C
+  500 CONTINUE
+C
+ 6000 CONTINUE
+ 7000 CONTINUE
+C
+C     ----- SET UP PVP MATRICES -----
+C
+      IF(DBUG) THEN
+            WRITE(IW,'(3X,9(2X,A6,2X))')
+     *           'I','LOCI','LI','IN','J','LOCJ','LJ','JN','NN'
+      END IF
+      JMAX = MAXJ
+      NN = 0
+      DO 7500 I = MINI, MAXI
+         LI = LOCI + I - 1
+         IN = LI * NNUM(JSUB)
+         IF (IANDJ) JMAX = I
+         DO 7500 J = MINJ, JMAX
+            LJ = LOCJ + J
+            JN = LJ + IN
+            NN = NN + 1
+            IF(DBUG) THEN
+              WRITE(IW,'(3X,9(2X,I6,2X))') I,LOCI,LI,IN,J,LOCJ,LJ,JN,NN
+            END IF
+            PVP2(JN)= PVP(NN)
+ 7500    CONTINUE
+ 8000 CONTINUE
+ 9000 CONTINUE
+      IF(GOPARR.AND.NXT) CALL DDI_DLBRESET
+      IF (GOPARR) CALL DDI_GSUMF(910,PVP2,LIJ3)
+C
+      IF(DBUG) THEN
+         CALL DPRTMATL(PVP2,LJ1,LI1,LJ1,'PVP I*J   ')
+      END IF
+C
+      RETURN
+C9999 FORMAT(/,10X,24(1H-),/,10X,'1 ELECTRON PVP INTEGRALS',
+C    2       /,10X,24(1H-))
+ 9997 FORMAT(' IN -PVPL2- THE RYS QUADRATURE IS NOT IMPLEMENTED',
+     1       ' BEYOND -NROOTS- = ',I2,/,
+     2       ' LIT,LJT,NROOTS= ',3I3)
+      END
+C
+C*MODULE LUT      *DECK LUTTRN
+C>
+C>    @brief   Interatomic IOTC transformation in the LUT scheme
+C>
+C>    @details This subroutine gives transformed interatomic integrals
+C>             using atomic IOTC transformation. The transformation is
+C>             applied to nuclear-attraction and pVp integrals.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- output --
+C>    @param   HAO   : relativistic correction to Hamiltonian
+C>    -- input --
+C>    @param   V     : nulcear attraction integrals
+C>    @param   PVP   : pVp (Darwin-like) integrals
+C>    @param   UNVI  : unitary transformation for nuclear attraction
+C>                     of i-th atom
+C>    @param   UNVJ  : unitary transformation for nuclear attraction
+C>                     of j-th atom
+C>    @param   UNPVI : unitary transformation for pVp of i-th atom
+C>    @param   UNPVJ : unitary transformation for pVp of j-th atom
+C>    @param   WRK3  : scratch array
+C>    @param   DBUG  : flag of a debug print
+C>    @param   LI1   : uncontracted AO size in i-th atom
+C>    @param   LJ1   : uncontracted AO size in j-th atom
+C>    @param   LI3   : size of square matrix for i-th atom (LI1*LI1)
+C>    @param   LJ3   : size of square matrix for j-th atom (LI1*LI1)
+C>    @param   LIJ3  : size of rectangle matrix, LI1*LJ1
+C>
+      SUBROUTINE LUTTRN(HAO,V,PVP,UNVI,UNVJ,UNPVI,UNPVJ,WRK3,
+     *                  LI1,LJ1,LI3,LJ3,LIJ3)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (ONE=1.0D+00, ZERO=0.0D+00)
+C
+      DIMENSION HAO(LIJ3)
+      DIMENSION V(LIJ3)
+      DIMENSION PVP(LIJ3)
+      DIMENSION UNVI(LI3)
+      DIMENSION UNVJ(LJ3)
+      DIMENSION UNPVI(LI3)
+      DIMENSION UNPVJ(LJ3)
+      DIMENSION WRK3(LIJ3)
+C
+      CALL DGEMM('T','N',LJ1,LI1,LJ1,ONE,UNVJ,LJ1,V,LJ1,ZERO,WRK3,LJ1)
+      CALL DGEMM('N','N',LJ1,LI1,LI1,ONE,WRK3,LJ1,UNVI,LI1,ZERO,HAO,LJ1)
+C
+      CALL DGEMM('T','N',LJ1,LI1,LJ1,ONE,UNPVJ,LJ1,PVP,LJ1,ZERO,
+     *           WRK3,LJ1)
+      CALL DGEMM('N','N',LJ1,LI1,LI1,ONE,WRK3,LJ1,UNPVI,LI1,ONE,HAO,LJ1)
+C
+      HAO(1:LIJ3)  = HAO(1:LIJ3) - V(1:LIJ3)
+C
+      RETURN
+      END
+C
+C*MODULE LUT      *DECK LUTGX
+C>
+C>    @brief   The main driver for analytical energy gradient in the LUT
+C>             scheme with the IOTC method
+C>
+C>    @details The program derives analytical gradient calculation for
+C>             fast infinite-order Douglas-Kroll-Hess transformation
+C>             using the local unitary transformation (LUT) scheme.
+C>             Please refer to the following paper.
+C>             - Y. Nakajima, J. Seino and H. Nakai, J. Chem. Phys. 139,
+C>               244107 (2013).
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- input --
+C>    @param   DENAB : density matrix
+C>    @param   LL1   : contracted basis set size
+C>    @param   LL2   : triangular matrix size, (LL1*LL1+LL1)/2
+C>
+      SUBROUTINE LUTGX(DENAB,LL1,LL2)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL SOME,DBUG
+      LOGICAL GOPARR,DSKWRK,MASWRK,NXT
+      LOGICAL SVDSKW
+C
+      PARAMETER (MXATM=2000)
+      PARAMETER (ZERO=0.0D+00,ONE=1.0D+00)
+      PARAMETER (UNIT=0.52917724924D+00)
+C
+      DIMENSION DENAB(LL2)
+C
+      COMMON /FMCOM / X(1)
+      COMMON /GRAD  / DE(3,MXATM)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /RELWFN/ RMETHOD,QRQMT,CLIG,CLIG2,QRTOL,TAU,
+     *                IQRORD,MODQR,NESOC,NRATOM,
+     *                NUMU,NQMTR,NQRDAF,MORDA,NDARELB
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUB
+C
+      DATA DEBUG/8HDEBUG   /,DBUGME/8HLUTGX   /
+C
+      SOME = MASWRK .AND. .NOT. (NPRINT.EQ.-5)
+      DBUG = MASWRK  .AND.
+     *       (NPRINT.EQ.3 .OR. EXETYP.EQ.DEBUG .OR. EXETYP.EQ.DBUGME)
+C
+C     ----- IODKH TRANSFORMATION FOR INTERACTION PART -----
+C
+      IF(SOME) WRITE(IW,9998)
+C
+      TOL = QRTOL
+C
+      SVDSKW = DSKWRK
+      DSKWRK = .TRUE.
+C
+      CALL SEQOPN(NUNV ,'UNV' ,'UNKNOWN',.FALSE.,'UNFORMATTED')
+      CALL SEQOPN(NUNPV,'UNPV','UNKNOWN',.FALSE.,'UNFORMATTED')
+C
+      CALL SEQREW(NUNV)
+      CALL SEQREW(NUNPV)
+C
+      L1 = NUMU
+      L3 = L1 * L1
+      L2 = (L1 + L3) / 2
+C
+C     ----- ALLOCATE MEMORY -----
+C
+      CALL VALFM(LOADFM)
+      LDH   = LOADFM + 1
+      LDT   = LDH    + L2
+      LDV   = LDT    + L2
+      LDPV  = LDV    + L2
+      LUC   = LDPV   + L2
+      LDHC  = LUC    + L1 * NUM
+      LWRK1 = LDHC   + L3
+      LAST  = LWRK1  + L3
+      NEED  = LAST - LOADFM - 1
+      CALL GETFM(NEED)
+C
+      CALL DAREAD(IDAF,IODA,X(LUC),L1*NUM,NDARELB+19,0)
+C
+C     ----- INITIALIZE PARALLEL -----
+C
+      NXT = IBTYP.EQ.1
+      NEXT = -1
+      MINE = -1
+C
+      LRECT   = 1 * 3 * NAT
+      LRECPVP = 2 * 3 * NAT
+      LRECV   = 3 * 3 * NAT
+      LREC    = 0
+C
+      TCPU = ZERO
+      DO KAT = 1, NAT
+        DO IXYZ = 1, 3
+C
+          LREC = LREC + 1
+C
+          IF(GOPARR.AND.NXT) THEN
+            MINE = MINE + 1
+            IF(MINE.GT.NEXT) CALL DDI_DLBNEXT(NEXT)
+            IF(NEXT.NE.MINE) CYCLE
+          END IF
+          IF(GOPARR.AND..NOT.NXT.AND.MOD(LREC,NPROC).NE.ME) CYCLE
+C
+          CALL RAREAD(NQRDAF,X(MORDA),X(LDT) ,L2,LRECT+LREC  ,0)
+          CALL RAREAD(NQRDAF,X(MORDA),X(LDPV),L2,LRECPVP+LREC,0)
+          CALL RAREAD(NQRDAF,X(MORDA),X(LDV) ,L2,LRECV+LREC  ,0)
+          X(LDH:LDH+L2-1) = X(LDT:LDT+L2-1) + X(LDV:LDV+L2-1)
+C
+          CALL SEQREW(NUNV)
+          CALL SEQREW(NUNPV)
+C
+          DO ISUB = 1, NAT
+C
+            CALL TSECND(T1)
+C
+            XI = C(1,ISUB)
+            YI = C(2,ISUB)
+            ZI = C(3,ISUB)
+C
+            LI1 = NNUM(ISUB)
+            LI3 = LI1 * LI1
+C---        LI2 = (LI1 + LI3) / 2
+C
+C     ----- ALLOCATE MEMORY FOR ISUB -----
+C
+            CALL VALFM(LOADFM)
+            LUNTVI  = LOADFM  + 1
+            LUNTPVI = LUNTVI  + LI3
+            LAST    = LUNTPVI + LI3
+            NEEDI   = LAST - LOADFM - 1
+            CALL GETFM(NEEDI)
+C
+            CALL SQREAD(NUNV ,X(LUNTVI) ,LI3)
+            CALL SQREAD(NUNPV,X(LUNTPVI),LI3)
+C
+            CALL SEQREW(NUNV)
+            CALL SEQREW(NUNPV)
+C
+            CALL TSECND(T2)
+            TCPU = TCPU + T2 - T1
+C
+            DO JSUB = 1, ISUB
+C
+              CALL TSECND(T3)
+C
+              XJ = C(1,JSUB)
+              YJ = C(2,JSUB)
+              ZJ = C(3,JSUB)
+C
+              RX = XJ - XI
+              RY = YJ - YI
+              RZ = ZJ - ZI
+              RR = RX * RX + RY * RY + RZ * RZ
+              R  = SQRT(RR)
+              R  = R * UNIT
+C
+              LJ1 = NNUM(JSUB)
+              LJ3 = LJ1 * LJ1
+C---          LJ2 = (LJ1 + LJ3) / 2
+              LIJ3 = LI1 * LJ1
+C
+C     ----- ALLOCATE MEMORY FOR JSUB -----
+C
+              CALL VALFM(LOADFM)
+              LUNTVJ  = LOADFM  + 1
+              LUNTPVJ = LUNTVJ  + LJ3
+              LAST    = LUNTPVJ + LJ3
+              NEEDJ   = LAST - LOADFM - 1
+              CALL GETFM(NEEDJ)
+C
+              CALL SQREAD(NUNV ,X(LUNTVJ) ,LJ3)
+              CALL SQREAD(NUNPV,X(LUNTPVJ),LJ3)
+C
+              CALL TSECND(T4)
+              TCPU = TCPU + T4 - T3
+C
+              IF(ISUB.EQ.JSUB.OR.R.GT.TAU) THEN
+                CALL RETFM(NEEDJ)
+                CYCLE
+              END IF
+C
+              CALL TSECND(T5)
+C
+              CALL VALFM(LOADFM)
+              LDVP  = LOADFM + 1
+              LDPVP = LDVP   + LIJ3
+              LDHP  = LDPVP  + LIJ3
+              LWRK3 = LDHP   + LIJ3
+              LAST  = LWRK3  + LIJ3
+              NEEDV = LAST - LOADFM - 1
+              CALL GETFM(NEEDV)
+              X(LDHP:LDHP+LIJ3-1) = ZERO
+C
+              CALL EXTRACT(X(LDVP) ,X(LDV) ,ISUB,JSUB,LIJ3,LL1,LL2,DBUG)
+              CALL EXTRACT(X(LDPVP),X(LDPV),ISUB,JSUB,LIJ3,LL1,LL2,DBUG)
+C
+              CALL LUTTRN(X(LDHP),X(LDVP),X(LDPVP),X(LUNTVI),X(LUNTVJ),
+     *                    X(LUNTPVI),X(LUNTPVJ),X(LWRK3),
+     *                    LI1,LJ1,LI3,LJ3,LIJ3)
+C
+              CALL TSECND(T6)
+              TCPU = TCPU + T6 - T5
+C
+              CALL INTEGDH(X(LDHP),X(LDH),ISUB,JSUB,LIJ3,LL1,LL2,DBUG)
+C
+              CALL RETFM(NEEDV)
+              CALL RETFM(NEEDJ)
+            END DO
+            CALL RETFM(NEEDI)
+          END DO
+C
+C     ----- CONTRACTION -----
+C
+          CALL CPYTSQ(X(LDH),X(LDHC),L1,1) !HERE, X(LDHC) AS WORK.
+          CALL DGEMM('T','N',LL1,L1,L1,ONE,X(LUC),L1,X(LDHC),L1,ZERO,
+     *               X(LWRK1),LL1)
+          CALL DGEMM('N','N',LL1,LL1,L1,ONE,X(LWRK1),LL1,X(LUC),L1,ZERO,
+     *               X(LDHC),LL1)
+C
+C     ----- FORCE -----
+C
+          CALL CPYSQT(X(LDHC),X(LWRK1),LL1,1)
+          WRK = TRACEP(X(LWRK1),DENAB,LL1)
+          IF(ABS(WRK).GT.TOL)
+     *       DE(IXYZ,KAT) = DE(IXYZ,KAT) + TRACEP(X(LWRK1),DENAB,LL1)
+          IF(DBUG) WRITE(IW,9997) KAT,IXYZ,TRACEP(X(LWRK1),DENAB,LL1)
+        END DO
+      END DO
+C
+      IF(SOME) WRITE(IW,9999) TCPU
+C
+      IF(GOPARR.AND.NXT) CALL DDI_DLBRESET
+      DSKWRK = SVDSKW
+C
+C     CALL EGOUT(DE,NAT)
+C
+      CALL RETFM(NEED)
+C
+      CALL SEQCLO(NUNV ,'KEEP')
+      CALL SEQCLO(NUNPV,'KEEP')
+C
+      RETURN
+ 9999 FORMAT(1X,'TIME TO DO LUT GRADIENT INTEGRALS=',F10.2)
+ 9998 FORMAT(/1X,71(1H=)/
+     * 1X,'ANALYTICAL GRADIENT OF INFINITE-ORDER TWO-COMPONENT (IOTC)'/
+     * 1X,'ONE-ELECTRON HAMILTONIAN WITH LOCAL UNITARY ',
+     *    'TRANSFORMATION (LUT) SCHEME'/
+     * 1X,49X,'CODED BY YUYA NAKAJIMA'/
+     * 1X,5X,'Y. NAKAJIMA, J. SEINO, H. NAKAI, J. CHEM. PHYS. 139, ',
+     *    '244107 (2013)'/
+     * 1X,71(1H=)/)
+ 9997 FORMAT(1X,"IATM=",I4,2X,"IXYZ=",I4,2X,
+     *       "FORCE CONTRIBUTION=",F20.16)
+      END
+C
+C*MODULE LUTGRD   *DECK EXTRACT
+C>
+C>    @brief   Get matrix elements between subsystems
+C>
+C>    @details This subroutine obtains the matrix elements between
+C>             subsystems i and j.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- output --
+C>    @param   VPART  : part of matrix
+C>    -- input --
+C>    @param   VALL   : total matrix
+C>    @param   JSUB   : # of the j-th subsystem
+C>    @param   ISUB   : # of the i-th subsystem
+C>    @param   LENGTH : the size of array for partial matrix
+C>    @param   LL1    : uncontracted AO size (LL1)
+C>    @param   LL2    : triangular matrix size, (LL1*LL1+LL1)/2
+C>    @param   DBUG   : flag of a debag print
+C>
+      SUBROUTINE EXTRACT(VPART,VALL,JSUB,ISUB,LENGTH,LL1,LL2,DBUG)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL DBUG
+C
+      PARAMETER (MXAO=8192, MXATM=2000)
+C
+      DIMENSION VPART(LENGTH)
+      DIMENSION VALL(LL2)
+C
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+      ISTART = NLOC(ISUB)
+      IEND   = NLOC(ISUB+1) - 1
+      JSTART = NLOC(JSUB)
+      JEND   = NLOC(JSUB+1) - 1
+C
+      IF(DBUG) THEN
+        WRITE(IW,'(/,3X,4(2X,A6,2X))') 'ISTART','IEND','JSTART','JEND'
+        WRITE(IW,'(3X,4(2X,I6,2X))') ISTART,IEND,JSTART,JEND
+      END IF
+C
+      IF(DBUG) THEN
+        CALL PRTRIEXL(VALL,LL1,'TOT.EX-POT')
+      END IF
+C
+CYN-- IF(DBUG) THEN
+CYN--   WRITE(IW,'(/,2(2X,A7,2X),2(2X,A25,2X))')
+CYN--*        'NN','IJ','VPART','VALL'
+CYN-- END IF
+        NN = 0
+        DO J = JSTART, JEND
+          DO I = ISTART, IEND
+            IJ = IA(J) + I
+            NN = NN + 1
+            VPART(NN) = VALL(IJ)
+CYN--       IF(DBUG) THEN
+CYN--         WRITE(IW,'(2(2X,I7,2X),2(2X,F25.15,2X))')
+CYN--*             NN,IJ,VPART(NN),VALL(IJ)
+CYN--       END IF
+          END DO
+        END DO
+C
+      IF(DBUG) THEN
+        LI1 = NNUM(ISUB)
+        LJ1 = NNUM(JSUB)
+        WRITE(IW,'(/,A)') '<< PART OF EXTERNAL POTENTIAL MATRIX >>'
+        CALL PRMATEX(VPART,LJ1,LI1,LJ1)
+      END IF
+C
+      RETURN
+      END
+C
+C*MODULE LUTGRD   *DECK INTEGDH
+C>
+C>    @brief   Add the contributions of subsystems to gradient of
+C>             one-electron Hamiltonian
+C>
+C>    @details This subroutine is a modified version of INTEGH
+C>             add the contribution of the subsystem to an gradient
+C>             of one-electron Hamiltonian after the relativistic
+C>             transformations are performed.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- output --
+C>    @param   DHALL  : total 1e-gradient
+C>    -- input --
+C>    @param   DHPART : subsystem contribution to 1e-gradient
+C>    @param   JSUB   : # of the subsystem
+C>    @param   ISUB   : # of the subsystem
+C>    @param   LENGTH : the size of array H
+C>    @param   LL1    : uncontracted basis set size
+C>    @param   LL2    : triangular matrix size, (LL1*LL1+LL1)/2
+C>    @param   DBUG   : flag of a debug print
+C>
+      SUBROUTINE INTEGDH(DHPART,DHALL,JSUB,ISUB,LENGTH,LL1,LL2,DBUG)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL DBUG
+C
+      PARAMETER (MXAO=8192, MXATM=2000)
+C
+      DIMENSION DHPART(LENGTH)
+      DIMENSION DHALL(LL2)
+C
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUBX
+C
+      ISTART = NLOC(ISUB)
+      IEND   = NLOC(ISUB+1) - 1
+      JSTART = NLOC(JSUB)
+      JEND   = NLOC(JSUB+1) - 1
+C
+      IF(DBUG) THEN
+        WRITE(IW,'(/,3X,4(2X,A6,2X))') 'ISTART','IEND','JSTART','JEND'
+        WRITE(IW,'(3X,4(2X,I6,2X))') ISTART,IEND,JSTART,JEND
+      END IF
+C
+      IF(DBUG) THEN
+        CALL PRTRIEXL(DHALL,LL1,'INI.TOT-DH')
+      END IF
+C
+CYN-- IF(DBUG) THEN
+CYN--   WRITE(IW,'(/,2(2X,A7,2X),3(2X,A25,2X))')
+CYN--*        'IJ','NN','ALL+PART','DHALL','DHPART'
+CYN-- END IF
+        NN = 0
+        DO J = JSTART, JEND
+          DO I = ISTART, IEND
+            IJ = IA(J) + I
+            NN = NN + 1
+CYN--       AUX = DHALL(IJ)
+            DHALL(IJ) = DHALL(IJ) + DHPART(NN)
+CYN--       IF(DBUG) THEN
+CYN--         WRITE(IW,'(2(2X,I7,2X),3(2X,F25.15,2X))')
+CYN--*             IJ,NN,DHALL(IJ),AUX,DHPART(NN)
+CYN--       END IF
+          END DO
+        END DO
+C
+      IF(DBUG) THEN
+        CALL PRTRIEXL(DHALL,LL1,'TOT-DH    ')
+      END IF
+C
+      RETURN
+      END
+C
+C*MODULE LUT     *DECK SPHBCKLUT
+C
+C> @brief : Routine transforms SALC coefficients expressed in cartesian
+C>          space into spherical harmonic space. This is a clone
+C>          of SPHBCKU.
+C>
+C> @date  : Yuya Nakajima, June, 2015
+C
+      SUBROUTINE SPHBCKLUT(T,L1,NBF,NSPH)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION T(NBF,*)
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000)
+C
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /SPHERI/ PSHELL(3,3),DSHELL(6,6),
+     *                FSHELL(10,10),GSHELL(15,15),
+     *                PIHELL(3,3),DIHELL(6,6),
+     *                FIHELL(10,10),GIHELL(15,15)
+      common /sphehi/ hshell(21,21),aishell(28,28),
+     *                hihell(21,21),aiihell(28,28)
+      COMMON /SETATM/ NSHL(MXATM),NBSF(MXATM),NNUM(MXATM),NLOC(MXATM),
+     *                NUNV,NUNPV,ISUB
+C
+C     ----- CREATE TRANSFORMATION MATRIX CARTESIAN->SPHERICAL
+C           A CLONE OF SPHBCK.
+C     T WILL CONTAIN THE TRANSFORMATION MATRIX, NSPH - THE NUMBER OF
+C     SPHERICAL HARMONICS IN THE BASIS SET, T(L1,NSPH).
+C     NOTE THAT T IS NOT UNITARY, IT IS DEVISED SO THAT T^T * S * T = 1
+C     (FOR S - BLOCK OF OVERLAPS FOR A FIXED SHELL).
+C
+      NSPH=0
+      NEL=0
+      CALL VCLR(T,1,L1*L1)
+      CALL STLUT(ISTART,IEND,JSTART,JEND,NATST,NATED,ISUB,ISUB)
+C
+C      DO 1000 ISH=1,NSHELL
+      DO 1000 ISH=ISTART,IEND
+         IT =KTYPE(ISH)
+         MIN=KMIN(ISH)
+         MAX=KMAX(ISH)
+C         LOC=KLOC(ISH)-MIN
+         LOC = KLOC(ISH)-MIN-NLOC(ISUB)+1
+C
+         NSPH=NSPH+(2*IT-1)
+C                                     L-SHELLS
+         IF(IT.EQ.2.AND.MIN.EQ.1) NSPH=NSPH+1
+C
+         go to (100,200,300,400,500,600,700),it
+C
+  100    CONTINUE
+         LOCI=LOC+1
+         LOCJ=LOC+1-NEL
+         T(LOCI,LOCJ)=1.0D+00
+         GO TO 1000
+C
+  200    CONTINUE
+         IF(MIN.EQ.1) THEN
+            LOCI=LOC+1
+            LOCJ=LOC+1-NEL
+            T(LOCI,LOCJ)=1.0D+00
+            DO I=MIN+1,MAX
+               DO J=MIN+1,MAX
+                  LOCI=LOC+I
+                  LOCJ=LOC+J-NEL
+                  T(LOCI,LOCJ)=PSHELL(I-MIN  ,J-MIN  )
+               ENDDO
+            ENDDO
+         ELSE
+            DO I=MIN,MAX
+               DO J=MIN,MAX
+                  LOCI=LOC+I
+                  LOCJ=LOC+J-NEL
+                  T(LOCI,LOCJ)=PSHELL(I-MIN+1,J-MIN+1)
+               ENDDO
+            ENDDO
+         END IF
+         GO TO 1000
+C
+  300    CONTINUE
+         DO I=MIN,MAX
+            DO J=MIN,MIN+4
+               LOCI=LOC+I
+               LOCJ=LOC+J-NEL
+               T(LOCI,LOCJ)=DSHELL(I-MIN+1,J-MIN+1)
+            ENDDO
+         ENDDO
+         NEL=NEL+1
+         GO TO 1000
+C
+  400    CONTINUE
+         DO I=MIN,MAX
+            DO J=MIN,MIN+6
+               LOCI=LOC+I
+               LOCJ=LOC+J-NEL
+               T(LOCI,LOCJ)=FSHELL(I-MIN+1,J-MIN+1)
+            ENDDO
+         ENDDO
+         NEL=NEL+3
+         GO TO 1000
+C
+  500    CONTINUE
+         DO I=MIN,MAX
+            DO J=MIN,MIN+8
+               LOCI=LOC+I
+               LOCJ=LOC+J-NEL
+               T(LOCI,LOCJ)=GSHELL(I-MIN+1,J-MIN+1)
+            ENDDO
+         ENDDO
+         NEL=NEL+6
+C
+         go to 1000
+  600    continue
+         do i=min,max
+            do j=min,min+10
+               loci=loc+i
+               locj=loc+j-nel
+               t(loci,locj)=hshell(i-min+1,j-min+1)
+            enddo
+         enddo
+         nel=nel+10
+         go to 1000
+  700    continue
+         do i=min,max
+            do j=min,min+12
+               loci=loc+i
+               locj=loc+j-nel
+               t(loci,locj)=aishell(i-min+1,j-min+1)
+            enddo
+         enddo
+         nel=nel+15
+C
+ 1000 CONTINUE
+C
+      RETURN
+      END
+C
+C*MODULE LUT     *DECK TRNATM
+C
+C> @brief : Write information for the LUT transformation.
+C>          This is a clone of INTR.
+C>
+C> @date  : Yuya Nakajima, June, 2015
+C>
+      SUBROUTINE TRNATM
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      PARAMETER (MXATM=2000, MXAO=8192)
+      PARAMETER (UNIT=0.52917724924D+00)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      INTEGER MARK,STAR,BLANK
+C
+      DIMENSION R(MXATM)
+      DIMENSION MARK(MXATM)
+C
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /INFOA / NAT,ICH,MUL,NUN,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /RELWFN/ RMETHOD,QRQMT,CLIG,CLIG2,QRTOL,TAU,
+     *                IQRORD,MODQR,NESOC,NRATOM,
+     *                NUMU,NQMTR,NQRDAF,MORDA,NDARELB
+      COMMON /RUNLAB/ TITLE(10),ANAM(MXATM),BNAM(MXATM),BFLAB(MXAO)
+C
+      DATA STAR /4H *  / , BLANK /4H    /
+C
+C     ----- CALCULATE ATOM-ATOM DISTANCES -----
+C
+      IF (MASWRK) WRITE (IW,9008)
+      FAC = UNIT
+      INCR = 5
+      IF(NPRINT.EQ.6) INCR=7
+      MAX = 0
+  140 MIN = MAX+1
+      MAX = MAX+INCR
+      IF (MAX .GT. NAT) MAX = NAT
+      IF (MASWRK) THEN
+         WRITE (IW,9048)
+         WRITE (IW,9068) (J,ANAM(J),BNAM(J),J = MIN,MAX)
+         WRITE (IW,9048)
+      END IF
+      DO 180 I = 1,NAT
+         DO 160 J = MIN,MAX
+            RR = (C(1,I)-C(1,J))**2
+     *         + (C(2,I)-C(2,J))**2
+     *         + (C(3,I)-C(3,J))**2
+            RR = SQRT(RR) * FAC
+            IF (RR.GT.TAU .OR. I.EQ.J) THEN
+              MARK(J) = BLANK
+            ELSE
+              MARK(J) = STAR
+            END IF
+            R(J) = RR
+  160    CONTINUE
+         IF (MASWRK) WRITE (IW,9088)
+     *      I,ANAM(I),BNAM(I),(R(J),MARK(J),J = MIN,MAX)
+  180 CONTINUE
+      IF (MAX .LT. NAT) GO TO 140
+C
+      IF (MASWRK) WRITE(IW,9090) TAU
+      RETURN
+C
+ 9008 FORMAT(/,5X,37(1H-),
+     *       /,5X,37HLUT-IOTC TRANSFORMATION FOR ATOM-PAIR,
+     *       /,5X,37(1H-))
+ 9048 FORMAT(1X)
+ 9068 FORMAT(11X,7(2X,I4,1X,A4,A2))
+ 9088 FORMAT(I4,1X,A4,A2,7(F11.7,A2))
+ 9090 FORMAT(/'  * ... TRANSFORMED ATOM PAIR (LESS THAN ',F7.3,
+     *        ' ANGS.)'/)
+      END
+C
+C======================================================================
+C  SUBROUTINES FOR DEBUG BELOW
+C======================================================================
+C
+C*MODULE LUT      *DECK PRTRIEXL
+C>
+C>    @brief   Print triangular matrix (modified version of PRTRI)
+C>
+C>    @details This routine prints the triangular matrix like the
+C>             original subroutine, PRTRI. The differences from PRTRI
+C>             are (1) more digits are printed, (2) less than 10
+C>             character is printed as a title.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- input --
+C>    @param   D   : triangular matrix
+C>    @param   N   : the size of triangular matrix
+C>    @param   BUF : title character
+C>
+      SUBROUTINE PRTRIEXL(D,N,BUF)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      CHARACTER*10 BUF
+      DIMENSION D(*)
+C
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+C     ----- PRINT SYMMETRIC MATRIX -D- OF DIMENSION -N- -----
+C     STOLEN FROM MTHLIB.SRC. (EXTEND OUTPUT)
+C
+      IF(MASWRK) WRITE(IW,9996) BUF
+C
+      IF (MASWRK) THEN
+      MAX = 5
+      IF (NPRINT .EQ. 6) MAX = 10
+      MM1 = MAX-1
+      DO 120 I0=1,N,MAX
+         IL = MIN(N,I0+MM1)
+         WRITE(IW,9008)
+         WRITE(IW,9028) (I,I=I0,IL)
+         WRITE(IW,9008)
+         IL = -1
+         DO 100 I=I0,N
+            IL=IL+1
+            J0=I0+(I*I-I)/2
+            JL=J0+MIN(IL,MM1)
+            WRITE(IW,9048) I,(D(J),J=J0,JL)
+  100    CONTINUE
+  120 CONTINUE
+      END IF
+      RETURN
+ 9008 FORMAT(1X)
+ 9028 FORMAT(7X,10(9X,I9,9X))
+ 9048 FORMAT(I6,1X,10F27.14)
+ 9996 FORMAT(/10X,22(1H-),/10X,A10,' DEBUG PRINT'/10X,22(1H-))
+      END
+C
+C--C*MODULE LUT      *DECK DPRTMAT
+C--C>
+C--C>    @brief   Print rectangle matrix
+C--C>
+C--C>    @details This routine prints the rectangular matrix. Compared
+C--C>             to the original routine such as PUSQ, more digits are
+C--C>             printed.
+C--C>
+C--C>    @author  Yuya Nakajima, June, 2015
+C--C>
+C--C>    -- input --
+C--C>    @param  A   : rectangular matrix
+C--C>    @param  M   : dimension of the matrix
+C--C>    @param  N   : dimension of the matrix
+C--C>    @param  LDA : leading dimension of the matrix
+C--C>
+C--      SUBROUTINE DPRTMAT(A,M,N,LDA)
+C--C
+C--      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C--C
+C--      DIMENSION A(LDA,*)
+C--C
+C--      IF(LDA.LE.0) RETURN
+C--      IF(M.LE.0) RETURN
+C--      IF(M.GT.LDA) RETURN
+C--C
+C--      JMAX = 5
+C--      JLST = N - MOD(N,JMAX)
+C--      JST  = 0
+C--      JED  = 0
+C--C
+C--      DO
+C--        JST = JED + 1
+C--        JED = JST + JMAX - 1
+C--        WRITE(6,9997)
+C--        WRITE(6,9999) (J,J=JST,JED)
+C--        DO I = 1, M
+C--          WRITE(6,9998) I,(A(I,J),J=JST,JED)
+C--        END DO
+C--        IF(JED.EQ.JLST) EXIT
+C--      END DO
+C--C
+C--      IF(N.EQ.JLST) RETURN
+C--C
+C--      JLST = JLST + 1
+C--      WRITE(6,9997)
+C--      WRITE(6,9999) (J,J=JLST,N)
+C--      DO I = 1, M
+C--        WRITE(6,9998) I,(A(I,J),J=JLST,N)
+C--      END DO
+C--C
+C--      RETURN
+C--C
+C-- 9999 FORMAT(8X,5(2X,8X,I8,8X))
+C-- 9998 FORMAT(I8,5(2X,F24.12))
+C-- 9997 FORMAT(1X)
+C--      END
+C--C
+C
+C*MODULE LUT      *DECK DPRTMATL
+C>
+C>    @brief   Print rectangular matrix with title
+C>
+C>    @details This routine prints the rectangular matrix with title
+C>             you want to show (modified version of DPRTMAT)
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+C>    -- input --
+C>    @param  A   : rectangle matrix
+C>    @param  M   : dimension of the matrix
+C>    @param  N   : dimension of the matrix
+C>    @param  LDA : leading dimension of the matrix
+C>    @param  BUF : title character less than ten
+C>
+      SUBROUTINE DPRTMATL(A,M,N,LDA,BUF)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      CHARACTER*10 BUF
+      DIMENSION A(LDA,*)
+C
+      IF(LDA.LE.0) RETURN
+      IF(M.LE.0) RETURN
+      IF(M.GT.LDA) RETURN
+C
+      WRITE(6,9996) BUF
+C
+      JMAX = 5
+      JLST = N - MOD(N,JMAX)
+      JST  = 0
+      JED  = 0
+C
+      DO
+        JST = JED + 1
+        JED = JST + JMAX - 1
+        WRITE(6,9997)
+        WRITE(6,9999) (J,J=JST,JED)
+        DO I = 1, M
+          WRITE(6,9998) I,(A(I,J),J=JST,JED)
+        END DO
+        IF(JED.EQ.JLST) EXIT
+      END DO
+C
+      IF(N.EQ.JLST) RETURN
+C
+      JLST = JLST + 1
+      WRITE(6,9997)
+      WRITE(6,9999) (J,J=JLST,N)
+      DO I = 1, M
+        WRITE(6,9998) I,(A(I,J),J=JLST,N)
+      END DO
+C
+      RETURN
+C
+ 9999 FORMAT(8X,5(2X,8X,I8,8X))
+ 9998 FORMAT(I8,5(2X,F24.12))
+ 9997 FORMAT(1X)
+ 9996 FORMAT(/10X,22(1H-),/10X,A10,' DEBUG PRINT'/10X,22(1H-))
+      END
+C
+C*MODULE LUT      *DECK PRMATEX
+C>
+C>    @brief   Print rectangular matrix
+C>
+C>    @details This routine prints the rectangular matrix with more
+C>             digits compared with original routine PRSQ.
+C>
+C>    @author  Yuya Nakajima, June, 2015
+C>
+      SUBROUTINE PRMATEX(V,M,N,MDIM)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      DIMENSION V(MDIM,N)
+C
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+C     ----- PRINT OUT A SQUARE MATRIX -----
+C     STOLEN FROM MTHLIB.SRC. AND MODIFIED (EXTEND OUTPUT)
+C     -V- IS -M- ROWS BY -N- COLUMNS, WITH LEADING DIMENSION -MDIM-
+C
+      IF (MASWRK) THEN
+        MAX = 5
+        IF (NPRINT .EQ. 6) MAX = 10
+        IMAX = 0
+        DO
+          IMIN = IMAX+1
+          IMAX = IMAX+MAX
+          IF (IMAX .GT. N) IMAX = N
+          WRITE (IW,9008)
+          WRITE (IW,9028) (I,I = IMIN,IMAX)
+          WRITE (IW,9008)
+          DO J = 1,M
+            WRITE (IW,9048) J,(V(J,I),I = IMIN,IMAX)
+          END DO
+          IF (IMAX .EQ. N) EXIT
+        END DO
+      END IF
+      RETURN
+ 9008 FORMAT(1X)
+ 9028 FORMAT(7X,10(9X,I9,9X))
+ 9048 FORMAT(I6,1X,10F27.14)
+      END

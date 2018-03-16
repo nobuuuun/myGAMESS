@@ -1,0 +1,48 @@
+{
+  "parse_header" : "CMOEDA",
+  "parse_group" : [
+   {
+     "regex_string" : "^ ELECTROSTATIC ENERGY                  ES=.*$",
+     "parse_name"   : "ES ENERGY OWN - CMOEDA",
+     "parse_precision" : 6,
+     "parse_instance" : 1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ EXCHANGE ENERGY                       EX=.*$",
+     "parse_name"   : "EX ENERGY OWN - CMOEDA",
+     "parse_precision" : 6,
+     "parse_instance" : 1
+   },
+   {
+     "regex_string" : "^ REPULSION ENERGY                     REP=.*$",
+     "parse_name"   : "REP ENERGY OWN - CMOEDA",
+     "parse_precision" : 6,
+     "parse_instance" : 1
+   },
+   {
+     "regex_string" : "^ POLARIZATION ENERGY                  POL=.*$",
+     "parse_name"   : "POL ENERGY OWN - CMOEDA",
+     "parse_precision" : 6,
+     "parse_instance" : 1
+   },
+   {
+     "regex_string" : "^ MP2 DISPERSION ENERGY               DISP=.*$",
+     "parse_name"   : "DISP ENERGY OWN - CMOEDA",
+     "parse_precision" : 6,
+     "parse_instance" : 1
+   },
+   {
+     "regex_string" : "^ TOTAL INTERACTION ENERGY HF OR DFT     E=.*$",
+     "parse_name"   : "TOT. INTR. ENERGY (HF/DFT) OWN - CMOEDA",
+     "parse_precision" : 6,
+     "parse_instance" : 1
+   },
+   {
+     "regex_string" : "^ TOTAL INTERACTION ENERGY MP2           E=.*$",
+     "parse_name"   : "TOT. INTR. ENERGY (MP2) OWN - CMOEDA",
+     "parse_precision" : 6,
+     "parse_instance" : 1
+   }
+  ]
+}

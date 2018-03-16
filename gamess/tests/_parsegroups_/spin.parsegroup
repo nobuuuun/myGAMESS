@@ -1,0 +1,11 @@
+{
+  "parse_header" : "SPIN",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)S-SQUARED =.*$",
+     "parse_name"   : "S-SQUARED",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_precision" : 3
+   }
+  ]
+}

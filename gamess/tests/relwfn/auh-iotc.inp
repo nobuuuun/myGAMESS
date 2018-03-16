@@ -1,0 +1,62 @@
+!   AuH diatomic....MP2 gradient with IOTC relativity,
+!   using a Sapporo TZ semicore/valence basis set.
+!   130 AOs and 108 MOs...RI step has 332 GTOs, keeps 324 combos.
+!
+!   The Sapporo basis set has Au semicore parts= 4f(14),5s(2),5p(6)
+!   The MP2 run here uses non-default input to correlate all of these!
+!   Orbital 23 has eigenvalue -13.47, while 24 has eigenvalue -4.70,
+!   which is the separation between true core and "semi-core".
+!   Orbital 34 has eigenvalue -2.76, while 35 has eigenvalue -0.56,
+!   which is the separation between "semi-core" and valence.
+!   Normally GAMESS would correlate starting at orbital 35.
+!
+!     top line is correlating all 22 semi-core electrons (this run),
+!     second line is GAMESS default of correlating only the valence:
+!   FINAL E= -19011.5967715772, E(MP2)= -19012.5077950646, RMS= 0.005287316
+!   FINAL E= -19011.5967715772, E(MP2)= -19012.0128102040, RMS= 0.001354498
+!
+!   this run takes 505 seconds on a 2.66 GHz Cloverton (10 Aug 2015)
+!
+! --------------------------------------------------------------------
+! if run as a SCF geometry opt, IOTC falls a bit short of being monotonic:
+!       NSERCH:   0  E=   -19011.5967778131  R.M.S.=  0.0143632
+!       NSERCH:   1  E=   -19011.5977660751  R.M.S.=  0.0080460
+!       NSERCH:   2  E=   -19011.5982371195  R.M.S.=  0.0006870
+!       NSERCH:   3  E=   -19011.5982346992  R.M.S.=  0.0001836
+!       NSERCH:   4  E=   -19011.5982412533  R.M.S.=  0.0001854
+!       NSERCH:   5  E=   -19011.5978186004  R.M.S.=  0.0060610
+!       NSERCH:   6  E=   -19011.5982449508  R.M.S.=  0.0001739
+!       NSERCH:   7  E=   -19011.5982432398  R.M.S.=  0.0000855
+!       NSERCH:   8  E=   -19011.5982393620  R.M.S.=  0.0001519
+!       NSERCH:   9  E=   -19011.5982375458  R.M.S.=  0.0000566
+!       NSERCH:  10  E=   -19011.5982338784  R.M.S.=  0.0000988
+!       NSERCH:  11  E=   -19011.5978225639  R.M.S.=  0.0061693
+!       NSERCH:  12  E=   -19011.5982406788  R.M.S.=  0.0000601  <-- best
+!       NSERCH:  13  E=   -19011.5982364409  R.M.S.=  0.0001702
+!       NSERCH:  14  E=   -19011.5982387721  R.M.S.=  0.0000735
+!       NSERCH:  15  E=   -19011.5982401292  R.M.S.=  0.0000018
+!  the last geom r(AuH)= 1.5683762, 
+!     slightly longer than the exp bond length Re = 1.52385 Ang.
+!
+ $contrl scftyp=rhf mplevl=2 runtyp=gradient relwfn=iotc ispher=1 $end
+ $system parall=.t. mwords=10 memddi=30 $end
+!
+!    correlate semi-core orbitals 5s=24, 4f=25-31, 5p=32-34,
+!    as well as the true valence orbitals 35-40 (5d and 6s and H)
+ $mp2    nacore=23 $end
+!
+ $basis  gbasis=SPKrTZC   $end
+ $guess  guess=huckel     $end
+ $scf    dirscf=.true.    $end
+ $data
+AuH...by IOTC scalar relativity...round number starting geometry
+Cnv 4
+
+Au  79.0  0.0  0.0  0.0
+H    1.0  0.0  0.0  1.5
+ $end
+
+! TRAVIS-CI SMALL
+! TRAVIS-CI SKIP
+! ACCURACY BETWEEN INTEL AND GNU DOES NOT MATCH
+

@@ -1,0 +1,156 @@
+!  C60, run in highest subgroup of Ih that GAMESS can use: Th
+!  180 occupied MOs (60 are cores) and 120 Valence Virtual Orbitals
+!
+!  for the MINI basis set,
+!     F.NAL E= -2256.1586979707, 9 iters, t1u LUMO is +0.0012 (e1u+a2u)
+!  this run takes 78 seconds on 2.66 GHz Cloverton (17 Mar 2015)
+!
+!---------------------------------------------------------------------
+!  See "Quantum Mechanics, Group Theory, and C60",
+!       Frank Rioux, J.Chem.Ed. 71, 464-465(1994)
+!      "Vibrational analysis for C60 and other fullerenes"
+!       Frank Rioux, J.Chem.Ed. 80, 1380(2003)
+!  The former has references to experimental and Huckel spectra:
+!  there is thought to be a dark T1u as LUMO and then an allowed
+!  T2u as LUMO+1, at least in the early '90s literature.
+!  But VVOs and an ordinary MINI calculation both place T1g and Hg
+!  levels (both obviously dark) between these two.
+!
+!  * ACCT has 3300 AOs, drops 540 contaminants, and 106 more at
+!  the slightly raised Qmatrix TOL=5d-6, for total of 2654 MOs.
+!  The smallest eigenvalue of S for ACCT is 1D-10!
+!     F.NAL E= -2272.4475041384 for ACCT
+!  Can get convergence from extended Huckel guess with RSTRCT
+!  turned on, but RDMINI of all orbitals from a GBASIS=MINI job
+!  is quicker, and the ACCT SCF without any orbital restriction
+!  can be counted on to sort orbitals by eigenvalue.
+!  A little extra precision with the integrals doesn't hurt.
+!  The MINI calculation is so quick, its orbs aren't stored here.
+!  *  CCT has 2100 AOs, drops 300 contaminants, but no linear
+!  dependencies at default Qmatrix TOL, thus keeping 1800 AOs.
+!     F.NAL E= -2272.4332570912 for  CCT
+!  Convergence from extended Huckel is a piece of cake.
+!  * MINI is just 300 AOs, for the ACCT D5d geometry,
+!     F.NAL E= -2256.1586979707, 9 iters, 78 s.conds on 1 Cloverton core
+!
+!  Orbital symmetry assignments in Ih are easily gleaned from the
+!  labels in D5d, using Altmann and Herzig's subduction table 75.9:
+!  Ax=A1x, T1x=A2x+E1x, T2x=A2x+E2x, Gx=E1x+E2x, Hx=A1x+E1x+E2x (x=g/u),
+!  writing Gx rather than their Fx as name of the 4-fold degen. irrep.
+!
+!  VVO spectrum is
+!                   CCT     ACCT    Th        D5d          Ih
+!      163-166   -0.4661  -0.4677  au,tu   e1u,e2u         Gu
+!      167-170   -0.3654  -0.3699  ag,tg   e1g,e2g         Gg
+!      171-175   -0.3538  -0.3553  eg,tg   e1g,e2g,a1g     Hg
+!      176-180   -0.2889  -0.2903  eu,tu   e1u,e2u,a1u     Hu
+!      181-183   +0.0215  +0.0199  tu      a2u,e1u         T1u
+!      184-186   +0.0872  +0.0856  tg      e1g,a2g         T1g
+!      187-191   +0.1567  +0.1551  eg,tg   e2g,e1g,a1g     Hg
+!      192-194   +0.1622  +0.1606  tu      e2u,a2u         T2u
+!      195-199   +0.2517  +0.2502  tu,eu   e2u,a1u,e1u     Hu
+!      200-203   +0.2883  +0.2869  ag,tg   e2g,e1g         Gg
+!  Eigenvalue degeneracy is preserved to all four digits printed,
+!  except for the T1g level in the ACCT basis (0.0001 difference).
+!
+!  CMO spectrum is identical for occupied orbitals, note 1st CMO is <0!
+!                           ACCT    Th        D5d          Ih
+!      181-183            -0.0232          e1u,a2u         T1u
+!      184-186            +0.0429          a2g,e1g         T1g
+!      187-189            +0.0501          a2u,e1u         T1u
+!      190-194            +0.0577          a1g,e2g,e1g     Hg
+!      195                +0.0624          a1g             Ag
+!      196                +0.0683          a2u
+!      197-198            +0.0710          e2u     must pair with 196 as T2u
+!      199-202            +0.0722          e1u,e2u         Gu
+!      203                +0.0762          a2u
+!      204-205            +0.0766          e2u     must pair with 203 as T2u
+!      206-210            +0.0810          a1g,e1g,e2g     Hg
+!  A few levels above differing by only 0.0001 were grouped together
+!  as degenerate.  There's no double degeneracy possible in Ih, so
+!  the level at 0.0710 may be due to incomplete geometry optimzation,
+!  as CC bond lengths vary 1.4460415 to 1.4460500, or possibly due to
+!  the dropping of linear dependencies within D5d, or both.
+!
+!  MINI's virtual CMOs (which are identical to MINI's VVOs):
+!      181-183 = +0.0012 = e1u,a2u     -> T1u
+!      184-186 = +0.0662 = a2g,e1g     -> T1g
+!      187-191 = +0.1402 = e1g,a1g,e2g -> Hg
+!      192-194 = +0.1469 = a2u,e2u     -> T2u
+!      195-199 = +0.2383 = a1u,e1u,e2u -> Hu
+!      200-203 = +0.2788 = e1g,e2g     -> Gg
+!      204-207 = +0.3207 = e1u,e2u     -> Gu
+!  This simple calculation also places the allowed T2u at LUMO+2,
+!  above dark T1u, T1g, and Hg levels (same result as ACCT VVOs).
+!  There is also reasonable agreement as to the eigenvalues.
+!
+ $contrl scftyp=rhf runtyp=energy ispher=1 $end
+ $system mwords=100 $end
+ $scf    dirscf=.true. $end
+
+!            pick one of the three basis set groupings below,
+!            and also choose a point group.
+ $basis  gbasis=mini $end
+ $guess  guess=Huckel $end
+
+x$basis  gbasis=cct $end
+x$guess  guess=Huckel $end
+x$scf    vvos=.true. $end
+
+x$contrl icut=11 qmttol=5d-6 $end
+x$basis  gbasis=acct $end
+x$guess  guess=rdmini $end
+x$scf    vvos=.true. fdiff=.false. $end
+
+!  Ih (and Th) have two-fold operations along the x,y,z directions,
+!  whereas the D5d subgroup places z along its only 5-fold axis.
+!  It is not so very easy to extract a D5d geometry from Th, so the
+!  approach here (very lazy) was to simply optimize in both subgroups.
+!
+!  the first atom generates 24, the s.cond atom generates 24,
+!  and the third atom in the input generates 12: 24+24+12=60.
+--- $data
+Buckminsterfullerene...highest subgroup of Ih
+Th
+
+C 6.0   2.5773310135   0.7230392785   2.2772697986
+C 6.0   3.0002979112   1.4074223650   1.1699019218
+C 6.0   3.4471753587   0.6843901925   0.0000000000
+ $end
+
+!  each of the first two atoms generates 10, and
+!  each of the  last two atoms generates 20:  10+10+20+20=60.
+ $data
+Buckminsterfullerene...a different subgroup
+Dnd 5
+
+C 6.0   0.0000000000   1.2300580198   3.2919195366
+C 6.0   0.0000000000   2.3944107918   2.5723886150
+C 6.0   1.1698874925   2.7745497413   1.8121953518
+C 6.0   0.7230249917   3.3896054588   0.5821517550
+ $end
+
+!       CCT geometry (Th) is
+C 6.0   2.5776782462   0.7231549951   2.2775366862
+C 6.0   3.0006921540   1.4075898513   1.1700943530
+C 6.0   3.4476291703   0.6844373759   0.0000000000
+!      ACCT geometry (Th) is
+C 6.0   2.5773310135   0.7230392785   2.2772697986
+C 6.0   3.0002979112   1.4074223650   1.1699019218
+C 6.0   3.4471753587   0.6843901925   0.0000000000
+!       CCT geometry (D5d) is
+C 6.0   0.0000000000   1.2303062478   3.2925595277
+C 6.0   0.0000000000   2.3947359110   2.5728885709
+C 6.0   1.1700897905   2.7749259017   1.8125218495
+C 6.0   0.7231547708   3.3900836939   0.5822192102
+!      ACCT geometry (D5d) is
+C 6.0   0.0000000000   1.2300580198   3.2919195366
+C 6.0   0.0000000000   2.3944107918   2.5723886150
+C 6.0   1.1698874925   2.7745497413   1.8121953518
+C 6.0   0.7230249917   3.3896054588   0.5821517550
+
+
+! TRAVIS-CI SMALL
+! USE GAMESS LEGACY INTEGRAL CODE DURING OMP RUNS
+ $INTGRL INTOMP=0 $END
+

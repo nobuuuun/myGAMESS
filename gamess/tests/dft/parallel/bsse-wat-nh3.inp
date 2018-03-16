@@ -1,0 +1,81 @@
+!  DFT counterpoise run: H2O, with a ghost NH3 beside it.
+!           FINAL E= -76.4873439307, 17 iters
+!  This run takes 36 seconds on 2.66 GHz Cloverton (5 Oct 2012)
+!
+!  -------------------------------------------------------------------------
+!  The counterpoise corrected interaction energy is defined as
+!     CP = Eab(AB) - Eab(A) - Eab(B), all computed in full basis set a+b
+!  The basis set superposition error is
+!     BSSE = Eab(A) + Eab(B) - Ea(A) - Eb(B), latter two using monomer basis
+!  Monomers A and B should use the geometry they have within the dimer AB.
+!  See F.B.van Duijneveldt, J.G.C.M. van Duijneveldt-van de Rigdt,
+!  J.H.van Lenthe  Chem.Rev. 94, 1873-1885(1994)
+!  Here the runs also use the grid of the ghost atoms for DFT jobs!
+!
+!   SCF level CP-corrected interaction= -0.006637, BSSE= -0.000673
+!   DFT level CP-corrected interaction= -0.012682, BSSE= -0.000847
+!  The name BSSE seems inappropriate for the DFT run, since it also
+!  involves a grid correction, but both "BSSE" are rather similar.
+!  -------------------------------------------------------------------------
+!  It helps to know that the dimer energies are
+!  SCF= -132.2505316716, DFT= -133.1048648556 (default Lebedev)
+!
+!  A set of results for water, sometimes with a ghost ammonia:
+!      plain Hartree-Fock, should capture magnitude of basis set's effect:
+!  water            RHF ENERGY IS       -76.0385235038  these differ by
+!  water-ammonia    RHF ENERGY IS       -76.0386544888   0.000131
+!      default Lebedev:
+!  water            R-REVTPSS ENERGY IS -76.4871427281 AFTER  17 ITERS
+!  water-ammonia    R-REVTPSS ENERGY IS -76.4873439307   0.000201
+!      decent polar coordinate grid:
+!  water            R-REVTPSS ENERGY IS -76.4871431604 AFTER  17 ITERS
+!  water-ammonia    R-REVTPSS ENERGY IS -76.4873443718   0.000201
+!      shabby SG1 grid:
+!  water            R-REVTPSS ENERGY IS -76.4871102559 AFTER  17 ITERS
+!  water-ammonia    R-REVTPSS ENERGY IS -76.4873064128   0.000196
+!      best Janssen grid:
+!  water            R-REVTPSS ENERGY IS -76.4871429749 AFTER  17 ITERS
+!  water-ammonia    R-REVTPSS ENERGY IS -76.4873441602   0.000202
+!
+!  doing it the other way around, so that the water is the ghost:
+!      plain Hartree-Fock:
+!  ammonia          RHF ENERGY IS       -56.2046969949 AFTER  10 ITERS
+!  ammonia-water    RHF ENERGY IS       -56.2052394308   0.000542
+!      default Lebedev:
+!  ammonia          R-REVTPSS ENERGY IS -56.6041934331 AFTER  17 ITERS
+!  ammonia-water    R-REVTPSS ENERGY IS -56.6048392335   0.000646
+!      decent polar coordinate grid:
+!  ammonia          R-REVTPSS ENERGY IS -56.6041970679 AFTER  17 ITERS
+!  ammonia-water    R-REVTPSS ENERGY IS -56.6048432100   0.000646
+!      shabby SG1 grid:
+!  ammonia          R-REVTPSS ENERGY IS -56.6041655687 AFTER  17 ITERS
+!  ammonia-water    R-REVTPSS ENERGY IS -56.6048028342   0.000636
+!      best Janssen grid:
+!  ammonia          R-REVTPSS ENERGY IS -56.6041950779   AFTER  17 ITERS
+!  ammonia-water    R-REVTPSS ENERGY IS -56.6048410653   0.000646
+!
+!  In both cases, the DFT basis+grid "BSSE" is about the same size 
+!  for all types of grids.  And around same size as HF's BSSE.
+!
+ $contrl scftyp=rhf dfttyp=revTPSS runtyp=energy ispher=1 $end
+ $system mwords=2 $end
+ $basis  gbasis=accd $end
+ $guess  guess=huckel $end
+x$dft    sg1=.true. $end
+x$dft    jans=2 $end
+x$dft    nthe=24 nphi=48 $end
+
+ $data
+water-ammonia dimer...aug-cc-pVDZ basis...revTPSS geometry of real dimer.
+Cs
+
+H   1.0  -1.7971766148   0.7951563543   0.0000000000
+O   8.0  -1.4116072300  -0.0958664606   0.0000000000
+H   1.0  -0.4277962833   0.0501591212   0.0000000000
+N  -7.0   1.4251552474   0.0483806567   0.0000000000
+H  -1.0   1.6981840762  -0.9374580990   0.0000000000
+H  -1.0   1.8637979821   0.4723620749  -0.8208117454
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,106 @@
+!   HNO (QM) plus two H2O (EFP1)....EFP position constraint test.
+!   Expected result is case c, subcase i.    Test created April 2012.
+!
+!   This test shows IFREEZ is ignored during optimization,
+!   but POSITION=FIXED works.
+!   See also a similar hessian test case.
+!
+!      Starting from the 6-31G(d,p) all-QM structure, 
+!   a) the unconstrained QM/EFP optimization takes 22 steps to converge,
+!      finding E= -129.8084450336 and R.M.S.=  0.0000022
+!   b) using the IFREEZ constraints takes 17 steps to converge,
+!      finding E= -129.8084450325 and R.M.S.=  0.0000019
+!      Since this is essentially the same energy as the run with no
+!      constraints, and the 'EFP-EFP EXCHANGE REPULSION' does change,
+!      and the atom positions move (see below), this probably did not
+!      actually constrain the EFP positions.
+!      Mystery: if IFREEZ is ignored, why does it take 17 steps instead of 22?
+!   c) using the POSITION=FIXED constraints 
+!          i) with HESS = GUESS,
+!             we find E= -129.8082919121 in 19 total steps, r.m.s.= 0.0000015
+!         ii) with HESS = CALC,
+!             we find E= -129.8082919126 in 11 total steps, r.m.s.= 0.0000016 
+!      It appears that POSITION=FIXED cannot handle a hessian with zero
+!      eigenvalues, so the initial guess is now adjusted to have that
+!      property.   note that hess=calc turns out this way too.  The
+!      manual shows us Hui knew projection must be avoided, to change
+!      the hessian to have zero T/R motions.
+!
+!   This run takes 6 seconds on 2.66 GHz Cloverton (26 Oct 2015)
+!   results have not changed since 2012
+!
+!   note: some optimized coordinates are at the end of this file
+!
+ $contrl scftyp=rhf runtyp=optimize nzvar=0 $end
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $guess  guess=huckel $end
+ $statpt opttol=1d-5 $end
+!           we have 6 T+R degrees of freedom for each EFP to freeze:
+x$statpt ifreez(1)=10,11,12,13,14,15,   16,17,18,19,20,21 $end
+!           FIXED run is a bit more robust with a computed hessian.
+ $statpt hess=guess hssend=.false. $end
+ $data
+HNO plus two waters (NH...OH(u)...OH(d) ring)...using all QM geometry here
+C1
+H     1.0   1.3419875361   0.3981155179   0.1106968988
+N     7.0   1.2204850926  -0.5804266758   0.3965444928
+O     8.0   2.2417060868  -1.0390269402   0.7592852538
+ $end
+ $efrag
+position=fixed >
+coord=cart
+fragname=H2ORHF
+O1         -1.7810788844  -0.4032410931  -0.3120521718
+H2         -1.0363309407  -0.8576268253   0.0580836462
+H3         -2.0983692051  -0.9398298617  -1.0200912901
+fragname=H2ORHF
+O1         -0.0776169231   1.9064264506  -0.6647047920
+H2         -0.3748202824   2.7113275869  -0.2742467258
+H3         -0.8198008802   1.3129893733  -0.6625148173
+ $end
+
+a) unconstrained optimization finds this:
+ H           1.0   1.4053291430   0.4200740899   0.1249831360
+ N           7.0   1.2092840913  -0.5553155703   0.3766557267
+ O           8.0   2.1880317432  -1.0832176249   0.7626430764
+ FRAGNAME=H2ORHF
+ ZO1              -1.7437892267  -0.4390824744  -0.3082905886
+ ZH2              -0.9686446479  -0.8665298903   0.0193037377
+ ZH3              -2.1496950629  -1.0395279678  -0.9129261116
+ FRAGNAME=H2ORHF
+ ZO1              -0.1100213095   1.9390494879  -0.6670138466
+ ZH2              -0.3929024437   2.7631233926  -0.3040277346
+ ZH3              -0.8678817020   1.3767817891  -0.6865359987
+
+b) IFREEZ run finds this:
+ H           1.0   1.4052779936   0.4200108532   0.1247664592
+ N           7.0   1.2093262556  -0.5554060431   0.3764288292
+ O           8.0   2.1879790071  -1.0829841235   0.7631097407
+ FRAGNAME=H2ORHF
+ ZO1              -1.7436479442  -0.4394494757  -0.3093304209
+ ZH2              -0.9684994598  -0.8669713411   0.0181574961
+ ZH3              -2.1495376694  -1.0397403119  -0.9141303027
+ FRAGNAME=H2ORHF
+ ZO1              -0.1100986317   1.9393716927  -0.6660018192
+ ZH2              -0.3931967813   2.7629286792  -0.3020131083
+ ZH3              -0.8678020410   1.3769153123  -0.6861715442
+Notice that the two EFP particles have changed their x,y,z
+
+c) fixed constraint, with guessed hessian, prints these coords
+ H           1.0   1.4071519102   0.3602366490   0.1857888824
+ N           7.0   1.1612653662  -0.6012823903   0.4479045111
+ O           8.0   2.1060678444  -1.1649820149   0.8661939940
+ FRAGNAME=H2ORHF
+ ZO1              -1.7810788844  -0.4032410931  -0.3120521718
+ ZH2              -1.0393379910  -0.8557921633   0.0565891580
+ ZH3              -2.1004408536  -0.9383486684  -1.0209571510
+ FRAGNAME=H2ORHF
+ ZO1              -0.0776169231   1.9064264506  -0.6647047920
+ ZH2              -0.3751921632   2.7123347333  -0.2737581584
+ ZH3              -0.8140290729   1.3160256597  -0.6631218022
+so the EFP particles are indeed frozen into place.
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

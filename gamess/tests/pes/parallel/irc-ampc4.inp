@@ -1,0 +1,42 @@
+!  NH3 pyramidalization, by Adams-Moulton predictor corrector integrator.
+!  the unpolarized basis 6-31G (unlike some s,p basis sets) has
+!  a saddle point for planar ammonia, and we "react" from that
+!  planar D3h saddle, towards the usual pyramidal ammonia.
+!  Note the reaction path possesses C3v rather than D3h symmetry.
+!
+!  the 4th order AMPC stepper should yield this path information:
+!     point 1, STOTAL= 0.17134, RHF E= -56.1650174004
+!     point 2, STOTAL= 0.17756, RHF E= -56.1650274863
+!     point 3, STOTAL= 0.17954, RHF E= -56.1650300241
+!     point 4, STOTAL= 0.18201, RHF E= -56.1650323457
+!  the predicted point 5 should be at S=0.187373, r(NH)=0.98716,
+!  and ang(HNH)=119.60.  Its energy is not computed in this run.
+!
+!  It is clear that the step off the saddle point
+!    INITIAL DISPLACEMENT= -0.17 ALONG MODE WITH FREQUENCY= 424.3i CM**-1
+!  isn't well matched to the step size used after that.
+!
+!  This run takes 0 seconds on a 2.66 GHz Cloverton (29 Apr 2015)
+!  results haven't changed significantly since 1999
+!
+ $CONTRL SCFTYP=RHF RUNTYP=IRC NZVAR=6 $END
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 $end
+ $DATA
+AMMONIA ... 6-31G...INTRINSIC REACTION COORDINATE
+CNV      3
+
+NITROGEN    7.0
+HYDROGEN    1.0   0.9864
+ $END
+ $GUESS  GUESS=huckel $END
+ $ZMAT   IZMAT(1)=1,1,2  1,1,3  1,1,4  2,3,1,2  2,4,1,2  3,4,1,2,3  $END
+ $IRC    PACE=AMPC4  SADDLE=.TRUE.  STRIDE=0.01  EVIB=0.0001
+         FORWRD=.TRUE.  STABLZ=.FALSE.  NPOINT=5
+         FREQ=424.3   CMODE(1)=0.0,0.0,0.123701201,
+                            0.0,0.0,-0.572915937,
+                            0.0,0.0,-0.572915937,
+                            0.0,0.0,-0.572915937      $END
+
+! TRAVIS-CI SMALL
+

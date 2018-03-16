@@ -1,0 +1,43 @@
+!  This run tests f ECP integrals and f potential in C1 geometries
+!  SCF convergence requires damping
+!
+!  FINAL E= -303.7370457644 in 23 iters, RMS= 0.026393713
+!
+!  This run takes 3 seconds on a 2.66 GHz Cloverton ( 6 Apr 2015)
+!  results have been changing little since 2005
+!
+!  5/2013: starts at -293.1712209177, rises 81 Hatree on iter #2,
+!  and kicks in the SOSCF converger at iter 13 (E= -303.729),
+!  going reasonably from that.  Huckel guess isn't so hot!
+!
+ $contrl scftyp=rhf runtyp=gradient pp=sbkjc coord=zmt nzvar=9 $end
+ $system mwords=1 timlim=10 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=sbkjc $end
+ $scf    damp=.true. $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  1,3,4,  1,1,5,
+           2,2,1,3,  2,5,1,3,  2,1,3,4,
+           3,4,3,1,2,  3,4,3,1,5 $end
+ $statpt opttol=1d-5 nstep=50 $end
+ $data
+LuClH(OH)...arbitrary C1 geometry...minimum is nearly collinear LuOH.
+C1
+Lu
+Cl  1  rLuCl
+O   1  rLuO   2 aOLuCl
+H   3  rOH    1 aHOLu   2 w
+H   1  rLuH   2 aHLuCl  3 aHLuO +1
+
+rLuCl=2.6
+rLuO=2.2
+rOH=1.0
+rLuH=1.8
+aOLuCl=108.0
+aHOLu=109.0
+aHLuCl=106.0
+aHLuO=105.0
+w=90.0
+ $end
+
+! TRAVIS-CI SMALL
+

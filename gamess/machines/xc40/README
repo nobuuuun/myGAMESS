@@ -1,0 +1,12 @@
+To compile on XC40 machine like Theta load Intel Cray environment.
+
+module list
+Currently Loaded Modulefiles:
+  1) modules/3.2.10.6                              6) cray-libsci/17.09.1                          11) gni-headers/5.0.11-2.2                       16) rca/2.1.6_g2c60fbf-2.265                     21) cray-mpich/7.6.2
+  2) eproxy/2.0.14-4.3                             7) udreg/2.3.2-7.54                             12) xpmem/2.1.1_gf9c9084-2.38                    17) atp/2.1.1                                    22) nompirun/nompirun
+  3) intel/17.0.4.196                              8) ugni/6.0.15-2.2                              13) job/2.1.1_gc1ad964-2.175                     18) perftools-base/6.5.2                         23) darshan/3.1.4
+  4) craype-network-aries                          9) pmi/5.0.12                                   14) dvs/2.7_2.1.67_geb949b6-1.0000.eb949b6.2.32  19) PrgEnv-intel/6.0.4                           24) trackdeps
+  5) craype/2.5.12                                10) dmapp/7.1.1-39.37                            15) alps/6.3.4-3.1                               20) craype-mic-knl                               25) xalt
+
+Set in install.info target to cray-xc.
+Use Cobalt submission scripts in this directory.

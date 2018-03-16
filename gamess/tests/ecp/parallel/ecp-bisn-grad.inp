@@ -1,0 +1,159 @@
+!     multi-center multi-function multi-potential ECP gradient test
+!
+!     The molecule contains one third row atom, S, with a d potential
+!                         one fourth row atom, Se, with a f potential
+!                          one fifth row atom, Sn, with a f potential
+!                  two sixth row atoms, Bi and At, with a g potential.
+!     The heavy atoms all have d, f, and g functions, and for good
+!     measure the hydrogens have p shells.  The SBKJC valence basis
+!     sets contain L shells.  Thus every possible kind of one, two,
+!     and three center ECP integral and derivative ECP integral will
+!     be encountered in performing this calculation, although many of
+!     them involve uncontracted GTOs.
+!
+!     The starting geometry is optimized SBKJC with d on Bi only (0.185).
+!     There are 215 AOs, 165 MOs in the variation space, and 16 occ. MOs.
+!
+!     FINAL RHF E= -40.9437415615, 14 iters, RMS grad= 0.005478206
+!
+!     this run takes 213 seconds on 2.66 GHz Cloverton ( 6 Apr 2015)
+!     the results have not changes since fixing a bug in 2008
+!
+!     ---------------------------------------------------------------------
+!     Since the geometry optimization is not monotonic, we can conclude
+!     that there are still small errors in the ECP integrals.
+!     geometry opt. takes 4659 s.conds on 2.66 GHz Cloverton (21 March 2008)
+!
+!  For RUNTYP=GRADIENT,
+!  F.NAL RHF E= -40.9437415615, 14 iters, R.S GRAD= .005478208
+!  prior to changing RECUR in ecp.src in April 2008:
+!            E= -40.9437373846, 14 iters,        G_rad = .005478429
+!
+!  An NWchem run will obtain
+!            Total SCF energy =    -40.943741252125  (~0.3 microHartree diff.)
+!         One-electron energy =   -192.557005977760
+!         Two-electron energy =     87.509710408406
+!    Nuclear repulsion energy =     64.103554317229
+!  NWchem will not geometry optimize,
+!    "sp functions cannot be used in the integral derivative code yet"
+!
+!  The geometry optimization below is still not monotonic:
+!
+!  For RUNTYP=OPTIMIZE, the best energy is before the zero gradient,
+!  F_INAL RHF E= -40.9437415615,14 iters, R_MS G_RAD= 0.0054781
+!  F_INAL RHF E= -40.9446980191, 7 iters, R_MS G_RAD= 0.0038696
+!  F_INAL RHF E= -40.9453339623, 8 iters, R_MS G_RAD= 0.0021384
+!  F_INAL RHF E= -40.9455991381, 9 iters, R_MS G_RAD= 0.0004660
+!  F_INAL RHF E= -40.9456074471, 6 iters, R_MS G_RAD= 0.0002209
+!  F_INAL RHF E= -40.9456122853, 6 iters, R_MS G_RAD= 0.0001378
+!  F_INAL RHF E= -40.9456153667, 6 iters, R_MS G_RAD= 0.0001511
+!  F_INAL RHF E= -40.9456183947, 6 iters, R_MS G_RAD= 0.0001540
+!  F_INAL RHF E= -40.9456214140, 6 iters, R_MS G_RAD= 0.0001580
+!  F_INAL RHF E= -40.9456251235, 7 iters, R_MS G_RAD= 0.0001857
+!  F_INAL RHF E= -40.9456311035, 7 iters, R_MS G_RAD= 0.0002347
+!  F_INAL RHF E= -40.9456404439, 8 iters, R_MS G_RAD= 0.0002765
+!  F_INAL RHF E= -40.9456525854, 8 iters, R_MS G_RAD= 0.0002696
+!  F_INAL RHF E= -40.9456665055, 8 iters, R_MS G_RAD= 0.0002410
+!  F_INAL RHF E= -40.9456765577, 8 iters, R_MS G_RAD= 0.0002489
+!  F_INAL RHF E= -40.9456803169, 7 iters, R_MS G_RAD= 0.0001881
+!  F_INAL RHF E= -40.9456831177, 7 iters, R_MS G_RAD= 0.0000682
+!  F_INAL RHF E= -40.9456836871, 5 iters, R_MS G_RAD= 0.0000311
+!  F_INAL RHF E= -40.9456839036, 6 iters, R_MS G_RAD= 0.0000284
+!  F_INAL RHF E= -40.9456840099, 5 iters, R_MS G_RAD= 0.0000227
+!  F_INAL RHF E= -40.9456840800, 5 iters, R_MS G_RAD= 0.0000134
+!  F_INAL RHF E= -40.9456841250, 5 iters, R_MS G_RAD= 0.0000113
+!  F_INAL RHF E= -40.9456841725, 5 iters, R_MS G_RAD= 0.0000153
+!  F_INAL RHF E= -40.9456842469, 5 iters, R_MS G_RAD= 0.0000204
+!  F_INAL RHF E= -40.9456843954, 6 iters, R_MS G_RAD= 0.0000284
+!  F_INAL RHF E= -40.9456846315, 6 iters, R_MS G_RAD= 0.0000367
+!  F_INAL RHF E= -40.9456849461, 6 iters, R_MS G_RAD= 0.0000410
+!  F_INAL RHF E= -40.9456851941, 6 iters, R_MS G_RAD= 0.0000343
+!  F_INAL RHF E= -40.9456853224, 5 iters, R_MS G_RAD= 0.0000205
+!  F_INAL RHF E= -40.9456853472, 5 iters, R_MS G_RAD= 0.0000116  <===
+!  F_INAL RHF E= -40.9456853364, 4 iters, R_MS G_RAD= 0.0000074
+!  F_INAL RHF E= -40.9456853279, 4 iters, R_MS G_RAD= 0.0000045
+!  F_INAL RHF E= -40.9456853233, 4 iters, R_MS G_RAD= 0.0000029 (nserch=32)
+!    if the last coords are placed into RUNTYP=GRADIENT, we get
+!             E= -40.9456853230,13 iters, R_M_S=      0.000002822
+!  The NSERCH= 0 is 0.31 microHartree below NWchem's energy.
+!  The NSERCH= 0 is 4.18 microHartree below the previous results,
+!  and NSERCH=32 is 4.49 microHartree below the previous result.
+!
+!  prior to changing RECUR in April 2008,
+!  F_INAL RHF E=  -40.9437373846,14 iters, R_MS G_RAD= 0.0054783
+!  F_INAL RHF E=  -40.9446938779, 7 iters, R_MS G_RAD= 0.0038695
+!  F_INAL RHF E=  -40.9453298316, 8 iters, R_MS G_RAD= 0.0021380
+!  F_INAL RHF E=  -40.9455948724, 9 iters, R_MS G_RAD= 0.0004654
+!  F_INAL RHF E=  -40.9456031954, 6 iters, R_MS G_RAD= 0.0002212
+!  F_INAL RHF E=  -40.9456080633, 6 iters, R_MS G_RAD= 0.0001376
+!       ...snipped...
+!  F_INAL RHF E=  -40.9456808302, 5 iters, R_MS G_RAD= 0.0000207
+!  F_INAL RHF E=  -40.9456808556, 5 iters, R_MS G_RAD= 0.0000117  <====
+!  F_INAL RHF E=  -40.9456808460, 4 iters, R_MS G_RAD= 0.0000074
+!  F_INAL RHF E=  -40.9456808392, 4 iters, R_MS G_RAD= 0.0000046
+!  F_INAL RHF E=  -40.9456808346, 4 iters, R_MS G_RAD= 0.0000029 (nserch=32)
+!
+ $contrl scftyp=rhf runtyp=gradient pp=sbkjc nzvar=21 ispher=1 $end
+ $system timlim=999 mwords=50 $end
+ $statpt opttol=0.00001 nstep=40 $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $data
+ECP test on artificial molecule...Bi(SnH3)(SeH)At=S
+C1
+BI         83.0    .4070872775    .7782398266   -.3936725280
+     sbkjc
+     d 1 ; 1 0.185 1.0
+     f 1 ; 1 0.15 1.0
+     g 1 ; 1 0.12 1.0
+
+SN         50.0   1.1414728458   1.1356145862   2.3848588864
+     sbkjc
+     d 1 ; 1 0.183 1.0
+     f 1 ; 1 0.15 1.0
+     g 1 ; 1 0.12 1.0
+
+H           1.0   1.2527257999   -.4214651586   3.0224606970
+     sbkjc
+     p 1 ; 1 1.0 1.0
+
+H           1.0   2.6177043590   1.9484947995   2.3495726821
+     sbkjc
+     p 1 ; 1 1.0 1.0
+
+H           1.0   -.1127047214   2.0405969627   3.0535321693
+     sbkjc
+     p 1 ; 1 1.0 1.0
+
+SE         34.0   2.0684890776  -1.1125182760  -1.2134154093
+     sbkjc
+     d 1 ; 1 0.338 1.0
+     f 1 ; 1 0.25  1.0
+     g 1 ; 1 0.20  1.0
+
+H           1.0   2.1422107340   -.5803659875  -2.5852472725
+     sbkjc
+     p 1 ; 1 1.0 1.0
+
+AT         85.0  -2.1302318016   -.6171154150   -.2143212107
+     sbkjc
+     d 1 ; 1 0.225 1.0
+     f 1 ; 1 0.19  1.0
+     g 1 ; 1 0.15  1.0
+
+S          16.0    .3754817088   2.6319401078  -1.8885256240
+     sbkjc
+     d 1 ; 1 0.650 1.0
+     f 1 ; 1 0.550 1.0
+     g 1 ; 1 0.45 1.0
+
+ $end
+ $zmat izmat(1)=1,1,2,  1,2,3,  1,2,4,  1,2,5,
+           1,1,6,  1,6,7,  1,1,8,  1,1,9
+           2,2,1,6,  2,8,1,6,  2,9,1,6,
+           3,2,1,6,7,  3,8,1,6,7,  3,9,1,6,7
+           2,3,2,1,  2,4,2,1,  2,5,2,1,   2,7,6,1,
+           3,3,2,1,6,  3,4,2,1,6,  3,5,2,1,6  $end
+
+! TRAVIS-CI SMALL
+

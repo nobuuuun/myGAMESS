@@ -1,0 +1,83 @@
+!   this tests restart another test, namely
+!   MD NVE simulation with 1 ab initio water and 3 RHF-like EFP1 waters.
+!   This test comes from Soohaeng.
+!
+!   The restart is done by picking up the data packet at the 100th
+!   step of the 200 step NVE test case (time step 50.0 fs), to
+!   run 100 more steps.  Its coordinates are placed in $data
+!   and $efrag, and the $md is simply appended to the file (as it
+!   contains switching off the Maxwell/Boltzmann initializations).
+!   Thus the only change in $md done by a human is asking for just
+!   100 additional steps in this run.  The 100+100 restart gives
+!   almost exactly the same point at the 200 step run:
+!
+!        after 100+100 total steps,
+!    AT T=        100.00 fsec, this run's step no.=     100
+!    POT  ENERGY      =     -4.772472626E+04 KCAL/MOL
+!    TRANS    KE      =           3.90794279 KCAL/MOL
+!    ROT      KE      =           0.89154808 KCAL/MOL
+!    TOT      KE      =           4.79949087 KCAL/MOL
+!    TOT  ENERGY      =     -4.771992677E+04 KCAL/MOL -0.03190253
+!    TEMPERATURE      =         178.902      K
+!   
+!   this test takes 38 seconds on a 2.66 GHz Cloverton (10 Dec 2008)
+!
+ $contrl scftyp=rhf runtyp=md $end
+ $basis  GBASIS=DH NPFUNC=1 NDFUNC=1 $END
+ $md     mdint=vverlet nsteps=100 dt=0.50d-15
+         batht=200.0
+         mbt=.true. mbr=.true. jevery=1 kevery=10 $end
+         
+ $data
+H2O
+C1
+O           8.0    0.5150017302     -1.0892818829     -0.0153975971
+H           1.0    0.8150787263     -1.8575410984      0.4436009545
+H           1.0    0.0627085293     -0.5430914410      0.5642448591
+ $end
+
+ $efrag
+
+FRAGNAME=H2ORHF  #  1
+ZO1                1.088900571042    3.298673654431   -1.016565358261
+ZH2                1.682051166252    2.610892388058   -1.273485102725
+ZH3                0.216567969862    2.984921798580   -1.193974658850
+FRAGNAME=H2ORHF  #  2
+ZO1               -2.800105061049   -4.486760569270    1.581596869226
+ZH2               -2.619323002333   -3.928051694232    0.842651205277
+ZH3               -2.723503042821   -5.375980903069    1.274517428643
+FRAGNAME=H2ORHF  #  3
+ZO1               -3.030857838978   -1.893689503238    3.540669552594
+ZH2               -2.862657914896   -2.772781346482    3.241028482731
+ZH3               -3.889353826316   -1.900361528138    3.932866668694
+ $end
+
+ $md read=.true. mbt=.false. mbr=.false. ttotal=    5.00E-14
+tvelqm(1)=     ! QM atom TRANS. VELOCITIES (BOHR/PS) !
+  -5.943669758E+00   3.016584599E+00  -3.867185583E-01
+  -1.549390948E+01   6.912770383E+00  -1.471080346E+01
+   8.066335206E+01  -2.883451574E+01   1.231333132E+01
+tvel(1)=     ! efp TRANSLATIONAL VELOCITIES (BOHR/PS) !
+  -4.363898722E+00   1.236719846E+01   8.174534235E+00
+  -1.257965863E+00  -8.088463111E+00   1.064282266E+00
+   5.803841395E+00   8.600000236E+00   4.380879106E+00
+quat(1)=     ! efp QUATERNIONS !
+  -4.508243934E-01  -3.225347661E-01   5.220082153E-01   6.482562103E-01
+  -1.473023942E-01  -1.189116455E-01   9.817670348E-01   1.719053776E-02
+  -7.184300959E-01  -1.578889327E-01   4.325022011E-01   5.214126276E-01
+rvel(1)=     ! efp ANGULAR VELOCITY (RAD/PS) !
+  -7.377629789E+00   2.274953937E+01  -4.850838611E+00
+  -7.826580481E-01  -8.938920843E+00  -1.324506779E+01
+  -6.142500423E+00  -1.544636087E+01   2.850255440E+00
+quat1d(1)=     ! efp QUATERNION 1ST DERIV. !
+  -4.665891362E+12  -9.422458574E+12  -3.578044070E+12  -5.051705889E+12
+   1.248522766E+12   3.405726651E+12   4.752696762E+11   7.113614109E+12
+   5.130274386E+12   2.762758540E+12   4.168962889E+12   4.447277967E+12
+quat2d(1)=     ! efp QUATERNION 2ND DERIV. !
+   9.449830325E+25  -1.320905468E+25  -1.919203541E+26  -1.596534981E+25
+  -1.532506879E+26   1.860255568E+26  -6.423932797E+25  -7.985228457E+25
+   7.561940681E+25   2.967579728E+26  -7.639348197E+23   5.830579515E+25
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,26 @@
+!   Mg2O2...160 AOs and 138 MOs
+!   ground state is a singlet, first excited state is a triplet.
+!   there are 12 chemical cores, 8 valence orbitals, 118 virtuals
+!   created in 2010, updated to new Mg basis set in 2015.
+!
+!   FINAL E= -548.9715319267, 17 iters, <S**2>=2.150, E(MP2)= -549.4906405615
+!
+!   This run takes 93 seconds on 2.66 GHz Cloverton (3 Nov 2010)
+!       p=4 needed 24
+!
+ $CONTRL SCFTYP=UHF MULT=3 mplevl=2 runtyp=energy ispher=1 $END
+ $SYSTEM parall=.true.  MWORDS=5  MEMDDI=20 $END
+
+ $scf    dirscf=.true. $end
+ $BASIS  GBASIS=cct $end
+ $DATA
+Mg2O2 square...arbitrary diamond shape chosen
+Dnh  2
+
+Mg  12   0.0  1.34  0.0
+O    8   1.35 0.0   0.0
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

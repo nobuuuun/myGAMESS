@@ -1,0 +1,48 @@
+!
+! Two pyrazine molecules at 20 A distance.
+!
+! INTOMP parameter in $INTGRL controls the algorithm of
+! MPI/OpenMP workload separation. INTOMP=2 assumes
+! MPI parallelization over top (I) and 2nd (J) loops collapsed,
+! and OpenMP parallelization over 3nd (K) and 4th (L) loops
+! collapsed.
+!
+! Method: RHF/6-31G*
+! Final energy:
+!   FINAL RHF ENERGY IS     -525.1379673445
+!
+ $CONTRL
+  SCFTYP=rhf
+!  dfttyp=b3lyp
+  RUNTYP=Energy
+  maxit=50 nprint=4 $END
+ $SYSTEM TIMLIM=50 MEMORY=10000000 $END
+ $SCF    DIRSCF=.TRUE. CONV=1.0d-7 FDIFF=.false. $END
+ $BASIS  GBASIS=n31 NGAUSS=6 npfunc=1 $END
+ $INTGRL INTOMP=2 $END
+! $BASIS  GBASIS=n31 NGAUSS=6 npfunc=1 ndfunc=1 $END
+ $GUESS  GUESS=huckel $END
+ $DATA
+Two pyrazine molecules on the 20 A distance from each other
+C1
+NITROGEN    7.0      1.386350000        -0.291970000         0.013520000
+NITROGEN    7.0     -1.386330000         0.292270000         0.006810000
+CARBON      6.0      0.918820000         0.970770000        -0.018780000
+CARBON      6.0     -0.448890000         1.258970000        -0.022080000
+CARBON      6.0     -0.918810000        -0.970950000         0.007300000
+CARBON      6.0      0.448860000        -1.259140000         0.010580000
+HYDROGEN    1.0      1.661070000         1.765960000        -0.025760000
+HYDROGEN    1.0     -0.807120000         2.286040000        -0.031760000
+HYDROGEN    1.0      0.807140000        -2.286110000         0.027350000
+HYDROGEN    1.0     -1.661090000        -1.766020000         0.021390000
+NITROGEN    7.0      1.386350000        -0.291970000        20.013520000
+NITROGEN    7.0     -1.386330000         0.292270000        20.006810000
+CARBON      6.0      0.918820000         0.970770000        19.981220000
+CARBON      6.0     -0.448890000         1.258970000        19.977920000
+CARBON      6.0     -0.918810000        -0.970950000        20.007300000
+CARBON      6.0      0.448860000        -1.259140000        20.010580000
+HYDROGEN    1.0      1.661070000         1.765960000        19.974240000
+HYDROGEN    1.0     -0.807120000         2.286040000        19.968240000
+HYDROGEN    1.0      0.807140000        -2.286110000        20.027350000
+HYDROGEN    1.0     -1.661090000        -1.766020000        20.021390000
+ $END

@@ -1,0 +1,33 @@
+!    acetate anion...heterogenous C-PCM test...from Hui and Dejun Si
+!         D.Si, H.Li, J.Chem.Phys. 131, 044123/1-8 (2009)
+!    although the basis set (and other info???) differ from its Table 2
+!
+!    FINAL E= -227.3819259022, 11 iters, RMS grad= 0.005421193
+!    this run only has electrostatics, ES= -69.76 KCAL/MOL
+!
+!    this run takes 57 seconds on 2.66 GHz Cloverton ( 2 Oct 2015)
+!    results unchanged since 2009
+!
+ $CONTRL SCFTYP=RHF RUNTYP=GRADIENT ICHARG=-1 ISPHER=1 $END
+ $system mwords=2 $end
+
+ $PCM    SOLVNT=WATER  EPS=4.0  $END
+ $PCMCAV RADII=SUAHF EPSHET(5)=78.39, 78.39, 78.39 $END
+
+ $BASIS  GBASIS=ACCD $END
+ $SCF    DIIS=.T. DIRSCF=.T. FDIFF=.F. $END
+ $DATA
+acetate, Heterogenous-CPCM with EPS=4 for CH3, EPS=78.39 for COO-
+C1
+H           1.0  -0.1897245234   0.0620463581   0.0345182233
+C           6.0  -0.0247642785  -0.0319868016   1.1053140150
+H           1.0   1.0404873744  -0.1008593759   1.2977233752
+H           1.0  -0.4127598617   0.8728221541   1.5679707571
+C           6.0  -0.7870059993  -1.2516421130   1.6400407477
+O           8.0  -0.1350396308  -2.1247235241   2.2310184944
+O           8.0  -2.0111930008  -1.2576568275   1.4324142872
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

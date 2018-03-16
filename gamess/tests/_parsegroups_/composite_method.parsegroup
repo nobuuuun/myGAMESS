@@ -1,0 +1,50 @@
+{
+  "parse_header" : "COMPOSITE METHOD",
+  "parse_group" : [
+   {
+     "regex_string" : "^    ENERGY CORRECTION  .*$",
+     "parse_name"   : "ENERGY CORRECTION 1 - COMPOSITE METHOD",
+     "parse_precision" : 8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_instance" : 1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^    ENERGY CORRECTION  .*$",
+     "parse_name"   : "ENERGY CORRECTION 2 - COMPOSITE METHOD",
+     "parse_precision" : 8,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_instance" : 2,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^    COMPOSITE ENERGY @ 0K   =.*$",
+     "parse_name"   : "ENERGY @ 0K - COMPOSITE METHOD",
+     "parse_precision" : 6,
+     "parse_recipe" : "firstinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^    COMPOSITE ENERGY @ 298K =.*$",
+     "parse_name"   : "ENERGY @ 298K - COMPOSITE METHOD",
+     "parse_precision" : 6,
+     "parse_recipe" : "firstinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^    COMPOSITE ENTHALPY      =.*$",
+     "parse_name"   : "ENTHALPY - COMPOSITE METHOD",
+     "parse_precision" : 6,
+     "parse_recipe" : "firstinstance_firstindex",
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^    COMPOSITE FREE ENERGY   =.*$",
+     "parse_name"   : "FREE ENERGY - COMPOSITE METHOD",
+     "parse_precision" : 6,
+     "parse_recipe" : "firstinstance_firstindex"
+   }
+  ]
+}

@@ -1,0 +1,53 @@
+!  ROHF case, derived from the MCSCF + SCRF test on H2CNH
+!
+!  FINAL energy= -93.9981760402, 13 iters.
+!         INDUCED DIPOLE     ATOMIC UNITS          DEBYE
+!               X(IND)           -0.00936         -0.02379
+!               Y(IND)           -0.01163         -0.02955
+!               Z(IND)            0.00000          0.00000
+!
+!  This run takes 8 seconds on a 2.66 GHz Cloverton (11 Apr 2013)
+!
+ $contrl scftyp=rohf mult=3 runtyp=energy nzvar=9 $end
+ $system mwords=2 memddi=10 $end
+ $guess  guess=huckel $end
+ $zmat   izmat(1)= 1,2,1,  1,3,2,  2,3,2,1,  1,5,3,  2,5,3,2,
+            3,5,3,2,1,  1,4,3,  2,4,3,2,  3,4,3,2,1  $end
+ $scrf   radius=2.00 dielec=80.0 $end
+ $data
+H2C=NH...at the rotational transition state
+Cs
+
+H           1.0     -1.1182540878       .8561180363       .0000000000
+   tzv
+   s 1 ; 1 0.036  1.0
+   p 1 ; 1 2.0    1.0
+   p 1 ; 1 0.5    1.0
+   d 1 ; 1 1.0    1.0
+       
+N           7.0      -.7231013873      -.0878084615       .0000000000
+   tzv
+   l 1 ; 1 0.0639 1.0 1.0
+   d 1 ; 1 1.96   1.0
+   d 1 ; 1 0.49   1.0
+   f 1 ; 1 1.0    1.0
+       
+C           6.0       .7315113444       .0629083616       .0000000000
+   tzv
+   l 1 ; 1 0.0438 1.0 1.0
+   d 1 ; 1 1.44   1.0
+   d 1 ; 1 0.36   1.0
+   f 1 ; 1 1.0    1.0
+       
+H           1.0      1.2276474767      -.1925579665       .9251216425
+   tzv
+   s 1 ; 1 0.036  1.0
+   p 1 ; 1 2.0    1.0
+   p 1 ; 1 0.5    1.0
+   d 1 ; 1 1.0    1.0
+       
+ $end      
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

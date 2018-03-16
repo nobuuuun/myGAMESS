@@ -1,0 +1,101 @@
+{
+  "name": "moro-wat3.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-228.1078808942",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "ELECTROSTATIC ENERGY - MOROKUMA",
+      "value": "-0.036277",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "EXCHANGE REPULSION ENERGY - MOROKUMA",
+      "value": "0.023623",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "POLARIZATION ENERGY - MOROKUMA",
+      "value": "-0.003624",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "CHARGE TRANSFER ENERGY - MOROKUMA",
+      "value": "-0.011503",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "HIGH ORDER COUPLING ENERGY - MOROKUMA",
+      "value": "0.000224",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "TOTAL INTERACTION ENERGY - MOROKUMA",
+      "value": "-0.027557",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "CHARGE TRANSFER ENERGY 1 - MOROKUMA",
+      "value": "-0.003970",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "CHARGE TRANSFER ENERGY 2 - MOROKUMA",
+      "value": "-0.003859",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "EPL 1 ENERGY - MOROKUMA",
+      "value": "-0.001099",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "EPL 2 ENERGY - MOROKUMA",
+      "value": "-0.001079",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "KITAURA-MOROKUMA ANALYSIS",
+      "name": "HIGH ORDER COUPLING PL ENERGY - MOROKUMA",
+      "value": "-0.000413",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

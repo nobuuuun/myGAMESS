@@ -1,0 +1,1755 @@
+C 18 Apr 16 - YN  - updates for FMO 5.2
+C 29 Sep 14 - YN  - Implement Density-Functional Tight-Binding Method
+C
+C*MODULE DFTBGR    *DECK DFTB_GRAD
+C>
+C>    @brief Gradient of DFTB
+C>
+C>    @details Calculate gradient of DFTB
+C>             If FMO-DFTB, subtract ESP contribution by modifying
+C>             Lagrangian.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date Feb, 2016- Yoshio Nishimoto
+C>    - Added time-dependent and PCM
+C>
+C
+      SUBROUTINE DFTB_GRAD
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000, MXATM=2000)
+      PARAMETER (MXSPE=10)
+      PARAMETER (ZERO=0.0D+00, HALF=0.5D+00, TWO=2.0D+00)
+      LOGICAL TRIPLET,SG1T,TAMMD,TPA,ALPHKWD,BETAKWD
+      LOGICAL GOPARR,DSKWRK,MASWRK,mdout
+      DOUBLE PRECISION MD
+C
+      COMMON /DFTB  / DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /DFTBRE/ REPCUT(MXSPE,MXSPE),NUMREP(MXSPE,MXSPE),
+     *                LREPINTV(MXSPE,MXSPE),LREPSHORT(MXSPE,MXSPE),
+     *                LREPCOEFF(MXSPE,MXSPE)
+      COMMON /DFTBSK/ SKDIM(MXSPE,MXSPE),SKSPIN(MXSPE),QREFL(3,MXSPE),
+     *                HUBBL(3,MXSPE),QREF(MXSPE),HUBB(MXSPE),SKCUT2,
+     *                NEEDSK,LSKHTAB(MXSPE,MXSPE),LSKSTAB(MXSPE,MXSPE),
+     *                LSKGRID(MXSPE,MXSPE),LSKSELF(MXSPE)
+      COMMON /EFLDC / EVEC(3),EFLDL
+      LOGICAL :: EFLDL
+C     COMMON /ENRGYS/ ENUCR,EELCT,ETOT1,SZ,SZZ,ECORE,ESCF,EERD,E1,E2,
+C    *                VEN,VEE,EPOT,EKIN,ESTATE(MXRT),STATN,EDFT(2),EDISP
+      COMMON /EFPFMO/ RUNEFP,REFFMO,REPNUCEFP,IEFPFMO,ISWENUC,EFPEFP
+      COMMON /FMCOM / X(1)
+      COMMON /FMODTB/ LGAMMAGLOB,LZREF,LISPE,LSHIFTG,LSHIFTCT,
+     *                LGAMMAD,MODESD,MODGAMMA,LDCTMP,LGAMMA3,LGAMMA3D,
+     *                LNBOND,LCTMUL
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      COMMON /FMOOPT/ ESPSCA(9),RESPAP(2),RESPPC(2),RESDIM,RESTRI(4),
+     *                RCORSD,RESPCT,CONVFG,CNVDMP,COROFF,RFLMO(4),
+     *                ORSHFT,ORSHFT2,CNVAFO,ASCREEN(4),IXESP,MXITFG,
+     *                NGUESS,NBSSE,MODORB,MODPAR,IRSTSTP,IRSTLAY,NPRFMO,
+     *                NFMOPAL,MODPRP,MAXL1C,IPIEDA,MODGRD,MODESP,IVMUL,
+     *                MODLMO,NOPDEN,MOFOCK,MODFD,MODFMM,NCENTM,ndualb
+      COMMON /FMOPNT/ LICHFG,LMULFG,LIDMREC,LFRGNAM,LLAYFRG,LINDAT,
+     *                LNCBS,LFMOZAN,LFMOC,LFMOMAS,LIZBAS,LIAGLOB,LIBDGH,
+     *                LIABDFG,LJABDFG,LNCAO,LIDXCAO,LIAPRJO,LJAPRJO,
+     *                LCOREAO,LOCCCOR,LSHIFTB,LIODFMO,LFMODA,LFMODB,
+     *                LFMOESPA,LFMOESPB,LLOCFMO,LSCFFRG,LFMOSCF,LRIJ,
+     *                LPOPMUL,LPOPMAT,LIALOC,LINDBD,LIATFRG,LINDFRG,
+     *                LINDGFRG,LNATFRG,LNAT0FRG,LIANFRG,LZANFRG,LCFRG,
+     *                LLIBISH,LLIBNSH,LLIBNG,LINDATG,LFMOBUF(3),LFMODE,
+     *                LNUMFRG,LLOCTAT,LIAOGLOB,LLOADM,LFMOGE,LDGRID,
+     *                LIODCFMO,LJOB2GRP,LFMOPG,LEMOCDR,LUNTXYZ,LUNTROT,
+     *                LSTONEP,LMAPSU,LFRGMUL,LCLMO,LIALMO,LINDLMO,
+     *                LATCLMO,LLMOBDF,LFGFLMO,LNFGLMO,LLFGLMO,LPFGLMO,
+     *                LPOPDMAT,LIDMPNT,LIDDPNT,LIVMPNT,LIACTFG,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      COMMON /FUNCT / ENERGY,EGRAD(3,MXATM)
+C     COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+C    *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+C    *                MeUniv,NPUniv
+C     LOGICAL :: ISGDDI,PAROUT,INITGDDI,wasgddi
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /INFOTD/ CNVTOL,PFREQ(2),
+     *                JANST,NRADT,NTHET,NPHIT,NLEBT,
+     *                NSTAT,NTRIAL,MAXVEC,NTHST,IRECTD,ITDFG,ITDPRP,
+     *                TRIPLET,SG1T,NONEQR,TAMMD,TPA,ALPHKWD,BETAKWD
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /MACHSW/ KDIAGG,ICORFL,IXDR,MODIO,mem10,lpnt10,mem10m
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PCMPAR/ IPCM,NFT26,NFT27,IKREP,IEF,IP_F,NFMOPCM,IHET
+C     COMMON /RESTAR/ TIMLIM,IREST,NREC,INTLOC,IST,JST,KST,LST
+C     COMMON /RUNLAB/ TITLE(10),ANAM(MXATM),BNAM(MXATM),BFLAB(MXAO)
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+      LOGICAL :: DC
+      LOGICAL DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+
+      DOUBLE PRECISION :: SHIFT(MXATM),DQ(NAT)
+      DOUBLE PRECISION :: AUM(9,9),BUM(9,9),VEC(3)
+C
+      DATA CHECK/8HCHECK   /, DEBUG/8HDEBUG   /, DBUGME/8HRHFCL   /
+      DATA RHF/8HRHF     /
+      DATA ROHF/8HROHF    /
+      DATA UHF/8HUHF     /,MD/8HMD      /,RNONE/8HNONE    /
+C
+      INTEGER :: O,MN0(3),IJ0(3)
+      CHARACTER(3) :: CHARA
+      LOGICAL :: SOME,DFTD,SKP
+C
+      IF(MASWRK) THEN
+        SOME   = NPRINT.NE.-5 .OR. EXETYP.EQ.DEBUG .OR. EXETYP.EQ.DBUGME
+      END IF
+      mdout=nfg.eq.0.or.(runefp.ne.md.or.iand(modio,16).eq.0)
+     *      .and.iand(nprfmo,3).lt.2
+      if (iand(nprfmo,3).eq.3) mdout=.false.
+C
+      IF (MASWRK.AND.SOME) THEN
+        WRITE (IW,*)
+        WRITE (IW,'(5X,"-------------------------",5X)')
+        WRITE (IW,'(5X,"FIRST DERIVATIVE FOR DFTB",5X)')
+        WRITE (IW,'(5X,"-------------------------",5X)')
+        WRITE (IW,*)
+      END IF
+C
+C     ----- START THE CLOCKS -----
+C
+      TIM0 = ZERO
+C     TIM1 = ZERO
+      CALL TSECND(TIM0)
+C     TLEFTS = TIMLIM - TIM0
+C
+      DFTD = .FALSE.
+      IF (IDFTBD.NE.0) THEN
+        DC = .TRUE.
+        IF (IDFTBD.EQ.3) DFTD = .TRUE.
+      ELSE
+        DC = .FALSE.
+      END IF
+C
+      L1 = NUM
+      L2 = (L1*L1+L1)/2
+      L3 = L1*L1
+C
+C     ----- ALLOCATE MEMORY -----
+C
+      CALL VALFM(LOADFM)
+      CALL GOTFM(NGOTMX)
+      LSCR    = LOADFM  + 1
+      LIWRK   = LSCR    + L1*8
+      LWRK    = LIWRK   + MAX(L1,NAT+1)
+      LWRK1   = LWRK    + L1
+      LVEC    = LWRK1   + L3
+      LD      = LVEC    + L3
+      LD2     = LD      + L2
+      LEIG    = LD2     + L2
+      LOCC    = LEIG    + L1
+      LMULA   = LOCC    + L1
+      LMULS   = LMULA   + NAT
+      LGAMMA  = LMULS   + NSHELL
+      IF (SRSCC) THEN
+        LDIST = LGAMMA  + (NSHELL*NSHELL+NSHELL)/2
+      ELSE
+        LDIST = LGAMMA  + (NAT*NAT+NAT)/2
+      END IF
+      LAST    = LDIST   + (NAT*NAT+NAT)/2
+      IF (DFTB3) THEN
+        LGAM3 = LAST
+        IF (SRSCC) THEN
+          LAST  = LGAM3 + NSHELL*NSHELL
+        ELSE
+          LAST  = LGAM3 + NAT*NAT
+        END IF
+      ELSE
+        LGAM3 = LAST
+      END IF
+      IF (SCFTYP.EQ.UHF) THEN
+        LDA   = LD
+        LDA2  = LD2
+C
+        LDB2  = LAST
+        LVB   = LDB2    + L2
+        LDB   = LVB     + L3
+        LEB   = LDB     + L2
+        LBOC  = LEB     + L1
+        LSHIFTS  = LBOC    + L1
+        LSHIFTSH = LSHIFTS + NSHELL
+        LAST     = LSHIFTSH+ NSHELL
+      END IF
+      IF (SRSCC.AND.SCFTYP.NE.UHF) THEN
+        LSHIFTS  = LAST
+        LSHIFTSH = LSHIFTS + NSHELL
+        LAST     = LSHIFTSH+ NSHELL
+      END IF
+      IF (TDDFTYP.NE.RNONE) THEN
+        IF (NFG.NE.0) THEN
+          WRITE (IW,*) "NOT YET CONSIDERED"
+          CALL ABRT
+        END IF
+        LDQES    = LAST
+        LDQXY    = LDQES   + NAT
+        LSHIFTES = LDQXY   + NAT
+        LSHIFTXY = LSHIFTES+ NAT
+        LDGS     = LSHIFTXY+ NAT
+        LXYAO    = LDGS    + L2
+        LAST     = LXYAO   + L2
+      END IF
+      NEED    = LAST - LOADFM - 1
+C
+C     ----- GET MEMORY -----
+C
+      CALL GETFM(NEED)
+C
+      IF (EXETYP.EQ.CHECK) GO TO 100
+C
+C     ----- INITIALIZE GRADIENT -----
+C
+      CALL VCLR(EGRAD,1,3*NAT)
+C
+C     ----- RESTORE SEVERAL QUANTITIES -----
+C
+      !! EIGENVECTORS
+      CALL DAREAD(IDAF,IODA,X(LVEC),L3,15,0)
+      !! DENSITY MATRIX
+      CALL DAREAD(IDAF,IODA,X(LD),L2,16,0)
+      IF (SCFTYP.EQ.ROHF) THEN
+        CALL DAREAD(IDAF,IODA,X(LWRK1),L2,20,0)
+        CALL VADD(X(LD),1,X(LWRK1),1,X(LD),1,L2)
+      END IF
+      !! EIGENVALUES
+      CALL DAREAD(IDAF,IODA,X(LEIG),L1,17,0)
+      !! OCCUPATION NUMBER (ALPHA)
+      CALL DAREAD(IDAF,IODA,X(LOCC),L1,562,0)
+      IF (SCFTYP.EQ.UHF) THEN
+        CALL DAREAD(IDAF,IODA,X(LVB),L3,19,0)
+        CALL DAREAD(IDAF,IODA,X(LDB),L2,20,0)
+        CALL DAREAD(IDAF,IODA,X(LEB),L1,21,0)
+        !! SPIN SHIFT MATRIX
+        IF (SCC) CALL DAREAD(IDAF,IODA,X(LSHIFTS),NSHELL,561,0)
+        !! OCCUPATION NUMBER (BETA)
+        CALL DAREAD(IDAF,IODA,X(LBOC),L1,563,0)
+      END IF
+      IF (SCC) THEN
+        !! ATOMIC MULLIKEN POPULATION
+        CALL DAREAD(IDAF,IODA,X(LMULA),NAT,556,0)
+        !! SHELL-RESOLVED MULLIKEN CHARGE (NOT POPULATION)
+        CALL DAREAD(IDAF,IODA,X(LMULS),NSHELL,557,0)
+C       !! AZIMUTHAL MULLIKEN POPULATION
+C       CALL DAREAD(IDAF,IODA,X(LMUL),NUM,902,0)
+        !! SHIFT MATRIX
+        CALL DAREAD(IDAF,IODA,SHIFT,NAT,559,0)
+        DO I = 1, NAT
+          DQ(I) = X(LMULA+I-1) - ZREF(I) !! \Delta q_A
+        END DO
+        IF (SRSCC) THEN
+          CALL DAREAD(IDAF,IODA,X(LSHIFTSH),NSHELL,560,0)
+          IF (SCFTYP.NE.UHF) CALL VCLR(X(LSHIFTS),1,NSHELL)
+          ISH = 0
+          DO I = 1, NAT
+            DO J = 1, MAXANG(ISPE(I))
+              ISH = ISH + 1
+              X(LMULS+ISH-1) = X(LMULS+ISH-1) - QREFL(J,ISPE(I))
+            END DO
+          END DO
+        END IF
+      END IF
+C
+C     ----- CALCULATE DERIVATIVE OF EREP -----
+C
+      CALL VCLR(X(LDIST),1,(NAT*NAT+NAT)/2)
+      CALL DFTB_REPGRAD(NAT,C,ISPE,NSPE,NUMREP,REPCUT,X(LREPINTV(1,1)),
+     *       X(LREPSHORT(1,1)),X(LREPCOEFF(1,1)),EGRAD,X(LDIST),ZREF,
+     *       QREF)
+C
+C     ----- CALCULATE EIGENVALUE WEIGHTED DENSITY MATRIX (X(LD2)) -----
+C     SUBROUTINE FROM DMTX
+C
+      CALL DFTB_DMTEIG(X(LD2),X(LVEC),X(LOCC),X(LEIG),NA,L1,L1)
+      IF (SCFTYP.EQ.UHF)
+     *  CALL DFTB_DMTEIG(X(LDB2),X(LVB),X(LBOC),X(LEB),NB,L1,L1)
+      if(nfg.ne.0 .and. scc) call fmolag(x(ld2),x(lwrk1),x(lscr),L1,l2)
+C
+C     ----- TIME-DEPENDENT DFTB -----
+C
+      IF(TDDFTYP.NE.RNONE) THEN
+        IF (SRSCC.OR.SCFTYP.EQ.UHF) THEN
+          WRITE (*,*) "NOT YET"
+          CALL ABRT
+        END IF
+        CALL DAREAD(IDAF,IODA,X(LDGS),L2,308,0) !! GS DENSITY MATRIX
+        CALL DAREAD(IDAF,IODA,X(LWRK1),L2,12,0) !! OVERLAP MATRIX
+C
+C       ----- MAKE q^ES AND q^XY (destroy LVEC) -----
+C
+        CALL DFTB_TD_GRAD_SHIFT(X(LVEC),X(LWRK1),DAMPXHE,X(LDGS),DQ,
+     *                          X(LDIST),HUBBL,SPE,SPNCST,X(LXYAO),
+     *                          X(LDQES),X(LDQXY),X(LSHIFTES),
+     *                          X(LSHIFTXY),X(LGAMMA),X(LGAM3),
+     *                          IPCM,NSPE,NAT,L1,L2,IDAF,IODA,ISPE,
+     *                          MAXANG,IND,
+     *                          DFTB3,DAMPXH,SRSCC,TRIPLET)
+C
+C       ----- UPDATE ENERGY WEIGHTED DENSITY MATRIX -----
+C
+        CALL DSCAL(L2,-1.0D+00,X(LD2),1)
+        CALL TDDENS(X(LD2),X(LVEC),L1)
+        CALL DSCAL(L2,-1.0D+00,X(LD2),1)
+      END IF
+C
+C     --- ADD ELECTRIC FIELD ---
+C
+      IF (EFLDL) THEN !! USE EVEC(1:3)
+        DO IEVEC = 1, 3
+          IF (EVEC(IEVEC).EQ.ZERO) CYCLE
+          TEVEC = EVEC(IEVEC)
+          DO I = 1, NAT
+            EGRAD(IEVEC,I) = EGRAD(IEVEC,I) + TEVEC*DQ(I)
+          END DO
+        END DO
+      END IF
+C
+C     --- CALCULATE DH/DR AND DS/DR ANALYTICALLY ---
+C
+      IF ((SCFTYP.EQ.RHF.OR.SCFTYP.EQ.ROHF).AND..NOT.SRSCC) THEN
+      DO I = 1, NAT
+        SHIFTI = SHIFT(I)
+        IF(TDDFTYP.NE.RNONE) THEN
+          SHIFTESI = X(LSHIFTES+I-1)
+          SHIFTXYI = X(LSHIFTXY+I-1)
+        END IF
+        DO J = 1, NAT
+          IF (I.EQ.J) CYCLE
+          SHIFTJ = SHIFT(J)
+          SHIFTIJ = HALF*(SHIFTI+SHIFTJ)
+          IF(TDDFTYP.NE.RNONE) THEN
+            SHIFTESJ = X(LSHIFTES+J-1)
+            SHIFTXYJ = X(LSHIFTXY+J-1)
+            SHIFTESIJ = HALF*(SHIFTESI+SHIFTESJ)
+            !! SCALE BY TWO (BUT NOT ONE ACCORDING TO FORMUALTION)
+            !! BECAUSE OF SPIN (X(LXYAO) IS NOT DOUBLED)
+            SHIFTXYIJ = TWO*(SHIFTXYI+SHIFTXYJ)
+          END IF
+          DO K = 1, 3
+            CALL VCLR(AUM,1,81)
+            CALL VCLR(BUM,1,81)
+            VEC(1) = C(1,J) - C(1,I)
+            VEC(2) = C(2,J) - C(2,I)
+            VEC(3) = C(3,J) - C(3,I)
+            CALL DFTB_SKODEA(I.EQ.J,ISPE(I),ISPE(J),1,K,0,
+     *        MAXANG(ISPE(I)),MAXANG(ISPE(J)),VEC,
+     *        X(LSKGRID(ISPE(I),ISPE(J))),X(LSKGRID(ISPE(J),ISPE(I))),
+     *        SKDIM(ISPE(I),ISPE(J)),SKDIM(ISPE(J),ISPE(I)),
+     *        X(LSKHTAB(ISPE(I),ISPE(J))),X(LSKHTAB(ISPE(J),ISPE(I))),
+     *        X(LSKSTAB(ISPE(I),ISPE(J))),X(LSKSTAB(ISPE(J),ISPE(I))),
+     *        X(LSKSELF(ISPE(I))),SKCUT2,AUM,BUM,
+     *        .TRUE.,.TRUE.,SKP)
+            IF (SKP) CYCLE
+            DO L = 1, IND(J+1) - IND(J)
+              O = IND(J)+L
+              DO M = 1, IND(I+1) - IND(I)
+                N = IND(I)+M
+                CALL DFTB_CNVSQ(N,O,NSEQ)
+C
+C               ----- CALCULATE 2*DH/DR -----
+C
+                DHDR = -AUM(M,L)*TWO
+C
+C               ----- CALCULATE 2*(epsilon)*DS/DR -----
+C
+                DSDR = -BUM(M,L)*TWO
+C
+C               ----- ADD SCC CONTRIBUTIONS -----
+C
+                IF (SCC) THEN
+                  DGR = DSDR*SHIFTIJ
+                  !! ADD SCC FORCE 
+                  EGRAD(K,I) = EGRAD(K,I) - (DHDR+DGR)*X(LD+NSEQ-1)
+     &              + DSDR*X(LD2+NSEQ-1)
+                  IF (TDDFTYP.NE.RNONE) THEN
+                    EGRAD(K,I) = EGRAD(K,I) -
+     *                DSDR*(SHIFTESIJ*X(LDGS+NSEQ-1)
+     *                     +SHIFTXYIJ*X(LXYAO+NSEQ-1))
+                  END IF
+                ELSE
+                  !! ADD NCC FORCE 
+                  EGRAD(K,I) = EGRAD(K,I) - DHDR*X(LD+NSEQ-1)
+     &              + DSDR*X(LD2+NSEQ-1)
+                END IF
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+      ELSE IF (SCFTYP.EQ.UHF.OR.SRSCC) THEN
+        IJ0(1) = 1
+        IJ0(2) = 3
+        IJ0(3) = 5
+        MN0(1) = 0
+        MN0(2) = 1
+        MN0(3) = 4
+        IF (.NOT.SRSCC) CALL DFTB_SHIFT_ATOSH(SHIFT,X(LSHIFTSH),NAT,
+     *    NSHELL,NSPE,ISPE,MAXANG)
+        ISH0 = 0
+        DO I = 1, NAT
+          JSH0 = 0
+          DO J = 1, NAT
+            IF (I.EQ.J) THEN
+              JSH0 = JSH0 + MAXANG(ISPE(J))
+              CYCLE
+            END IF
+C           write (*,*) i,j
+            DO K = 1, 3
+              CALL VCLR(AUM,1,81)
+              CALL VCLR(BUM,1,81)
+              VEC(1) = C(1,J) - C(1,I)
+              VEC(2) = C(2,J) - C(2,I)
+              VEC(3) = C(3,J) - C(3,I)
+              CALL DFTB_SKODEA(I.EQ.J,ISPE(I),ISPE(J),1,K,0,
+     *          MAXANG(ISPE(I)),MAXANG(ISPE(J)),VEC,
+     *          X(LSKGRID(ISPE(I),ISPE(J))),X(LSKGRID(ISPE(J),ISPE(I))),
+     *          SKDIM(ISPE(I),ISPE(J)),SKDIM(ISPE(J),ISPE(I)),
+     *          X(LSKHTAB(ISPE(I),ISPE(J))),X(LSKHTAB(ISPE(J),ISPE(I))),
+     *          X(LSKSTAB(ISPE(I),ISPE(J))),X(LSKSTAB(ISPE(J),ISPE(I))),
+     *          X(LSKSELF(ISPE(I))),SKCUT2,AUM,BUM,
+     *          .TRUE.,.TRUE.,SKP)
+              IF (SKP) CYCLE
+              MU0 = IND(I)
+              DO II = 1, MAXANG(ISPE(I))
+                ISH = ISH0 + II
+                SHIFTI = X(LSHIFTSH+ISH-1)
+                SHIFTIS = X(LSHIFTS+ISH-1)
+                NU0 = IND(J)
+                DO JJ = 1, MAXANG(ISPE(J))
+                  JSH = JSH0 + JJ
+                  SHIFTJ = X(LSHIFTSH+JSH-1)
+                  SHIFTJS = X(LSHIFTS+JSH-1)
+                  SHIFTIJ = HALF*(SHIFTI+SHIFTJ)
+                  SHIFTIJS = HALF*(SHIFTIS+SHIFTJS)
+                  DO M = 1, IJ0(II)
+                    MU = MU0 + M
+                    MM = MN0(II) + M
+                    DO N = 1, IJ0(JJ)
+                      NU = NU0 + N
+                      NN = MN0(JJ) + N
+                      CALL DFTB_CNVSQ(MU,NU,NSEQ)
+C                     if (k.eq.1) write (*,'(9i3)')
+C    *                  ii,jj,ish,jsh,mu,nu,m,n,nseq
+C
+C                 ----- CALCULATE 2*DH/DR -----
+C
+                      DHDR = -AUM(MM,NN)*TWO
+C
+C                 ----- CALCULATE 2*(epsilon)*DS/DR -----
+C
+                      DSDR = -BUM(MM,NN)*TWO
+C
+C                 ----- ADD SCC CONTRIBUTIONS -----
+C
+                      IF (SCFTYP.EQ.UHF) THEN
+                        IF (SCC) THEN
+                          DGRA = DSDR*(SHIFTIJ+SHIFTIJS)
+                          DGRB = DSDR*(SHIFTIJ-SHIFTIJS)
+                          !! ADD SCC FORCE 
+                          EGRAD(K,I) = EGRAD(K,I)
+     *                      - (DHDR+DGRA)*X(LDA+NSEQ-1)
+     *                      - (DHDR+DGRB)*X(LDB+NSEQ-1)
+     &                      + DSDR*(X(LDA2+NSEQ-1)+X(LDB2+NSEQ-1))
+                        ELSE
+                          !! ADD NCC FORCE 
+                          EGRAD(K,I) = EGRAD(K,I)
+     *                      - DHDR*(X(LD+NSEQ-1)+X(LDB+NSEQ-1))
+     &                      + DSDR*(X(LD2+NSEQ-1)+X(LDB2+NSEQ-1))
+                        END IF
+                      ELSE
+                        IF (SCC) THEN
+                          DGR = DSDR*SHIFTIJ
+                          !! ADD SCC FORCE 
+                          EGRAD(K,I) = EGRAD(K,I)
+     *                      - (DHDR+DGR)*X(LD+NSEQ-1)
+     *                      + DSDR*X(LD2+NSEQ-1)
+                        ELSE
+                          !! ADD NCC FORCE 
+                          EGRAD(K,I) = EGRAD(K,I)
+     *                      - DHDR*X(LD+NSEQ-1) + DSDR*X(LD2+NSEQ-1)
+                        END IF
+                      END IF
+                    END DO
+                  END DO
+                  NU0 = NU0 + IJ0(JJ)
+                END DO
+                MU0 = MU0 + IJ0(II)
+              END DO
+            END DO
+            JSH0 = JSH0 + MAXANG(ISPE(J))
+          END DO
+          ISH0 = ISH0 + MAXANG(ISPE(I))
+        END DO
+      ELSE
+        WRITE (IW,*) "SOMETHING IS STRANGE IN GRADIENT CALCULATION"
+        CALL ABRT
+      END IF
+C
+C     ---- ADD SCC CONTRIBUTION (2) -----
+C
+      IF (SCC) THEN
+        IF (TDDFTYP.NE.RNONE) THEN
+C
+C         ----- CALCULATE K TERMS AT THE SAME TIME -----
+C
+          CALL DFTB_GAMDER(NAT,NSPE,HUBBL,ISPE,X(LGAMMA),DAMPXH,
+     *      DAMPXHE,SPE,X(LDIST),DFTB3,X(LGAM3),HUBDER,SRSCC,MAXANG,
+     *      NAT,NSPE)
+          IF (TRIPLET) CALL VCLR(X(LDQXY),1,NAT) !! NO CONTRIBUTION
+          DO I = 1, NAT
+            DO J = 1, I-1
+              CALL DFTB_CNVSQ(I,J,NSEQ)
+              VEC(1) = C(1,J) - C(1,I)
+              VEC(2) = C(2,J) - C(2,I)
+              VEC(3) = C(3,J) - C(3,I)
+              DIST = X(LDIST+NSEQ-1)
+              GAMMAV = X(LGAMMA+NSEQ-1)
+              VAL = DQ(I)*DQ(J)*GAMMAV !! GS
+     *            + X(LDQES+I-1)*DQ(J)*GAMMAV !! DQES
+     *            + DQ(I)*X(LDQES+J-1)*GAMMAV !! DQES
+     *            + X(LDQXY+I-1)*X(LDQXY+J-1)*GAMMAV !! DQXY
+     *            + X(LDQXY+J-1)*X(LDQXY+I-1)*GAMMAV !! DQXY
+              IF (DFTB3) THEN
+                GAMI = X(LGAM3+I-1+(J-1)*NAT) !! G_ac
+                GAMJ = X(LGAM3+J-1+(I-1)*NAT) !! G_ca
+                VAL = VAL
+     *            + DQ(I)*(DQ(I)*DQ(J)*GAMI+DQ(J)*DQ(J)*GAMJ) !! GS
+     *            + GAMI*X(LDQES+I-1)*DQ(I)*DQ(J)*2.0D+00 !! DQES
+     *            + GAMJ*X(LDQES+I-1)*DQ(J)*DQ(J)         !! DQES
+     *            + GAMJ*X(LDQES+J-1)*DQ(J)*DQ(I)*2.0D+00 !! DQES
+     *            + GAMI*X(LDQES+J-1)*DQ(I)*DQ(I)         !! DQES
+     *            +(GAMI*DQ(I)*X(LDQXY+I-1)*X(LDQXY+J-1)*2.0D+00
+     *            + GAMJ*DQ(J)*X(LDQXY+I-1)*X(LDQXY+J-1)*2.0D+00
+     *            + GAMI*DQ(J)*X(LDQXY+I-1)*X(LDQXY+I-1)
+     *            + GAMJ*DQ(I)*X(LDQXY+J-1)*X(LDQXY+J-1))*2.0D+00!!DQXY
+              END IF
+              VAL = VAL / DIST
+              DO K = 1, 3
+                EGRAD(K,I) = EGRAD(K,I) - VEC(K)*VAL
+                EGRAD(K,J) = EGRAD(K,J) + VEC(K)*VAL
+              END DO
+            END DO
+          END DO
+        ELSE IF (SRSCC) THEN
+          NN = 0
+          DO I = 1, NSPE
+            NN = NN + MAXANG(I)
+          END DO
+          CALL DFTB_GAMDER(NAT,NSPE,HUBBL,ISPE,X(LGAMMA),DAMPXH,
+     *      DAMPXHE,SPE,X(LDIST),DFTB3,X(LGAM3),HUBDER,SRSCC,MAXANG,
+     *      NSHELL,NN)
+          ISH0 = 0
+          DO I = 1, NAT
+            JSH0 = 0
+            DO J = 1, I-1
+              CALL DFTB_CNVSQ(I,J,NSEQ)
+              VEC(1) = C(1,J) - C(1,I)
+              VEC(2) = C(2,J) - C(2,I)
+              VEC(3) = C(3,J) - C(3,I)
+              DIST   = X(LDIST+NSEQ-1)
+              VAL    = ZERO
+              VALTMP1= ZERO
+              VALTMP2= ZERO
+              DO II = 1, MAXANG(ISPE(I))
+                ISH = ISH0 + II
+                DQI = X(LMULS+ISH-1)
+                DO JJ = 1, MAXANG(ISPE(J))
+                  JSH = JSH0 + JJ
+                  DQJ = X(LMULS+JSH-1)
+                  CALL DFTB_CNVSQ(ISH,JSH,NSEQ)
+                  GAMMAV = X(LGAMMA+NSEQ-1)
+                  VAL = VAL + DQI*DQJ*GAMMAV
+                  IF (DFTB3) THEN
+                    GAMI = X(LGAM3+ISH-1+(JSH-1)*NSHELL) !! G_ac
+                    GAMJ = X(LGAM3+JSH-1+(ISH-1)*NSHELL) !! G_ca
+C                   VALTMP = VALTMP + DQI*DQJ*GAMI + DQJ*DQI*GAMJ
+                    VALTMP1 = VALTMP1 + GAMI*DQI*DQJ
+                    VALTMP2 = VALTMP2 + GAMJ*DQJ*DQI
+                  END IF
+                END DO
+              END DO
+              IF (DFTB3) VAL = VAL + VALTMP1*DQ(I) + VALTMP2*DQ(J)
+              VAL = VAL / DIST
+              DO K = 1, 3
+                EGRAD(K,I) = EGRAD(K,I) - VEC(K)*VAL
+                EGRAD(K,J) = EGRAD(K,J) + VEC(K)*VAL
+              END DO
+              JSH0 = JSH0 + MAXANG(ISPE(J))
+            END DO
+            ISH0 = ISH0 + MAXANG(ISPE(I))
+          END DO
+        ELSE
+          CALL DFTB_GAMDER(NAT,NSPE,HUBBL,ISPE,X(LGAMMA),DAMPXH,
+     *      DAMPXHE,SPE,X(LDIST),DFTB3,X(LGAM3),HUBDER,SRSCC,MAXANG,
+     *      NAT,NSPE)
+          DO I = 1, NAT
+            DO J = 1, I-1
+              CALL DFTB_CNVSQ(I,J,NSEQ)
+              VEC(1) = C(1,J) - C(1,I)
+              VEC(2) = C(2,J) - C(2,I)
+              VEC(3) = C(3,J) - C(3,I)
+              DIST = X(LDIST+NSEQ-1)
+              GAMMAV = X(LGAMMA+NSEQ-1)
+              VAL = DQ(I)*DQ(J)*GAMMAV
+              IF (DFTB3) THEN
+                GAMI = X(LGAM3+I-1+(J-1)*NAT) !! G_ac
+                GAMJ = X(LGAM3+J-1+(I-1)*NAT) !! G_ca
+                VAL = VAL + DQ(I)*
+     *            (DQ(I)*DQ(J)*GAMI + DQ(J)*DQ(J)*GAMJ)
+              END IF
+              VAL = VAL / DIST
+              DO K = 1, 3
+                EGRAD(K,I) = EGRAD(K,I) - VEC(K)*VAL
+                EGRAD(K,J) = EGRAD(K,J) + VEC(K)*VAL
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+C
+C     ---- ADD DISPERSION CONTRIBUTION -----
+C
+      IF (DC) THEN
+        IF (DFTD) THEN
+          CALL DFTD3(2,DUMMY,EGRAD) !! EXPERIMENTAL
+        ELSE
+          X(LIWRK+NAT) = ZERO
+          IF (NFG.NE.0.AND.IDFTBD.EQ.4) THEN
+            CALL IXSTOR(X(LIWRK+NAT),1,NFG)
+            CALL DFTB_FMONBOND(NAT,X(LIAGLOB),X(LNBOND),X(LIWRK))
+          END IF
+          CALL DFTB_DISP_GRAD(QREF,X(LDIST),EGRAD,X(LIWRK))
+        END IF
+      END IF
+C
+  100 CALL DAWRIT(IDAF,IODA,EGRAD,3*NAT,3,0)
+C
+      IF (MASWRK.AND.SOME) THEN
+        CHARA(1:3) = "   "
+        IF (.NOT.SCC) CHARA(1:1) = "1"
+        IF (SCC.AND..NOT.DFTB3) CHARA(1:1) = "2"
+        IF (SCC.AND.DFTB3) CHARA(1:1) = "3"
+        IF (DC) CHARA(2:3) = "-D"
+        WRITE(IW,'(" ...... END OF DFTB",A3," GRADIENT ......")') CHARA
+      END IF
+      if(mdout) CALL TIMIT(1)
+C
+      CALL RETFM(NEED)
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_GRAD
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_PREP_GAMMA_GRAD
+C>
+C>    @brief Gradient of DFTB
+C>
+C>    @details Calculate TMP matrix used for gamma values
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param HUBA,HUBB Hubbard values of atom A and B
+C>    @param DFTB3 Whether DFTB3 or not
+C>    @param DAMPXH Whether X-H damping or not
+C>           --- OUTPUT ---
+C>    @param TMP Constants for gamma calculation
+C>
+C
+      SUBROUTINE DFTB_PREP_GAMMA_GRAD(HUBA,HUBB,TMP,DFTB3,DAMPXH)
+C
+      IMPLICIT NONE
+C
+      DOUBLE PRECISION, INTENT(IN) :: HUBA,HUBB
+      LOGICAL, INTENT(IN) :: DFTB3,DAMPXH
+      DOUBLE PRECISION, INTENT(OUT) :: TMP(11)
+C
+      DOUBLE PRECISION :: TAUA,TAUA2,TAUA3,TAUA4,TAUA6,TAUB,TAUB2,TAUB3,
+     *  TAUB4,TAUB6,TAUAB,TAUABI,TAUABI2,TAUABI3,TAUABI4
+      DOUBLE PRECISION,PARAMETER :: HUBTOL=1.0D-04,
+     *  HALF=0.5D+00,ONE=1.0D+00,TWO=2.0D+00,THREE=3.0D+00,
+     *  ONE_24=ONE/2.4D+01,TWELVE=1.2D+01,ONE_15=ONE/1.5D+01
+C
+      TAUA = 3.2D+00*HUBA
+      TAUA2 = TAUA**2
+      TAUA3 = TAUA*TAUA2
+      TAUA4 = TAUA2**2
+      TAUA6 = TAUA2*TAUA4
+      TAUB = 3.2D+00*HUBB
+      TAUB2 = TAUB**2
+      TAUB3 = TAUB*TAUB2
+      TAUB4 = TAUB2**2
+      TAUB6 = TAUB2*TAUB4
+      IF (ABS(HUBA-HUBB).LE.HUBTOL) THEN
+        TMP(1) = 1.875D-01*TAUA2 !! 3/16 a^2
+        TMP(2) = ONE_24*TAUA3    !! 1/24 a^3
+        TMP(3) = 6.875D-01*TAUA  !! 11/16 a
+        TMP(4) = HALF*TMP(2) !! 1/48 a^3
+        IF (DFTB3) THEN
+          TMP(5) = -6.0D-01*TAUA
+          TMP(6) = 2.0D-01*TAUA2
+          TMP(7) = 2.0D-01*TAUA3
+          TMP(8) = TAUA4*ONE_15
+          IF (DAMPXH) THEN
+            TMP(9)  = -TAUA
+            TMP(10) = -4.0D-01*TAUA2
+            TMP(11) = -TAUA3*ONE_15
+          END IF
+        END IF
+      ELSE
+        TAUAB = TAUA2 - TAUB2
+        TAUABI = ONE/TAUAB
+        TAUABI2 = TAUABI**2
+        TAUABI3 = TAUABI**3
+        TMP(1) =  (TAUB6-THREE*TAUA2*TAUB4)*TAUABI3
+        TMP(2) = HALF*TAUA*TAUB4*TAUABI2
+        TMP(3) = -(TAUA6-THREE*TAUB2*TAUA4)*TAUABI3
+        TMP(4) = HALF*TAUB*TAUA4*TAUABI2
+        IF (DFTB3) THEN
+          TAUABI4 = TAUABI**4
+          TMP(5) = -HALF*(TAUB6+THREE*TAUA2*TAUB4)*TAUABI3
+          TMP(6) = -TWELVE*TAUA3*TAUB4*TAUABI4
+          TMP(7) = -TWO*TAUB3*TAUA3*TAUABI3
+          TMP(8) =  TWELVE*TAUB4*TAUA3*TAUABI4
+        END IF
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_PREP_GAMMA_GRAD
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_GAMDERF
+C>
+C>    @brief Gradient of DFTB
+C>
+C>    @details Function which calculates gamma 1st-order derivative
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param HUBA,HUBB Hubbard values of atom A and B
+C>    @param HUBDER Hubbard derivative (DFTB3)
+C>    @param DIST Distance between atom A and B
+C>    @param DAMPXHE Exponent of X-H damping
+C>    @param TMP Constants of the pair atom A and B
+C>    @param DFTB3 Whether DFTB3 or not
+C>    @param HDAMP Whether X-H damping or not, decided before calling
+C>           this function
+C>           --- OUTPUT ---
+C>    @param GAMMA2 Gamma used in DFTB2
+C>    @param GAMMA3 Gamma used in DFTB3
+C>
+C
+      SUBROUTINE DFTB_GAMDERF(GAMMA2,GAMMA3,HUBA,HUBB,HUBDER,DIST,
+     *  DAMPXHE,TMP,DFTB3,HDAMP)
+C
+      IMPLICIT NONE
+C
+      DOUBLE PRECISION, INTENT(IN) :: HUBA,HUBB,DIST,HUBDER,TMP(11),
+     *  DAMPXHE
+      DOUBLE PRECISION, INTENT(OUT) :: GAMMA2,GAMMA3
+      LOGICAL, INTENT(IN) :: DFTB3,HDAMP
+C
+      DOUBLE PRECISION :: TAUA,TAUB,EXPA,EXPB,DIST2,DISTI,DISTI2,
+     * HUBMEAN,HUBMEANEXP,EXPH,GAMTMP,GAMTMP2,GA,DGA_DR,FAB,FBA,
+     * DFAB_DR,DFBA_DR,GAMTMP3,DIST3,DFAB_DA,DFBA_DA,D2FAB_DADR,S,
+     * D2FBA_DADR,GAMTMP4,DS_DR,DS_DU,DH_DR,DH_DU,D2H_DUDR,HUBMEANEXP1
+      DOUBLE PRECISION,PARAMETER :: DISTTOL=1.0D-08,HUBTOL=1.0D-04,
+     *  ZERO=0.0D+00,HALF=0.5D+00,ONE=1.0D+00,TWO=2.0D+00,THREE=3.0D+00,
+     *  ONE_THIRD=ONE/THREE
+C
+      TAUA = 3.2D+00*HUBA
+      TAUB = 3.2D+00*HUBB
+      GAMTMP2 = ZERO
+      GAMTMP4 = ZERO
+      IF (DIST.LE.DISTTOL) THEN
+        GAMMA2 = ZERO
+        IF (DFTB3) GAMMA3 = ZERO
+      ELSE
+        DIST2 = DIST**2
+        DISTI = ONE/DIST
+        DISTI2 = DISTI**2
+        EXPA = EXP(-TAUA*DIST)
+        IF (ABS(HUBA-HUBB).LE.HUBTOL) THEN
+          !! CALCULATE HUBA EQ HUBB
+          GA = DISTI+TMP(3)+TMP(1)*DIST
+     *       + TMP(4)*DIST2
+          DGA_DR = -DISTI2+TMP(1)+TMP(2)*DIST
+          DS_DR = EXPA*DGA_DR - TAUA*EXPA*GA
+          GAMTMP = -DS_DR
+          IF (HDAMP) THEN
+            HUBMEAN = HUBA
+            HUBMEANEXP = HUBMEAN**DAMPXHE
+            EXPH = EXP(-HUBMEANEXP*DIST2)
+            GAMTMP = GAMTMP * EXPH !! -h*dSg/dR
+            GAMTMP2 = EXPA*GA
+            GAMTMP2 = GAMTMP2*HUBMEANEXP*TWO*DIST*EXPH
+          END IF
+          IF (DFTB3) THEN !! 3rd
+            DIST3 = DIST2*DIST
+            GAMTMP3 = EXPA*(TMP(6)*DIST
+     *        + TMP(7)*DIST2 + TMP(8)*DIST3)
+            GAMTMP3 = -GAMTMP3
+            IF (HDAMP) THEN !! damp correction with 3rd
+              HUBMEANEXP1 = HUBMEAN**(DAMPXHE-ONE)
+              DS_DU = EXPA*(-ONE+TMP(9)*DIST
+     *          + TMP(10)*DIST2+TMP(11)*DIST3)
+              DH_DR = -TWO*DIST*HUBMEANEXP*EXPH
+              DH_DU = -HALF*DIST2*DAMPXHE*HUBMEANEXP1*EXPH
+              D2H_DUDR = DAMPXHE*DIST*HUBMEANEXP1
+     *                   *(DIST2*HUBMEANEXP-ONE)*EXPH
+              S = EXPA * GA
+              GAMTMP4 = DS_DU*DH_DR + DS_DR*DH_DU + S*D2H_DUDR
+              GAMTMP3 = GAMTMP3*EXPH - GAMTMP4
+            END IF
+            GAMMA3 = GAMTMP3 * HUBDER * ONE_THIRD
+          END IF
+        ELSE
+          !! CALCULATE HUBA NE HUBB
+          EXPB = EXP(-TAUB*DIST)
+          FAB = TMP(2)-TMP(1)*DISTI
+          FBA = TMP(4)-TMP(3)*DISTI
+          DFAB_DR = TMP(1)*DISTI2
+          DFBA_DR = TMP(3)*DISTI2
+          !! CALCULATE -dSf/dR
+          DS_DR = EXPA*DFAB_DR - TAUA*EXPA*FAB
+     *          + EXPB*DFBA_DR - TAUB*EXPB*FBA
+          GAMTMP = -DS_DR
+          IF (HDAMP) THEN
+            HUBMEAN = HALF*(HUBA+HUBB)
+            HUBMEANEXP = HUBMEAN**DAMPXHE
+            EXPH = EXP(-HUBMEANEXP*DIST2)
+            GAMTMP = GAMTMP * EXPH !! -h*dSf/dR
+            GAMTMP2 = EXPA*FAB + EXPB*FBA
+            GAMTMP2 = GAMTMP2*HUBMEANEXP*TWO*DIST*EXPH
+          END IF
+          IF (DFTB3) THEN !! 3rd
+            DFAB_DA = TMP(5) + TMP(6)*DISTI
+            DFBA_DA = TMP(7) + TMP(8)*DISTI
+            D2FAB_DADR = -TMP(6)*DISTI2
+            D2FBA_DADR = -D2FAB_DADR !! CHECK
+C           D2FBA_DADR = D2FAB_DADR
+            GAMTMP3 = EXPA*((TAUA*DIST-ONE)*FAB-TAUA*DFAB_DA
+     *        + D2FAB_DADR - DIST*DFAB_DR)
+     *        + EXPB*(D2FBA_DADR - TAUB*DFBA_DA)
+            GAMTMP3 = -3.2D+00*GAMTMP3
+            IF (HDAMP) THEN  !! damp correction with 3rd
+              HUBMEANEXP1 = HUBMEAN**(DAMPXHE-ONE)
+              DS_DU = EXPA*(DFAB_DA-DIST*FAB)+EXPB*DFBA_DA
+              DS_DU = 3.2D+00*DS_DU
+              DH_DR = -TWO*DIST*HUBMEANEXP*EXPH
+              DH_DU = -HALF*DIST2*DAMPXHE*HUBMEANEXP1*EXPH
+              D2H_DUDR = DAMPXHE*DIST*HUBMEANEXP1
+     *                   *(DIST2*HUBMEANEXP-ONE)*EXPH
+              S = EXPA*FAB + EXPB*FBA
+              GAMTMP4 = DS_DU*DH_DR + DS_DR*DH_DU + S*D2H_DUDR
+              GAMTMP3 = GAMTMP3*EXPH - GAMTMP4
+            END IF
+            GAMMA3 = GAMTMP3 * HUBDER * ONE_THIRD
+          END IF
+        END IF
+        GAMMA2 = -DISTI2 + GAMTMP + GAMTMP2
+C       WRITE (*,*) GAMMA(NSEQ),GAM3(I,J)
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_GAMDERF
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_GAMDER
+C>
+C>    @brief Gradient of DFTB
+C>
+C>    @details Calculates gamma 1st-order derivative
+C>             First, calculate constants which do not depend on
+C>             inter-atomic distance, but only depends on species of
+C>             atom A and B, which is done by DFTB_PREP_GAMMA_GRAD
+C>             subroutine.  Then, calculate actual gamma derivatives
+C>             with DFTB_GAMDERF function.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date Feb, 2016- Yoshio Nishimoto
+C>    - Bug fix
+C>
+C>           --- INPUT ---
+C>    @param NAT Number of atoms
+C>    @param NSPE Number of species
+C>    @param HUBBL Shell resolved Hubbard derivatives
+C>    @param ISPE Index of species
+C>    @param DAMPXH Whether H-X damping or not
+C>    @param DAMPXHE Exponent of X-H damping
+C>    @param SPE Name of each species
+C>    @param DISTMAT Matrix of inter-atomic distances
+C>    @param DFTB3 Whether DFTB3 or not
+C>    @param HUBDER Hubbard derivative (DFTB3)
+C>    @param SRSCC Shell-resolved SCC or not
+C>    @param MAXANG Maximum angular momentum of each species
+C>    @param NDIMGAM Dimension of gamma matrix, if SRSCC=.T., NDIMGAM=
+C>           NSHELL, if not, NDIMGAM=NAT
+C>    @param NN Number of species to be calculated.  If SRSCC=.T.,
+C>           this is the sum of the number of shell of each atom, and
+C>           if not, NN=NSPE
+C>           --- OUTPUT ---
+C>    @param GAMMA Gamma used in DFTB2
+C>    @param GAMMA3 Gamma used in DFTB3
+C>
+C
+      SUBROUTINE DFTB_GAMDER(NAT,NSPE,HUBBL,ISPE,GAMMA,DAMPXH,
+     *  DAMPXHE,SPE,DISTMAT,DFTB3,GAMMA3,HUBDER,SRSCC,MAXANG,NDIMGAM,NN)
+C
+      IMPLICIT NONE
+C
+      INTEGER,INTENT(IN) :: NAT,NSPE,ISPE(NAT),NDIMGAM,MAXANG(NSPE),NN
+      DOUBLE PRECISION,INTENT(IN) :: HUBBL(3,NSPE),DISTMAT(*),DAMPXHE,
+     *  HUBDER(*),SPE(*)
+      LOGICAL,INTENT(IN) :: DAMPXH,DFTB3,SRSCC
+      DOUBLE PRECISION,INTENT(OUT) :: GAMMA(*),GAMMA3(NDIMGAM,NDIMGAM)
+C
+      INTEGER :: I,II,ISH,J,JJ,JSH,NSP1,NSP2,NSEQ,ISHELL(NDIMGAM),
+     *  IND(NSPE),ISH0,JSH0
+      DOUBLE PRECISION :: HUBA,HUBB,DIST,HUBDERTMP,CHARA1,CHARA2
+      DOUBLE PRECISION :: TMP(11,NN,NN)
+      DOUBLE PRECISION H/8HH       /
+      LOGICAL :: HDAMP
+C
+      CALL VCLR(TMP,1,11*NN*NN)
+      IF (SRSCC) THEN
+        IND(1) = 0
+        DO I = 2, NSPE
+          IND(I) = IND(I-1) + MAXANG(I-1) !MAXANG(ISPE(I-1))
+        END DO
+        ISH = 0
+        JSH = 0
+        DO I = 1, NAT
+          JSH = IND(ISPE(I))
+          DO J = 1, MAXANG(ISPE(I))
+            ISH = ISH + 1
+            ISHELL(ISH) = JSH + J
+          END DO
+        END DO
+        ISH = 0
+        DO I = 1, NSPE
+          DO II = 1, MAXANG(I)
+            ISH = ISH + 1
+            HUBA = HUBBL(II,I)
+            JSH = 0
+            DO J = 1, NSPE
+              DO JJ = 1, MAXANG(J)
+                JSH = JSH + 1
+                HUBB = HUBBL(JJ,J)
+C               write (*,*) ish,jsh
+                CALL DFTB_PREP_GAMMA_GRAD(HUBA,HUBB,TMP(1,ISH,JSH),
+     *            DFTB3,DAMPXH)
+              END DO
+            END DO
+          END DO
+        END DO
+C
+        ISH0 = 0
+        DO I = 1, NAT
+          NSP1 = ISPE(I)
+          CHARA1 = SPE(ISPE(I))
+          JSH0 = 0
+          DO J = 1, NAT
+C           NSP2 = ISPE(J)
+            CHARA2 = SPE(ISPE(J))
+            CALL DFTB_CNVSQ(I,J,NSEQ)
+            DIST = DISTMAT(NSEQ)
+            IF (DAMPXH.AND.(CHARA1.EQ.H.OR.CHARA2.EQ.H)) THEN
+              HDAMP = .TRUE.
+            ELSE
+              HDAMP = .FALSE.
+            END IF
+            DO II = 1, MAXANG(ISPE(I))
+              ISH = ISH0 + II
+              HUBA = HUBBL(II,ISPE(I))
+              NSP1 = ISHELL(ISH)
+              HUBDERTMP = HUBDER(NSP1)
+              DO JJ = 1, MAXANG(ISPE(J))
+                JSH = JSH0 + JJ
+                HUBB = HUBBL(JJ,ISPE(J))
+                NSP2 = ISHELL(JSH)
+C               WRITE (*,*) I, J
+                CALL DFTB_CNVSQ(ISH,JSH,NSEQ)
+                CALL DFTB_GAMDERF(GAMMA(NSEQ),GAMMA3(ISH,JSH),HUBA,HUBB,
+     *            HUBDERTMP,DIST,DAMPXHE,TMP(1,NSP1,NSP2),DFTB3,HDAMP)
+C      write (*,'(6i3,f20.10)') i,j,ish,jsh,nsp1,nsp2,gamma(nseq)
+              END DO
+            END DO
+            JSH0 = JSH0 + MAXANG(ISPE(J))
+          END DO
+          ISH0 = ISH0 + MAXANG(ISPE(I))
+        END DO
+      ELSE
+        DO I = 1, NSPE
+          HUBA = HUBBL(1,I)
+          DO J = 1, NSPE
+            HUBB = HUBBL(1,J)
+            CALL DFTB_PREP_GAMMA_GRAD(HUBA,HUBB,TMP(1,I,J),DFTB3,DAMPXH)
+          END DO
+        END DO
+C
+        DO I = 1, NAT
+          NSP1 = ISPE(I)
+          HUBA = HUBBL(1,NSP1)
+          CHARA1 = SPE(ISPE(I))
+          DO J = 1, NAT
+            NSP2 = ISPE(J)
+            HUBB = HUBBL(1,NSP2)
+            CHARA2 = SPE(ISPE(J))
+            CALL DFTB_CNVSQ(I,J,NSEQ)
+            DIST = DISTMAT(NSEQ)
+            IF (DAMPXH.AND.(CHARA1.EQ.H.OR.CHARA2.EQ.H)) THEN
+              HDAMP = .TRUE.
+            ELSE
+              HDAMP = .FALSE.
+            END IF
+            CALL DFTB_GAMDERF(GAMMA(NSEQ),GAMMA3(I,J),HUBA,HUBB,
+     *        HUBDER(NSP1),DIST,DAMPXHE,TMP(1,NSP1,NSP2),DFTB3,HDAMP)
+C      write (*,'(6i3,f20.10)') i,j,ish,jsh,nsp1,nsp2,gamma(nseq)
+          END DO
+        END DO
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_GAMDER
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_EXTSDER
+C>
+C>    @brief Gradient of DFTB
+C>
+C>    @details Calculates 1st-order derivative of overlap matrix in AO
+C>             basis.  Maybe called only from HOPDER?
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date Feb, 2016- Yoshio Nishimoto
+C>    - Analytic derivatives are now used.
+C>
+C>           --- INPUT ---
+C>    @param L1 Number of basis functions
+C>    @param L2 L2=L1*(L1+1)/2
+C>    @param NSTART Lower limit of atom index to be calculated
+C>    @param NLAST Upper limit of atom index to be calculated
+C>           --- OUTPUT ---
+C>    @param DSINT Overlap derivative
+C>
+C>    @todo This subroutine should be replaced with analytical
+C>          derivative
+C>
+C
+      SUBROUTINE DFTB_EXTSDER(DSINT,L2,NSTART,NLAST)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXATM=2000,MXSPE=10)
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+C
+      DOUBLE PRECISION :: AUP(9,9),BUP(9,9),VEC(3)
+      DOUBLE PRECISION :: DSINT(L2,3,NLAST-NSTART+1)
+C
+      INTEGER :: NSEQ
+      LOGICAL :: SKP
+C
+C     ----- CALCULATE DS/DR NUMERICALLY -----
+C     DS/DR = (BUP - BUM)/DELTA * 0.5
+C
+      CALL VCLR(DSINT,1,L2*3*NAT)
+C
+      DO NI = 1, NAT
+        DO KI = 1, 3
+          DO NJ = 1, NAT
+            IF (NI.EQ.NJ) CYCLE
+C           CALL VCLR(BUP,1,81)
+C           CALL DFTB_DISPLACEMENT(NI,NJ,KI,0,VEC,C,0)
+            VEC(1) = C(1,NJ) - C(1,NI)
+            VEC(2) = C(2,NJ) - C(2,NI)
+            VEC(3) = C(3,NJ) - C(3,NI)
+            CALL DFTB_SKODE_HELPA(1,NI,NJ,KI,0,VEC,AUP,BUP,
+     *                            .FALSE.,.TRUE.,SKP)
+            IF (SKP) CYCLE
+            DO M = 1, IND(NJ+1)-IND(NJ)
+              MU = IND(NJ)+M
+              DO N = 1, IND(NI+1)-IND(NI)
+                NU = IND(NI)+N
+                CALL DFTB_CNVSQ(MU,NU,NSEQ)
+                DSINT(NSEQ,KI,NI) = BUP(N,M) !! SDERAO
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_EXTSDER
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_GAMD3
+C>
+C>    @brief Gradient of DFTB
+C>
+C>    @details Calculates gamma 1st-order derivative of DFTB3.
+C>             It seems that it is only used in FMO-DFTB
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date Feb, 2016- Yoshio Nishimoto
+C>    - Bug fix
+C>
+C>           --- INPUT ---
+C>    @param DIST Inter-atomic distances of atom A and B
+C>    @param HUBA,HUBB Hubbard values of atom A and B
+C>    @param HUBDER1,HUBDER2 Hubbard derivatives of atom A and B
+C>    @param VALUE1,VALUE2 Constants, they are prepared in DFTB_GAMFMO
+C>    @param DAMPXH Whether H-X damping or not
+C>    @param DAMPXHE Exponent of X-H damping
+C>    @param SPE1,SPE2 Name of atom A and B
+C>           --- OUTPUT ---
+C>    @param VAL1,VAL2 Derivatives of DFTB3 gamma
+C>
+C
+      SUBROUTINE DFTB_GAMD3(DIST,DISTI,VAL1,VAL2,HUBA,HUBB,HUBDER1,
+     * HUBDER2,VALUE1,VALUE2,DAMPXH,DAMPXHE,SPE1,SPE2)
+C
+      IMPLICIT NONE
+C
+      DOUBLE PRECISION, INTENT(IN) :: DIST,DISTI,HUBA,HUBB,VALUE1(11),
+     *  VALUE2(11),DAMPXHE,HUBDER1,HUBDER2,SPE1,SPE2
+      DOUBLE PRECISION, INTENT(OUT) :: VAL1,VAL2
+      LOGICAL, INTENT(IN) :: DAMPXH
+C
+      DOUBLE PRECISION, PARAMETER :: ZERO=0.0D+00,ONE=1.0D+00, 
+     * HALF=5.0D-01,TWO=2.0D+00!! ,ONE_THIRD=ONE/3.0D+00
+      DOUBLE PRECISION, PARAMETER :: DISTTOL=1.0D-08,HUBTOL=1.0D-04
+C
+      DOUBLE PRECISION :: TAUA,TAUB,EXPA,EXPB,DIST2,DIST3,
+     * DFAB_DA,DFBA_DA,DFAB_DB,DFBA_DB,FAB,FBA,HUBMEAN,
+     * HUBMEANEXP,HUBMEANEXP1,EXPH,DH_DU,D2FAB_DBDR,D2FBA_DBDR,
+     * DS_DR,GAMTMP3BA,DISTI2,GA,DGA_DR,GAMTMP3,DS_DU,DH_DR,D2H_DUDR,S,
+     * DFAB_DR,DFBA_DR,D2FAB_DADR,D2FBA_DADR,GAMTMP4,GAMTMP5,SBA,
+     * DS_DUBA,DS_DRBA
+      DOUBLE PRECISION H/8HH       /
+C
+      TAUA = 3.2D+00*HUBA
+      TAUB = 3.2D+00*HUBB
+      IF (DIST.LE.DISTTOL) THEN
+        VAL1 = ZERO
+        VAL2 = ZERO
+      ELSE
+        DIST2 = DIST**2
+C       DISTI = ONE/DIST
+        DISTI2 = DISTI**2
+        EXPA = EXP(-TAUA*DIST)
+        IF (ABS(HUBA-HUBB).LE.HUBTOL) THEN
+          !! CALCULATE HUBA EQ HUBB
+          GA = DISTI+VALUE1(3)+VALUE1(1)*DIST+VALUE1(4)*DIST2
+          DGA_DR = -DISTI2+VALUE1(1)+VALUE1(2)*DIST
+          DS_DR = EXPA*DGA_DR-TAUA*EXPA*GA
+          DIST3 = DIST2*DIST
+          GAMTMP3 = EXPA*(VALUE1(6)*DIST + VALUE1(7)*DIST2
+     *            + VALUE1(8)*DIST3)
+          GAMTMP3 = -GAMTMP3
+          IF (DAMPXH) THEN !! damp correction with 3rd
+            IF (SPE1.EQ.H.OR.SPE2.EQ.H) THEN
+              HUBMEAN = HUBA
+              HUBMEANEXP = HUBMEAN**DAMPXHE
+              HUBMEANEXP1 = HUBMEAN**(DAMPXHE-ONE)
+              EXPH = EXP(-HUBMEANEXP*DIST2)
+              DS_DU = EXPA*(-ONE+VALUE1(9)*DIST
+     *          + VALUE1(10)*DIST2+VALUE1(11)*DIST3)
+              DH_DR = -TWO*DIST*HUBMEANEXP*EXPH
+              DH_DU = -HALF*DIST2*DAMPXHE*HUBMEANEXP1*EXPH
+              D2H_DUDR = DAMPXHE*DIST*HUBMEANEXP1
+     *                   *(DIST2*HUBMEANEXP-ONE)*EXPH
+              S = EXPA * GA
+              GAMTMP4 = DS_DU*DH_DR + DS_DR*DH_DU + S*D2H_DUDR
+              GAMTMP3 = GAMTMP3*EXPH - GAMTMP4
+            END IF
+          END IF
+          VAL1 = GAMTMP3 * HUBDER1! * ONE_THIRD
+          VAL2 = VAL1
+        ELSE
+          !! CALCULATE HUBA NE HUBB
+          EXPB = EXP(-TAUB*DIST)
+          FAB = VALUE1(2)-VALUE1(1)*DISTI
+          FBA = VALUE1(4)-VALUE1(3)*DISTI
+          DFAB_DR = VALUE1(1)*DISTI2
+          DFBA_DR = VALUE1(3)*DISTI2
+          !! CALCULATE -dSf/dR
+          DS_DR   = EXPA*DFAB_DR - TAUA*EXPA*FAB
+     *            + EXPB*DFBA_DR - TAUB*EXPB*FBA
+          DS_DRBA = EXPB*DFBA_DR - TAUB*EXPB*FBA
+     *            + EXPA*DFAB_DR - TAUA*EXPA*FAB
+          DFAB_DA = VALUE1(5) + VALUE1(6)*DISTI
+          DFBA_DA = VALUE1(7) + VALUE1(8)*DISTI
+          DFAB_DB = VALUE2(7) + VALUE2(8)*DISTI
+          DFBA_DB = VALUE2(5) + VALUE2(6)*DISTI
+          D2FAB_DADR = -VALUE1(6)*DISTI2
+          D2FBA_DADR = -D2FAB_DADR
+          D2FBA_DBDR = -VALUE2(6)*DISTI2
+          D2FAB_DBDR = -D2FBA_DBDR
+          GAMTMP3 = EXPA*((TAUA*DIST-ONE)*FAB-TAUA*DFAB_DA
+     *      + D2FAB_DADR - DIST*DFAB_DR)
+     *      + EXPB*(D2FBA_DADR - TAUB*DFBA_DA)
+          GAMTMP3 = -3.2D+00*GAMTMP3
+          GAMTMP3BA = EXPB*((TAUB*DIST-ONE)*FBA-TAUB*DFBA_DB
+     *      + D2FBA_DBDR - DIST*DFBA_DR)
+     *      + EXPA*(D2FAB_DBDR - TAUA*DFAB_DB)
+          GAMTMP3BA = -3.2D+00*GAMTMP3BA
+          IF (DAMPXH) THEN  !! damp correction with 3rd
+            IF (SPE1.EQ.H.OR.SPE2.EQ.H) THEN
+              HUBMEAN = HALF*(HUBA+HUBB)
+              HUBMEANEXP = HUBMEAN**DAMPXHE
+              EXPH = EXP(-HUBMEANEXP*DIST2)
+              HUBMEANEXP1 = HUBMEAN**(DAMPXHE-ONE)
+              DS_DU   = EXPA*(DFAB_DA-DIST*FAB)+EXPB*DFBA_DA
+              DS_DUBA = EXPB*(DFBA_DB-DIST*FBA)+EXPA*DFAB_DB
+              DS_DU   = 3.2D+00*DS_DU
+              DS_DUBA = 3.2D+00*DS_DUBA
+              DH_DR = -TWO*DIST*HUBMEANEXP*EXPH
+              DH_DU = -HALF*DIST2*DAMPXHE*HUBMEANEXP1*EXPH
+              D2H_DUDR = DAMPXHE*DIST*HUBMEANEXP1
+     *                   *(DIST2*HUBMEANEXP-ONE)*EXPH
+              S   = EXPA*FAB + EXPB*FBA
+              SBA = EXPB*FBA + EXPA*FAB
+              GAMTMP4   = DS_DU  *DH_DR + DS_DR  *DH_DU + S  *D2H_DUDR
+              GAMTMP5   = DS_DUBA*DH_DR + DS_DRBA*DH_DU + SBA*D2H_DUDR
+              GAMTMP3   = GAMTMP3*EXPH - GAMTMP4
+              GAMTMP3BA = GAMTMP3BA*EXPH - GAMTMP5
+            END IF
+          END IF
+          VAL1 = GAMTMP3 * HUBDER1! * ONE_THIRD
+          VAL2 = GAMTMP3BA * HUBDER2! * ONE_THIRD
+        END IF
+      END IF
+C
+C
+      END SUBROUTINE DFTB_GAMD3
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_DISP_GRAD
+C>
+C>    @brief Gradient of DFTB
+C>
+C>    @details Calculates 1st-order derivative of dispersion correction
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date Feb, 2016- Yoshio Nishimoto
+C>    - Added Slater-Kirkwoord (hybrid-polarized)
+C>
+C>           --- INPUT ---
+C>    @param ZREF    Nuclear charges of a given atom. In FMO-DFTB, ZREF
+C>                   of BDA or BAA is differet from QREF
+C>    @param QREF    Nuclear charges of a given species. This is taken
+C>                   from Slater-Koster files
+C>    @param DISTMAT Matrix of inter-atomic distances
+C>    @param IWRK    Integer working array
+C>           --- OUTPUT ---
+C>    @param EGRAD   Gradient
+C>
+C
+      SUBROUTINE DFTB_DISP_GRAD(QREF,DISTMAT,EGRAD,IWRK)
+
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MXATM=2000,MXSPE=10
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     & ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      INTEGER :: NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,IAN
+      DOUBLE PRECISION :: ZAN,C
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      DOUBLE PRECISION :: ETEMP,DFTBDP,DAMPXHE,HUBDER,ZREF,SPNCST,SPE
+      INTEGER :: NSPE,MAXANG,ISPE,IND,IDFTBD
+C
+      INTEGER :: I,J,K,NSP1,NSP2,NSEQ
+      DOUBLE PRECISION :: R5,R6,R10,R12,C1,C2,CR0,RI,RJ,DI,DJ,DIST,
+     * RIJ,DIJ,R0,TMP,VAL,RDMAT(3,NSPE,NSPE),CI,CJ,C6A,C6B,C6AB,R0A,R0B,
+     * R0AB,NEA,PA,NEB,PB,R0AB7I,DISTI,DIST6I,DIST7I,DAMP1,DAMP3,
+     * VEXP,DIST7,R7R07
+      DOUBLE PRECISION, INTENT(IN) :: QREF(*),DISTMAT(*)
+      DOUBLE PRECISION, INTENT(INOUT) :: EGRAD(3,*)
+      INTEGER, INTENT(INOUT) :: IWRK(*)
+C
+      NSP1 = 0
+      NSP2 = 0
+      IF (IDFTBD.EQ.1) THEN !! "UFF"
+C       C0 = 1.584D+01 !! 396/25
+        C1 = 4.78947150872246D+01 !! 2^(5/6)*672/25
+        C2 = 3.50498152274578D+01 !! 2^(2/3)*552/25
+        CR0 = 8.908987181D-01
+        !! FIRST CALCULATE SOME CONSTANTS FOR ALL PAIRS OF SPECIES
+        DO I = 1, NSPE
+          RI = DFTBDP(I*2-1)
+          DI = DFTBDP(I*2  )
+          DO J = I, NSPE
+            RJ = DFTBDP(J*2-1)
+            DJ = DFTBDP(J*2  )
+            RIJ = SQRT(RI*RJ) !! van der Waals distance
+            DIJ = SQRT(DI*DJ) !! well depth
+            R0 = CR0*RIJ
+            RDMAT(1,I,J) = R0
+            RDMAT(2,I,J) = RIJ
+            RDMAT(3,I,J) = DIJ
+            RDMAT(1,J,I) = R0
+            RDMAT(2,J,I) = RIJ
+            RDMAT(3,J,I) = DIJ
+          END DO
+        END DO
+        !! CALCULATE DISPERSION CORRECTION
+        DO I = 1, NAT
+          NSP1 = ISPE(I)
+          CI = ZREF(I)/QREF(NSP1)
+          DO J = I+1, NAT
+            NSP2 = ISPE(J)
+            CJ = ZREF(J)/QREF(NSP2)
+            R0  = RDMAT(1,NSP1,NSP2)
+            RIJ = RDMAT(2,NSP1,NSP2)
+            DIJ = RDMAT(3,NSP1,NSP2)
+            CALL DFTB_CNVSQ(I,J,NSEQ)
+            DIST = DISTMAT(NSEQ)
+            DIJ = DIJ * CI * CJ
+            IF (DIST.GE.R0) THEN !! ATTRACTIVE POTENTIAL
+              TMP = RIJ/DIST
+              R6 = TMP**6
+              R12 = R6**2
+              VAL = 1.2D+01*DIJ*(R6-R12)/(DIST**2)
+              DO K = 1, 3
+                EGRAD(K,I) = EGRAD(K,I) + (C(K,I)-C(K,J))*VAL
+                EGRAD(K,J) = EGRAD(K,J) - (C(K,I)-C(K,J))*VAL
+              END DO
+            ELSE !! REPULSIVE POTENTIAL
+              TMP = DIST/RIJ
+              R5 = TMP**5
+              R10 = R5**2
+              VAL = DIJ*(-C1*R5*5.0D+00+C2*R10*1.0D+01)/(DIST**2)
+              DO K = 1, 3
+                EGRAD(K,I) = EGRAD(K,I) + (C(K,I)-C(K,J))*VAL
+                EGRAD(K,J) = EGRAD(K,J) - (C(K,I)-C(K,J))*VAL
+              END DO
+            END IF
+          END DO
+        END DO
+      ELSE IF (IDFTBD.EQ.2) THEN !! "SK"
+        !! FIRST CALCULATE SOME CONSTANTS FOR ALL PAIRS OF SPECIES
+        DO I = 1, NSPE
+          PA  = DFTBDP(I*3-2)
+          R0A = DFTBDP(I*3-1)
+          NEA = DFTBDP(I*3  )
+          C6A = 7.5D-01*SQRT(NEA*PA*PA*PA)
+          DO J = I, NSPE
+            PB  = DFTBDP(J*3-2)
+            R0B = DFTBDP(J*3-1)
+            NEB = DFTBDP(J*3  )
+            C6B = 7.5D-01*SQRT(NEB*PB*PB*PB)
+C
+            C6AB = (2.0D+00*C6A*C6B*PA*PB) / (PA*PA*C6B+PB*PB*C6A)
+            R0AB = (R0A**3 + R0B**3) / (R0A**2 + R0B**2)
+            R0AB7I = 1.0D+00 / R0AB**7
+            RDMAT(1,I,J) = C6AB
+            RDMAT(2,I,J) = R0AB7I
+            RDMAT(1,J,I) = C6AB
+            RDMAT(2,J,I) = R0AB7I
+          END DO
+        END DO
+        DO I = 1, NAT
+          NSP1 = ISPE(I)
+          CI = ZREF(I)/QREF(NSP1)
+          DO J = I+1, NAT
+            NSP2 = ISPE(J)
+            CJ = ZREF(J)/QREF(NSP2)
+            C6AB   = RDMAT(1,NSP1,NSP2)
+            R0AB7I = RDMAT(2,NSP1,NSP2)
+            CALL DFTB_CNVSQ(I,J,NSEQ)
+            DIST = DISTMAT(NSEQ)
+            C6AB = C6AB * CI * CJ
+            DISTI = 1.0D+00 / DIST
+            DIST6I = DISTI**6
+            DIST7  = DIST**7
+            DIST7I = DIST6I*DISTI
+            R7R07 = DIST7*R0AB7I
+            VEXP = EXP(-3.0D+00*R7R07)
+            DAMP1 = 1.0D+00 - VEXP
+            DAMP3 = DAMP1**3
+            VAL = 8.4D+01*VEXP*R7R07-6.0D+00*DAMP1
+            VAL = -VAL*C6AB*DAMP3*DIST7I*DISTI
+            DO K = 1, 3
+              EGRAD(K,I) = EGRAD(K,I) + (C(K,I)-C(K,J))*VAL
+              EGRAD(K,J) = EGRAD(K,J) - (C(K,I)-C(K,J))*VAL
+            END DO
+          END DO
+        END DO
+      ELSE IF (IDFTBD.EQ.4) THEN !! "SKHP"
+        IF (IWRK(NAT+1).EQ.0) THEN
+          !! COUNT NUMBER OF BONDS FOR ALL ATOMS
+          CALL VICLR(IWRK,1,NAT)
+          NSEQ = 0
+          DO I = 1, NAT
+            NSP1 = ISPE(I)
+            R0A = DFTBDP(NSP1*14-13) !! COVALENT RADIUS
+            DO J = 1, I-1
+              NSP2 = ISPE(I)
+              R0B = DFTBDP(NSP2*14-13)
+              NSEQ = NSEQ + 1
+              DIST = DISTMAT(NSEQ)
+              IF (DIST.LT.(R0A+R0B)) THEN
+                IWRK(I) = IWRK(I) + 1
+                IWRK(J) = IWRK(J) + 1
+              END IF
+            END DO
+            NSEQ = NSEQ + 1 !! SKIP THE INDEX FOR SAME ATOM
+          END DO
+          DO I = 1, NAT
+            IF (IWRK(I).GT.5) IWRK(I) = 5 !! MAX NEIGHBORS SHOULD BE 5
+          END DO
+        END IF
+        !! CALCULATE DISPERSION CORRECTION
+        NSEQ = 0
+        DO I = 1, NAT
+          NSP1 = ISPE(I)
+          PA   = DFTBDP(NSP1*14-12+IWRK(I))
+          R0A  = DFTBDP(NSP1*14- 6+IWRK(I))
+          NEA  = DFTBDP(NSP1*14)
+          C6A  = 7.5D-01*SQRT(NEA*PA*PA*PA)
+          CI   = ZREF(I)/QREF(NSP1)
+          DO J = 1, I-1
+            NSP2 = ISPE(J)
+            PB   = DFTBDP(NSP2*14-12+IWRK(J))
+            R0B  = DFTBDP(NSP2*14- 6+IWRK(J))
+            NEB  = DFTBDP(NSP2*14)
+            C6B  = 7.5D-01*SQRT(NEB*PB*PB*PB)
+            CJ   = ZREF(J)/QREF(NSP2)
+            C6AB = (2.0D+00*C6A*C6B*PA*PB) / (PA*PA*C6B+PB*PB*C6A)
+            R0AB = (R0A**3 + R0B**3) / (R0A**2 + R0B**2)
+            R0AB7I = 1.0D+00 / R0AB**7
+            NSEQ = NSEQ + 1
+            DIST = DISTMAT(NSEQ)
+            C6AB = C6AB * CI * CJ
+            DISTI = 1.0D+00 / DIST
+            DIST6I = DISTI**6
+            DIST7  = DIST**7
+            DIST7I = DIST6I*DISTI
+            R7R07 = DIST7*R0AB7I
+            VEXP = EXP(-3.0D+00*R7R07)
+            DAMP1 = 1.0D+00 - VEXP
+            DAMP3 = DAMP1**3
+            VAL = 8.4D+01*VEXP*R7R07-6.0D+00*DAMP1
+            VAL = -VAL*C6AB*DAMP3*DIST7I*DISTI
+            DO K = 1, 3
+              EGRAD(K,I) = EGRAD(K,I) + (C(K,I)-C(K,J))*VAL
+              EGRAD(K,J) = EGRAD(K,J) - (C(K,I)-C(K,J))*VAL
+            END DO
+          END DO
+          NSEQ = NSEQ + 1
+        END DO
+      END IF
+C
+      END SUBROUTINE DFTB_DISP_GRAD
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_REPGRAD
+C>
+C>    @brief Calculate gradient for DFTB
+C>
+C>    @details Calculate gradient for DFTB
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NAT      Number of atoms
+C>    @param C        Coordinate
+C>    @param ISPE     Index of species
+C>    @param NSPE     Number of species
+C>    @param NUMREP   Number of grids for specific pairs
+C>    @param REPCUT   Cutoff distance for specific pairs
+C>    @param REPINTV  Lower and upper bound of each grid of repulsive
+C>                    potential for specific pairs
+C>    @param REPSHORT Coefficients (and exponent) for short range
+C>                    respulsive potential
+C>    @param REPSHORT Coefficients for medium (4 terms) and long (6
+C>                    terms) range respulsive potential
+C>           --- OUTPUT ---
+C>    @param GRAD     Gradient of repulsive potential
+C>    @param DISTMAT  Matrix of distance between each atom (up. triang.)
+C>
+C
+      SUBROUTINE DFTB_REPGRAD(NAT,C,ISPE,NSPE,NUMREP,REPCUT,
+     & REPINTV,REPSHORT,REPCOEFF,GRAD,DISTMAT,ZREF,QREF)
+C
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MXINT=150,MXSPE=10
+C
+      INTEGER,INTENT(IN) :: NAT
+      DOUBLE PRECISION,INTENT(IN) :: C(3,NAT)
+      INTEGER,INTENT(IN) :: ISPE(NAT)
+      INTEGER,INTENT(IN) :: NSPE
+      INTEGER,INTENT(IN) :: NUMREP(MXSPE,MXSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPCUT(MXSPE,MXSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPINTV(2,MXINT,NSPE,NSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPSHORT(3,NSPE,NSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPCOEFF(6,MXINT,NSPE,NSPE)
+      DOUBLE PRECISION,INTENT(IN) :: ZREF(NAT),QREF(*)
+C
+      DOUBLE PRECISION,INTENT(INOUT) :: GRAD(3,NAT)
+      DOUBLE PRECISION,INTENT(INOUT) :: DISTMAT(*)
+C
+      INTEGER :: I,J,K,L,SPE1,SPE2,NSEQ
+      DOUBLE PRECISION :: VAL,X,X1,DIST,CI,CJ,TQ1,TQ2
+C
+      DO I = 1, NAT
+        SPE1 = ISPE(I)
+        TQ1 = 1.0D+00 / QREF(SPE1)
+        CI = ZREF(I)*TQ1
+        DO J = 1, I-1 !! I
+          SPE2 = ISPE(J)
+          TQ2 = 1.0D+00 / QREF(SPE2)
+          CJ = ZREF(J)*TQ2
+          DIST = SQRT( (C(1,I)-C(1,J))**2
+     &               + (C(2,I)-C(2,J))**2
+     &               + (C(3,I)-C(3,J))**2 )
+          CALL DFTB_CNVSQ(I,J,NSEQ)
+          DISTMAT(NSEQ) = DIST
+          IF (DIST.LT.1.0D-02) THEN
+C         ----- VAL = 0.0 IF DISTANCE IS LESS THAN 0.01 AU
+            VAL = 0.0D+00
+          ELSE IF (DIST.GT.REPCUT(SPE1,SPE2)) THEN
+C         ----- VAL = 0.0 IF DISTANCE IS MORE THAN CUTOFF
+            VAL = 0.0D+00
+          ELSE
+            IF (DIST.LT.REPINTV(1,1,SPE1,SPE2)) THEN
+C            --- SHORT RANGE REPULSIVE PART ---
+              VAL = -REPSHORT(1,SPE1,SPE2)
+     &            * EXP(-REPSHORT(1,SPE1,SPE2)*DIST
+     &                 + REPSHORT(2,SPE1,SPE2))
+            ELSE
+              DO K = 1, NUMREP(SPE1,SPE2)
+                IF (DIST.GE.REPINTV(1,K,SPE1,SPE2) 
+     &              .AND. DIST.LE.REPINTV(2,K,SPE1,SPE2)) EXIT
+              END DO
+              VAL = 0.0D+00 ! REPCOEFF(1,K,SPE1,SPE2)
+              X1  = DIST - REPINTV(1,K,SPE1,SPE2)
+              X   = 1.0D+00
+              IF (K.LT.NUMREP(SPE1,SPE2)) THEN
+C            --- MEDIUM RANGE REPULSIVE PART ---
+                DO L = 2, 4
+                  VAL = VAL + (L-1)*REPCOEFF(L,K,SPE1,SPE2) * X
+                  X   = X * X1
+                END DO
+              ELSE
+C            --- LONG RANGE REPULSIVE PART ---
+                DO L = 2, 6
+                  VAL = VAL + (L-1)*REPCOEFF(L,K,SPE1,SPE2) * X
+                  X   = X * X1
+                END DO
+              END IF
+            END IF
+            VAL = VAL / DIST *CI*CJ
+          END IF
+C         WRITE (6,'(3I3,X,F14.7,X,F8.5)') I, J, K, VAL, DIST
+          DO K = 1, 3
+            GRAD(K,I) = GRAD(K,I) + (C(K,I)-C(K,J))*VAL
+            GRAD(K,J) = GRAD(K,J) - (C(K,I)-C(K,J))*VAL
+          END DO
+        END DO
+      END DO
+C      
+      END SUBROUTINE DFTB_REPGRAD
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK REPGRADFMO
+C>
+C>    @brief Calculate respulsive gradient
+C>
+C>    @details Calculate gradient repulsive terms in ES-DIM calculations
+C>             for FMO-DFTB.  This function may possibly be required
+C>             for ES-DIM calculation when repulsive term has values
+C>             at long-range region.  We have assumed that inter-fragm.
+C>             contribution in ES-DIM is (close to) zero, since the
+C>             repulsive terms are much short-ranged.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param DIST Distance between atom A and B
+C>    @param NUMREP Number of grids for specific pairs
+C>    @param REPCUT Cutoff distance for specific pairs
+C>    @param ISPE Index of species
+C>    @param REPINTV Lower and upper bound of each grid of repulsive
+C>                   potential for specific pairs
+C>    @param REPSHORT Coefficients (and exponent) for short range
+C>                    respulsive potential
+C>    @param REPCOEFF Coefficients for medium (4 terms) and long (6
+C>                    terms) range respulsive potential
+C>           --- OUTPUT ---
+C>    @param REPGRADFMO Gradient
+C>
+C
+      DOUBLE PRECISION FUNCTION REPGRADFMO(DIST,NUMREP,
+     & REPCUT,REPINTV,REPSHORT,REPCOEFF)
+C
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MXINT=150
+C
+      DOUBLE PRECISION,INTENT(IN) :: DIST
+      INTEGER,INTENT(IN) :: NUMREP
+      DOUBLE PRECISION,INTENT(IN) :: REPCUT
+      DOUBLE PRECISION,INTENT(IN) :: REPINTV(2,MXINT)
+      DOUBLE PRECISION,INTENT(IN) :: REPSHORT(3)
+      DOUBLE PRECISION,INTENT(IN) :: REPCOEFF(6,MXINT)
+C
+      INTEGER :: K, L
+      DOUBLE PRECISION :: X, X1
+C
+      IF (DIST.LT.1.0D-02) THEN
+C     ----- REPGRADFMO = 0.0 IF DISTANCE IS LESS THAN 0.01 AU
+        REPGRADFMO = 0.0D+00
+        RETURN
+      ELSE IF (DIST.GT.REPCUT) THEN
+C     ----- REPGRADFMO = 0.0 IF DISTANCE IS MORE THAN CUTOFF
+        REPGRADFMO = 0.0D+00
+        RETURN
+      ELSE
+        IF (DIST.LT.REPINTV(1,1)) THEN
+C        --- SHORT RANGE REPULSIVE PART ---
+          REPGRADFMO = -REPSHORT(1)
+     &        * EXP(-REPSHORT(1)*DIST+ REPSHORT(2))
+        ELSE
+          DO K = 1, NUMREP
+            IF (DIST.GE.REPINTV(1,K) .AND. DIST.LE.REPINTV(2,K)) EXIT
+          END DO
+          REPGRADFMO = 0.0D+00 ! REPCOEFF(1,K,SPE1,SPE2)
+          X1  = DIST - REPINTV(1,K)
+          X   = 1.0D+00
+          IF (K.LT.NUMREP) THEN
+C        --- MEDIUM RANGE REPULSIVE PART ---
+            DO L = 2, 4
+              REPGRADFMO = REPGRADFMO + (L-1)*REPCOEFF(L,K) * X
+              X   = X * X1
+            END DO
+          ELSE
+C        --- LONG RANGE REPULSIVE PART ---
+            DO L = 2, 6
+              REPGRADFMO = REPGRADFMO + (L-1)*REPCOEFF(L,K) * X
+              X   = X * X1
+            END DO
+          END IF
+        END IF
+      END IF
+C     WRITE (6,'(3I3,X,F14.7,X,F8.5)') I, J, K, REPGRADFMO, DIST
+      REPGRADFMO = REPGRADFMO / DIST
+C
+      END FUNCTION REPGRADFMO
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBGR    *DECK DFTB_PRJGRD
+C>
+C>    @brief   Projection of gradients
+C>
+C>    @details Projection of gradients for DFTB.  This subroutine should
+C>             be called for DFTB/PCM calculations (gradient).
+C>             Since DFTB does not call JKDER, the PRJGRD subroutine is
+C>             never called.  For this reason, it has to be called later
+C>             after the addition of PCM contributions.  This is copied
+C>             from the JKDER subroutine.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param C      Coordinates
+C>    @param RUNTYP Runtype.
+C>    @param NAT    Number of aotms
+C>           --- IN/OUTPUT ---
+C>    @param EGRAD  Gradient on entry, and gradient whose rotational
+C>                  vectors have been projected out on exit
+C>
+      SUBROUTINE DFTB_PRJGRD(EGRAD,C,RUNTYP,NAT)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXATM=2000,MXFRG=1050,MXDFG=5,MXDPPT=MXFRG*MXDFG*12)
+C
+      LOGICAL PROJGRAD,LINEAR
+C
+      COMMON /FMCOM / X(1)
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+     *                NPPTS(MXFRG),NPTTPT,IEFP,
+     *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+     *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+     *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /MASSES/ ZMASS(MXATM)
+      COMMON /ZMAT  / NZMAT,NZVAR,NVAR,NSYMC,LINEAR
+C
+      DATA OPT,SADPT,MD/8HOPTIMIZE,8HSADPOINT,8HMD      /
+C
+      DIMENSION EGRAD(3,NAT)
+C
+C            PROJECT ROTATIONAL CONTAMINANT FROM GRADIENTS
+C       WHICH MAY HAVE TORQUES DUE TO FINITE GRIDS IN DFT OR PCM
+C     GEOMETRY SEARCHES CAN SKIP IF THEY TRANSFORM INTO INTERNAL
+C     COORDINATES, A HEALTHIER WAY TO REMOVE THE PROBLEM.
+C     WHAT IS THE THINKING IS BEHIND EXCLUDING MD?
+C     THIS WILL BE DONE LATER FOR THE FULL MOLECULE IN CASE OF FMO.
+C
+      PROJGRAD = .TRUE.
+C
+      IF(RUNTYP.EQ.OPT   .AND. NZVAR.GT.0) PROJGRAD=.FALSE.
+      IF(RUNTYP.EQ.SADPT .AND. NZVAR.GT.0) PROJGRAD=.FALSE.
+      IF(RUNTYP.EQ.MD)                     PROJGRAD=.FALSE.
+      IF(NFG.GT.0)                         PROJGRAD=.FALSE.
+C
+      IF(PROJGRAD) THEN
+         NCCF = 3*NAT + 6*NFRG
+         CALL VALFM(LOADFM)
+         LGTOT  = LOADFM + 1
+         LRM    = LGTOT  + 3*NAT +  6*NFRG
+         LX     = LRM    + 3*NAT + 21*NFRG
+         LP     = LX     + 3*NAT +  6*NFRG
+         LAST   = LP     + 3*NAT +  6*NFRG 
+         NEEDP  = LAST-LOADFM-1
+         CALL GETFM(NEEDP)
+         CALL PRJGRD(EGRAD,C,X(LX),X(LGTOT),X(LRM),X(LP),ZMASS,
+     *               NAT,3*NAT,NCCF,.FALSE.)
+         CALL RETFM(NEEDP)
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_PRJGRD

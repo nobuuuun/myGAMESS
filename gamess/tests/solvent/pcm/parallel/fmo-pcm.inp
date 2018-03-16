@@ -1,0 +1,106 @@
+!   FMO + PCM test case from Dmitri, three waters in PCM water.
+!
+!       This test executes a number of older PCM options:
+!   IEF-PCM with escaped charge correction, and all the empirical
+!   stuff (cavitation etc).  Note, old style dispersion/repulsion.
+!   C-PCM results are include below the results for this run.
+!
+!   As for FMO, it is at the level FMO2-RHF/PCM[1(2)].  MULTILAYER!
+!   So, be sure to look only at the last set of results.
+!
+!   There are 42 FINAL energies, the first, fourth, last being
+!       -76.0842371173, -76.1057439980, -152.1238811632
+!
+!   One body results are
+!     Total energy of the molecule: Euncorr(1)=     -228.020890673
+!     Total energy of the molecule: Eunc_es(1)=     -228.038195253
+!     Total energy of the molecule: Eunc+so(1)=     -228.035540133
+!   Dipole moment D(xyz),DA(1)=   -0.1941959   -0.6463487   -1.3188335
+!   Total Gsol(1)=    -9.193 kcal/mol.
+!   Shift to convert internal to QM energy, Des(1)=   -10.859 kcal/mol.
+!
+!   Two body results are
+!     Total energy of the molecule: Euncorr(2)=     -228.055054843
+!     Total energy of the molecule: Eunc_es(2)=     -228.072374969
+!     Total energy of the molecule: Eunc+so(2)=     -228.066909835
+!   Dipole moment D(xyz),DA(2)=   -0.1762348   -0.6622430   -1.3119044
+!   Total Gsol(2)=    -7.439 kcal/mol.
+!   Shift to convert internal to QM energy, Des(2)=   -10.869 kcal/mol.
+!
+!   ELECTROSTATIC INTERACTION  =     -10.869 KCAL/MOL
+!   PIEROTTI CAVITATION ENERGY =      12.626 KCAL/MOL
+!   DISPERSION FREE ENERGY     =     -11.076 KCAL/MOL
+!   REPULSION FREE ENERGY      =       1.879 KCAL/MOL
+!   TOTAL INTERACTION          =      -7.439 KCAL/MOL
+!        Free  uncorrelated energy in solvent=     -228.066909835
+!    Internal  uncorrelated energy in solvent=     -228.055054843
+!
+!   This job takes 4 seconds on 2.66 GHz Cloverton (29 Aug 2008)
+!
+!   ----------------------------------------------------------------
+!   data for sampling other PCM keyword:
+!   IEF   mthall    e-uncorr(1)     e-uncorr(2)   Ges-1   Ges-2
+!   -3      2    -228.038195253   -228.072374969 -10.859 -10.869 
+!   -3      2       full QM       -228.066571904         -10.89
+!   -3      3    -228.038277857   -228.072463615 -10.922 -10.931 
+!   -3      3       full QM       -228.066660260         -10.95
+!   -3      4    -228.037908872   -228.071958080 -10.592 -10.592 
+!   -3      4       full QM       -228.066152567         -10.61
+!   -10     2    -228.038291813   -228.072481113 -10.934 -10.944 
+!   -10     2       full QM       -228.066678058         -10.96
+!   -10     3    -228.038371315   -228.072566526 -10.995 -11.005 
+!   -10     3       full QM       -228.066763191         -11.02
+!   -10     4    -228.037984273   -228.072040604 -10.651 -10.650 
+!   -10     4       full QM       -228.066235072         -10.67
+!   Using mthall=3 requires bumping to mxts=1000 and mword=10, much more time
+!
+!   note that the 'uncorrelated energy in solvent' is a much better
+!   match to the true QM+PCM energy than the 'e-uncorr' printouts!
+!
+ $contrl scftyp=rhf runtyp=energy ispher=1 nprint=-5 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $scf    npunch=0 $end
+
+ $pcm    solvnt=water ief=-3 icomp=2 icav=1 idisp=1 ifmo=2 $end
+ $tescav mthall=2 $end
+
+ $fmo    nfrag=3 nacut=3 $end
+ $fmoprp nprint=0 npcmit=2 $end
+ $fmoxyz
+O  O            .000000     .000000     .000000
+H  H            .000000     .000000     .957200
+H  H            .926627     .000000    -.239987
+8  8           2.542027     .893763   -1.001593
+H  H           1.991815    1.623962   -1.284979
+1  1           2.958433     .581215   -1.804806
+O  O            .162059    2.462918   -1.477183
+H  H           -.189749    1.755643    -.936605
+H  H           -.375542    2.449889   -2.269046
+ $end
+
+ $data
+Water in water.
+c1
+h-1 1
+o-1 8
+ $end
+
+         to do full QM instead of FMO, use this data group,
+         commend out the fmo input group, and turn ifmo off
+
+--- $data
+Water in water.
+c1
+O  8            .000000     .000000     .000000
+H  1            .000000     .000000     .957200
+H  1            .926627     .000000    -.239987
+O  8           2.542027     .893763   -1.001593
+H  1           1.991815    1.623962   -1.284979
+H  1           2.958433     .581215   -1.804806
+O  8            .162059    2.462918   -1.477183
+H  1           -.189749    1.755643    -.936605
+H  1           -.375542    2.449889   -2.269046
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,53 @@
+!   H atom excited state...test case from Toby Zeng...August 2011
+!   the 2-P spinor of H atom is generated.
+!
+!   This generates the spinor shown at equation (3) of the paper:
+!       T.Zeng, D.G.Fedorov, M.W.Schmidt, M.Klobukowski
+!           J.Chem.Theory Comput. 7, 2864-2875(2011)
+!   energy is -0.0063557 due to using only a single GTO, not -1/8
+!
+!   The 2nd spinor in this run will have occupation number 0.50, 
+!   and j=1/2, jz= -0.5, with spinor components obeying eq. (3):
+!          5.77350 * px * alpha 
+!    - i * 5.77350 * py * alpha
+!        + 5.77350 * pz * beta
+!   but note this is an eigenvector, so the phase is arbitrary, and
+!   this run has been observed to have phase factor i times the above.
+!
+!   This test requires 0 seconds on 2.66 GHz Cloverton (17 Apr 2015)
+!   results the same since creation in 2011
+!   
+ $contrl scftyp=none cityp=guga mult=2 runtyp=transitn relwfn=dk ispher=1 $end
+ $system mwords=1 $end
+ $relwfn norder=2 $end 
+ $transt operat=hso1 numci=3 numvec=1 nfzc=0 nocc=3
+         iroots(1)=1,1,1
+         nstate(1)=1,1,1 prtprm=.t.
+         parmp=1 istno(1)=-1,-2 $end
+!             a p shell lies in the D2h irreps shown below
+ $drt1   fors=.t. group=d2h nalp=1 nval=2
+         MXNINT=100000 stsym=b1u $end
+ $drt2   fors=.t. group=d2h nalp=1 nval=2
+         MXNINT=100000 stsym=b2u $end
+ $drt3   fors=.t. group=d2h nalp=1 nval=2
+         MXNINT=100000 stsym=b3u $end
+ $data
+hydrogen atom spinor...STO-1G...note that there is no s basis function
+Dnh 2
+
+H      1.0
+  p 1 ; 1 0.1759666885 1.0
+
+ $end
+--- CLOSED SHELL ORBITALS --- GENERATED AT Mon Apr  4 07:54:41 2011
+ h    title                                                                     
+
+Use of single GTO means we can make our LCAO matrix by hand:
+ $VEC1  
+ 1  1 1.00000000E+00 0.00000000E+00 0.00000000E+00
+ 2  1 0.00000000E+00 1.00000000E+00 0.00000000E+00
+ 3  1 0.00000000E+00 0.00000000E+00 1.00000000E+00
+ $END   
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,71 @@
+!   Test of PCM with effective fragments, from Pradipta
+!   The system is glycine in a zwitterion form, 3 EFP waters, in PCM water
+!
+!   solute/EFP FINAL E= -282.8979599938, solute/EFP/PCM E= -282.9574074967
+!
+!   This job takes 28 seconds on a 2.66 GHz Cloverton (14 Nov 2008)
+!  
+!   ------------ additional data from the run is -----------
+!   19 spheres, 634 tesserae, SURFACE AREA= 206.07491835, VOLUME= 174.17830293
+!   PCM charges: CALCULATED 39.46969, THEORETICAL 39.48973 NOT RENORMALIZED
+!   FREE ENERGY IN SOLVENT = <PSI| H(0)+V/2 |PSI>       =  -282.9574074967 A.U.
+!   INTERNAL ENERGY IN SOLVENT = <PSI| H(0) |PSI>       =  -282.8908850443 A.U.
+!   ELECTROSTATIC INTERACTION                           =    -0.0665224525 A.U.
+!   TOTAL FREE ENERGY IN SOLVENT                        =  -282.9574074967 A.U.
+!
+!                            ELECTRON        NUCLEI     MULTIPOLE   POLARIZABLE
+!                             INDUCED       INDUCED       INDUCED       INDUCED
+!                              CHARGE        CHARGE        CHARGE        CHARGE
+!    ELECTRONIC  POTENTIAL  -93363.22      93226.34        -87.97        -14.42
+!    NUCLEAR     POTENTIAL   93226.50     -93140.93         99.50         16.86
+!    MULTIPOLE   POTENTIAL     -88.72        100.26        -13.84         -2.11
+!    POLARIZABLE POTENTIAL       0.00          0.00          0.00          0.00
+!           ----------------- TOTAL:     -41.74 -----------------
+!
+!   dipole of the QM region only is
+!        DX          DY          DZ         /D/  (DEBYE)
+!     9.710436    -.633746   -3.146366   10.227112
+!   including PCM surface charges, total CHARGE= -.009942, total dipole is
+!         DX          DY          DZ         /D/  (DEBYE)
+!      .331658     .004106    -.184826     .379703
+!  
+!
+ $contrl scftyp=rhf runtyp=energy molplt=.true. $end
+ $system mwords=5 $end
+ $basis  gbasis=DH NDFUNC=1 NPFUNC=0 DIFFS=.F. DIFFSP=.T. $end
+
+ $pcm    solvnt=water ief=3 icomp=0 $END
+ $tescav mthall=1 $end
+
+ $data
+glycine plus 3 explicit EFP waters solvated by PCM water
+C1
+C           6.0    .8548532570    .6250395990    .7351601803
+H           1.0    .9177464011   1.6888530001    .5841407841
+C           6.0   -.5472080135    .0895694415    .3884733234
+N           7.0   1.8717761392   -.0235585665   -.1357743780
+H           1.0   1.0929293454    .3864564692   1.7639890758
+O           8.0  -1.4119855741    .9390419804    .1967096333
+O           8.0   -.6426013382  -1.1440413971    .3298826677
+H           1.0   1.9483553681  -1.0256390976    .0275149808
+H           1.0   1.6375852468    .0959157955  -1.1228599081
+H           1.0   2.7703091390    .4044305207   -.0013913366
+ $end
+ $efrag
+iscrelec=0 iscrpol=0 iscrdisp=0
+FRAGNAME=h2orhf
+ZO1               2.2551779733   2.6327672761  -1.5258590470
+ZH2               2.8116953432   2.5640498674  -2.2850986593
+ZH3               1.3826401331   2.8020646807  -1.8434980878
+FRAGNAME=h2orhf
+ZO1               -.6241975105   2.2988841475  -2.2479128403
+ZH2               -.9710681607   2.0320900979  -1.4116233323
+ZH3              -1.3616797976   2.5557070349  -2.7780452152
+FRAGNAME=h2orhf
+ZO1               2.2124256701  -2.7878195716   -.2001651338
+ZH2               1.7581866840  -3.2939827552    .4543149874
+ZH3               1.7674115663  -2.9405811720  -1.0183978604
+ $end  
+
+! TRAVIS-CI SMALL
+

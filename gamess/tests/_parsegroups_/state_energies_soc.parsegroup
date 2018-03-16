@@ -1,0 +1,14 @@
+{
+  "parse_header" : "STATE ENERGIES - SPIN-ORBIT COUPLING",
+  "parse_group" : [
+   {
+     "regex_string" : "^ STATE(\\s*)[0-9]+: RELATIVE E=.*$",
+     "parse_name"   : "SPIN-ORBIT COUPLING ENERGY",
+     "parse_precision" : -1,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "STATE"
+   }
+  ]
+}

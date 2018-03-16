@@ -1,0 +1,106 @@
+!  water trimer...all options in $MOROKM group are tested below
+!
+!            results of Kitaura-Morokuma analysis
+!            ------------------------------------
+!                                           hartree    kcal/mole
+!   electrostatic e.ergy             ES=    -.036277     -22.76
+!   exchange repulsion e.ergy        EX=     .023623      14.82
+!   polarization e.ergy              PL=    -.003624      -2.27
+!   charge transfer e.ergy           CT=    -.011503      -7.22
+!   high order coupling e.ergy      MIX=     .000224        .14
+!   CT + PL + X,      x           CTPLX=    -.014725      -9.24
+!   high order couplinx for CPLX,   RES=    -.000178       -.11
+!   total interaction e.ergy,   delta-E=    -.027557     -17.29
+!   
+!   decomposition of CT
+!   charge transfer energy, mon=  1  CT=    -.003970      -2.49
+!   charge transfer energy, mon=  2  CT=    -.003859      -2.42
+!   charge transfer energy, mon=  3  CT=    -.003675      -2.31
+!   
+!   decomposition of PL
+!   EPL,                    mon=  1  PL=    -.001099       -.69
+!   EPL,                    mon=  2  PL=    -.001079       -.68
+!   EPL,                    mon=  3  PL=    -.001032       -.65
+!   high order coupling for PL,    PMIX=    -.000413       -.26
+!   
+!   decomposition of CTPLX
+!   CT + PL + X,            mon=  1 CPX=    -.004957      -3.11
+!   CT + PL + X,            mon=  2 CPX=    -.004736      -2.97
+!   CT + PL + X,            mon=  3 CPX=    -.005032      -3.16
+!   
+!   Basis set superposition error
+!   total INT with BSSE,  delta-E(BSSE)=    -.021830     -13.70
+!   BSSE correction,            E(BSSE)=     .005727       3.59
+!   
+!   EEX with BSSE              EX(BSSE)=     .024434      15.33
+!   EEX with BSSE     mon=  1    DEL EX=     .000284        .18
+!   EEX with BSSE     mon=  2    DEL EX=     .000268        .17
+!   EEX with BSSE     mon=  3    DEL EX=     .000260        .16
+!   
+!   ECT with BSSE              CT(BSSE)=    -.009832      -6.17
+!   ECT with BSSE     mon=  1    DEL CT=     .000585        .37
+!   ECT with BSSE     mon=  2    DEL CT=     .000538        .34
+!   ECT with BSSE     mon=  3    DEL CT=     .000548        .34
+!   ECT with BSSE     mon=  1  CT(BSSE)=    -.003385      -2.12
+!   ECT with BSSE     mon=  2  CT(BSSE)=    -.003321      -2.08
+!   ECT with BSSE     mon=  3  CT(BSSE)=    -.003127      -1.96
+!   
+!   EMIX with BSSE           EMIX(BSSE)=     .003468       2.18
+!   
+!   ECTPLX with BSSE        CTPLX(BSSE)=    -.013054      -8.19
+!   ECTPLX with BSSE  mon=  1 DEL CTPLX=     .000585        .37
+!   ECTPLX with BSSE  mon=  2 DEL CTPLX=     .000538        .34
+!   ECTPLX with BSSE  mon=  3 DEL CTPLX=     .000548        .34
+!   ECTPLX with BSSE  mon=  1 CTPLX(BS)=    -.004372      -2.74
+!   ECTPLX with BSSE  mon=  2 CTPLX(BS)=    -.004198      -2.63
+!   ECTPLX with BSSE  mon=  3 CTPLX(BS)=    -.004484      -2.81
+!   
+!   ERES with BSSE           ERES(BSSE)=     .003066       1.92
+!   
+!            results of rvs analysis
+!            -----------------------
+!                                           HARTREE    KCAL/MOLE
+!    ES (ELECTROSTATIC, OR COULOMB)       -0.036277     -22.76
+!    EX (EXCHANGE REPULSION)               0.023623      14.82
+!    POL         MONOMER  1               -0.001549      -0.97
+!    POL         MONOMER  2               -0.001458      -0.91
+!    POL         MONOMER  3               -0.001489      -0.93
+!    CT          MONOMER  1               -0.002740      -1.72
+!    CT          MONOMER  2               -0.002577      -1.62
+!    CT          MONOMER  3               -0.002436      -1.53
+!   
+!             TOTAL COULOMB/EXCHANGE      -0.012654      -7.94
+!             TOTAL POLARIZATION          -0.004496      -2.82
+!             TOTAL CHARGE TRANSFER       -0.007753      -4.87
+!             TOTAL OF CEX+POL+CT         -0.024902     -15.63
+!             TOTAL INTERACTION ENERGY    -0.027557     -17.29
+!   
+!    BSSE(VIR)   MONOMER  1               -0.000655      -0.41
+!    BSSE(VIR)   MONOMER  2               -0.000600      -0.38
+!    BSSE(VIR)   MONOMER  3               -0.000610      -0.38
+!    TOTAL BSSE                           -0.001866      -1.17
+!    BSSE CORRECTED TOTAL INTERACTION     -0.025691     -16.12
+!
+!    this run takes 20 seconds on 2.66 GHz Cloverton (28 April 2009)
+!    results in 2009 remained identical to input file's 1999 data!
+!  
+ $contrl scftyp=rhf runtyp=eda ispher=0 $end
+ $system mwords=1 timlim=10 $end
+ $morokm iatm(1)=3,3 ctplx=.true. rvs=.true. bsse=.true. $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $data
+water trimer at 6-31G(d,p)
+C1
+Oxygen      8.0       .137767    1.647646     .108196
+Hydrogen    1.0      -.633431    1.090377     .112660
+Hydrogen    1.0       .048391    2.218605    -.637157
+Oxygen      8.0     -1.505219    -.695733    -.081093
+Hydrogen    1.0     -1.965311   -1.131395     .617021
+Hydrogen    1.0      -.648126   -1.103779    -.141014
+Oxygen      8.0      1.367951    -.940123    -.092091
+Hydrogen    1.0      1.264708     .005135    -.059850
+Hydrogen    1.0      1.929783   -1.173264     .628244
+ $end
+
+! TRAVIS-CI SMALL
+

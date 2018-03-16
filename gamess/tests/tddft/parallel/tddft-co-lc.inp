@@ -1,0 +1,160 @@
+! CO at Re(experiment)....TDDFT/LC-BLYP  calculation
+!
+! LC-BLYP results, without using the bond functions, are
+!      FINAL R-LC-BLYP E= -113.1154318436, 20 iters
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!  0  A1        -113.1154318436    0.000
+!  1  B2        -112.8055987071    8.431     0.0000  0.6630  0.0000    0.091
+!  2  B1        -112.8055986968    8.431     0.6630  0.0000  0.0000    0.091
+!  3  A2        -112.7414467874   10.177     0.0000  0.0000  0.0000    0.000
+!  4  A1        -112.7414467874   10.177     0.0000  0.0000  0.0000    0.000
+!  5  A1        -112.7352282501   10.346     0.0000  0.0000  0.2077    0.011
+!  6  A1        -112.7167665314   10.848     0.0000  0.0000 -0.7279    0.141
+!  7  B2        -112.7079415100   11.088     0.0000 -0.4216  0.0000    0.048
+!  8  B1        -112.7079414116   11.088    -0.4216  0.0000  0.0000    0.048
+!  9  A1        -112.6671483236   12.198     0.0000  0.0000  0.0000    0.000
+! 10  A2        -112.6671482723   12.198     0.0000  0.0000  0.0000    0.000
+!
+!  The singlet spectrum takes 20 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!  results haven't changed much since 2009.
+!
+! --------------------------------------------------------------------------
+! This job means to reproduce the column "LC-BLYP" in Table II in
+!     Y.Towada, T.Tsuneda, S.Yanagisawa, T.Yanai, K.Hirao
+!             J.Chem.Phys. 120, 8425-8433(2004)
+! and all results below the line are from before GAMESS would refuse to
+! run with a bond function given in the input file.
+! Note, the 1-sigma-minus and 3-sigma-minus states listed at 9.74 eV
+! are not found in these computations.
+! A state is found at 9.75 without the long-range correction (BLYP column)!
+!
+!        SUMMARY OF TDDFT RESULTS (for LC style DFTTYP.eq.BLYP singlet states)
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!                   HARTREE          EV         X       Y       Z     STRENGTH
+!  0  A1        -113.1156582497    0.000
+!  1  B2        -112.8058046404    8.432     0.0000 -0.6628  0.0000    0.091
+!  2  B1        -112.8058046397    8.432     0.6628  0.0000  0.0000    0.091
+!  3  A2        -112.7416894817   10.176     0.0000  0.0000  0.0000    0.000
+!  4  A1        -112.7416894754   10.176     0.0000  0.0000  0.0000    0.000
+!  5  A1        -112.7382428341   10.270     0.0000  0.0000 -0.2108    0.011
+!  6  A1        -112.7215544434   10.724     0.0000  0.0000  0.6385    0.107
+!  7  B1        -112.7169944893   10.848     0.3443  0.0000  0.0000    0.032
+!  8  B2        -112.7169944778   10.848     0.0000  0.3443  0.0000    0.032
+!  9  A1        -112.6831323115   11.770     0.0000  0.0000  0.0000    0.000
+! 10  A2        -112.6831322836   11.770     0.0000  0.0000  0.0000    0.000
+!
+!  without the long range correction, the BLYP results are
+!   0.0, 8.234(2), 8.889, 9.252, 9.444(2), 9.501, 9.747, 9.952, 9.997
+!
+!        SUMMARY OF TDDFT RESULTS (for LC style DFTTYP.eq.BLYP triplet states)
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!                   HARTREE          EV         X       Y       Z     STRENGTH
+!  0  A1        -113.1156582499     .000
+!  1  B2        -112.8970946500    5.947      .0000   .0000   .0000     .000
+!  2  B1        -112.8970946492    5.947      .0000   .0000   .0000     .000
+!  3  A1        -112.8172217035    8.121      .0000   .0000   .0000     .000
+!  4  A1        -112.7914234750    8.823      .0000   .0000   .0000     .000
+!  5  A2        -112.7914234750    8.823      .0000   .0000   .0000     .000
+!  6  A1        -112.7557142317    9.795      .0000   .0000   .0000     .000
+!  7  A1        -112.7246673766   10.639      .0000   .0000   .0000     .000
+!  8  B2        -112.7199729452   10.767      .0000   .0000   .0000     .000
+!  9  B1        -112.7199729426   10.767      .0000   .0000   .0000     .000
+! 10  A1        -112.6847974318   11.724      .0000   .0000   .0000     .000
+! 11  A1        -112.6822685204   11.793      .0000   .0000   .0000     .000
+! 12  A2        -112.6822684945   11.793      .0000   .0000   .0000     .000
+!
+ $CONTRL SCFTYP=RHF DFTTYP=BLYP TDDFT=EXCITE $END
+ $SYSTEM MWORDS=4 TIMLIM=10 $END
+ $dft    nrad=96 nthe=12 nphi=24 lc=.true. $end
+ $tddft  nrad=24 nthe=8  nphi=16 NSTATE=10 MULT=1 $END 
+                    or maybe...  NSTATE=12 MULT=3
+ $SCF    DIRSCF=.F. $END
+ $DATA
+CO/TDDFT/LC-BLYP/augmented Sadlej, without bond functions at origin.
+CNV 2
+
+C   6.0  0.0     0.0      0.5640000
+ S   5
+ 1  5240.635300      0.0009370
+ 2   782.204800      0.0072280
+ 3   178.350830      0.0363440
+ 4    50.815942      0.1306000
+ 5    16.823562      0.3189310
+ S   2
+ 1     6.175776      0.4387420
+ 2     2.418049      0.2149740
+ S   1
+ 1     0.511900      1.0000000
+ S   1
+ 1     0.156590      1.0000000
+ S   1
+ 1     0.047900      1.0000000
+ P   4
+ 1    18.841800      0.0138870
+ 2     4.159240      0.0862790
+ 3     1.206710      0.2887440
+ 4     0.385540      0.4994110
+ P   1
+ 1     0.121940      1.0000000
+ P   1
+ 1     0.038568      1.0000000
+ D   2
+ 1     1.206710      0.2628520
+ 2     0.385540      0.8043000
+ D   1
+ 1     0.121940      0.6535000
+ D   1
+ 1     0.038658      0.8636000
+
+O   8.0  0.0     0.0     -0.5640000
+ S   5
+ 1 10662.285000      0.0007990
+ 2  1599.709700      0.0061530
+ 3   364.725260      0.0311570
+ 4   103.651790      0.1155960
+ 5    33.905805      0.3015520
+ S   2
+ 1    12.287469      0.4448700
+ 2     4.756805      0.2431720
+ S   1
+ 1     1.004271      1.0000000
+ S   1
+ 1     0.300686      1.0000000
+ S   1
+ 1     0.090030      1.0000000
+ P   4
+ 1    34.856463      0.0156480
+ 2     7.843131      0.0981970
+ 3     2.306249      0.3077680
+ 4     0.723164      0.4924700
+ P   1
+ 1     0.214882      1.0000000
+ P   1
+ 1     0.063850      1.0000000
+ D   2
+ 1     2.306200      0.2027000
+ 2     0.723200      0.5791000
+ D   1
+ 1     0.214900      0.7854500
+ D   1
+ 1     0.063900      0.5338700
+
+ $END
+
+This test originally had bond functions, but I don't think these
+have Bragg radii defined!  Note that the states above 11 eV
+were affected by removing these very diffuse AOs.
+
+X   0.0  0.0     0.0     0.0
+ S   1
+ 1    0.020850      1.0000000
+ S   1
+ 1    0.006280      1.0000000
+ P   1
+ 1    0.015500      1.0000000
+ D   1
+ 1    0.015500      1.0000000
+
+
+! TRAVIS-CI SMALL
+

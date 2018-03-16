@@ -1,0 +1,55 @@
+! MP2/a5Z-h//MP2/aTZ (with counterpoise BSSE correction and deformation E)
+! interaction energy for water hexamer prism is -45.05 kcal/mol.
+!  Yiming Chen and Hui Li, JPC A 
+!  http://pubs.acs.org/doi/abs/10.1021/jp104822e
+! It is remarkable that TIP5P can give -45.81 kcal/mol.
+!
+!  The TIP5P geometry optimization proceeds as
+!        NSERCH:   0  E=       -0.0694157761  R.M.S.=  0.0034039
+!        NSERCH:   1  E=       -0.0715737355  R.M.S.=  0.0021664
+!        NSERCH:   2  E=       -0.0719009385  R.M.S.=  0.0018668
+!        NSERCH:   3  E=       -0.0719139878  R.M.S.=  0.0020147
+!        NSERCH:   4  E=       -0.0726748880  R.M.S.=  0.0009471
+!        NSERCH:   5  E=       -0.0727283170  R.M.S.=  0.0009687
+!               ...snipped...
+!        NSERCH:  27  E=       -0.0729994598  R.M.S.=  0.0000081
+!        NSERCH:  28  E=       -0.0729995086  R.M.S.=  0.0000058
+!        NSERCH:  29  E=       -0.0729995617  R.M.S.=  0.0000058
+!        NSERCH:  30  E=       -0.0729996110  R.M.S.=  0.0000046
+!        NSERCH:  31  E=       -0.0729996321  R.M.S.=  0.0000021
+!
+! This run takes 0 seconds on 2.66 GHz Cloverton (26 OCt 2015)
+!
+ $contrl runtyp=optimize coord=fragonly $end
+ $system mwords=1 $END
+ $statpt opttol=1d-5 $end
+ $efrag
+ 
+FRAGNAME=TIP5P
+ O1                 -2.1675526522  -2.0544029015  -0.4337647119  
+ H2                 -1.3531471666  -2.5389321875  -0.6352882840  
+ H3                 -1.8715507614  -1.1308550588  -0.5712015155  
+FRAGNAME=TIP5P
+ O1                 -0.6716977019   0.2944490104  -0.4731366656  
+ H2                  0.0613027114  -0.3301277055  -0.5823914443  
+ H3                 -0.6662754913   0.4977657773   0.4757800816  
+FRAGNAME=TIP5P
+ O1                  0.7338021938  -2.2712610461  -0.4178562959  
+ H2                  1.5224027002  -2.7112002511  -0.7469640553  
+ H3                  0.7912691510  -2.3178568450   0.5623860615  
+FRAGNAME=TIP5P
+ O1                  0.5477615506  -2.2081713860   2.3095474506  
+ H2                  0.5487271572  -1.2696791005   2.5435981222  
+ H3                 -0.3848259533  -2.4450162628   2.4407198618  
+FRAGNAME=TIP5P
+ O1                 -2.3039695896  -2.0206189589   2.2137143494  
+ H2                 -2.3596274689  -2.0978839796   1.2226652906  
+ H3                 -3.1107672987  -2.4106894763   2.5610245710  
+FRAGNAME=TIP5P
+ O1                 -0.8889898251   0.3442982323   2.4253171742  
+ H2                 -1.1868458820   1.0730525498   2.9769993607  
+ H3                 -1.5792840937  -0.3439096032   2.4908364462
+ $end
+
+! TRAVIS-CI SMALL
+

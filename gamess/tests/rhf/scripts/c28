@@ -1,0 +1,28 @@
+#!/bin/bash
+
+rhf0=-1059.6723788032
+grad0=0.000000344
+
+rhf=`grep "FINAL RHF ENERGY " $1 | tail -n 1 | awk '{print $5}'`
+grad=`grep "RMS GRADIENT " $1 | tail -n 1 | awk '{print $4}'`
+
+tolE0=$tolE
+tolG0=$tolG
+
+error=0
+
+#rhf energy
+diffrhf=`$chkabs $rhf $rhf0 $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+#rhf gradient
+diffrhf=`$chkabs $grad $grad0 $tolG0`
+if [ $? -ne 0 ]
+then
+  error=$(( $error + 1 ))
+fi
+
+printf "RHF=%12.8f; GRAD=%12.8f\n" $diffrhf $diffgrad
+exit $error

@@ -1,0 +1,84 @@
+!    diborane...VVO type altered virtuals...ACCT has 260 AOs and 230 MOs,
+!    there are 2 cores, 6 filled valence, and 8 valence virtuals.
+!          HOMO is MO #8, 1st empty MO is #9
+!
+!    SCF E= -52.8354378677, 10 iterations,
+!    but the point of this test is to check eigenvalues:
+!                     1          2          3          4          5
+!                  -7.6161    -7.6155    -0.8846    -0.6399    -0.5554
+!                    AG         B1U        AG         B1U        B3U
+!
+!                     6          7          8          9         10
+!                  -0.5402    -0.5191    -0.4735     0.1493     0.3979
+!                    B2U        AG         B3G        B2G        AG
+!
+!                    11         12         13         14         15
+!                   0.4484     0.5166     0.5905     0.5962     0.6358
+!                    B1U        B2U        B1U        B3U        AG
+!
+!                    16         17         18         19         20...
+!                   0.8059     0.0361     0.0406     0.0406     0.0430...
+!                    B3G        AG         B1U        B3U        B2U...
+!    orbitals  1- 2 are chemical core, very deep indeed.
+!    orbitals  3- 8 are valence occupied (conventional RHF eigenvalues)
+!    orbitals  9-18 are VVOs (pseudo-canonicalized to meaningful values)
+!    orbitals 19 on up are the continuum-like background (non-valence),
+!                   note that these start just barely above zero,
+!                   because of the diffuse augmentation in the basis set.
+!
+!    This run takes 21 seconds on 2.66 GHz Cloverton (29 Apr 2015)
+!
+!    -------------------------------------------------------------------
+!    D2h's orientation is z through B's, and x through bridging H's,
+!    which puts the terminal H's into the yz plane.  This is used in
+!    the chapter "Structure and bonding of diborane", K. Wade, 
+!    Electron Deficient Compounds, Studies in Modern Chemistry 6-31(1971)
+!    and seems to be what is implied by Mulliken's orientation rules.
+!    Older papers use various other orientations!
+!
+!    Geometry by high resolution IR spectra is
+!    r(B-B)=1.762 pm 0.0026, r(B-Ht)=1.200 pm 0.0036, r(B-Hb)=1.320 pm 0.0010, 
+!    a(HtBHt)=121.0 pm 0.6, a(HbBHb)=96.2 pm 0.2 (pm-plus/minus)
+!    W.J.Lafferty, A.G.Maki. T.D.Coyle  J. Mol. Spectrosc. 33, 345-367(1970)
+!    The RHF/ACCT geometry is
+!    r(B-B)=1.777,           r(B-Ht)=1.184,           r(B-Hb)=1.319
+!
+ $contrl scftyp=rhf runtyp=energy ispher=1 $end
+ $system mwords=5 $end
+ $basis  gbasis=acct $end
+ $guess  guess=huckel $end
+ $scf    vvos=.true. $end
+
+!      my VVOs paper surveys other basis sets, at this geometry.
+x$basis  gbasis=n31 ngauss=6 $end
+x$basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+x$basis  gbasis=n31 ngauss=6 ndfunc=3 nffunc=1 npfunc=2 $end
+x$basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 diffsp=.t. diffs=.t. $end
+x$basis  gbasis=accq $end
+!
+!      full valence MCSCF has 1,129,033 determinants for the 1-Ag state
+!      The RHF energy is -52.835438
+!      The RHF + VVOs starting energy is -52.939094, 86% to convergence!
+!      The MCSCF converged energy is -52.9554947128, after 11 iters
+!      Presumably because ACCT has two warnings about near-linear dependence,
+!      both SOSCF and FULLNR lose orbital symmetry around iteration 8.
+!      The purification below allows the latter to reach convergence,
+!      without using QMTTOL to drop anything out.
+x$contrl scftyp=mcscf $end
+x$system mwords=75 $end
+x$guess  guess=moread norb=230 $end
+x$trans  ipurfy=2 $end
+x$mcscf  fullnr=.true. $end
+x$det    ncore=2 nact=14 nels=12 $end
+
+ $data
+diborane...RHF/ACCT geometry
+Dnh 2
+
+B   5.0   0.0000000000   0.0000000000   0.8884714197
+H   1.0   0.9748693664   0.0000000000   0.0000000000
+H   1.0   0.0000000000   1.0351002102   1.4628630696
+ $end
+
+! TRAVIS-CI SMALL
+

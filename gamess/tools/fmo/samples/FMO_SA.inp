@@ -1,0 +1,67 @@
+! FMO/SA sample. A water decamer is divided into 4 subsystems.
+! Subsystem properties are:
+!Sys     E'              Epart           EBB         EU,int(i), kcal/mol
+!--------------------------------------------------------------
+! 1 -224.892254691 -224.947870182 -224.892254691   0.000 -23.552 -22.147 -24.100
+! 2 -224.889469026 -224.925348408 -224.889469026 -23.552   0.000 -10.124 -11.353
+! 3 -149.923017887 -149.949181038 -149.923017887 -22.147 -10.124   0.000  -0.565
+! 4 -149.914894949 -149.943594141 -149.914894949 -24.100 -11.353  -0.565   0.000
+!
+! The total energy of -749.765993770 is divided into 4 partial energies Epart.
+! E' and EBB are identical here because there are no covalent boundaries.
+! Each Epart is given as EBB+sum(i)EU(i)/2.
+! E' is the internal energy, EU,int are unconnected interactions between 
+! subsystems (unconnected means excluding pairs with covalent boundaries).
+!
+ $contrl nosym=1 units=angs nprint=-5 $end
+ $system memory=100000000 BALTYP=NXTVAL modio=0 $end
+ $gddi ngroup=1 parout=.t. BALTYP=NXTVAL $end
+ $scf dirscf=.t. conv=1e-7 NPUNCH=0 diis=.f. soscf=.t. $end
+ $basis gbasis=sto ngauss=3 $end
+ $elmom where=cocharge $end
+ $pcm solvnt=water ief=-10 icomp=0 icav=1 idisp=1 ifmo=-1 $end
+ $dft dfttyp=none dc=.t. $end
+ $fmo
+      nfrag=10 nlayer=1 nacut=3 nbody=2
+      modmol=8
+      molfrg(1)=1,1,2,2,2, 1,3,4,4,3
+ $end
+ $fmoprp nprint=1 $end
+ $data
+ (H2O)10 optimized at HF/3-21+G
+c1
+h-1 1
+o-1 8
+ $end
+ $fmoxyz
+ 8 8         -0.219481   -0.107456   -1.428560
+ 1 1         -0.782252   -0.028096   -0.630868
+ 1 1          0.488352    0.617042   -1.424407
+ 8 8         -2.270477    0.065813    0.451612
+ 1 1         -2.838843    0.005487   -0.340469
+ 1 1         -2.244152   -0.760371    0.996725
+ 8 8         -1.428977    2.291839    1.609005
+ 1 1         -1.787177    1.474035    1.173114
+ 1 1         -1.918803    2.513201    2.406581
+ 8 8          0.783894    3.368026    0.603475
+ 1 1          0.866941    4.320535    0.700639
+ 1 1         -0.043877    3.013969    1.020595
+ 8 8         -1.760073   -2.088475    1.876451
+ 1 1         -2.202964   -2.751106    2.413272
+ 1 1         -0.780564   -2.232685    1.811026
+ 8 8          1.292041   -2.164463   -1.195781
+ 1 1          0.633224   -1.416497   -1.392864
+ 1 1          1.185683   -2.924830   -1.776977
+ 8 8          3.460724   -0.525560   -0.716173
+ 1 1          2.825250   -1.235820   -0.942161
+ 1 1          4.378448   -0.807477   -0.773421
+ 8 8          0.846149   -2.298168    1.485084
+ 1 1          1.505061   -1.824359    2.004572
+ 1 1          1.088070   -2.327609    0.532869
+ 8 8         -2.836400   -0.054152   -2.207877
+ 1 1         -1.865154   -0.040610   -2.330031
+ 1 1         -3.327545    0.042899   -3.027981
+ 8 8          1.697285    1.557978   -1.120447
+ 1 1          2.513729    1.064383   -0.922884
+ 1 1          1.507338    2.308872   -0.511523
+ $end

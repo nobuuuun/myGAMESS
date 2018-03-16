@@ -1,0 +1,25 @@
+{
+  "parse_header" : "LOCALIZATION SUMS",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)DIAGONAL SUM D=.*$",
+     "parse_name"   : "DIAGONAL LOCALIZATION SUM",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : 5e-8,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)COULOMB SUM C=.*$",
+     "parse_name"   : "COULOMB LOCALIZATION SUM",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : 5e-8,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)EXCHANGE SUM X=.*$",
+     "parse_name"   : "EXCHANGE LOCALIZATION SUM",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : 5e-8
+   }
+  ]
+}

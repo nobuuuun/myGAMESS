@@ -1,0 +1,25 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : OPEN-SHELL EOM",
+  "parse_group" : [
+   {
+     "regex_string" : "^             ---- SUMMARY OF OPEN-SHELL EOM-CCSD CALCULATIONS ----.*$",
+     "parse_name"   : "OPEN-SHELL EOM-CCSD ENERGY",
+     "parse_value_index" : 2,
+     "parse_line_offset" : 3,
+     "parse_instance" : -1,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "STATE",
+     "parse_precision" : 8
+   },
+   {
+     "regex_string" : "^                   ---- SUMMARY OF EOM-CCSD CALCULATIONS ----.*$",
+     "parse_name"   : "OPEN-SHELL EOM-CCSD ENERGY",
+     "parse_value_index" : 2,
+     "parse_line_offset" : 3,
+     "parse_instance" : -1,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "STATE",
+     "parse_precision" : 8
+   }
+  ]
+}

@@ -1,0 +1,53 @@
+!  puckered ADSbO RHF/3-21G* optimized structure,
+!  used in our very first parallel hessian paper way back when:
+!  T.L.Windus, M.W.Schmidt, M.S.Gordon  Chem.Phys.Lett. 216, 375(1993)
+!
+!  Point group Cs, 110 basis functions.
+!  This test presently exercises the distributed memory CPHF code.
+!
+!  FINAL E= -6642.1898265043, 12 iter
+!
+!  analytic DDI calculation: lowest FREQ=137.05, highest FREQ=3444.67
+!  harmonic zero point energy= 53.546528 KCAL/MOL
+!
+!  numerical calculation:    lowest FREQ=137.08, highest FREQ=3444.34
+!  harmonic zero point energy= 53.550370
+!
+!  This run took 77 CPU seconds on a 2.66 GHz Cloverton (17 Mar 2015)
+!  results haven't changed much since at least 2005
+!
+ $CONTRL SCFTYP=RHF RUNTYP=hessian NZVAR=30 UNITS=BOHR $END
+ $SYSTEM mwords=2 memddi=20 parall=.t. $END
+ $BASIS  GBASIS=N21 NGAUSS=3 NDFUNC=1 $END
+ $scf    dirscf=.true. $end
+ $cphf   cphf=aoddi $end
+
+x$system mwords=2 memddi=0 $end
+x$force  method=seminum nvib=2 $end
+
+ $DATA
+puckered ADSbO...RHF/3-21G*//RHF/3-21G*
+Cs
+ 
+ANTIMONY    51.   -1.8433476877       -0.5240796014        0.0000000000
+NITROGEN     7.    1.9677694222       -1.2596167352        0.0000000000
+CARBON       6.    3.0574129817       -0.2457886820       -2.3007192723
+CARBON       6.    1.5780753428        1.1491377083       -3.7343146243
+OXYGEN       8.   -0.9516551352        1.4623048388       -3.0245465915
+HYDROGEN     1.    4.9916494784       -0.6483538433       -2.7128100383
+HYDROGEN     1.    2.0957190284        2.0335640765       -5.4696869691
+ $END
+ $GUESS  GUESS=HUCKEL  $END
+ $ZMAT   IZMAT(1)=1,1,2       1,2,3       1,3,5  1,5,7
+         2,5,3,2     2,7,5,3       2,3,2,1
+         1,3,9       2,9,3,2       1,5,11
+         2,11,5,3    3,3,2,1,7     3,5,3,2,1
+         3,9,3,2,1   3,11,5,3,2    1,2,4
+         1,4,6       1,6,8         2,6,4,2
+         2,8,6,4     2,4,2,1       1,4,10
+         2,10,4,2    1,6,12        2,12,6,4
+         3,4,2,1,8   3,6,4,2,1     3,10,4,2,1
+         3,12,6,4,2  3,4,2,1,7                $END
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,32 @@
+!    Test of NMR shielding computation on the water trimer (39 AOs)
+!
+!    The isotropic shieldings of the nine atoms are
+!       334.8290, 30.2623, 32.7276, 336.6771, 33.3943, 30.2252,
+!       336.8400, 30.7747, 33.3408
+!    The anisotropy of the third oxygen is 51.0414, and its
+!    diamagnetic shielding= 392.5505, paramagnetic= -55.7106.
+!
+!    This run takes 141 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!    results have not changed significantly since at least 2008
+!
+ $contrl scftyp=rhf runtyp=nmr $end
+ $system mwords=8 $end
+ $basis  gbasis=n31 ngauss=6 $end
+ $nmr    inmem=.f. angint=.t. pdia=.t. ppara=.t. pevec=.t. angint=.t. $end
+ $guess  guess=huckel $end
+ $data
+Water H bond acceptor/donator tests
+c1
+O1          8.0    .4948284829  -3.2318875811    .2182451792
+H2          1.0   -.0122351360  -2.4485430344    .4158201994
+H3          1.0   -.0300612653  -4.0199850128    .2065169706
+O1          8.0   2.8516205398  -1.7519357683    .4502008517
+H2          1.0   3.3697431154  -1.7213607853   -.3381471813
+H3          1.0   2.2601884075  -2.4817188626    .3579884765
+O1          8.0    .3286046696   -.3976597289    .9671877218
+H2          1.0   1.2556368997   -.5086495524    .8287284946
+H3          1.0    .2241464810   -.0500939073   1.8384884395
+ $end
+
+! TRAVIS-CI SMALL
+

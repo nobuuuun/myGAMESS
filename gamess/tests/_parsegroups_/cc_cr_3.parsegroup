@@ -1,0 +1,20 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+  "parse_group" : [
+   {
+     "regex_string" : "^              SUMMARY OF CR-CC\\(2,3\\) OR CR-CCSD\\(T\\)_L CALCULATIONS.*$",
+     "parse_name"   : "CR-CC(2,3),A OR CCSD(2)_T  ENERGY",
+     "parse_type" : "float",
+     "parse_line_offset" : 5,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^              SUMMARY OF CR-CC\\(2,3\\) OR CR-CCSD\\(T\\)_L CALCULATIONS.*$",
+     "parse_name"   : "CR-CC(2,3) OR CR-CCSD(T)_L ENERGY",
+     "parse_type" : "float",
+     "parse_line_offset" : 6,
+     "parse_instance" : -1
+   }
+  ]
+}

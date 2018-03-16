@@ -1,0 +1,25 @@
+!  The standard EXAM 41 will optimize to the distance in $DATA below.
+!
+!  The hessian has frequency 1460.99, and clean residuals.
+!
+!  This run takes 72 seconds on a 2.66 GHz Cloverton ( 3 Apr 2015)
+!  results have been the same since 2008.
+!
+ $contrl scftyp=rhf dfttyp=blyp tddft=excite runtyp=hessian $end
+ $system timlim=40 mwords=7 $end
+ $dft    nrad=96 nthe=12 nphi=24 $end
+ $tddft  nrad=24 nthe=8  nphi=16 nstate=3 mult=1 iroot=1 $end
+ $force  nvib=2 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=N31 ngauss=6 diffsp=.t. ndfunc=1 $end
+ $data
+CO...excitation to the three lowest singlet states
+Cnv 4
+
+C    6.0   0.0   0.0   0.0
+O    8.0   0.0   0.0   1.2542088
+ $end 
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,380 @@
+C 18 Apr 16 - SRP - tweaks for RMD
+! 18 Mar 14 - SRP - Created source file for FMO/RMD multistate method
+!***********************************************************************
+!*MODULE RMD  *DECK RMDINP
+!> @brief      Routine sets up RMD molecular dynamics runs
+!>
+!> @author Spencer R. Pruitt
+!>         -2014
+!>
+!> @details    Routine reads in user options from $RMD
+!>
+!> @date : March 18, 2014 - Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @date : November 25, 2014 - Spencer R. Pruitt
+!>         Changed user options and method header
+!>
+!> @param dormd : logical to do RMD calculation
+!***********************************************************************
+      SUBROUTINE RMDINP(dormd)
+
+      USE RMDDAT
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      LOGICAL GOPARR,DSKWRK,MASWRK,dormd
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      PARAMETER (NNAM=4)
+      DIMENSION QNAM(NNAM),KQNAM(NNAM)
+      DATA RMDGRP /8HRMD     /
+      DATA QNAM/8HNHOPS   ,8HHOPDST  ,8HPENLTY  ,8HMODRMD  /
+      DATA KQNAM /1,1,0,1/
+
+      !SET DEFAULT VALUES FOR RMD OPTIONS
+      dormd=IRMDRUN.ne.0 
+      if(IRMDRUN.eq.0) return
+
+      NHOPS=1
+      HOPDST=1
+      MODRMD=1
+      PENLTY=.TRUE.
+
+      !READ IN OPTIONS FROM $RMD
+      CALL NAMEIO(IR,JRET,RMDGRP,NNAM,QNAM,
+     *            KQNAM,NHOPS,HOPDST,
+     *            PENLTY,MODRMD,0,0,0, 0,0,0,0,0,
+     *            0,0,0,0,0, 0,0,0,0,0,
+     *            0,0,0,0,0, 0,0,0,0,0,
+     *            0,0,0,0,0, 0,0,0,0,0,
+     *            0,0,0,0,0, 0,0,0,0,0,
+     *            0,0,0,0,0, 0,0,0,0,0,0,0)
+
+      !CHECK TO SEE OPTIONS WERE READ IN
+      IF(IRMDRUN.GT.0.AND.MASWRK) THEN
+         WRITE(IW,9000)
+         WRITE(IW,9200) NHOPS,HOPDST,MODRMD
+          IF(PENLTY) THEN
+             WRITE(IW,9300) 
+          ELSE 
+             WRITE(IW,9400)
+          ENDIF
+      ENDIF
+
+ 9000 FORMAT(2X,' '//
+     *       2X,49(1H-),/,
+     *       2X,'     MULTI-STATE REACTIVE MOLECULAR DYNAMICS',/
+     *       2X,49(1H-),/,
+     *       2X,'       Originally written by Adrian Lange   ',/
+     *       2X,49(1H-),/,
+     *       2X,'Lange, A.W. & Voth, G.A., JCTC,',
+     *       ' 2013, 9,(9), 4018'                        ,/
+     *       2X,49(1H-),/,
+     *       2X,'              Implemented in GAMESS         ',/
+     *       2X,'                        by                  ',/
+     *       2X,'         Spencer R. Pruitt & Olaseni Sode   ',/
+     *       2X,49(1H-))
+ 9200 FORMAT(2X,' '/
+     *       2X,19(1H-),/,
+     *       2X,'MS-RMD User Options      ',/
+     *       2X,19(1H-),/,
+     *       2X,'NHOPS = ',I2,/
+     *       2X,'HOPDST = ',I2,/
+     *       2X,'MODRMD = ',I2,/
+     *       2X,19(1H-))
+ 9300 FORMAT(2X,' '/
+     *       2X,22(1H-),/,
+     *       2X,'Penalty Term <<<ON>>>',/
+     *       2X,22(1H-))
+ 9400 FORMAT(2X,' '/
+     *       2X,22(1H-),/,
+     *       2X,'Penalty Term <<<OFF>>>',/
+     *       2X,22(1H-))
+      RETURN
+      END
+!***********************************************************************
+!*MODULE RMD  *DECK GETRMDDAT
+!> @brief      Fill indat and charge arrays
+!>
+!> @author Spencer R. Pruitt
+!>         -2014
+!>
+!> @details    Routine retrieves relevant fragmentation scheme and charges
+!>             and saves it to the appropriate FMO arrays
+!>
+!> @date : March 18, 2014 - Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @param NAT : number of atoms
+!>
+!> @param NFG : number of fragments
+!>
+!> @param INDAT : fragmentation array
+!>
+!> @param ICHFG : fragment charge array
+!>
+!> @param IRMDFMO : RMD fragmentation array
+!>
+!> @param IRMD : current fragmentation state
+!***********************************************************************
+      SUBROUTINE GETRMDDAT(NAT,NFG,INDAT,ICHFG,IRMDFMO,IRMD)
+
+      USE RMDDAT
+
+      IMPLICIT NONE
+
+      INTEGER :: IRMD, NAT, NFG, I
+      INTEGER :: INDAT(*)
+      INTEGER :: ICHFG(*)
+      INTEGER :: IRMDFMO
+
+      !INDAT RUNS OVER ATOMS
+      IF(IRMDRUN.eq.0) return
+
+      IRMDFMO=IRMDRUN
+ 
+      IF(IRMD.EQ.1) THEN
+         DO I=1,NAT
+            INDAT(I)=IRMDDAT(I)
+         ENDDO
+      ELSE
+         DO I=1,NAT
+            INDAT(I)=IRMDDAT(I+NAT*(IRMD-1))
+         ENDDO
+      ENDIF 
+
+      !ICHFG RUNS OVER FRAGMENTS
+      IF(IRMD.EQ.1) THEN
+         DO I=1,NFG
+            ICHFG(I)=IRMDCHG(I)
+         ENDDO
+      ELSE
+         DO I=1,NFG
+            ICHFG(I)=IRMDCHG(I+NFG*(IRMD-1))
+         ENDDO
+      ENDIF 
+
+      RETURN
+      END
+!***********************************************************************
+!*MODULE RMD  *DECK checkrmd
+!> @brief      Check if this is a MS-RMD calculation
+!>
+!> @author Spencer R. Pruitt
+!>         -2014
+!>
+!> @details    Check for the existence of $RMD
+!>
+!> @date : March 18, 2014 - Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @param NFG : number of fragments
+!>
+!> @param IRMDFMO : RMD fragmentation array
+!>
+!***********************************************************************
+      SUBROUTINE CHECKRMD(NFG,IRMDFMO)
+
+      USE RMDDAT
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+
+      IRMDRUN=0
+      IF(NFG.GT.0) THEN
+         CALL SEQREW(IR)
+         CALL FNDGRP(IR,' $RMD   ',IEOF)
+         IF(IEOF.EQ.0) IRMDRUN=1
+      ENDIF
+
+      IRMDFMO=IRMDRUN
+      RETURN
+      END
+!***********************************************************************
+!*MODULE RMD  *DECK SETRMDIND
+!> @brief      Set INDAT for fragmentation state
+!>
+!> @author Spencer R. Pruitt
+!>         -2014
+!>
+!> @details    Retrieve INDAT from RMD module
+!>
+!> @date : March 18, 2014 - Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @param NFG : number of fragments
+!>
+!> @param NATFMO : number of atoms in FMO
+!>
+!> @param INDAT : fragmentation array
+!>
+!> @param ICHFG : fragment charge array
+!***********************************************************************
+      SUBROUTINE SETRMDIND(nfg,natfmo,indat,ichfg)
+
+      USE RMDDAT
+
+      IMPLICIT NONE
+      INTEGER :: indat(*),ichfg(*)
+      INTEGER :: I,J,NFG,NATFMO
+
+      IF(IRMDRUN.GT.0) THEN
+        IF(INDAT(1).EQ.0) THEN
+          WRITE(6,9000)
+          CALL FLSHBF(6)
+          CALL ABRT
+        ELSE
+          DO I=1,NATFMO
+            IRMDDAT(I)=INDAT(I)
+          ENDDO
+          DO J=1,NFG
+            IRMDCHG(J)=ICHFG(J)
+          ENDDO
+        ENDIF
+      ENDIF
+
+ 9000 FORMAT(1X,' '/
+     *       1X,29(1H-),/,
+     *       1X,'Sorry, that form of INDAT is not'/
+     *       1X,'supported for FMO-RMD runs.'/
+     *       1X,29(1H-))
+
+      RETURN
+      END
+!***********************************************************************
+!*MODULE RMD  *DECK rmd_prop
+!> @brief      Save energies+gradients for MS-RMD
+!>
+!> @author Spencer R. Pruitt
+!>         -2014
+!>
+!> @details    Put energies+gradients in distributed array
+!>
+!> @date : November 25, 2014 - Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @param EFFMO : FMO gradients
+!>
+!> @param NAT : number of atoms
+!>
+!> @param ISTLOOP : current fragmentation state
+!>
+!> @param IERR : error 
+!***********************************************************************
+      SUBROUTINE rmd_prop(egfmo,nat,istloop,IERR)
+
+      USE RMDDAT,  ONLY : RMD_D_E, RMD_D_G
+
+      IMPLICIT NONE
+      INTEGER NAT
+      DOUBLE PRECISION :: E,EG, EGFMO(3,nat),GRD_TMP(3*NAT), ZERO
+      INTEGER :: J, K, ME, MASTER, NPROC, IBTYP
+      INTEGER :: IPTIM,ISTLOOP,IERR
+      INTEGER DDI_WORLD,DDI_GROUP,DDI_SUBGROUP,DDI_SUPERWORLD
+      integer :: ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     $           MEUNIV,NPUNIV,NSUBGR
+      LOGICAL :: DSKWRK,GOPARR,MASWRK
+      logical :: ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+      COMMON /FUNCT / E, EG(3,2000)
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,npglob,nnglob,JBTYP,
+     $                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     $                MeUniv,NPUniv
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      parameter (DDI_WORLD=0, DDI_GROUP=1, DDI_SUPERWORLD=-1,
+     *          DDI_SUBGROUP=4)      
+      PARAMETER (ZERO=0.0D+00)
+
+      IF(IERR.LT.3) THEN
+         IF(MLGDDI) THEN
+         CALL GDDI_ASCOPE(DDI_WORLD)
+         CALL GDDI_ASCOPE(DDI_SUPERWORLD)
+         CALL GDDI_ASCOPE(DDI_WORLD)
+         ENDIF
+  
+         CALL DDI_PUT(RMD_D_E,1,1,ISTLOOP,ISTLOOP,E)
+
+         DO J=1,NAT
+            K=J*2
+            GRD_TMP((K+J-2)) = EGFMO(1,J)
+            GRD_TMP((K+J-1)) = EGFMO(2,J)
+            GRD_TMP((J*3))   = EGFMO(3,J)
+         ENDDO
+
+         CALL DDI_PUT(RMD_D_G,1,3*NAT,ISTLOOP,ISTLOOP,GRD_TMP)
+
+         IF(MLGDDI) THEN
+         CALL GDDI_ASCOPE(DDI_GROUP)
+         CALL GDDI_ASCOPE(DDI_SUBGROUP)
+         CALL GDDI_ASCOPE(DDI_GROUP)
+         ENDIF
+
+
+      ELSE
+
+         IF(MLGDDI) THEN
+         CALL GDDI_ASCOPE(DDI_WORLD)
+         CALL GDDI_ASCOPE(DDI_SUPERWORLD)
+         CALL GDDI_ASCOPE(DDI_WORLD)
+         ENDIF
+
+         CALL DDI_PUT(RMD_D_E,1,1,ISTLOOP,ISTLOOP,ZERO)
+
+         DO J=1,NAT
+            K=J*2
+            GRD_TMP((K+J-2)) = ZERO
+            GRD_TMP((K+J-1)) = ZERO
+            GRD_TMP((J*3))   = ZERO
+         ENDDO
+
+         CALL DDI_PUT(RMD_D_G,1,3*NAT,ISTLOOP,ISTLOOP,GRD_TMP)
+
+         IF(MLGDDI) THEN
+         CALL GDDI_ASCOPE(DDI_GROUP)
+         CALL GDDI_ASCOPE(DDI_SUBGROUP)
+         CALL GDDI_ASCOPE(DDI_GROUP)
+         ENDIF 
+
+      ENDIF
+      
+      CALL DDI_SYNC(9000)
+      RETURN
+      END
+!***********************************************************************
+!*MODULE RMD  *DECK rmd_coord
+!> @brief      Print dropped state coordinates
+!>
+!> @author Spencer R. Pruitt
+!>         -2014
+!>
+!> @details    Print dropped state coordinates to log file
+!>
+!> @date : November 25, 2014 - Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @param INDAT : fragmentation array
+!***********************************************************************
+      SUBROUTINE rmd_coord(indat)
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      Parameter (MXATM=2000,MXAO=8192)
+      INTEGER :: indat(*)
+      COMMON /CONVMD/ AU2KCAL, EK2KCAL, AU2ANG, AU2SEC, AU2AMU, EK2BAR
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /RUNLAB/ TITLE(10),ANAM(MXATM),BNAM(MXATM),BFLAB(MXAO)
+
+      IF(NAT.GT.0) WRITE(6,1000)
+      DO IAT=1,NAT
+         ZNUC = IAN(IAT)
+         X = AU2ANG * C(1,IAT)
+         Y = AU2ANG * C(2,IAT)
+         Z = AU2ANG * C(3,IAT)
+         WRITE(6,1005) ANAM(IAT),BNAM(IAT),ZNUC,X,Y,Z,indat(iat)
+      ENDDO
+      CALL FLSHBF(6)
+      RETURN
+
+ 1000 FORMAT(1X,'QM ATOM COORDINATES (ANG) FOR DROPPED STATE')
+ 1005 FORMAT(1X,A8,A2,F5.1,3F15.10,I3)
+      END

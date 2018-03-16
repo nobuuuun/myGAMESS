@@ -1,0 +1,33 @@
+!   CI-SD nuclear gradient from ORMAS by numerical differentiation.
+!   basis deliberately trivial to keep run time trivial: 13 total MOs.
+!   test case created in 2011
+!
+!   FINAL E= -75.5854987691, EIGENSTATE= -75.7103507602, RMS= 0.009337979
+!
+!   this test takes 0 seconds on 2.66 GHz Cloverton (15 Apr 2015)
+!
+ $contrl scftyp=rhf runtyp=gradient units=bohr $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=n21 ngauss=3 $end
+
+!     a numerical evaluation of the nuclear gradient: R.M.S.= 0.009337979
+ $contrl cityp=ormas numgrd=.true. $end
+ $cidet  GROUP=C2V stsym=a1 ncore=1 nact=12 nels=8 $end
+ $ormas  nspace=2 mstart(1)=2,6 mine(1)=6,0 maxe(1)=8,2 $end
+
+!     an analytic evaluation of the nuclear gradient: R.M.S.= 0.009335883
+x$contrl cityp=guga numgrd=.false. $end
+x$cidrt  group=c1 iexcit=2 nfzc=1 ndoc=4 nval=8 $end
+
+ $data
+H2O...1-A1...CI...3-21G BASIS
+Cnv 2
+ 
+OXYGEN     8.0  0.0                 0.0                -0.009
+HYDROGEN   1.0  1.515263            0.000000           -1.058898
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

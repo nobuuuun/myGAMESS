@@ -1,0 +1,31 @@
+!    This job tests the constrained optimization TS search.
+!    The lowest mode is followed from trans hydroxycarbene
+!    to the rotational TS.
+!
+!    The initial minimum geometry has FINAL E=-112.2784060700
+!    Following the lowest mode, which is of a'' symmetry, gives
+!    an optimal FINAL E on the first hypersphere -112.2779436053
+!    After 15 hyperspheres, the algorithm switches to a NR search 
+!    which locates the TS in 5 additional steps:
+!        NSERCH:  20  E= -112.2320754311  R.M.S.=  0.0000036
+!
+!    This run takes 0 seconds on 2.66 GHz Cloverton (28 Apr 2015)
+!    answers hardly changed since 2001.
+!
+ $contrl scftyp=rhf runtyp=sadpoint nzvar=6 $end
+ $system mwords=1 $end
+ $zmat   izmat(1)=1,1,2, 1,1,3, 1,2,4, 2,1,2,4, 2,2,1,3,
+                  3,3,1,2,4  $end
+ $statpt method=conopt ifolow=1 hess=calc $end
+ $basis  gbasis=sto ngauss=3 $end
+ $data
+trans hydroxycarbene
+C1
+c   6.          0.010497    0.754850    0.000000
+o   8.          0.010497   -0.576411    0.000000
+h   1.         -1.098810    0.966943    0.000000
+h   1.          0.951858   -0.884751    0.000000
+ $end
+
+! TRAVIS-CI SMALL
+

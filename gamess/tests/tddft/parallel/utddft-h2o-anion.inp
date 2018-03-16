@@ -1,0 +1,39 @@
+!  water anion's excited states, using inaccurate valence basis set,
+!  but it runs fast since there are only 19 basis functions, with
+!  absolutely no diffuse character.
+!
+!  as a matter of fact, since the E.Q. of water dimer is only 17 meV,
+!  there's a good chance that H2O anion doesn't even exist.
+!
+!  UB3LYP ground state FINAL energy= -76.2285132236, 21 iters, <S**2>=0.752
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!                   HARTREE          EV         X       Y       Z     STRENGTH
+!  0             -76.2285132236    0.000
+!  1             -76.1338824852    2.575     0.0000 -1.2398  0.0000    0.097
+!  2             -76.0208255677    5.651    -0.1703  0.0000  0.0000    0.004
+!  3             -75.9918686190    6.439     0.0000  0.0000  0.0000    0.000
+!  4             -75.9505431580    7.564     0.0000  0.0000  0.0000    0.000
+!  5             -75.9337047897    8.022     0.0000  0.0000  0.4604    0.042
+!  6             -75.9082597739    8.715     0.0000  0.0366  0.0000    0.000
+!
+!  This run takes 6 seconds on a 2.66 GHz Cloverton ( 3 Apr 2015)
+!  results haven't changed since 2009
+!
+ $CONTRL SCFTYP=UHF ICHARG=-1 MULT=2 RUNTYP=energy
+         dfttyp=pw91 tddft=excite $END
+ $SYSTEM mwords=2 $END
+ $dft    nrad=96 nthe=12 nphi=24 $end
+ $tddft  nrad=24 nthe=12 nphi=24 NSTATE=6 $END
+ $GUESS  GUESS=HUCKEL $END
+ $SCF    DIRSCF=.TRUE. $END
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+ $DATA
+water anion...purely a test case, as basis lacks Rydberg functions
+Cnv  2
+
+OXYGEN     8.0
+HYDROGEN   1.0   0.0     0.86371194      0.64820724
+ $END
+
+! TRAVIS-CI SMALL
+

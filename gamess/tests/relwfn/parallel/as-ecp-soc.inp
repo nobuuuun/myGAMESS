@@ -1,0 +1,56 @@
+!  As atom...test of ECP evaluation of SOC...(4sp)5 full valence space
+!  test created in April 2015.
+!  Zeff is taken from S.Koseki, M.W.Schmidt, M.S.Gordon JCP-A 102, 10430(1998)
+!  The very big Zeff dials up the splitting, to sort-of match experiment.
+!
+!          CI ENERGY LEVELS    level       exp
+!           1- 4      0.00    4-S-3/2        0
+!           5- 8  14863.35    2-D-3/2   10,592
+!           9-14  15214.27    2-D-5/2   10,914
+!          15-16  21021.18    2-P-1/2   18,186
+!          17-20  21408.15    2-P-3/2   18,647
+!
+!  This run takes 0 seconds on 2.66 GHz Cloverton (20 Apr 2015)
+!
+ $contrl scftyp=none cityp=guga mult=2 pp=sbkjc runtyp=transitn ispher=1 $end
+ $system mwords=1 $end
+ $basis  gbasis=sbkjc $end
+ $transt operat=HSO1 numvec=1 numci=2 nocc=4 nfzc=0
+         zeff(1)=1353 iroots(1)=8,1 $end
+ $drt1   group=c1 fors=.true. nfzc=0 ndoc=2 nalp=1 nval=1 $end
+ $drt2   group=c1 fors=.true. nfzc=0 ndoc=1 nalp=3 nval=0 $end
+ $data
+As atom...unagumented SBKJC basis set is used
+Dnh 2
+
+As   33.    0.0  0.0  0.0
+ $end
+
+!               here is how to get the ground state open shell orbitals:
+x$contrl scftyp=rohf mplevl=0 mult=4 pp=sbkjc runtyp=energy ispher=1 $end
+x$basis  gbasis=sbkjc $end
+x$guess  guess=huckel $end
+--- OPEN SHELL ORBITALS --- GENERATED AT Mon Apr 20 10:10:06 2015
+E(ROHF)=       -6.0522120062
+ $VEC1
+ 1  1 8.75761208E-01 0.00000000E+00 0.00000000E+00 0.00000000E+00 1.46505523E-01
+ 1  2 0.00000000E+00 0.00000000E+00 0.00000000E+00
+ 2  1 0.00000000E+00 0.00000000E+00 0.00000000E+00 7.99068843E-01 0.00000000E+00
+ 2  2 0.00000000E+00 0.00000000E+00 2.68575339E-01
+ 3  1 0.00000000E+00 7.99068843E-01 0.00000000E+00 0.00000000E+00 0.00000000E+00
+ 3  2 2.68575339E-01 0.00000000E+00 0.00000000E+00
+ 4  1 0.00000000E+00 0.00000000E+00 7.99068843E-01 0.00000000E+00 0.00000000E+00
+ 4  2 0.00000000E+00 2.68575339E-01 0.00000000E+00
+ 5  1 0.00000000E+00 0.00000000E+00 0.00000000E+00-1.09296316E+00 0.00000000E+00
+ 5  2 0.00000000E+00 0.00000000E+00 1.32700670E+00
+ 6  1 0.00000000E+00-1.09296316E+00 0.00000000E+00 0.00000000E+00 0.00000000E+00
+ 6  2 1.32700670E+00 0.00000000E+00 0.00000000E+00
+ 7  1 0.00000000E+00 0.00000000E+00-1.09296316E+00 0.00000000E+00 0.00000000E+00
+ 7  2 0.00000000E+00 1.32700670E+00 0.00000000E+00
+ 8  1-1.53506687E+00 0.00000000E+00 0.00000000E+00 0.00000000E+00 1.76122801E+00
+ 8  2 0.00000000E+00 0.00000000E+00 0.00000000E+00
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

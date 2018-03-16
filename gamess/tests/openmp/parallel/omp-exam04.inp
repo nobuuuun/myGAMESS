@@ -1,0 +1,33 @@
+!
+! Phenoxyl radical.
+! Hartree-Fock test for open shell system.
+!
+! Method: UHF/6-31G*
+! Final energy:
+!   FINAL UHF ENERGY IS     -304.8502527580
+!
+ $CONTRL
+  SCFTYP=uhf
+  RUNTYP=Energy
+  icharg=0 mult=2
+  maxit=50 nprint=4 $END
+ $SYSTEM TIMLIM=50 MEMORY=10000000 $END
+ $SCF    DIRSCF=.TRUE. CONV=1.0d-7 FDIFF=.false. $END
+ $BASIS  GBASIS=n31 NGAUSS=6 npfunc=1 $END
+ $GUESS  GUESS=HUCKEL $END
+ $DATA
+Phenoxyl radical
+C1
+OXYGEN      8.0      2.324589265         0.001016808         0.000000000
+CARBON      6.0      0.930554120        -0.042879207         0.000000000
+CARBON      6.0      0.281456628         1.187225928         0.000000000
+CARBON      6.0      0.214161493        -1.236231202         0.000000000
+CARBON      6.0     -1.110074072         1.226198616         0.000000000
+HYDROGEN    1.0      0.872731932         2.094726696         0.000000000
+CARBON      6.0     -1.177674673        -1.182304315         0.000000000
+HYDROGEN    1.0      0.731762980        -2.184436924         0.000000000
+CARBON      6.0     -1.843560426         0.041753657         0.000000000
+HYDROGEN    1.0     -1.618415287         2.183547412         0.000000000
+HYDROGEN    1.0     -1.742556792        -2.107485034         0.000000000
+HYDROGEN    1.0     -2.926828871         0.071767587         0.000000000
+ $END

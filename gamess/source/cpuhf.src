@@ -1,0 +1,3931 @@
+c 18 Apr 16 - DGF - tweaks for FMO 5.2
+C 01 Aug 14 - HN  - add ROHF based CPHF 
+C 01 Jan 14 - HN  - changes for DFT Hessian
+C 20 APR 13 - HN  - add the interface with FMO
+C 08 APR 13 - HN  - add a new module for UHF based CPHF 
+C
+c*MODULE CPUHF   *DECK CPUHF
+C>    @brief Main subrroutine to calculate open-shell CPHF
+C>
+C>    @details Solve the linear equation UA=B and added the contributions
+C>             to Force constant matrix and Dipole derivative moments.
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NDER    Number of derivative
+C>    @param SOME    Print out on/off
+C>    @param DBG     Print out for DBG
+C>    @param NOCP    Integer number for symmetry trancation
+C>    @param NXYZ    Number of cartesian coodinate elements
+C>    @param NUNIQ   Number of symmetry unique cartesian coordinate 
+C>    @param NFT16   Record number : dummy integer
+C>    @param NFT18   Record number to store Fock derivative
+C>
+      SUBROUTINE CPUHF(NDER,SOME,DBG,NOCP,NXYZ,NUNIQ,NFT16,NFT18)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL DBG,SOME,CHKMEM,PACK2E,INCORE,GOPARR,DSKWRK,MASWRK,
+     *        POLAR,MODRV,AODRV,DDAODRV,DIRSCF,FDIFF,ADDVCPHF
+C
+      PARAMETER (MXATM=2000, MXSH=5000, MXGTOT=20000, MXGSH=30,
+     *           MXAO=8192)
+C
+      DIMENSION NOCP(NXYZ+3)
+C
+      COMMON /CHFINF/ CHFSLV,CPTYPE,NWDCHF,POLAR,NSPLIT
+C     COMMON /DIISSO/ SOGTOL,ETHRSH,MAXDII,IRAF
+      COMMON /FMCOM / X(1)
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      common /fmorun/ espscf,e0scf(2),emp2s,IDAFMO,icurfg,jcurfg,kcurfg,
+     *                icurlay,icurunt,nat1e,ncursh,ngau,icurpop,ifmostp,
+     *                moncor,needr,modrst,norbproj,nunesp,iskipesp,
+     *                IESDPPC,idoprop,mp2run,icurit,idmfmo,iddfmo,
+     *                iddcur,nddleft,ivmfmo,NZMTFMO,ifmobas,itmfmo(2)
+      COMMON /GUGWFN/ NFZC,NMCC,NDOC,NAOS,NBOS,NALP,NVAL,NEXT,NFZV,
+     *                IFORS,IEXCIT,ICICI,NOIRR
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /INTFIL/ NINTMX,NHEX,NTUPL,PACK2E,INTTYP,IGRDTYP
+      COMMON /IOFILE/ IR,IW,IP,IJKO,IJKT,IDAF,NAV,IODA(950)
+c     COMMON /MACHIN/ NWDVAR,MAXFM,MAXSM,LIMFM,LIMSM
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /SCZLAG/ LZVLAG,LZVWRK,LYALAG,LYAWRK
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+C
+C     DATA MAXEQU /128/
+      DATA CHECK/8HCHECK   /
+      DATA CONJG/8HCONJG   /
+C     DATA BLANK,DIIS/8H        ,8HDIIS    /
+      DATA TYPEMO,TYPEAO,TYPDDI/8HMO      ,8HAO      ,8HAODDI   /
+      DATA UHF/8HUHF     /
+C
+C     ----- OPEN SHELL CPHF CALCULATION -----
+C     FOR NDER=2, WE ARE DOING A UHF ANALYTIC HESSIAN CALCULATION
+C
+      if(NDER.NE.2) THEN
+         WRITE(*,*) "NFT16 =",NFT16
+         CALL ABRT
+      END IF
+C
+      IF(SOME) WRITE(IW,9000)
+C   ONLY  ATOMIC ORBITAL BASIS is implemented
+      MODRV   = CPTYPE.EQ.TYPEMO
+      AODRV   = CPTYPE.EQ.TYPEAO
+      DDAODRV = CPTYPE.EQ.TYPDDI
+C
+      NOCC = NA
+      NOCCB= NB
+C           NEXT TWO UNUSED IN HESSIAN COMPUTATION, BUT LETS INIT THEM.
+      NOCACT = 1
+      NCVROT = 0
+C
+      NORB = NQMT
+      NVIR = NORB - NOCC
+      NVIRB= NORB - NOCCB
+      if(NFG.ne.0) NVIR = NORB - nocc  - norbproj
+      if(NFG.ne.0) NVIRB= NORB - noccb - norbproj
+      NROT  = NOCC  * NVIR
+      NROTB = NOCCB * NVIRB
+      IF(SOME) WRITE(IW,9010) NROT
+C
+      NC  = NAT*3
+      NC3 = NC * NC
+C
+      NUM2  =(NUM*NUM+NUM)/2
+      NUM3  = NUM*NUM
+      NORB2 =(NORB*NORB+NORB)/2
+      NOCC2 =(NOCC*NOCC+NOCC)/2
+      NOCCB2=(NOCCB*NOCCB+NOCCB)/2
+C
+      CALL BASCHK(LMAX)
+                    NANGM =  4
+      IF(LMAX.EQ.2) NANGM =  6
+      IF(LMAX.EQ.3) NANGM = 10
+      IF(LMAX.EQ.4) NANGM = 15
+      IF(LMAX.EQ.5) NANGM = 21
+      IF(LMAX.EQ.6) NANGM = 28
+C
+      IF(DDAODRV  .OR.  (AODRV.AND.DIRSCF)) THEN
+         MAXG = NANGM**4
+         NSH2 = (NSHELL*NSHELL+NSHELL)/2
+         MXG2 = MXGSH*MXGSH
+         INTMAX = 1
+      ELSE
+         MAXG = 1
+         NSH2 = 1
+         MXG2 = 1
+         INTMAX = NINTMX
+      END IF
+C
+C     ---- IF CALCULATING ALPHA POLARIZABILITIES ----
+C     ---- 3 EXTRA SOLUTIONS REQUIRED            ----
+C
+      IF(POLAR) THEN
+         NNXYZ=NXYZ+3
+         IF(MASWRK) WRITE(IW,9015) NUNIQ-3,3
+      ELSE
+         NNXYZ=NXYZ
+         IF(MASWRK) WRITE(IW,9015) NUNIQ,0
+      END IF
+C
+      IF(NVIR .EQ. 0) RETURN
+      IF(NVIRB.EQ. 0) CALL ABRT 
+C
+C     ----- BEGIN CPHF TERMS -----
+C     FIRST BRANCH ALL ABOUT TO CHECK MEMORY NEEDS,
+C     THEN COME BACK TO -90- AND ACTUALLY BEGIN TO DO THE WORK.
+C
+      TIM1 = 0.0D+00
+      CHKMEM = .TRUE.
+      CALL VALFM(LOADFM)
+      CALL GOTFM(NGOTMX)
+      IF(NWDCHF.GT.0) NGOTMX=MIN(NGOTMX,NWDCHF)
+      INCORE=.FALSE.
+      NDFA   = 0
+      NDTA   = 0
+      NDFCK  = 0
+      NDWXY  = 0
+      NDWXYI = 0
+      GO TO 95
+C
+   90 CONTINUE
+      CHKMEM = .FALSE.
+      IF(SOME) THEN
+         WRITE(IW,9020) NDFA,NDTA,NDFCK,NDWXY,NGOTMX
+         IF(.NOT.INCORE  .AND.  MODRV  .AND.  NDWXYI.GT.0)
+     *        WRITE(IW,9030) NDWXYI
+      END IF
+      NDMAX = MAX(NDFA,NDTA,NDFCK,NDWXY)
+      IF(NDMAX.GT.NGOTMX) THEN
+         IF (MASWRK) WRITE(IW,9040) NDMAX,NGOTMX
+         CALL ABRT
+         STOP
+      END IF
+C
+      IF(EXETYP.EQ.CHECK) THEN
+         CALL GETFM(NDMAX)
+         CALL RETFM(NDMAX)
+         RETURN
+      END IF
+C
+C     ----- TRANSFORM -DF/DQ- TO MO BASIS -----
+C
+      CALL TSECND(TIM1)
+   95 CONTINUE
+      LFCM = 1    + LOADFM
+      LWAX = LFCM + NC3
+      LWAXB= LWAX + NROT *NNXYZ
+      LC   = LWAXB+ NROTB*NNXYZ
+      LCB  = LC   + NUM3
+      LAA  = LCB  + NUM3
+      LAAB = LAA  + NOCC2 *NXYZ
+      LTA  = LAAB + NOCCB2*NXYZ
+      LTB  = LTA  + NOCC2 *NXYZ
+      LDFAO= LTB  + NOCCB2*NXYZ
+      LDFMO= LDFAO+ NUM2
+      LT   = LDFMO+ NUM2
+      LAST = LT   + NUM
+      IF(NDER.EQ.1 .AND. NFZC.GT.0) THEN
+         LWAXC= LAST
+         LAST = LWAXC+ NCVROT*NXYZ
+      ELSE
+         LWAXC= LAST
+      END IF
+      NEED = LAST - LOADFM - 1
+      NDFA = NEED
+      IF(CHKMEM) GO TO 115
+      CALL GETFM(NEED)
+C
+C        READ IN HESSIAN WITH ALL NON-CPHF TERMS
+C
+      CALL DAREAD(IDAF,IODA,X(LFCM),NC3,4,0)
+C
+C     READ MO VECTORS.
+C
+      CALL DAREAD(IDAF,IODA,X(LC),NUM3,15,0)
+      CALL DAREAD(IDAF,IODA,X(LCB),NUM3,19,0)
+C
+      CALL CPUFA(DBG,X(LWAX),X(LAA),X(LDFMO),X(LWAXC),
+     *          IA,NUM,NOCC,NVIR,NUM2,NOCC2,NXYZ,NFT18,NFZC,NOCACT,
+     *          X(LWAXB),X(LAAB),NOCCB,NVIRB,NOCCB2)
+C
+C
+      IF(IGETOLI(1).NE.0) THEN
+         CALL SVGGA1(X(LDFMO),NFT18)
+      END IF
+C
+c        WRITE(IW,*) '-WAX- MATRIX AFTER -DFMO- TERMS'
+c        CALL PRSQ(X(LWAXB),NXYZ,NROT,NROT)
+C
+      IF(DBG) THEN
+         WRITE(IW,*) '-WAX- MATRIX AFTER -DFMO- TERMS'
+         CALL PRSQ(X(LWAX),NXYZ,NROT,NROT)
+         DO 110 IXYZ=1,NXYZ
+            WRITE(IW,9976) IXYZ
+            CALL PRTRI(X(LAA+NOCC2*(IXYZ-1)),NOCC)
+  110    CONTINUE
+      END IF
+      CALL RETFM(NEED)
+      CALL TSECND(TIM2)
+      TIMFA=TIM2-TIM1
+      IF(SOME) WRITE(IW,9988) ' -FA-   ',TIMFA
+      IF(SOME) CALL FLSHBF(IW)
+      TIM1 = TIM2
+C
+C     ----- TRANSFORM - TA = -1/2 * DS/DA - TO MO BASIS -----
+C
+  115 CONTINUE
+      LFCM = 1+LOADFM
+      LWAX = LFCM + NC3
+      LWAXB= LWAX + NROT *NNXYZ
+      LC   = LWAXB+ NROTB*NNXYZ
+      LCB  = LC   + NUM3
+      LAA  = LCB  + NUM3
+      LAAB = LAA  + NOCC2 *NXYZ
+      LTA  = LAAB + NOCCB2*NXYZ
+      LTB  = LTA  + NOCC2 *NXYZ
+      LE   = LTB  + NOCCB2*NXYZ
+      LEB  = LE   + NUM
+      LDSAO= LEB  + NUM
+      LDSMO= LDSAO+ NUM2 *NXYZ
+      LT   = LDSMO+ NUM2
+      LDS  = LT   + NUM
+      LAST = LDS  + NUM3*3
+      IF(NDER.EQ.2) THEN
+         LSDI = LAST
+         LSDIA= LSDI + NAT*9
+         LH   = LSDIA+ NAT*9
+         LF   = LH   + NUM2*3*2
+         LAST = LF   + NUM2
+      ELSE
+         LSDI  = LAST
+         LSDIA = LAST
+         LH    = LAST
+         LF    = LAST
+      END IF
+      IF(NDER.EQ.1 .AND. NFZC.GT.0) THEN
+         LWAXC= LAST
+         LAST = LWAXC+ NCVROT*NXYZ
+      ELSE
+         LWAXC= LAST
+      END IF
+      NEED = LAST - LOADFM - 1
+      NDTA = NEED
+      IF(CHKMEM) GO TO 125
+      CALL GETFM(NEED)
+C
+      IF(NDER.EQ.2) CALL VCLR(X(LH),1,NUM2*3*2)
+C
+C        READ 1ST DERIVATIVES OF OVERLAP MATRIX
+C
+      CALL DAREAD(IDAF,IODA,X(LDS       ),NUM3,63,0)
+      CALL DAREAD(IDAF,IODA,X(LDS+NUM3  ),NUM3,64,0)
+      CALL DAREAD(IDAF,IODA,X(LDS+NUM3*2),NUM3,65,0)
+C
+C        READ RHF ORBITAL ENERGIES
+C
+      CALL DAREAD(IDAF,IODA,X(LE),NUM,17,0)
+      CALL DAREAD(IDAF,IODA,X(LEB),NUM,21,0)
+C
+      IF (NDER.EQ.1 .AND. NFZC.GT.0)
+     *    CALL DAREAD(IDAF,IODA,X(LWAXC),NCVROT*NXYZ,304,0)
+C
+      CALL CPTA_UHF(NDER,X(LWAX),X(LTA),X(LC),X(LE),X(LDSAO),X(LDSMO),
+     *          X(LT),X(LDS),X(LSDI),X(LF),X(LH),X(LWAXC),IA,
+     *          NUM,NOCC,NVIR,NORB,NUM2,NOCC2,NXYZ,NAT,NFZC,NOCACT,
+     *          X(LWAXB),X(LTB),X(LCB),X(LEB),
+     *          NOCCB,NVIRB,NOCCB2)
+C
+C
+C     For FMO hessian with covalent bond
+      IF(NFG.ne.0.and.NBDFG.ne.0) then
+       l1 = num
+       l2 = num2
+c      IF(MASWRK)  write(*,*) "Entering HOP DER in CPHF"
+       CALL HOPDER(4,0,0,0,L1,L2,
+     *             x(lfmoda),x(LWAX),x(LAA),x(LDSAO))
+      end if
+C
+C
+      IF(DBG) THEN
+         WRITE(IW,*) '-WAX- MATRIX AFTER -TA- TERMS'
+         CALL PRSQ(X(LWAX),NXYZ,NROT,NROT)
+         DO 120 IXYZ=1,NXYZ
+            WRITE(IW,9994) IXYZ
+            CALL PRTRI(X(LTA+NOCC2*(IXYZ-1)),NOCC)
+  120    CONTINUE
+      END IF
+C
+      CALL TSECND(TIM2)
+      TIMTA=TIM2-TIM1
+      IF(SOME) WRITE(IW,9988) ' -TA-   ',TIMTA
+      IF(SOME) CALL FLSHBF(IW)
+C
+C     --- ADD OVERLAP DERIVATIVE CONTRIBUTIONS TO DIPOLE DERIVATIVE ---
+C
+      IF(NDER.EQ.2) THEN
+         IF(DBG) THEN
+            WRITE(IW,9995)
+            CALL DDMOUT(X(LSDI),3*NAT)
+         END IF
+         CALL DAREAD(IDAF,IODA,X(LSDIA),9*NAT,34,0)
+         CALL VADD(X(LSDIA),1,X(LSDI),1,X(LSDIA),1,9*NAT)
+         CALL DAWRIT(IDAF,IODA,X(LSDIA),9*NAT,34,0)
+C
+C     ----- ADD - TA * TB - CONTRIBUTIONS TO -FCM- -----
+C
+         IF(SCFTYP.EQ.UHF) THEN
+          CALL CPWAB1(X(LFCM),X(LTA),X(LE),IA,NOCC,NOCC2,NXYZ,.TRUE.)
+          CALL CPWAB1(X(LFCM),X(LTB),X(LEB),IA,NOCCB,NOCCB2,NXYZ,.TRUE.)
+         ELSE
+          CALL CPWAB1_ROHF(X(LFCM),X(LTA),X(LTB),X(LC),NOCC,NOCCB,
+     *                     NOCC2,NOCCB2,NXYZ,X(LDS),IA,NUM,NORB)
+         END IF
+         IF(DBG) WRITE(IW,9992)
+         IF(DBG) CALL CPFCM(X(LFCM),NAT)
+      END IF
+C
+      CALL RETFM(NEED)
+C
+C     ----- FORM MODIFIED FOCK MATRICES -----
+C     THERE ARE THREE OPTIONS: MO INTEGRALS, OR AO INTEGRALS WITH
+C     REPLICATED OR DISTRIBUTED STORAGE FOR THE D/F MATRICES.
+C
+      CALL TSECND(TIM1)
+  125 CONTINUE
+C
+C     L1=NUM
+C     NAOMX = NANGM   ! MAXIMUM SIZE OF A SHELL
+C
+C     CHECK DISTRIBUTED MEMORY AVAILABILITY
+C
+      IF(DDAODRV) THEN
+            CALL ABRT
+      END IF
+C
+      LFCM = LOADFM + 1
+      LWAX = LFCM + NC3
+      LWAXB= LWAX + NROT *NNXYZ
+      LC   = LWAXB+ NROTB*NNXYZ
+      LCB  = LC   + NUM3
+      LAA  = LCB  + NUM3
+      LAAB = LAA  + NOCC2 *NXYZ
+      LTA  = LAAB + NOCCB2*NXYZ
+      LTB  = LTA  + NOCC2 *NXYZ
+      LAST = LTB  + NOCCB2*NXYZ
+C
+C
+      IF(AODRV) THEN
+         LDTEMP = LAST
+         LDTEMPB= LDTEMP + NUM2*NXYZ
+         LFTEMP = LDTEMPB+ NUM2*NXYZ
+C     For EX term in ROHF
+         IF(SCFTYP.NE.UHF) THEN
+           LDTEMPC= LDTEMPB+ NUM2*NXYZ
+           LFTEMP = LDTEMPC+ NUM2
+         END IF
+         LFTEMPB= LFTEMP + NUM2*NXYZ
+         LX     = LFTEMPB+ NUM2*NXYZ
+C     For EX term in ROHF
+         IF(SCFTYP.NE.UHF) THEN
+           LFTEMPC= LFTEMPB+ NUM2*NXYZ
+           LX     = LFTEMPC+ NUM2
+         END IF
+         LY     = LX     + NUM3
+         LWORK  = LY     + NUM3
+         LGHOND = LWORK  + MAX(NUM2,NOCC*NOCC,NOCC2)
+         IF(SCFTYP.NE.UHF) LGHOND = LWORK  + NUM3
+         LXINTS = LGHOND + MAXG
+         LDSH   = LXINTS + NSH2
+         LDDIJ  = LDSH   + NSH2
+         LAST   = LDDIJ  + 49*MXG2
+c        LDDSH1 = LAST
+c        LDDSH2 = LAST
+c        LDDSH3 = LAST
+c        LDFSH1 = LAST
+c        LDFSH2 = LAST
+c        LDFSH3 = LAST
+         LFMO   = LAST
+         LFMOB  = LAST
+      END IF
+      IF(MODRV) THEN
+         call abrt
+      END IF
+C          JUST LET ALL METHODS ALLOCATE THIS SMALLISH STORAGE?
+      LXX  = LAST
+      LIX  = LXX + NINTMX
+      LAST = LIX + NINTMX
+C
+      IF(POLAR) THEN
+         LHF  = LAST
+         LAST = LHF  + NUM2*3
+      ELSE
+         LHF  = LAST
+      END IF
+C
+      IF(NDER.EQ.1 .AND. NFZC.GT.0) THEN
+         CALL abrt
+      ELSE
+         LWAXC= LAST
+      END IF
+C
+      NEED = LAST - LOADFM - 1
+      NDFCK = NEED
+      IF(CHKMEM) GO TO 135
+      CALL GETFM(NEED)
+C
+C          REPLICATED MEMORY, AO OR MO INTEGRAL DRIVEN ALGORITHMS
+C
+      IF(AODRV) THEN
+         CALL CPFCK2(X(LWAX),X(LAA),X(LTA),X(LFMO),X(LDTEMP),
+     *              X(LFTEMP),X(LC),X(LY),X(LX),X(LWORK),X(LHF),
+     *              X(LWAXC),X(LXX),X(LIX),X(LGHOND),X(LXINTS),
+     *              X(LDSH),X(LDDIJ),IA,NOCC,NVIR,NORB,NOCC2,
+     *              NORB2,NXYZ,NNXYZ,IJKT,NINTMX,NUM,NUM2,NFZC,
+     *              NOCACT,NDER,MAXG,NSH2,MXG2,
+     *              X(LWAXB),X(LAAB),X(LTB),X(LFMOB),
+     *              X(LDTEMPB),X(LFTEMPB),X(LCB),
+     *              NOCCB,NVIRB, NOCCB2,X(LDTEMPC),X(LFTEMPC))
+      END IF
+C
+C          DISTRIBUTED MEMORY, AO DRIVEN ALGORITHM
+C
+C
+ 
+      IF(DBG) THEN
+         WRITE(IW,*) 'COMPLETED -WAX- MATRIX, AFTER -FCK- CONTRIBUTIONS'
+         CALL PRSQ(X(LWAX),NNXYZ,NROT,NROT)
+         DO 130 IXYZ=1,NXYZ
+            WRITE(IW,9973) IXYZ
+            CALL PRTRI(X(LAA+NOCC2*(IXYZ-1)),NOCC)
+  130    CONTINUE
+      END IF
+C
+C
+      CALL TSECND(TIM2)
+      TIMFCK=TIM2-TIM1
+      IF(SOME) WRITE(IW,9988) ' -FCK-  ',TIMFCK
+      IF(SOME) CALL FLSHBF(IW)
+C
+C     ----- ADD - TB * AA - CONTRIBUTIONS TO -FCM- -----
+c        WRITE(IW,*) 'COMPLETED -WAX- MATRIX, AFTER -FCK- CONTRIBUTIONS'
+c        CALL PRSQ(X(LWAX),NNXYZ,NROT,NROT)
+C
+      IF(NDER.EQ.2) THEN
+         CALL CPWAB2(X(LFCM),X(LAA),X(LTA),IA,NOCC,NOCC2,NXYZ,.TRUE.)
+         CALL CPWAB2(X(LFCM),X(LAAB),X(LTB),IA,NOCCB,NOCCB2,NXYZ,.TRUE.)
+         IF(DBG) WRITE(IW,9991)
+         IF(DBG) CALL CPFCM(X(LFCM),NAT)
+      END IF
+C
+      CALL RETFM(NEED)
+C
+C     ----- CALCULATE -WXY- MATRIX AND SOLVE CPHF EQNS -----
+      ADDVCPHF=.true.
+      if(NFG.ne.0) THEN
+        LFCM = LOADFM + 1
+        LWAX = LFCM   + NC3
+        LWAXB= LWAX   + NROT *NNXYZ
+        LC   = LWAXB  + NROTB*NNXYZ
+        LCB  = LC     + NUM3
+        LDV  = LCB    + NUM3
+        LAST = LDV    + NNXYZ * NUM2
+C       LAST = LWRK1  + NUM3  * 2 + NUM2 + NUM * 2
+        NEED = LAST   - LOADFM - 1
+C
+        CALL GETFM(NEED)
+C
+c       write(*,*) "icurfg in CPHF= ",icurfg,jcurfg
+        IFG = icurfg
+        JFG = jcurfg
+        KFG = kcurfg
+        L1  = NUM
+        L2  = (NUM * NUM + NUM) / 2
+        
+        CALL VCLR(X(LDV),1,NNXYZ * NUM2)
+        IF(ADDVCPHF)
+     *  CALL FMOESP_CPFCK(X(LDV),L1,L2,IFG,JFG,KFG,
+     *                    X(lidmrec),X(lscffrg))
+C
+        CALL RETFM(NEED)
+C
+      END IF
+C
+      CALL TSECND(TIM1)
+  135 CONTINUE
+C
+C         MEMORY FOR THE TWO AO INTEGRAL DRIVEN METHODS
+C
+C     L1    = NUM
+C     NAOMX = NANGM
+C
+C
+      IF (AODRV) THEN
+C   NOTE THE FIRST THREE ARE INHERITED FROM ABOVE IN THIS ORDER
+         LFCM   = LOADFM + 1
+         LWAX   = LFCM   + NC3
+         LWAXB  = LWAX   + NROT *NNXYZ
+         LC     = LWAXB  + NROTB*NNXYZ
+         LCB    = LC     + NUM3
+         IF(NFG.ne.0) THEN
+           LDV  = LCB    + NUM3
+           LWRK3= LDV    + NNXYZ * NUM2
+           LYA  = LWRK3  + NUM3  * 2 
+         ELSE
+           LYA  = LCB    + NUM3
+           LDV  = LCB          
+           LWRK3= LCB
+         END IF
+         LYB    = LYA    + NROT *NNXYZ
+         LWRK1  = LYB    + NROTB*NNXYZ
+         LWRK2  = LWRK1  + NUM3
+         IF(SCFTYP.NE.UHF) LWRK2  = LWRK1  + NUM3*2
+         LEIG   = LWRK2  + NUM3
+         IF(SCFTYP.NE.UHF) LEIG   = LWRK2  + NUM3*2
+         LEIGB  = LEIG   + NUM
+         LGHOND = LEIGB  + NUM
+         LXINTS = LGHOND + MAXG
+         LDSH   = LXINTS + NSH2
+         LDDIJ  = LDSH   + NSH2
+         LXX    = LDDIJ  + 49*MXG2
+         LIX    = LXX    + INTMAX
+         LDTEMP = LIX    + INTMAX
+         LDTEMPB= LDTEMP + NUM2*NUNIQ
+         LFTEMP = LDTEMPB+ NUM2*NUNIQ
+         IF(SCFTYP.NE.UHF) THEN
+           LDTEMPC= LDTEMPB+ NUM2*NUNIQ
+           LFTEMP = LDTEMPC+ NUM2
+         END IF
+         LFTEMPB= LFTEMP + NUM2*NUNIQ
+         LAST   = LFTEMPB+ NUM2*NUNIQ
+         IF(SCFTYP.NE.UHF) THEN
+           LFTEMPC= LFTEMPB+ NUM2*NUNIQ
+           LAST   = LFTEMPC+ NUM2
+         END IF
+c        LDDSH1 = LAST
+c        LDDSH2 = LAST
+c        LDDSH3 = LAST
+c        LDFSH1 = LAST
+c        LDFSH2 = LAST
+c        LDFSH3 = LAST
+c        LDMYX  = LAST
+c        LWRK2M = LAST
+      END IF
+C
+C         SOLVE RESPONSE EQUATIONS USING AO BASIS INTEGRALS
+C
+      IF(AODRV) THEN
+C            DISTRIBUTED DATA CODE CANNOT USE -DIIS- SOLVER
+c        IF(CHFSLV.EQ.BLANK) CHFSLV=CONJG
+         CHFSLV=CONJG
+C           NOTE -LERR- WORKING STORAGE FOR DIIS OVERLAPS DTEMP/FTEMP
+            LRESID = LAST
+            LRESIDB= LRESID + NROT *NUNIQ
+            LZRES  = LRESIDB+ NROTB*NUNIQ
+            LZRESB = LZRES  + NROT *NUNIQ
+            LPDIR  = LZRESB + NROTB*NUNIQ
+            LPDIRB = LPDIR  + NROT *NUNIQ
+            LPRCND = LPDIRB + NROTB*NUNIQ
+            LPRCNDB= LPRCND + NROT
+            LBNORM = LPRCNDB+ NROTB
+            LBKNUM = LBNORM + NNXYZ
+            LBKDEN = LBKNUM + NNXYZ
+            LAST   = LBKDEN + NNXYZ
+C
+         NEED = LAST - LOADFM - 1
+C
+         NDWXY = NEED
+         IF(CHKMEM) GO TO 90
+         CALL GETFM(NEED)
+C
+C        GET RHF ORBITAL ENERGIES, AND START SOLVING.
+C
+         CALL DAREAD(IDAF,IODA,X(LEIG), NUM,17,0)
+         CALL DAREAD(IDAF,IODA,X(LEIGB),NUM,21,0)
+C
+C            THE TWO AO DRIVEN ALGORITHMS USE CONJUGATE GRADIENTS
+C
+C                      REPLICATED STORAGE
+C
+         CALL UHF_AOCPCG(X(LWAX),X(LYA),X(LRESID),X(LZRES),
+     *          X(LPDIR),X(LPRCND),X(LBNORM),
+     *          X(LBKNUM),X(LBKDEN),X(LC),X(LEIG),
+     *          X(LDTEMP),X(LFTEMP),X(LWRK1),X(LWRK2),
+     *          NOCP,X(LGHOND),X(LXINTS),X(LDSH),
+     *          X(LDDIJ),X(LXX),X(LIX),NNXYZ,NUNIQ,
+     *          NFOCK,NROT,NOCC,NVIR,NUM,NUM2,
+     *          NUM3,NSH2,MAXG,MXG2,
+     *          X(LWAXB),X(LYB),X(LRESIDB),X(LZRESB),
+     *          X(LPDIRB),X(LPRCNDB),X(LCB),X(LEIGB),
+     *          X(LDTEMPB),X(LFTEMPB),NOCCB,NVIRB,NROTB,
+     *          X(LDV),X(LWRK3))
+C
+C        NSOLV = NNXYZ
+C
+      END IF
+C
+      IF(DBG) THEN
+         WRITE(IW,*) 'CPHF RESPONSE VECTORS -YA-'
+         CALL PRSQ(X(LYA),NNXYZ,NROT,NROT)
+      END IF
+C
+      CALL RETFM(NEED)
+      CALL TSECND(TIM2)
+      TIMYA=TIM2-TIM1
+      IF(SOME) WRITE(IW,9988) ' -YA-   ',TIMYA
+      IF(SOME) CALL FLSHBF(IW)
+C
+      IF(NDER.EQ.1) GO TO 900
+C
+C     ----- ADD WAX * YB - CONTRIBUTIONS TO -FCM- -----
+C     SNEAKY: THERE IS A MATRIX BETWEEN WAX AND YA WHOSE SIZE
+C     DEPENDS ON THE ALGORITHM USED ABOVE
+C
+      ISKIP = NUM3 * 2
+      IF(NFG.ne.0) THEN
+        ISKIP = ISKIP  + NNXYZ * NUM2 + NUM3 * 2
+      END IF
+C
+      LFCM = LOADFM + 1
+      LWAX = LFCM   + NC3
+      LWAXB= LWAX   + NROT *NNXYZ
+      LAST = LWAXB  + NROTB*NNXYZ
+      LYA  = LAST   + ISKIP
+      LYB  = LYA    + NROT *NNXYZ
+      LH   = LYB    + NROTB*NNXYZ
+      LDDM = LH     + NUM2*3*2
+      LDDMA= LDDM   + NAT*9
+      LSK  = LDDMA  + NAT*9
+      LAST = LSK    + NAT
+      NEED = LAST - LOADFM - 1
+      CALL GETFM(NEED)
+C
+      CALL CPWAB3_UHF(X(LFCM),X(LWAX),X(LYA),X(LH),X(LDDM),IA,
+     *            NROT,NXYZ,NNXYZ,NUM2,NOCC,NVIR,
+     *            X(LWAXB),X(LYB),NOCCB,NVIRB,NROTB)
+      IF(DBG) WRITE(IW,9990)
+      IF(DBG) CALL CPFCM(X(LFCM),NAT)
+C
+C     ---- ADD RESPONSE CONTRIBUTIONS TO DIPOLE DERIVATIVE ----
+      if(NFG.ne.0) then
+        call DCOPY((NOCC*NVIR+NOCCB*NVIRB)*NXYZ,X(LYA),1,X(LYAWRK),1)
+      end if
+C
+      IF(DBG) THEN
+         WRITE(IW,9996)
+         CALL DDMOUT(X(LDDM),3*NAT)
+      END IF
+      CALL DAREAD(IDAF,IODA,X(LDDMA),NAT*9,34,0)
+      CALL VADD(X(LDDMA),1,X(LDDM),1,X(LDDMA),1,NAT*9)
+      CALL DAWRIT(IDAF,IODA,X(LDDMA),NAT*9,34,0)
+C
+C     ---- SYMMETRIZE DIPOLE DERIVATIVE ----
+C
+      CALL CPSDDM(X(LDDMA),X(LSK),3*NAT)
+C
+C     ----- SYMMETRIZE -FCM- AND OUTPUT IT -----
+C
+      CALL CPSYM(X(LFCM),NC)
+      IF(DBG) CALL CPFCM(X(LFCM),NAT)
+      CALL DAWRIT(IDAF,IODA,X(LFCM),NC3,4,0)
+      CALL RETFM(NEED)
+C
+  900 CONTINUE
+      RETURN
+C
+C9998 FORMAT(' -WXY- MATRIX ')
+ 9994 FORMAT(' -TA- MATRIX ',I5)
+ 9992 FORMAT(' ADD T(A) * T(B) CONTRIBUTION TO -FCM- ')
+ 9991 FORMAT(' ADD T(A) * AA(B) CONTRIBUTION TO -FCM- ')
+ 9995 FORMAT(/10X,34(1H-)/
+     *        10X,'OVERLAP DERIVATIVE CONTRIBUTION TO'/
+     *        10X,34(1H-))
+ 9996 FORMAT(/10X,31(1H-)/
+     *        10X,'RESPONSE FACTOR CONTRIBUTION TO'/
+     *        10X,31(1H-))
+ 9990 FORMAT(' ADD WAX * YA CONTRIBUTION TO -FCM- ')
+ 9988 FORMAT(1X,'       TIME FOR',A8,'= ',F12.3)
+ 9976 FORMAT(' AFTER -DFMO- CONTRIBUTION TO -AA- ',I3)
+ 9973 FORMAT(' AFTER -FCK- CONTRIBUTION TO -AA- ',I3)
+ 9000 FORMAT(/5X,41(1H-)/
+     *        5X,'COUPLED-PERTURBED OPEN SHELL HARTREE-FOCK'/
+     *        5X,41(1H-))
+c9005 FORMAT(/10X,'...... USING THE Z VECTOR METHOD ......')
+ 9010 FORMAT(1X,'THE CPHF HAS',I8,' INDEPENDENT ORBITAL ROTATIONS.')
+ 9015 FORMAT(1X,'SOLVING FOR',I5,' NUCLEAR RESPONSES AND',I2,
+     *          ' ELECTRIC FIELD RESPONSES')
+ 9020 FORMAT(10X,' -FA- WILL USE',I10,' WORDS,'/
+     *       10X,' -TA- WILL USE',I10,' WORDS,'/
+     *       10X,'-FCK- WILL USE',I10,' WORDS,'/
+     *        1X,'-WXY- AND -YA- WILL USE',I10,' WORDS,'/
+     *       10X,'     THERE ARE',I10,' WORDS OF REPLICATED MEMORY',
+     *           ' AVAILABLE.')
+ 9030 FORMAT(1X,'IN MEMORY FORMATION OF -WXY- WOULD REQUIRE',I10,
+     *          ' WORDS')
+ 9040 FORMAT(1X,'NOT ENOUGH MEMORY TO DO CPHF, NEED=',I10,' GOT=',I10)
+c9050 FORMAT(1X,'CHOOSING IN MEMORY CPHF ALGORITHM')
+c9060 FORMAT(1X,'CHOOSING OUT OF MEMORY CPHF ALGORITHM,'/
+c    *   1X,'-WXY- WILL BE FORMED IN',I5,' SLICES OF',I7,' COLUMNS.')
+c9070 FORMAT(/1X,'*** NOT ENOUGH MEMORY TO RUN THE OUT OF MEMORY',
+c    *          ' CPHF CODE ***'/
+c    *       1X,'NWIDTH=',I10,'  NSLICE=',I10,'   NAT=',I10/
+c    *       1X,' NFREE=',I10,'   NNEED=',I10,'  NROT=',I10//
+c    *       1X,'INCREASE MEMORY IN $SYSTEM TO AT LEAST',I10/
+c    *       1X,'LARGER AMOUNTS OF MEMORY ARE EVEN BETTER!')
+C9080 FORMAT(1X,'SOLVING FOR ALL',I4,' UNIQUE RESPONSES TOOK',
+C    *          I5,' CG UPDATES.')
+C9090 FORMAT(1X,'CONJUGATE GRADIENT SOLVER MADE',I4,
+C    *          ' READS OF THE EXTERNALLY STORED -WXY-')
+C9110 FORMAT(/1X,21(1H-),5X,45(1H-)/
+C    *       1X,'DISTRIBUTED DATA CPHF',5X,
+C    *       'PROGRAM BY Y.ALEXEEV, T.L.WINDUS, M.W.SCHMIDT'/
+C    *       1X,21(1H-),5X,45(1H-)/
+C    *       1X,' REQUIRED DISTRIBUTED MEMORY=',I12,' MWORDS,'/
+c    *       1X,'AVAILABLE DISTRIBUTED MEMORY=',I12,' MWORDS.')
+      END
+c
+c
+C*MODULE CPUHF   *DECK CPUFA
+C>    @brief Add the Fock derivative contributions
+C>
+C>    @details  Convert the derivative of Fock from AO to MO,
+C>              and added the contribution to Aab, and Wax
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param DBG     Print out for DBG
+C>    @param DFMO    Fock derivative in MO basis
+C>    @param WAXC    Dummy varaiable for future implementation
+C>    @param   IA    Indice for triangular matrix elements
+C>    @param  NUM    Number of atomic orbital
+C>    @param NOCC    Number of alpha occupied molecular orbital
+C>    @param NVIR    Number of alpha virtual  molecular orbital
+C>    @param NUM2    Number of elements in triangular matrix of AO basis
+C>    @param NOCC2   Number of elements in triangular matrix of alpha occupied MO
+C>    @param NXYZ    Number of cartesian coodinate elements
+C>    @param NFT18   Record number to store Fock derivative
+C>    @param NFZC    Number of frozen core molecular orbital
+C>    @param NOCACT  Number of active molecular orbitals
+C>    @param NOCCB   Number of beta occupied molecular orbital
+C>    @param NVIRB   Number of beta virtual  molecular orbital
+C>    @param NOCCB2  Number of elements in triangular matrix of beta occupied MO
+C>           --- OUTPUT---
+C>    @param WAX     Derivative of energy with respect to alpha MO and coordiante 
+C>    @param  AA     Contribution to Hessian from alpha occupied orbitals.
+C>    @param WAXB    Derivative of energy with respect to beta MO and coordiante 
+C>    @param  AAB    Contribution to Hessian from beta occupied orbitals.
+      SUBROUTINE CPUFA(DBG,WAX,AA,DFMO,WAXC,IA,NUM,
+     *                NOCC,NVIR,NUM2,NOCC2,NXYZ,NFT18,NFZC,NOCACT,
+     *                WAXB,AAB,NOCCB,NVIRB,NOCCB2)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION WAX(NOCC,NVIR,NXYZ),AA(NOCC2,NXYZ),DFMO(NUM2),IA(NUM)
+      DIMENSION WAXC(NFZC,NOCACT,NXYZ)
+      DIMENSION WAXB(NOCCB,NVIRB,NXYZ),AAB(NOCCB2,NXYZ)
+C
+      LOGICAL DBG,GOPARR,DSKWRK,MASWRK,SVDSKW
+C
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+C
+      PARAMETER (FOUR=4.0D+00)
+C
+C     ----- INITIALIZE -WAX- AND -AA- WITH DF/DA TERMS -----
+C
+      CALL VCLR(WAX,1,NOCC*NVIR*NXYZ)
+      CALL VCLR(WAXB,1,NOCCB*NVIRB*NXYZ)
+      CALL VCLR(WAXC,1,NFZC*NOCACT*NXYZ)
+      CALL VCLR(AA,1,NOCC2*NXYZ)
+      CALL VCLR(AAB,1,NOCCB2*NXYZ)
+C
+C        ONLY THE MASTER NODE HAS THE DERIVATIVE FOCK MATRIX DISK FILE
+C
+      SVDSKW = DSKWRK
+      DSKWRK = .FALSE.
+      CALL SEQREW(NFT18)
+C
+      DO 300 IXYZ=1,NXYZ
+         CALL SQREAD(NFT18,DFMO,NUM2)
+         IF(DBG) THEN
+            WRITE(IW,*) 'FCKDER',IXYZ
+            CALL PRTRI(DFMO,NUM)
+         END IF
+C
+         DO 120 IVIR=1,NVIR
+            DO 110 IOCC=1,NOCC
+               IJ=IA(IVIR+NOCC)+IOCC
+               WAX(IOCC,IVIR,IXYZ)=FOUR*DFMO(IJ)
+  110       CONTINUE
+  120    CONTINUE
+C
+C
+         DO 220 IOCC=1,NOCC
+            DO 210 JOCC=1,IOCC
+               IJ=IA(IOCC)+JOCC
+               AA(IJ,IXYZ) = FOUR*DFMO(IJ)
+  210       CONTINUE
+  220    CONTINUE
+C     FOR BETA
+         CALL SQREAD(NFT18,DFMO,NUM2)
+C
+         DO 125 IVIR=1,NVIRB
+            DO 115 IOCC=1,NOCCB
+               IJ=IA(IVIR+NOCCB)+IOCC
+               WAXB(IOCC,IVIR,IXYZ)=FOUR*DFMO(IJ)
+  115       CONTINUE
+  125    CONTINUE
+C
+C
+         DO 225 IOCC=1,NOCCB
+            DO 215 JOCC=1,IOCC
+               IJ=IA(IOCC)+JOCC
+               AAB(IJ,IXYZ) = FOUR*DFMO(IJ)
+  215       CONTINUE
+  225    CONTINUE
+  300 CONTINUE
+C
+      CALL SEQREW(NFT18)
+      DSKWRK = SVDSKW
+      RETURN
+      END
+c
+C*MODULE CPUHF   *DECK CPFCK2
+C>    @brief Add the orbital Hessian contribution to B^a
+C>
+C>    @details  Construct the complete vectro of B^a by adding
+C>              Fock like terms.
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param  TA     Derivative of overlap integral
+C>    @param FMO     Fock derivative in MO basis
+C>    @param DTEMP   Density like matrix
+C>    @param FTEMP   Fock    like matrix
+C>    @param     C   Molecular orbital coefficient
+C>    @param X,Y        Working space
+C>    @param HF      Dummy variable for futhre implementation
+C>    @param WAXC    Dummy variable for futhre implementation
+C>    @param XX      for Two-electron integral
+C>    @param   IX      The variable for two electron integral   
+C>    @param   GHONDO  The variable for two electron integral
+C>    @param   XINT    The variable for two electron integralS
+C>    @param   DSH     The variable for two electron integralS
+C>    @param   DDIJ    The variable for two electron integralS
+C>    @param   IA      Indice for triangular matrix elements
+C>    @param NOCC      Number of alpha occupied molecular orbital
+C>    @param NVIR      Number of alpha virtual  molecular orbital
+C>    @param NORB      Number of molecular orbital
+C>    @param NOCC2     Number of elements in triangular matrix of alpha occupied MO
+C>    @param NORB2     Number of elements in triangular matrix of MO
+C>    @param NXYZ      Number of cartesian coodinate elements
+C>    @param NNXYZ     Number of unique cartesian coodinate elements
+C>    @param NFTI      Dummy variable for dirscf=.false.
+C>    @param NINTMX    Dummy variable for dirscf=.false.  
+C>    @param  NUM      Number of atomic orbital
+C>    @param NUM2      Number of elements in triangular matrix of AO basis
+C>    @param NFZC      Number of frozen core molecular orbital
+C>    @param NOCACT    Number of active molecular orbitals
+C>    @param NDER      Energy derivative order
+C>    @param   MAXG    The variable for two electron integralS
+C>    @param   NSH2    The variable for two electron integralS
+C>    @param   MXG2    The variable for two electron integralS
+C>    @param  TB       Derivative of overlap integral for beta
+C>    @param FMO       Fock derivative in MO basis for beta spin
+C>    @param DTEMPB    Density like matrix for beta
+C>    @param FTEMPB    Fock    like matrix for beta
+C>    @param    CB     Molecular orbital coefficient for beta
+C>    @param NOCCB     Number of beta occupied molecular orbital
+C>    @param NVIRB     Number of beta virtual  molecular orbital
+C>    @param NOCCB2    Number of elements in triangular matrix of beta occupied MO
+C>    @param DTEMPC    Density like matrix for ROHF singly occupied MO
+C>    @param FTEMPC    Fock    like matrix for ROHF singly occupied MO
+C>           --- OUTPUT---
+C>    @param WAX     Derivative of energy with respect to alpha MO and coordiante 
+C>    @param  AA     Contribution to Hessian from alpha occupied orbitals.
+C>    @param WAXB      Derivative of energy with respect to beta MO and coordiante 
+C>    @param  AAB      Contribution to Hessian from beta occupied orbitals.
+      SUBROUTINE CPFCK2(WAX,AA,TA,FMO,DTEMP,FTEMP,C,Y,X,WORK,
+     *                 HF,WAXC,XX,IX,GHONDO,XINTS,DSH,DDIJ,IA,
+     *                 NOCC,NVIR,NORB,NOCC2,NORB2,NXYZ,NNXYZ,NFTI,
+     *                 NINTMX,NUM,NUM2,NFZC,NOCACT,NDER,MAXG,NSH2,MXG2,
+     *                 WAXB,AAB,TB,FMOB,
+     *                 DTEMPB,FTEMPB,CB,
+     *                 NOCCB,NVIRB, NOCCB2,DTEMPC,FTEMPC)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK,POLAR,AODRV
+C
+C        -FMO- IS USED ONLY FOR COMPUTING RESPONSES FROM MO INTEGRALS.
+C        -DTEMP-, -FTEMP-, -C-, -Y-, -X-, -WORK- ARE USED ONLY FOR
+C           CALCULATION OF RESPONSES FROM AO BASIS INTEGRALS.
+C        -HF- IS USED FOR OPTIONAL POLARIZABILITY COMPUTATION.
+C        -WAXC- IS USED ONLY DURING CI GRADIENT RUNS.
+C
+      DIMENSION WAX(NOCC,NVIR,NNXYZ),AA(NOCC2,NXYZ),TA(NOCC2,NXYZ),
+     *         FMO(NXYZ,NORB2),DTEMP(NXYZ,NUM2),FTEMP(NXYZ,NUM2),
+     *         C(NUM,NUM),Y(NUM,NUM),X(NUM,NUM),WORK(*),
+     *         HF(NUM2,3),WAXC(NFZC,NOCACT,NNXYZ),XX(NINTMX),IX(*),
+     *         GHONDO(MAXG),XINTS(NSH2),DSH(NSH2),DDIJ(49*MXG2),IA(NUM),
+     *         WAXB(NOCCB,NVIRB,NNXYZ),AAB(NOCCB2,NXYZ),TB(NOCCB2,NXYZ),
+     *         FMOB(NXYZ,NORB2),DTEMPB(NXYZ,NUM2),FTEMPB(NXYZ,NUM2),
+     *         CB(NUM,NUM),DTEMPC(NUM2),FTEMPC(NUM2)
+C
+      COMMON /CHFINF/ CHFSLV,CPTYPE,NWDCHF,POLAR,NSPLIT
+      COMMON /IOFILE/ IR,IW,IP,IJKO,IJKT,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PCKLAB/ LABSIZ
+C
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+      PARAMETER (PT5=0.5D+00, FOUR=4.0D+00)
+C
+      DATA TYPEAO/8HAO      /
+      DATA ROHF/8HROHF    /
+C
+C     ----- FORM THE INTEGRAL CONTRIBUTIONS TO -AA- AND -WAX- -----
+      IF(NVIR.EQ.0) write(*,*) "HF=",HF(1,1),WAXC(1,1,1)
+C
+      AODRV = CPTYPE.EQ.TYPEAO
+      IF(AODRV) THEN
+C          EITHER WE ARE WORKING WITH INTEGRALS IN THE AO BASIS...
+C
+C     TRANSFORM THE TAS INTO THE AO BASIS,
+C     THESE "DENSITY MATRICES" ARE STORED IN -DTEMP-
+C
+         DO 290 IXYZ=1,NXYZ
+C          For ALPHA
+            CALL EXPND(TA(1,IXYZ),WORK,NOCC,0)
+            CALL MRARTR(WORK,NOCC,NOCC,NOCC,C,NUM,NUM,X,NUM)
+            CALL MRARBR(C,NUM,NUM,NOCC,X,NUM,NUM,Y,NUM)
+
+            IJ = 0
+            DO 260 I=1,NUM
+               DO 250 J=1,I
+                  IJ = IJ + 1
+                  DTEMP(IXYZ,IJ) = Y(I,J) + Y(J,I)
+  250          CONTINUE
+  260       CONTINUE
+C          FOR BETA
+            CALL EXPND(TB(1,IXYZ),WORK,NOCCB,0)
+            CALL MRARTR(WORK,NOCCB,NOCCB,NOCCB,CB,NUM,NUM,X,NUM)
+            CALL MRARBR(CB,NUM,NUM,NOCCB,X,NUM,NUM,Y,NUM)
+C
+            IJ = 0
+            DO 265 I=1,NUM
+               DO 255 J=1,I
+                  IJ = IJ + 1
+                  DTEMPB(IXYZ,IJ) = Y(I,J) + Y(J,I)
+  255          CONTINUE
+  265       CONTINUE
+C
+  290    CONTINUE
+C
+C     Extra exchange terms for rohf
+         if(scftyp.eq.rohf) then
+           NSO = NOCC - NOCCB
+           CALL DMTX2(DTEMPC,C(1,NOCCB+1),NSO,NUM,NUM,0) 
+         end if
+C
+C     NOW BUILD THE "FOCK-LIKE MATRICES" IN -FTEMP-
+C
+         CALL AOFLM3(DTEMP,FTEMP,GHONDO,XINTS,DSH,DDIJ,XX,IX,
+     *               NUM,NXYZ,MAXG,NSH2,MXG2,NINT,NSCHWZ,
+     *               DTEMPB,FTEMPB)
+C
+C     TRANSFORM THE RESULTS TO THE MO BASIS
+C
+         DO 390 IXYZ = 1,NXYZ
+            DO 310 IDUM=1,NUM2
+               WORK(IDUM) = FTEMP(IXYZ,IDUM)
+  310       CONTINUE
+            CALL EXPND(WORK,Y,NUM,0)
+            CALL MRARBR(Y,NUM,NUM,NUM,C,NUM,NOCC,X,NUM)
+            CALL MRTRBT(C,NUM,NUM,NOCC,X,NUM,WORK,1,1)
+C
+C     FORM THE AIJ^A CONTRIBUTION OF EQUATION 13.
+C     NOTE THAT THE FACTOR OF 4 IS THE 2 FROM EQUATION 13 AND
+C     ANOTHER TWO TAKING INTO ACCOUNT THE SYMMETRY OF THE TRANSFORMATION
+C     (HAVE TWO TERMS THAT ARE SYMMETRIC, I CALCULATED ONE
+C      AND NEED TO MULTIPLY BY TWO WHICH I AM DOING HERE)
+C
+            DO 330 IJ=1,NOCC2
+               AA(IJ,IXYZ) = AA(IJ,IXYZ) + 4.0D+00*WORK(IJ)
+  330      CONTINUE
+C
+C     DO LAST PART OF SECOND TRANSFORMATION INTO THE MO BASIS
+C     (FIRST PART IS THE SAME AS THE PREVIOUS TRANSFORMATION)
+C     THIS IS FOR EQUATION 14 TO FORM WAX
+C
+           CALL MRTRBR(C(1,NOCC+1),NUM,NUM,NVIR,X,NUM,NOCC,WORK,NVIR)
+C
+C     NOW FORM WAX
+C     NOTE THAT THE FACTOR OF 8 IS THE 4 FROM EQUATION 14 AND
+C     ANOTHER TWO TAKING INTO ACCOUNT THE SYMMETRY OF THE TRANSFORMATION
+C     (HAVE TWO TERMS THAT ARE SYMMETRIC, I CALCULATED ONE
+C      AND NEED TO MULTIPLY BY TWO WHICH I AM DOING HERE)
+C
+         I = 1
+            DO 360 IOCC=1,NOCC
+               DO 350 IVIR=1,NVIR
+                  WAX(IOCC,IVIR,IXYZ) = WAX(IOCC,IVIR,IXYZ) +
+     *                                  8.0D+00*WORK(I)
+                  I = I + 1
+  350          CONTINUE
+  360       CONTINUE
+
+C        for Beta
+            DO 315 IDUM=1,NUM2
+               WORK(IDUM) = FTEMPB(IXYZ,IDUM)
+  315       CONTINUE
+C
+            CALL EXPND(WORK,Y,NUM,0)
+            CALL MRARBR(Y,NUM,NUM,NUM,CB,NUM,NOCCB,X,NUM)
+            CALL MRTRBT(CB,NUM,NUM,NOCCB,X,NUM,WORK,1,1)
+
+            DO 335 IJ=1,NOCCB2
+               AAB(IJ,IXYZ) = AAB(IJ,IXYZ) + 4.0D+00*WORK(IJ)
+  335       CONTINUE
+
+            CALL MRTRBR(CB(1,NOCCB+1),NUM,NUM,NVIRB,X,NUM,NOCCB,
+     *                  WORK,NVIRB)
+
+            I = 1
+               DO 365 IOCC=1,NOCCB
+                  DO 355 IVIR=1,NVIRB
+                     WAXB(IOCC,IVIR,IXYZ) = WAXB(IOCC,IVIR,IXYZ)
+     *                                    + 8.0D+00*WORK(I)
+                     I = I + 1
+  355             CONTINUE
+  365          CONTINUE
+
+
+  390       CONTINUE
+C
+            if(scftyp.eq.rohf) then
+              CALL EXINT3_ROHF(FTEMPC,X,Y,WORK,C,NUM,NUM2,NORB,
+     *        NOCC,NVIR,NOCCB,NVIRB,WAX,WAXB,DTEMP,NXYZ)
+              CALL SWZVROHF2(WAX,WAXB,NOCCB,NSO,NVIR,NVIRB,NXYZ)
+            end if
+
+C          ...OR WE ARE WORKING WITH INTEGRALS TRANSFORMED TO MO BASIS.
+      ELSE
+         CALL VCLR(FMO,1,NXYZ*NORB2)
+         CALL VCLR(FMOB,1,NXYZ*NORB2)
+C
+C     ----- READ IN MO INTEGRALS -----
+C     TRANSFORMED INTEGRALS ASSUMED IN REVERSE CANONICAL ORDER
+C
+         CALL SEQREW(NFTI)
+         IF (MASWRK) READ(NFTI)
+  500    CONTINUE
+         CALL PREAD(NFTI,XX,IX,NX,NINTMX)
+         IF(NX.EQ.0) GO TO 710
+         MX=ABS(NX)
+         IF(MX.GT.NINTMX) GO TO 9000
+C
+C     ----- UNPACK LABEL AND PROCESS INTEGRAL -----
+C
+         DO 700 M=1,MX
+         VAL   = XX(M)
+C
+                       NPACK = M
+                       IF (LABSIZ .EQ. 2) THEN
+*I32                     LABEL1 = IX( 2*NPACK - 1 )
+*I32                     LABEL2 = IX( 2*NPACK     )
+*I32                     IPACK = ISHFT( LABEL1, -16 )
+*I32                     JPACK = IAND( LABEL1, 65535 )
+*I32                     KPACK = ISHFT( LABEL2, -16 )
+*I32                     LPACK = IAND( LABEL2, 65535 )
+*I64                     LABEL = IX(NPACK)
+*I64                     IPACK = ISHFT( LABEL, -48 )
+*I64                     JPACK = IAND( ISHFT( LABEL, -32 ), 65535 )
+*I64                     KPACK = IAND( ISHFT( LABEL, -16 ), 65535 )
+*I64                     LPACK = IAND( LABEL, 65535 )
+                       ELSE IF (LABSIZ .EQ. 1) THEN
+*I32                     LABEL = IX(NPACK)
+*I32                     IPACK = ISHFT( LABEL, -24 )
+*I32                     JPACK = IAND( ISHFT( LABEL, -16 ), 255 )
+*I32                     KPACK = IAND( ISHFT( LABEL,  -8 ), 255 )
+*I32                     LPACK = IAND( LABEL, 255 )
+*I64                     IF ( MOD(NPACK,2) .EQ. 0 ) THEN
+*I64                       LABEL = IX( NPACK/2 )
+*I64                       IPACK = IAND( ISHFT( LABEL, -24 ), 255 )
+*I64                       JPACK = IAND( ISHFT( LABEL, -16 ), 255 )
+*I64                       KPACK = IAND( ISHFT( LABEL,  -8 ), 255 )
+*I64                       LPACK = IAND( LABEL, 255 )
+*I64                     ELSE
+*I64                       LABEL = IX( (NPACK/2)+1 )
+*I64                       IPACK = ISHFT( LABEL, -56 )
+*I64                       JPACK = IAND( ISHFT( LABEL, -48 ), 255 )
+*I64                       KPACK = IAND( ISHFT( LABEL, -40 ), 255 )
+*I64                       LPACK = IAND( ISHFT( LABEL, -32 ), 255 )
+*I64                     END IF
+                       END IF
+                       K = IPACK
+                       L = JPACK
+                       I = KPACK
+                       J = LPACK
+C
+C
+C     ----- -AA- TERMS -----
+C
+         IF(I.GT.NOCC) GO TO 600
+         IF(J.EQ.I           ) VAL=VAL*PT5
+         IF(L.EQ.K           ) VAL=VAL*PT5
+         IF(K.EQ.I.AND.L.EQ.J) VAL=VAL*PT5
+         VALJ=(VAL +VAL )
+         VALJ=(VALJ+VALJ)
+         VALK=-VAL
+         NIJ=IA(I)+J
+         NKL=IA(K)+L
+         NIK=IA(I)+K
+         NIL=IA(I)+L
+         NJK=IA(MAX(J,K))+MIN(J,K)
+         NJL=IA(MAX(J,L))+MIN(J,L)
+C
+         DO 550 IXYZ=1,NXYZ
+            FMO(IXYZ,NIJ)=FMO(IXYZ,NIJ)+VALJ*TA(NKL,IXYZ)
+            FMO(IXYZ,NKL)=FMO(IXYZ,NKL)+VALJ*TA(NIJ,IXYZ)
+            FMO(IXYZ,NIK)=FMO(IXYZ,NIK)+VALK*TA(NJL,IXYZ)
+            FMO(IXYZ,NIL)=FMO(IXYZ,NIL)+VALK*TA(NJK,IXYZ)
+            FMO(IXYZ,NJK)=FMO(IXYZ,NJK)+VALK*TA(NIL,IXYZ)
+            FMO(IXYZ,NJL)=FMO(IXYZ,NJL)+VALK*TA(NIK,IXYZ)
+            IF(I.LE.NOCCB) THEN
+               FMOB(IXYZ,NIJ)=FMOB(IXYZ,NIJ)+VALJ*TB(NKL,IXYZ)
+               FMOB(IXYZ,NKL)=FMOB(IXYZ,NKL)+VALJ*TB(NIJ,IXYZ)
+               FMOB(IXYZ,NIK)=FMOB(IXYZ,NIK)+VALK*TB(NJL,IXYZ)
+               FMOB(IXYZ,NIL)=FMOB(IXYZ,NIL)+VALK*TB(NJK,IXYZ)
+               FMOB(IXYZ,NJK)=FMOB(IXYZ,NJK)+VALK*TB(NIL,IXYZ)
+               FMOB(IXYZ,NJL)=FMOB(IXYZ,NJL)+VALK*TB(NIK,IXYZ)
+            END IF
+  550    CONTINUE
+         IF(I.LE.NOCCB) GO TO 700
+C
+C     ----- -WAX- TERMS -----
+C
+  600    CONTINUE
+         IF(J.GT.NOCC.OR.K.GT.NOCC) GO TO 700
+         IF(L.EQ.K) VAL=VAL*PT5
+         VALJ=(VAL +VAL )
+         VALJ=(VALJ+VALJ)
+         VALK=-VAL
+         NIJ=IA(I)+J
+         NKL=IA(K)+L
+         NIK=IA(I)+K
+         NIL=IA(I)+L
+         NJK=IA(MAX(J,K))+MIN(J,K)
+         NJL=IA(MAX(J,L))+MIN(J,L)
+C
+         DO 690 IXYZ=1,NXYZ
+            IF(I.GT.NOCC) THEN
+              FMO(IXYZ,NIJ)=FMO(IXYZ,NIJ)+VALJ*TA(NKL,IXYZ)
+              FMO(IXYZ,NIK)=FMO(IXYZ,NIK)+VALK*TA(NJL,IXYZ)
+              FMO(IXYZ,NIL)=FMO(IXYZ,NIL)+VALK*TA(NJK,IXYZ)
+            END IF
+            IF(J.LE.NOCCB.AND.K.LE.NOCCB) THEN
+              FMOB(IXYZ,NIJ)=FMOB(IXYZ,NIJ)+VALJ*TB(NKL,IXYZ)
+              FMOB(IXYZ,NIK)=FMOB(IXYZ,NIK)+VALK*TB(NJL,IXYZ)
+              FMOB(IXYZ,NIL)=FMOB(IXYZ,NIL)+VALK*TB(NJK,IXYZ)
+            END IF
+  690    CONTINUE
+C
+  700    CONTINUE
+         IF(NX.GT.0) GO TO 500
+C
+C          DONE WITH INTEGRAL CONTRIBUTIONS TO -FMO-
+C
+  710    CONTINUE
+         IF(GOPARR) CALL DDI_GSUMF(2101,FMO,NORB2*NXYZ)
+         IF(GOPARR) CALL DDI_GSUMF(2101,FMOB,NORB2*NXYZ)
+C
+         CALL DSCAL(NORB2*NXYZ,PT5,FMO,1)
+         CALL DSCAL(NORB2*NXYZ,PT5,FMOB,1)
+         DO 750 IXYZ=1,NXYZ
+            MM=0
+            DO 740 M=1,NORB
+               MM = MM+M
+               FMO(IXYZ,MM)=FMO(IXYZ,MM)+FMO(IXYZ,MM)
+               FMOB(IXYZ,MM)=FMOB(IXYZ,MM)+FMOB(IXYZ,MM)
+  740       CONTINUE
+  750    CONTINUE
+C
+C     ----- -FMO- CONTRIBUTION TO -AA- ----- ALPHA
+C
+         DO 810 IXYZ=1,NXYZ
+         DO 810 IOCC=1,NOCC
+         DO 810 JOCC=1,IOCC
+         IJ=IA(IOCC)+JOCC
+  810    AA(IJ,IXYZ)        =AA(IJ,IXYZ)
+     *                      +(FOUR+FOUR)*FMO(IXYZ,IJ)
+C
+C     ----- -FMO- CONTRIBUTION TO -AA- -----  BETA
+C
+         DO 820 IXYZ=1,NXYZ
+         DO 820 IOCC=1,NOCCB
+         DO 820 JOCC=1,IOCC
+         IJ=IA(IOCC)+JOCC
+  820    AAB(IJ,IXYZ)       =AAB(IJ,IXYZ)
+     *                      +(FOUR+FOUR)*FMOB(IXYZ,IJ)
+C
+C     ----- -FMO- CONTRIBUTION TO -WAX- ----- ALPHA
+C
+         DO 830 IXYZ=1,NXYZ
+         DO 830 IVIR=1,NVIR
+         DO 830 IOCC=1,NOCC
+         IJ=IA(IVIR+NOCC)+IOCC
+  830    WAX(IOCC,IVIR,IXYZ)=WAX(IOCC,IVIR,IXYZ)
+     *                      +(FOUR*FOUR)*FMO(IXYZ,IJ)
+C
+C     ----- -FMO- CONTRIBUTION TO -WAX- ----- BETA
+C
+         DO 840 IXYZ=1,NXYZ
+         DO 840 IVIR=1,NVIRB
+         DO 840 IOCC=1,NOCCB
+         IJ=IA(IVIR+NOCC)+IOCC
+  840    WAXB(IOCC,IVIR,IXYZ)=WAXB(IOCC,IVIR,IXYZ)
+     *                       +(FOUR*FOUR)*FMOB(IXYZ,IJ)
+C     ----- -FMO- CONTRIBUTION TO -WAXC- -----
+C
+         IF (NDER.EQ.1 .AND. NFZC.GT.0) THEN
+            CALL ABRT
+         END IF
+C
+C            END OF SECTION PROCESSING MO INTEGRALS
+C
+      END IF
+C
+C     ---- IF POLARIZABILITY GET TRANSFORMED DIPOLE INTEGRALS ----
+C                      ---- ADD TO -WAX- ----
+C     ---- NOTE THAT MULTIPLICATION BY FOUR NEEDED TO RECONCILE ----
+C     ---- SCHAEFER'S AND KOMORNIKI'S FORMULATIONS              ----
+C
+      IF(POLAR) THEN
+         CALL ABRT
+      END IF
+C
+      RETURN
+C
+ 9000 IF (MASWRK) WRITE(IW,9999) MX,NINTMX
+      CALL ABRT
+      STOP
+C
+ 9999 FORMAT(' ERROR STOP IN -CPFCK-',/,
+     1       ' MX IS LARGER THAN NINTMX. MX =',I10,' NINTMX =',I10)
+      END
+c
+C*MODULE CPUHF   *DECK AOFLM3
+C>
+C>    @brief    Calculate Open shell Orbital Hessian Fock-like matrices.
+C>
+C>    @details  Convert U to density like matrix in AO basis,
+C>              and calculate Two-EI to construct Fock like terms.
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param    PMN    Density like matrix for alpha MO
+C>    @param GHONDO    The variable for two electron integral
+C>    @param  XINTS    The variable for two electron integralS
+C>    @param    DSH    The variable for two electron integralS
+C>    @param   DDIJ    The variable for two electron integralS
+C>    @param    BUF    for Two-electron integral
+C>    @param   IBUF    The variable for two electron integral   
+C>    @param    NBF    Number of atomic orbital
+C>    @param   NXYZ    Number of cartesian coodinate elements
+C>    @param   MAXG    The variable for two electron integralS
+C>    @param   NSH2    The variable for two electron integralS
+C>    @param   MXG2    The variable for two electron integralS
+C>    @param   NINT    Dummy variable for dirscf=.false.  
+C>    @param NSCHWZ    The variable for two electron integralS
+C>    @param   PMNB    Density like matrix for beta MO
+C>           --- OUTPUT ---
+C>    @param    FMN    Fock    like matrix for alpha MO
+C>    @param   FMNB    Fock    like matrix for beta MO
+C>
+      SUBROUTINE AOFLM3(PMN,FMN,GHONDO,XINTS,DSH,DDIJ,BUF,IBUF,
+     *                  NBF,NXYZ,MAXG,NSH2,MXG2,NINT,NSCHWZ,
+     *                  PMNB,FMNB)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL PACK2E,SCHWRZ,DIRSCF,FDIFF,SHLOUT,TDSKWRK
+C
+      DIMENSION PMN(*), FMN(*), GHONDO(MAXG), XINTS(NSH2), DSH(NSH2),
+     *          DDIJ(49*MXG2), BUF(NINTMX), IBUF(NINTMX),
+     *          PMNB(*),FMNB(*)
+C
+      PARAMETER (MXSH=5000, MXATM=2000, MXAO=8192)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK
+      LOGICAL LCFLAG,LRINT
+C
+      COMMON /IJPAIR/ IA(MXAO)
+      COMMON /INTFIL/ NINTMX,NHEX,NTUPL,PACK2E,INTTYP,IGRDTYP
+      COMMON /INTOPT/ ISCHWZ,IECP,NECP,IEFLD
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /NLRC  / LCFLAG,EMU,EMU2,LRFILE
+      COMMON /NLRCF / LRINT
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /SHLT  / SHLTOL,CUTOFF,ICOUNT,SHLOUT
+      COMMON /SYMTRY/ MAPSHL(MXSH,48),MAPCTR(MXATM,48),
+     *                T(432),INVT(48),NT
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+      PARAMETER (HALF=0.5D+00)
+C
+      DATA UHF,ROHF/8HUHF     ,8HROHF    /
+      DATA RNONE/8HNONE    /
+C
+C           NOW FORM FOCK-LIKE MATRIX
+C           DIRECT METHOD = RECOMPUTE 2E- AO INTEGRALS
+C           STANDARD METHOD = PROCESS INTEGRALS FROM DISK
+C           WE NEED TO TEMPORARILY TURN OFF SYMMETRY,
+C           as the density-like matrices are not in the totally
+C           symmetric representation of the point group.
+C
+      NTTEMP = NT
+      NT = 1
+C
+      L1 = NBF
+      L2 = (NBF*NBF+NBF)/2
+      NINT  =0
+      NSCHWZ=0
+C
+      NNXYZ=NXYZ
+      IF(SCFTYP.EQ.ROHF) NNXYZ=NXYZ+1
+C
+      IF(DIRSCF) THEN
+         SCHWRZ = ISCHWZ.EQ.1
+         IF(SCHWRZ) THEN
+            CALL DAREAD(IDAF,IODA,XINTS,NSH2,54,0)
+            CALL AOSHLD_UHF(PMN,PMNB,DSH,IA,L1,L2,NSH2,NXYZ)
+         END IF
+         CALL VCLR(FMN,1,NXYZ*L2)
+         CALL VCLR(FMNB,1,NNXYZ*L2)
+         CUTSV  = CUTOFF
+         CUTOFF = MIN(CUTOFF,1.0D-10)
+C
+C             contribution if using range separation
+C
+         IF(LCFLAG) THEN
+           LRINT=.TRUE.
+           CALL TWOEI(UHF,DIRSCF,.FALSE.,.FALSE.,.FALSE.,
+     *                INTTYP,SCHWRZ,NINT,NSCHWZ,L1,L2,
+     *                DUMMY,DUMMY,IDUMMY,1,XINTS,NSH2,GHONDO,
+     *                MAXG,DDIJ,IA,PMN,FMN,PMNB,FMNB,DSH,
+     *                DUMMY,DUMMY,NXYZ)
+           LRINT=.FALSE.
+         END IF
+C
+         CALL TWOEI(UHF,DIRSCF,.FALSE.,.FALSE.,.FALSE.,
+     *              INTTYP,SCHWRZ,NINT,NSCHWZ,L1,L2,
+     *              DUMMY,DUMMY,IDUMMY,1,XINTS,NSH2,GHONDO,
+     *              MAXG,DDIJ,IA,PMN,FMN,PMNB,FMNB,DSH,
+     *              DUMMY,DUMMY,NXYZ)
+C
+         CUTOFF = CUTSV
+C
+         CALL DSCAL(NXYZ*L2,HALF,FMN,1)
+         CALL DSCAL(NNXYZ*L2,HALF,FMNB,1)
+         II=0
+         DO 210 I=1,L1
+            II = II+I
+            IJ = (II-1)*NXYZ+1
+            DO 200 J=0,NXYZ-1
+                FMN(IJ+J)  = FMN(IJ+J)  + FMN(IJ+J)
+                FMNB(IJ+J) = FMNB(IJ+J) + FMNB(IJ+J)
+  200       CONTINUE
+  210    CONTINUE
+C
+         IF(SCFTYP.EQ.ROHF) THEN
+           NTMP= L2 * NXYZ
+           II  = 0
+           DO I=1, L1
+             II = II+I
+             FMNB(NTMP+II) = FMNB(NTMP+II) + FMNB(NTMP+II)
+           ENDDO
+         END IF
+C
+C     For DFT
+c        write(*,*) "UDFT is switched on 01",DFTYPE.NE.RNONE
+         IF(DFTYPE.NE.RNONE) THEN
+           CALL UDFTFCK(UHF,L1,L2,IA,PMN,PMNB,FMN,FMNB,NXYZ) 
+         END IF
+
+      ELSE
+         TDSKWRK = DSKWRK
+         DSKWRK  = .TRUE.
+         CALL SEQREW(IJK)
+         CALL AOHST2(PMN,FMN,BUF,IBUF,NINTMX,IA,NOPK,NXYZ)
+         DSKWRK  = TDSKWRK
+      END IF
+C
+C   --- SUM UP PARTIAL FOCK MATRICES ---
+C
+      IF(GOPARR) THEN
+         CALL DDI_GSUMF(1000,FMN   ,NXYZ*L2)
+         CALL DDI_GSUMF(1000,FMNB  ,NNXYZ*L2)
+         CALL DDI_GSUMI(1001,NINT  ,1)
+         CALL DDI_GSUMI(1002,NSCHWZ,1)
+      END IF
+C
+C        RESTORE THE VALUE OF NT (Full point group symmetry)
+C
+      NT = NTTEMP
+      RETURN
+      END
+c
+C
+C*MODULE CPUHF   *DECK AOSHLD_UHF
+C>    @brief    COMPRESS DENSITY OVER AOS TO DENSITY OVER SHELLS
+C>
+C>    @details  Evaluate the maximum density in the shell 
+C>             
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param   D       Density for alpha MO
+C>    @param   DB      Density for beta MO
+C>    @param   IA      Iindice for diagonal elements of triangular matrix
+C>    @param   L1      Number of atomic orbital
+C>    @param   L2      Number of elements in triangular matrix of AO
+C>    @param   NSH2    Number of elements in triangular matrix of Nshell
+C>    @param   NFO     Number of elements in unique cartesian coordinate
+C>           --- OUTPUT ---
+C>    @param   DSH     Max Density for the shell 
+      SUBROUTINE AOSHLD_UHF(D,DB,DSH,IA,L1,L2,NSH2,NFO)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION D(NFO,L2),DB(NFO,L2),DSH(NSH2),IA(L1)
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000)
+C
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+C
+      PARAMETER (ZERO=0.0D+00)
+C
+C
+      IJSH=0
+      DO 240 ISH=1,NSHELL
+         MINI = KLOC(ISH)
+         MAXI = MINI + KMAX(ISH) - KMIN(ISH)
+         DO 230 JSH=1,ISH
+            MINJ = KLOC(JSH)
+            MAXJ = MINJ + KMAX(JSH) - KMIN(JSH)
+            IJSH = IJSH+1
+            DMAX = ZERO
+            DO 130 I=MINI,MAXI
+               IF(ISH.EQ.JSH) MAXJ=I
+               DO 120 J=MINJ,MAXJ
+                  IJ = IA(I) + J
+                  DO 110 IFO=1,NFO
+                     IF(ABS(D(IFO,IJ)).GT.DMAX)  DMAX = ABS(D(IFO,IJ))
+                     IF(ABS(DB(IFO,IJ)).GT.DMAX) DMAX = ABS(DB(IFO,IJ))
+  110             CONTINUE
+  120          CONTINUE
+  130       CONTINUE
+            DSH(IJSH) = DMAX
+  230    CONTINUE
+  240 CONTINUE
+      RETURN
+      END
+C
+C*MODULE CPUHF   *DECK DIRFCK_CPUHF
+C>
+C>    @brief    Construct Final product of two electron integral
+C>
+C>    @details  Taking the dot product of Density and Two electron integral
+C>              to obtain complete Fock-like matrix elements.
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param   IA      Indice for triangular matrix elements
+C>    @param   DA      Density for alpha MO
+C>    @param   NXYZ    Number of cartesian coodinate elements
+C>    @param   ISH     Indice for Ith shell  
+C>    @param   JSH     Indice for Jth shell  
+C>    @param   KSH     Indice for Kth shell  
+C>    @param   LSH     Indice for Lth shell  
+C>    @param GHONDO    The variable for two electron integral
+C>    @param ISTRIDE   HONDO INDEXED INTEGRALS 
+C>    @param JSTRIDE   HONDO INDEXED INTEGRALS
+C>    @param KSTRIDE   HONDO INDEXED INTEGRALS
+C>    @param LSTRIDE   HONDO INDEXED INTEGRALS
+C>    @param CUTOFF    Threshold for two electron integrals
+C>    @param NINT      Number of integral calculated
+C>    @param   DB      Density for beta MO
+C>    @param HFSCAL    Scaling factor for DFT
+C>    @param CSCALT    Scaling factor for long range correction
+C>    @param NUM2      Number of elements in triangular matrix of AO basis
+C>           --- OUTPUPT ---
+C>    @param   FA      Fock matrix elements for alpha 
+C>    @param   FB      Fock matrix elements for beta MO
+C>
+      SUBROUTINE DIRFCK_CPUHF(IA,DA,FA,NXYZ,ISH,JSH,KSH,LSH,
+     &                       GHONDO,ISTRIDE,JSTRIDE,KSTRIDE,LSTRIDE,
+     &                       CUTOFF,NINT,DB,FB,HFSCAL,CSCALT,NUM2)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      DIMENSION IA(*),DA(*),FA(*),GHONDO(*),DB(*),FB(*)
+C
+      LOGICAL IANDJ,KANDL,SAME
+C
+      PARAMETER (MXSH=5000, MXGTOT=20000)
+C
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+      PARAMETER (HALF=0.5D+00, TWO=2.0D+00)
+C
+      DATA ROHF/8HROHF    /
+C
+C     COMPUTES FOCK MATRIX ELEMENTS OF CPHF WAVEFUNCTION.
+C     SHOULD NOT BE CALLED DIRECTLY, USE THE -DIRFCK- INTERFACE.
+C        IA(*)                  [IN] TRIANGULAR INDEX ARRAY
+C        DA(*)                  [IN] DENSITY MATRIX.
+C        FA(*)                  [IN,OUT] FOCK MATRIX.
+C        NXYZ                   [IN] CPHF NXYZ PARAMETER.
+C        ISH,JSH,KSH,LSH        [IN] SHELL INDICES
+C        GHONDO(*)              [IN] HONDO INDEXED INTEGRALS.
+C        ISTRIDE,JSTRIDE,KSTRIDE,LSTRIDE -
+C            [IN] HONDO INDEXED INTEGRALS SHELL STRIDES.
+C        HFSCAL,CSCALT          [IN] DFT SCALING FACTORS.
+C        CUTOFF                 [IN] NON-ZERO INTEGRAL CUTOFF
+C        NINT                   [IN,OUT] NUMBER OF NONZERO INTEGRALS
+C
+      SAME  = ISH.EQ.KSH.AND.JSH.EQ.LSH
+      IANDJ = ISH.EQ.JSH
+      KANDL = KSH.EQ.LSH
+C
+      MINI = KMIN(ISH)
+      MINJ = KMIN(JSH)
+      MINK = KMIN(KSH)
+      MINL = KMIN(LSH)
+      MAXI = KMAX(ISH)
+      MAXJ = KMAX(JSH)
+      MAXK = KMAX(KSH)
+      MAXL = KMAX(LSH)
+      LOCI = KLOC(ISH)-MINI
+      LOCJ = KLOC(JSH)-MINJ
+      LOCK = KLOC(KSH)-MINK
+      LOCL = KLOC(LSH)-MINL
+C
+      NIJ = 0
+c     IF(NIJ.NE.0) write(*,*) CSCALT
+      MAXJ2 = MAXJ
+      I_INDEX = 1
+      DO 360 I = MINI,MAXI
+         IF (IANDJ) MAXJ2 = I
+C
+         I1 = I+LOCI
+C
+         IJ_INDEX = I_INDEX
+         I_INDEX = I_INDEX + ISTRIDE
+C
+         DO 340 J = MINJ,MAXJ2
+            NIJ = NIJ+1
+            MAXL2 = MAXL
+C
+            J1 = J+LOCJ
+            I2 = I1
+            J2 = J1
+            IF (I1.LT.J1) THEN ! SORT <IJ|
+               I2 = J1
+               J2 = I1
+            ENDIF
+C
+            IJK_INDEX = IJ_INDEX
+            IJ_INDEX = IJ_INDEX + JSTRIDE
+C
+            NKL = NIJ
+C
+            DO 320 K =  MINK,MAXK
+               IF (KANDL) MAXL2 = K
+C
+               K1 = K + LOCK
+C
+               IF(SAME) THEN ! ACCOUNT FOR NON-UNIQUE PERMUTATIONS
+                  ITMP = MIN(MAXL2-MINL+1,NKL)
+                  IF (ITMP.EQ.0) GOTO 340
+                  MAXL2 = MINL + ITMP - 1
+                  NKL = NKL - ITMP
+               ENDIF
+C
+               IJKL_INDEX = IJK_INDEX
+               IJK_INDEX = IJK_INDEX + KSTRIDE
+C
+               DO 300 L=MINL,MAXL2
+C
+                  VAL = GHONDO( IJKL_INDEX )
+                  IJKL_INDEX = IJKL_INDEX + LSTRIDE
+                  IF(ABS(VAL).LT.CUTOFF) GOTO 300
+                  NINT = NINT + 1
+C
+                  L1 = L + LOCL
+                  K2 = K1
+                  L2 = L1
+C
+                  IF (K2.LT.L2) THEN ! SORT |KL>
+                     K2 = L1
+                     L2 = K1
+                  ENDIF
+C
+                  II = I2
+                  JJ = J2
+                  KK = K2
+                  LL = L2
+C
+                  IF (II.LT.KK) THEN ! SORT <IJ|KL>
+                     II = K2
+                     JJ = L2
+                     KK = I2
+                     LL = J2
+                  ELSE IF (II.EQ.KK.AND.JJ.LT.LL) THEN ! SORT <IJ|IL>
+                     JJ = L2
+                     LL = J2
+                  ENDIF
+C
+                  II2 = IA(II)
+                  JJ2 = IA(JJ)
+                  KK2 = IA(KK)
+C
+                  IJ = II2 + JJ
+                  IK = II2 + KK
+                  IL = II2 + LL
+                  JK = JJ2 + KK
+                  JL = JJ2 + LL
+                  KL = KK2 + LL
+                  IF (JJ.LT.KK) JK = KK2 + JJ
+                  IF (JJ.LT.LL) JL = IA(LL) + JJ
+C
+C       ACCOUNT FOR IDENTICAL PERMUTATIONS.
+C
+                  IF(II.EQ.JJ) VAL = VAL*HALF
+                  IF(KK.EQ.LL) VAL = VAL*HALF
+                  IF(II.EQ.KK.AND.JJ.EQ.LL) VAL = VAL*HALF
+                  VAL1 = VAL*HFSCAL
+                  VAL2 = VAL*TWO*CSCALT
+C
+                  IF(SCFTYP.EQ.ROHF) THEN
+                   NTMP= NXYZ * NUM2
+                   FB(NTMP+IK) = FB(NTMP+IK) + VAL1*DB(NTMP+JL)
+                   FB(NTMP+JL) = FB(NTMP+JL) + VAL1*DB(NTMP+IK)
+                   FB(NTMP+IL) = FB(NTMP+IL) + VAL1*DB(NTMP+JK)
+                   FB(NTMP+JK) = FB(NTMP+JK) + VAL1*DB(NTMP+IL)
+                  END IF
+C
+                  IJ = (IJ-1)*NXYZ+1
+                  KL = (KL-1)*NXYZ+1
+                  IK = (IK-1)*NXYZ+1
+                  IL = (IL-1)*NXYZ+1
+                  JK = (JK-1)*NXYZ+1
+                  JL = (JL-1)*NXYZ+1
+                  DO IXYZ=0,NXYZ-1
+                    DUMKL = VAL2*(DA(IXYZ+KL)+DB(IXYZ+KL))
+                    DUMIJ = VAL2*(DA(IXYZ+IJ)+DB(IXYZ+IJ))
+C
+                    FA(IXYZ+IJ) = FA(IXYZ+IJ) + DUMKL 
+                    FB(IXYZ+IJ) = FB(IXYZ+IJ) + DUMKL 
+                    FA(IXYZ+KL) = FA(IXYZ+KL) + DUMIJ 
+                    FB(IXYZ+KL) = FB(IXYZ+KL) + DUMIJ
+C 
+                    FA(IXYZ+IK) = FA(IXYZ+IK) - VAL1*DA(IXYZ+JL)
+                    FA(IXYZ+JL) = FA(IXYZ+JL) - VAL1*DA(IXYZ+IK)
+                    FA(IXYZ+IL) = FA(IXYZ+IL) - VAL1*DA(IXYZ+JK)
+                    FA(IXYZ+JK) = FA(IXYZ+JK) - VAL1*DA(IXYZ+IL)
+C 
+                    FB(IXYZ+IK) = FB(IXYZ+IK) - VAL1*DB(IXYZ+JL)
+                    FB(IXYZ+JL) = FB(IXYZ+JL) - VAL1*DB(IXYZ+IK)
+                    FB(IXYZ+IL) = FB(IXYZ+IL) - VAL1*DB(IXYZ+JK)
+                    FB(IXYZ+JK) = FB(IXYZ+JK) - VAL1*DB(IXYZ+IL)
+                  ENDDO
+ 300           ENDDO
+ 320        ENDDO
+ 340     ENDDO
+ 360  ENDDO
+C
+      RETURN
+      END
+c
+C*MODULE CPUHF   *DECK UHF_AOCPCG
+C>    @brief    Solve CPUHF equation to obtain U^a
+C>
+C>    @details  Using conjugate solver CPUHF or CPROHF is solved.
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param WAX       Derivative of energy with respect to alpha MO and coordiante 
+C>    @param RESID     Temporary work to solve Conjugate gradient
+C>    @param ZRES      Temporary work to solve Conjugate gradient
+C>    @param PDIR      Temporary work to solve Conjugate gradient
+C>    @param PRECND    Temporary work to solve Conjugate gradient
+C>    @param BNORM     Temporary work to solve Conjugate gradient
+C>    @param BKNUM     Temporary work to solve Conjugate gradient
+C>    @param BKDEN     Temporary work to solve Conjugate gradient
+C>    @param VEC       Alpha molecular orbital coefficient
+C>    @param EIG       Alpha molecular orbital energy
+C>    @param DTEMP     Density like matrix for alpha
+C>    @param FTEMP     Fock    like matrix for alpha
+C>    @param WRK1      temporary wrk for two electron integral
+C>    @param WRK2      temporary wrk for two electron integral
+C>    @param NOCP      Integer number for symmetry trancation
+C>    @param GHONDO    The variable for two electron integral
+C>    @param  XINTS    The variable for two electron integralS
+C>    @param    DSH    The variable for two electron integralS
+C>    @param   DDIJ    The variable for two electron integralS
+C>    @param XX        for Two-electron integral
+C>    @param   IX      The variable for two electron integral   
+C>    @param NNXYZ     Number of unique cartesian coodinate elements
+C>    @param NUNIQ     Number of symmetry unique cartesian coodinate elements
+C>    @param NFOCK     Number of cartesian coodinate elements for Fock matrix
+C>    @param NROT      Number of indipendent pair between virtual and occupied molecular orbital for alpha
+C>    @param NOCC      Number of alpha occupied molecular orbital
+C>    @param NVIR      Number of alpha virtual  molecular orbital
+C>    @param   L1      Number of atomic orbital
+C>    @param   L2      Number of elements in triangular matrix of AO
+C>    @param   L3      Number of atomic orbital squared
+C>    @param   NSH2    The variable for two electron integralS
+C>    @param   MAXG    The variable for two electron integralS
+C>    @param   MXG2    The variable for two electron integralS
+C>    @param WAXB      Derivative of energy with respect to beta MO and coordiante 
+C>    @param RESIDB    Temporary work to solve Conjugate gradient
+C>    @param ZRESB     Temporary work to solve Conjugate gradient
+C>    @param PDIRB     Temporary work to solve Conjugate gradient
+C>    @param PRECNDB   Temporary work to solve Conjugate gradient
+C>    @param VECB      Beta molecular orbital coefficient
+C>    @param EIGB      Beta molecular orbital energy
+C>    @param DTEMPB    Density like matrix for beta
+C>    @param FTEMPB    Fock    like matrix for beta
+C>    @param NOCCB     Number of beta occupied molecular orbital
+C>    @param NVIRB     Number of beta virtual  molecular orbital
+C>    @param NROTB     Number of indipendent pair between virtual and occupied molecular orbital for beta
+C>    @param DV        Derivative of ESP with respect to cartesian coordinate in FMO
+C>    @param WRK3      Temporary work for ESP derivative
+C>           --- OUTPUT---
+C>    @param YA        The solution of alpha orbital relaxation term
+C>    @param YB        The solution of alpha orbital relaxation term
+      SUBROUTINE UHF_AOCPCG(WAX,YA,RESID,ZRES,PDIR,
+     *                  PRECND,BNORM,BKNUM,BKDEN,
+     *                  VEC,EIG,DTEMP,FTEMP,WRK1,WRK2,
+     *                  NOCP,GHONDO,XINTS,DSH,DDIJ,XX,IX,
+     *                  NNXYZ,NUNIQ,NFOCK,NROT,NOCC,NVIR,
+     *                  L1,L2,L3,NSH2,MAXG,MXG2,
+     *                  WAXB,YB,RESIDB,ZRESB,
+     *                  PDIRB,PRCNDB,VECB,EIGB,
+     *                  DTEMPB,FTEMPB,
+     *                  NOCCB,NVIRB,NROTB,DV,WRK3)
+       
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION WAX(NROT,NNXYZ),YA(NROT,NNXYZ),RESID(NROT,NUNIQ),
+     *          ZRES(NROT,NUNIQ),PDIR(NROT,NUNIQ),PRECND(NROT),
+     *          BNORM(NNXYZ),BKNUM(NNXYZ),BKDEN(NNXYZ),
+     *          VEC(L1,L1),EIG(L1),DTEMP(NUNIQ,L2),FTEMP(NUNIQ,L2),
+     *          WRK1(L1,L1),WRK2(L1,L1),NOCP(NNXYZ),
+     *          GHONDO(MAXG),XINTS(NSH2),DSH(NSH2),DDIJ(49*MXG2),
+     *          XX(*),IX(*),
+     *          WAXB(NROTB,NNXYZ),YB(NROTB,NNXYZ),RESIDB(NROTB,NUNIQ),
+     *          PRCNDB(NROTB),VECB(L1,L1),EIGB(L1),ZRESB(NROTB,NUNIQ),
+     *          DTEMPB(NUNIQ,L2),FTEMPB(NUNIQ,L2),
+     *          PDIRB(NROTB,NUNIQ),DV(L2,*),WRK3(*)
+
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK,DIRSCF,FDIFF,CVGING
+C
+      COMMON /IOFILE/ IR,IW,IP,IJKO,IJKT,IDAF,NAV,IODA(950)
+      COMMON /OPTSCF/ DIRSCF,FDIFF
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+C
+      PARAMETER (ZERO=0.0D+00, TOL=5.0D-05, TWO=2.0D+00,FOUR=4.0D+00)
+C
+C        --- SOLVE MULTIPLE SETS OF LINEAR EQUATIONS A*YA+WAX=0 ---
+C        THIS ROUTINE USES THE ORDINARY PRECONDITIONED CONJUGATE
+C        GRADIENT PROCEDURE.  NOTE THAT "ORDINARY" MEANS -A- IS A
+C        POSITIVE DEFINITE SYMMETRIC MATRIX, I.E. THE ORBITAL HESSIAN.
+C        THE DIMENSION OF -A- IS -NROT-, AND THERE ARE -NNXYZ- COLUMNS
+C        IN BOTH THE INHOMOGENEITY (WHICH IS THE NEGATIVE OF -WAX-)
+C        AND IN THE -YA- RESPONSE VECTORS BEING SOLVED FOR.  ONLY
+C        -NUNIQ- RESPONSES ARE REQUIRED, DEPENDING ON SYMMETRY, WITH
+C        THE LIST -NOCP- NAMING WHICH RESPONSES ARE ACTUALLY NEEDED.
+C
+C        WRITTEN BY MIKE SCHMIDT, AT TOKYO TORITSU DAIGAKU, JAN 2001.
+C        THIS ROUTINE WAS INSPIRED BY -DCG- WRITTEN BY ANNE GREENBAUM
+C        AND MARK SEEGER, IN THE SPARSE LINEAR ALGEBRA PACKAGE -SLAP-
+C        WHICH WAS DOWNLOADED FROM NETLIB.
+C        EXTENSIVE MODIFICATIONS HAVE BEEN MADE, EXCEPT TO THE ACTUAL
+C        SOLVING TECHNIQUE, TO SUPPORT THE NEEDS OF QUANTUM CHEMISTRY.
+C        MULTIPLE SOLUTIONS ARE SOUGHT, WITH THE A*YA MULTIPLICATIONS
+C        DONE SIMULTANEOUSLY, ALTHOUGH EACH SOLVING REMAINS SEPARATE.
+C        THE PRECONDITIONER CHOSEN IS THE RECIPROCAL OF THE DIAGONAL
+C        ELEMENTS, APPROXIMATED IN THE SAME WAY AS GALINA CHABAN'S
+C        SECOND ORDER SCF CONVERGER, SEE EQUATION 1.17 IN G.CHABAN,
+C        M.W.SCHMIDT, M.S.GORDON, THEORET.CHIM.ACTA 97, 88-95(1997).
+C        NOTE THAT AN APPROXIMATION IS NEEDED SINCE THE MATRIX A IS
+C        NEVER GENERATED, INSTEAD PRODUCTS A*YA ARE FORMED DIRECTLY.
+C        THE INITIAL GUESS WAS SUGGESTED BY JAN JENSEN, IT AMOUNTS
+C        TO ASSUMING THE INITIAL RESPONSES ARE ZERO SO THAT THE
+C        INTEGRAL CONTRIBUTIONS TO THE A MATRIX VANISH, LEAVING A
+C        SIMPLE REARRANGEMENT TO PRODUCE THE INITIAL GUESS USED HERE.
+C        CONVERGENCE CRITERION WAS SELECTED BY NUMERICAL EXPERIMENT.
+C        FOR FURTHER INFORMATION, SEE THE COMMENTS IN THE ORIGINAL
+C        SLAP LIBRARY ROUTINES, AND THE "NUMERICAL RECIPES" BOOK.
+C        ANOTHER INTERESTING REFERENCE IS P.E.S.WORMER, F.VISSER,
+C        J.PALDUS, J.COMPUT.PHYS. 48, 23-44(1982).
+C
+C        SET UP PRECONDITIONER AND INITIAL GUESS OF RESPONSES
+C
+      NSO=NOCC-NOCCB
+
+C     Add the contribution of electrostatic potential to WAX
+      IF(NFG.ne.0) THEN
+        CALL ADD_ESPDER(L1,NNXYZ,WAX,NOCC,NVIR,DV,L2,WRK3,FOUR,VEC)
+        CALL ADD_ESPDER(L1,NNXYZ,WAXB,NOCCB,NVIRB,DV,L2,WRK3,FOUR,VECB)
+      END IF
+C
+      IROT = 0
+      DO 130 IVIR = NOCC+1,NOCC+NVIR
+         DO 120 IOCC= 1,NOCC
+            IROT = IROT + 1
+            PRECND(IROT) = 1.0D+00/(4.0D+00*(EIG(IVIR) - EIG(IOCC)))
+            FACTOR = -PRECND(IROT)
+            DO 110 IXYZ = 1,NNXYZ
+               YA(IROT,IXYZ) = FACTOR * WAX(IROT,IXYZ)
+  110       CONTINUE
+  120    CONTINUE
+  130 CONTINUE
+      IROT = 0
+      DO 135 IVIR = NOCCB+1,NOCCB+NVIRB
+         DO 125 IOCC= 1,NOCCB
+            IROT = IROT + 1
+            PRCNDB(IROT) = 1.0D+00/(4.0D+00*(EIGB(IVIR) - EIGB(IOCC)))
+            FACTOR = -PRCNDB(IROT)
+            DO 115 IXYZ = 1,NNXYZ
+               YB(IROT,IXYZ) = FACTOR * WAXB(IROT,IXYZ)
+  115       CONTINUE
+  125    CONTINUE
+  135 CONTINUE
+C
+C         THE INITIAL ITERATION IS DONE BEFORE THE MAIN LOOP,
+C         CALCULATE INITIAL ITERATION'S RESIDUAL -RESID-
+C
+      NFOCK = 0
+      MODE = 1
+      DUMMY = ZERO
+      ITER=1
+      CALL UHF_AOCPCL(WAX,VEC,YA,DUMMY,RESID,DTEMP,FTEMP,EIG,WRK1,WRK2,
+     *              XX,IX,GHONDO,XINTS,DSH,DDIJ,NOCP,MODE,
+     *              NNXYZ,NUNIQ,NXYZF,NFOCK,NINT,NSCHWZ,
+     *              NROT,NOCC,NVIR,L1,L2,L3,NSH2,MAXG,MXG2,
+     *              WAXB,VECB,YB,RESIDB,EIGB,DTEMPB,FTEMPB,
+     *              NROTB,NOCCB,NVIRB)
+C
+      IUNIQ=0
+      DO 160 IXYZ=1,NNXYZ
+         IF(NOCP(IXYZ).NE.1) IUNIQ=IUNIQ+1
+         IF(NOCP(IXYZ).NE.0) GO TO 160
+         DO 150 IROT=1,NROT
+            RESID(IROT,IUNIQ) =  -WAX(IROT,IXYZ) - RESID(IROT,IUNIQ)
+  150    CONTINUE
+         DO 155 IROT=1,NROTB
+            RESIDB(IROT,IUNIQ) =  -WAXB(IROT,IXYZ) - RESIDB(IROT,IUNIQ)
+  155    CONTINUE
+  160 CONTINUE
+C
+C        CALCULATE INITIAL PSEUDORESIDUAL -ZRES-, CHECK CONVERGENCE
+C
+      ERR = ZERO
+      IUNIQ=0
+      DO 210 IXYZ=1,NNXYZ
+         IF(NOCP(IXYZ).NE.1) IUNIQ=IUNIQ+1
+         IF(NOCP(IXYZ).NE.0) GO TO 210
+         DO IROT=1,NROT
+            ZRES(IROT,IUNIQ) = PRECND(IROT)*RESID(IROT,IUNIQ)
+         ENDDO
+         DO IROT=1,NROTB
+            ZRESB(IROT,IUNIQ)= PRCNDB(IROT)*RESIDB(IROT,IUNIQ)
+         ENDDO
+         BNORM(IXYZ) = DDOT(NROT,  WAX(1, IXYZ),1,  WAX(1, IXYZ),1)
+         BNORM(IXYZ) = BNORM(IXYZ)
+     *               + DDOT(NROTB,WAXB(1, IXYZ),1,WAXB(1, IXYZ),1)
+         BNORM(IXYZ) = SQRT(BNORM(IXYZ))
+         RNORM       = DDOT(NROT,RESID(1,IUNIQ),1,RESID(1,IUNIQ),1)
+         RNORM       = RNORM
+     *               + DDOT(NROTB,RESIDB(1,IUNIQ),1,RESIDB(1,IUNIQ),1)
+         RNORM       = SQRT(RNORM)
+         TEST = RNORM/BNORM(IXYZ)
+         IF(TEST.LT.TOL) NOCP(IXYZ)=2
+         ERR = MAX(ERR,TEST)
+  210 CONTINUE
+C
+C
+      IF(MASWRK) THEN
+         WRITE(IW,9000) TOL
+         IF(DIRSCF) THEN
+            WRITE(IW,9010)
+            WRITE(IW,9020) ITER,ERR,NXYZF,NINT,NSCHWZ
+         ELSE
+            WRITE(IW,9030)
+            WRITE(IW,9020) ITER,ERR,NXYZF
+         END IF
+         CALL FLSHBF(IW)
+      END IF
+C
+      IF(ERR.LT.TOL) GO TO 800
+C
+C        THE REMAINING CG ITERATIONS (2,3,...,MAXCP) START NOW...
+C
+      MODE=2
+      BKDEN(1)  = 1.0D+00   ! REMOVES SPURIOUS FTNCHEK COMPLAINT
+C        ITERATION LIMIT, IF WE AREN'T MAKING PROGRESS, IS SMALLISH.
+C        PRIOR TO 6/2012, ONLY 50 TOTAL ITERATIONS ALLOWED HERE,
+C        relaxed to allow more iters so long as progress is made.
+      MAXCP = 50
+      MAXCP2= 299
+      ITER=1
+      ERR=0.0D+00
+  300 CONTINUE
+      ITER=ITER+1
+      ERRSAVE = ERR
+C
+C           CALCULATE COEFFICIENT -BK- AND DIRECTION VECTOR -PDIR-
+C
+         IUNIQ=0
+         DO 320 IXYZ=1,NNXYZ
+            IF(NOCP(IXYZ).NE.1) IUNIQ=IUNIQ+1
+            IF(NOCP(IXYZ).NE.0) GO TO 320
+            BKNUM(IXYZ) =DDOT(NROT,ZRES(1,IUNIQ),1,RESID(1,IUNIQ),1)
+            BKNUM(IXYZ) =BKNUM(IXYZ)
+     *                  +DDOT(NROTB,ZRESB(1,IUNIQ),1,RESIDB(1,IUNIQ),1)
+            IF(BKNUM(IXYZ).LE.-TOL) THEN
+               IF(MASWRK) WRITE(IW,9040)
+               CALL ABRT
+            END IF
+            IF(ITER.EQ.2) THEN
+               CALL DCOPY(NROT,ZRES(1,IUNIQ),1,PDIR(1,IUNIQ),1)
+               CALL DCOPY(NROTB,ZRESB(1,IUNIQ),1,PDIRB(1,IUNIQ),1)
+            ELSE
+               BK = BKNUM(IXYZ)/BKDEN(IXYZ)
+               DO IROT=1,NROT
+                  PDIR(IROT,IUNIQ) =    ZRES(IROT,IUNIQ)
+     *                             +  BK*PDIR(IROT,IUNIQ)
+               ENDDO
+               DO IROT=1,NROTB
+                  PDIRB(IROT,IUNIQ)=     ZRESB(IROT,IUNIQ)
+     *                             +  BK*PDIRB(IROT,IUNIQ)
+               ENDDO
+            END IF
+            BKDEN(IXYZ)  = BKNUM(IXYZ)
+  320    CONTINUE
+C
+      CALL UHF_AOCPCL(WAX,VEC,PDIR,DUMMY,ZRES,DTEMP,FTEMP,EIG,WRK1,WRK2,
+     *           XX,IX,GHONDO,XINTS,DSH,DDIJ,NOCP,MODE,
+     *           NNXYZ,NUNIQ,NXYZF,NFOCK,NINT,NSCHWZ,
+     *           NROT,NOCC,NVIR,L1,L2,L3,NSH2,MAXG,MXG2,
+     *           WAXB,VECB,PDIRB,ZRESB,EIGB,DTEMPB,FTEMPB,
+     *           NROTB,NOCCB,NVIRB)
+       
+         ERR = ZERO
+         IUNIQ=0
+         DO 340 IXYZ=1,NNXYZ
+            IF(NOCP(IXYZ).NE.1) IUNIQ=IUNIQ+1
+            IF(NOCP(IXYZ).NE.0) GO TO 340
+            AKDEN = DDOT(NROT,PDIR(1,IUNIQ),1,ZRES(1,IUNIQ),1)
+            AKDEN = AKDEN
+     *            + DDOT(NROTB,PDIRB(1,IUNIQ),1,ZRESB(1,IUNIQ),1)
+C
+C              THIS TERMINATION IS SUPPOSED TO BE DUE TO THE
+C              MATRIX -A-'S NOT BEING POSITIVE DEFINITE.  A TEST
+C              CALCULATION SHOWED THAT A CASE WITH UHF INSTABILITY
+C              DID NOT GET INTO THIS ERROR TERMINATION SECTION,
+C              SO AN INSTABILITY IN THE ORBITAL HESSIAN MAY BE A
+C              NECESSARY BUT NOT SUFFICIENT CONDITION TO GET HERE.
+C
+            IF(AKDEN.LE.-TOL) THEN
+c              IF(MASWRK) WRITE(IW,9050)
+c              IF(MASWRK) WRITE(IW,9060)
+c              CALL ABRT
+            END IF
+C              FROM KURT GLAESEMANN IN 10/2011:
+            IF(ABS(BKNUM(IXYZ)).GT.1.0D-35 .AND. AKDEN.NE.0.0D+00) THEN
+               AK = BKNUM(IXYZ)/AKDEN
+            ELSE
+               AK = 0.0D+00
+            ENDIF
+C ALPHA
+            CALL DAXPY(NROT, AK,PDIR(1,IUNIQ),1,   YA(1, IXYZ),1)
+            CALL DAXPY(NROT,-AK,ZRES(1,IUNIQ),1,RESID(1,IUNIQ),1)
+            DO IROT=1,NROT
+               ZRES(IROT,IUNIQ) = PRECND(IROT)*RESID(IROT,IUNIQ)
+            ENDDO
+C BETA
+            CALL DAXPY(NROTB, AK,PDIRB(1,IUNIQ),1,    YB(1, IXYZ),1)
+            CALL DAXPY(NROTB,-AK,ZRESB(1,IUNIQ),1,RESIDB(1,IUNIQ),1)
+            DO IROT=1,NROTB
+               ZRESB(IROT,IUNIQ) = PRCNDB(IROT)*RESIDB(IROT,IUNIQ)
+            ENDDO
+C
+C              CHECK CONVERGENCE
+C
+            RNORM= DDOT(NROT,RESID(1,IUNIQ),1,RESID(1,IUNIQ),1)
+            RNORM= RNORM   
+     *           + DDOT(NROTB,RESIDB(1,IUNIQ),1,RESIDB(1,IUNIQ),1)
+            RNORM=SQRT(RNORM)
+            TEST = RNORM/BNORM(IXYZ)
+            IF(TEST.LT.TOL) NOCP(IXYZ)=2
+            ERR = MAX(ERR,TEST)
+  340    CONTINUE
+         CVGING = ERR.LT.TWO*ERRSAVE
+         IF(MASWRK) THEN
+            IF(DIRSCF) THEN
+               WRITE(IW,9020) ITER,ERR,NXYZF,NINT,NSCHWZ
+            ELSE
+               WRITE(IW,9020) ITER,ERR,NXYZF
+            END IF
+            CALL FLSHBF(IW)
+         END IF
+C
+C              exit if converged
+C
+      IF(ERR.LT.TOL) GO TO 800
+C     FMO-UHF have some convergence problem
+C     Due to it is not stational point at all
+C     it may reduce its accuracy
+c     IF(NFG.NE.0.AND.NXYZF.EQ.1) GO TO 800
+C     it shoud be carefully check 
+      IF(NFG.NE.0.AND.NXYZF.LE.NSO) GO TO 800
+
+C
+C        Another iteration?
+C
+      IF(MASWRK  .AND.  ITER.EQ.MAXCP) WRITE(IW,9090)
+      IF(ITER.EQ.MAXCP2) CVGING=.FALSE.
+      IF(ITER.LE.MAXCP) GO TO 300
+      IF(CVGING)        GO TO 300
+C
+      IF(MASWRK) WRITE(IW,9070) MAXCP,MAXCP2
+      IF(MASWRK) WRITE(IW,9060)
+      CALL ABRT
+      STOP
+C
+C        PRINT CONVERGENCE MESSAGE, RESTORE ORIGINAL -NOCP- ARRAY
+C
+  800 CONTINUE
+      IF(NFG.ne.0) THEN
+       CALL ADD_ESPDER(L1,NNXYZ,WAX,NOCC,NVIR,DV,L2,WRK3,-FOUR,VEC)
+       CALL ADD_ESPDER(L1,NNXYZ,WAXB,NOCCB,NVIRB,DV,L2,WRK3,-FOUR,VECB)
+      END IF
+      IF(MASWRK) WRITE(IW,9080) ITER,NFOCK,NUNIQ
+      DO IXYZ=1,NNXYZ
+         IF(NOCP(IXYZ).EQ.2) NOCP(IXYZ)=0
+      ENDDO
+      RETURN
+C
+ 9000 FORMAT(1X,'PRECONDITIONED CONJUGATE GRADIENT SOLVER',5X,
+     *          'CONV. TOLERANCE=',1P,E8.2)
+ 9010 FORMAT(1X,12X,'MAXIMUM',10X,'RESPONSES',8X,'NONZERO',5X,'BLOCKS'/
+     *       1X,'ITER',4X,'RESPONSE ERROR',8X,'IMPROVED',3X,
+     *          'AO INTEGRALS',4X,'SKIPPED')
+ 9020 FORMAT(1X,I3,5X,1P,E13.5,0P,8X,I6,3X,I15,I11)
+ 9030 FORMAT(1X,'ITER',4X,'RESPONSE ERROR',8X,'IMPROVED')
+ 9040 FORMAT(1X,'THE PRECONDITIONER IS NOT POSITIVE DEFINITE.'/
+     *       1X,'THIS MAY BE DUE TO PECULIAR ORBITAL ENERGIES.')
+c9050 FORMAT(//1X,'THE ORBITAL HESSIAN IS NOT POSITIVE DEFINITE.'//)
+ 9060 FORMAT(1X,'MOST OFTEN THIS IS',
+     *          ' CAUSED BY USE OF AN INAPPROPRIATE WAVEFUNCTION.'/
+     *       1X,'CHANGE SCFTYP, OR CHECK HOMO/LUMO FILLING ORDER.'//)
+ 9070 FORMAT(//1X,'*** TOO MANY ITERATIONS IN AOCPCG *** MAX CPHF=',I5/
+     *       1X,'AS LONG AS EQUATIONS REMAIN CONVERGENT,',
+     *          ' GRACE LIMIT=',I4/
+     *       1X,'THIS VALUE CANNOT BE RAISED BY THE INPUT BECAUSE'/
+     *       1X,'MORE CPHF ITERATIONS ARE UNLIKELY TO HELP.'//)
+ 9080 FORMAT(1X,'THE CPHF HAS CONVERGED AFTER',I3,' ITERATIONS.'/
+     *       1X,'IT REQUIRED',I6,' FOCK-LIKE BUILDS TO FIND THE',I4,
+     *          ' SYMMETRY UNIQUE RESPONSES.')
+ 9090 FORMAT(28X,'*** WARNING ***'/
+     *       1X,'THE RESPONSE EQUATIONS HAVE NOW REACHED THE NORMAL',
+     *          ' ITERATION LIMIT,'/
+     *       1X,'BUT THE SOLVER WILL CONTINUE AS LONG AS THE',
+     *          ' EQUATIONS ARE CONVERGING.')
+      END
+C
+C*MODULE CPUHF   *DECK UHF_AOCPCL
+C>    @brief    Construct orbital hessian terms
+C>
+C>    @details  Taking the dot product between A*U, and construct the complete
+C>              Right hand side equation for CG solver
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param WAX       Derivative of energy with respect to alpha MO and coordiante 
+C>    @param   C       Alpha molecular orbital coefficient
+C>    @param YA        The solution of alpha orbital relaxation term
+C>    @param YNEW      Updated response terms
+C>    @param DTEMP     Density like matrix for alpha
+C>    @param FTEMP     Fock    like matrix for alpha
+C>    @param EIG       Alpha molecular orbital energy
+C>    @param WRK1      temporary wrk for two electron integral
+C>    @param WRK2      temporary wrk for two electron integral
+C>    @param XX        for Two-electron integral
+C>    @param   IX      The variable for two electron integral   
+C>    @param GHONDO    The variable for two electron integral
+C>    @param  XINTS    The variable for two electron integralS
+C>    @param    DSH    The variable for two electron integralS
+C>    @param   DDIJ    The variable for two electron integralS
+C>    @param NOCP      Integer number for symmetry trancation
+C>    @param MODE      Input parameter to contrl method of solver
+C>    @param NNXYZ     Number of unique cartesian coodinate elements
+C>    @param NUNIQ     Number of symmetry unique cartesian coodinate elements
+C>    @param NXYZF     Dummy number for future implementation
+C>    @param NFOCK     Number of cartesian coodinate elements for Fock matrix
+C>    @param   NINT    Dummy variable for dirscf=.false.  
+C>    @param NSCHWZ    The variable for two electron integralS
+C>    @param NROT      Number of indipendent pair between virtual and occupied molecular orbital for alpha
+C>    @param NOCC      Number of alpha occupied molecular orbital
+C>    @param NVIR      Number of alpha virtual  molecular orbital
+C>    @param   L1      Number of atomic orbital
+C>    @param   L2      Number of elements in triangular matrix of AO
+C>    @param   L3      Number of atomic orbital squared
+C>    @param   NSH2    The variable for two electron integralS
+C>    @param   MAXG    The variable for two electron integralS
+C>    @param   MXG2    The variable for two electron integralS
+C>    @param WAXB      Derivative of energy with respect to beta MO and coordiante 
+C>    @param YB        The solution of alpha orbital relaxation term
+C>    @param EIGB      Beta molecular orbital energy
+C>    @param DTEMPB    Density like matrix for beta
+C>    @param FTEMPB    Fock    like matrix for beta
+C>    @param NROTB     Number of indipendent pair between virtual and occupied molecular orbital for beta
+C>    @param NOCCB     Number of beta occupied molecular orbital
+C>    @param NVIRB     Number of beta virtual  molecular orbital
+C>           --- OUTPUT ---
+C>    @param RHS       Right hand side of equation for CG solver
+C>    @param RHSB      Right hand side of equation for CG solver for beta
+C>
+      SUBROUTINE UHF_AOCPCL(WAX,C,YA,YNEW,RHS,DTEMP,FTEMP,EIG,WRK1,WRK2,
+     *                  XX,IX,GHONDO,XINTS,DSH,DDIJ,NOCP,MODE,
+     *                  NNXYZ,NUNIQ,NXYZF,NFOCK,NINT,NSCHWZ,
+     *                  NROT,NOCC,NVIR,L1,L2,L3,NSH2,MAXG,MXG2,
+     *                  WAXB,CB,YB,RHSB,EIGB,DTEMPB,FTEMPB,
+     *                  NROTB,NOCCB,NVIRB)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION WAX(NROT,NNXYZ),C(L1,L1),YA(NROT,NNXYZ),
+     *          YNEW(NROT,NNXYZ),RHS(NROT,NUNIQ),
+     *          DTEMP(NUNIQ*L2),FTEMP(NUNIQ*L2),
+     *          WRK1(L1,L1),WRK2(L3),EIG(L1),NOCP(NNXYZ),
+     *          GHONDO(MAXG),XINTS(NSH2),DSH(NSH2),DDIJ(49*MXG2),
+     *          XX(*),IX(*),
+     *          WAXB(NROTB,NNXYZ),CB(L1,L1),YB(NROTB,NNXYZ),
+     *          RHSB(NROTB,NUNIQ),EIGB(L1),
+     *          DTEMPB(*),FTEMPB(*)
+C
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+      DATA ROHF/8HROHF    /
+C
+C        --- OPEN SHELL FOCK-LIKE MATRICES FOR CPHF EQUATIONS ---
+C        WE CAN COMPUTE EITHER THE RIGHT HAND SIDE A*YA IN -RHS-
+C        OR THE IMPROVED SOLUTION -YNEW- DEPENDING ON THE CALL -MODE-.
+C        ONLY ONE OF -YNEW- OR -RHS- SHOULD BE ALLOCATED STORAGE.
+C        THE VALUE -MODE- EQUALS 0 IS FOR THE DIIS SOLVER,
+C        WHILE THE PCG SOLVER USES 1 AND 2 FOR ITS CALLS.
+C
+C        COUNT HOW MANY FOCK-LIKE MATRICES ARE NEEDED ON THIS ITERATION
+C        -NXYZF- SHOULD BE LESS OR EQUAL TO -NUNIQ-
+C
+      NXYZF = 0
+      DO IXYZ = 1,NNXYZ
+         IF (NOCP(IXYZ).EQ.0) NXYZF = NXYZF+1
+      ENDDO
+C
+C        UHF and ROHF each make an alpha and beta type,
+C        while ROHF makes one more Fock-like matrix,
+C        which is kept at the end of the beta storage.
+C
+      NFOCK = NFOCK + 2*NXYZF
+      IF(SCFTYP.EQ.ROHF) NFOCK=NFOCK+1
+C
+C           suppress a warning about WAXB not used here anywhere.
+      IF(NXYZF.EQ.0) write(6,*) "WAX=",WAXB(1,1)
+C
+C        The direct mode response equation Fock builder will end
+C        up in the ordinary SCF-cycle ROHF builder, if it is asked
+C        to construct only one Fock-like matrix.  That's actually OK
+C        for UHF (probably, not really tested).  At the end of the
+C        response equations, we might (on occasion) only be working
+C        on one more response.  Since the ROHF programming needs an
+C        extra Fock, it must go into the response equation's builder.
+C        Here we force a fake 2nd matrix, from a zero density matrix,
+C        so the code goes through the motions of building 2 matrices,
+C        plus the extra one whose density is set up below.
+C        Zeroing the entire density-like matrix ensures the one (1)
+C        built in the next loop is OK, and the other remains zero.
+C
+      IF(SCFTYP.EQ.ROHF) THEN                                                   
+        IF(NXYZF.EQ.1) THEN
+           NXYZF=NXYZF+1
+           CALL VCLR(DTEMP ,1,NXYZF*L2)
+           CALL VCLR(DTEMPB,1,NXYZF*L2)
+        END IF
+      END IF
+C
+C        TRANSFORM CURRENT GUESS AT SOLUTION -YA- TO THE AO BASIS.
+C        THE RESULT ARE "DENSITY-LIKE MATRICES" STORED IN -DTEMP-
+C
+      IXYZF = 0
+      IUNIQ = 0
+      DO 270 IXYZ = 1,NNXYZ
+         IF(NOCP(IXYZ).NE.1) IUNIQ=IUNIQ+1
+         IF(NOCP(IXYZ).NE.0) GO TO 270
+         IXYZF = IXYZF+1
+C
+                       IKOL = IXYZ
+         IF(MODE.EQ.2) IKOL = IUNIQ
+         CALL MRARTR(YA(1,IKOL),NOCC,NOCC,NVIR,C(1,NOCC+1),
+     *               L1,L1,WRK2,L1)
+         CALL MRARBR(C,L1,L1,NOCC,WRK2,L1,L1,WRK1,L1)
+C
+         IJ = 0
+         DO 260 I=1,L1
+            DO 250 J=1,I
+               DTEMP(IXYZF+IJ) = WRK1(I,J) + WRK1(J,I)
+               IJ = IJ + NXYZF
+  250       CONTINUE
+  260    CONTINUE
+C
+         CALL MRARTR(YB(1,IKOL),NOCCB,NOCCB,NVIRB,CB(1,NOCCB+1),
+     *               L1,L1,WRK2,L1)
+         CALL MRARBR(CB,L1,L1,NOCCB,WRK2,L1,L1,WRK1,L1)
+         IJ = 0
+         DO 265 I=1,L1
+            DO 255 J=1,I
+               DTEMPB(IXYZF+IJ) = WRK1(I,J) + WRK1(J,I)
+               IJ = IJ + NXYZF
+  255       CONTINUE
+  265    CONTINUE
+  270 CONTINUE
+C
+C     density for the extra exchange terms for ROHF,
+C     at the end of the NFXYZ-strided UHF beta density-like matrices,
+C     note that this extra density has a unit stride.
+C
+      IF(SCFTYP.EQ.ROHF) THEN
+        NSO = NOCC - NOCCB
+        CALL DMTX2(DTEMPB(NXYZF*L2+1),C(1,NOCCB+1),NSO,l1,l1,0) 
+      END IF
+C
+C  BUILD THE CORRESPONDING "FOCK-LIKE MATRICES" IN -FTEMP-
+C
+      CALL AOFLM3(DTEMP,FTEMP,GHONDO,XINTS,DSH,DDIJ,XX,IX,
+     *            L1,NXYZF,MAXG,NSH2,MXG2,NINT,NSCHWZ,
+     *            DTEMPB,FTEMPB)
+C
+C  TRANSFORM FOCK-LIKE MATRICES BACK INTO THE MO BASIS,
+C  and consume them as the solver needs to.
+C
+      IXYZF = 0
+      IUNIQ = 0
+      DO 390 IXYZ = 1,NNXYZ
+         IF(NOCP(IXYZ).NE.1) IUNIQ=IUNIQ+1
+         IF(NOCP(IXYZ).NE.0) GO TO 390
+C
+C    FOR ALPHA RESPONSES
+C
+         IXYZF = IXYZF+1
+         CALL DCOPY(L2,FTEMP(IXYZF),NXYZF,WRK1,1)
+         CALL EXPND(WRK1,WRK2,L1,0)
+         CALL MRARBR(WRK2,L1,L1,L1,C(1,NOCC+1),L1,NVIR,WRK1,L1)
+         CALL MRTRBR(C,L1,L1,NOCC,WRK1,L1,NVIR,WRK2,NOCC)
+C
+C     FORM THE NEW RESPONSE VECTOR.
+C     NOTE THAT THE FACTOR OF 8 IS THE 2 FROM EQUATION 13 AND
+C     ANOTHER TWO TAKING INTO ACCOUNT THE SYMMETRY OF THE TRANSFORMATION
+C     (HAVE TWO TERMS THAT ARE SYMMETRIC, I CALCULATED ONE
+C      AND NEED TO MULTIPLY BY TWO WHICH I AM DOING HERE)
+C
+C     MODE is 1 for 1st conj.grad. iter, then 2 on all other iters.
+C     MODE of 0 corresponds to DIIS solver (not fully programmed)
+C
+         IF(MODE.EQ.0) THEN
+            IJ = 0
+            DO 320 IVIR = NOCC+1,NOCC+NVIR
+               DO 310 IOCC= 1,NOCC
+                  IJ = IJ + 1
+                  YNEW(IJ,IXYZ) = (-WAX(IJ,IXYZ) - 8.0D+00*WRK2(IJ)) /
+     *                            (4.0D+00*(EIG(IVIR) - EIG(IOCC)))
+  310          CONTINUE
+  320       CONTINUE
+         ELSE
+            IJ = 0
+                          IKOL = IXYZ
+            IF(MODE.EQ.2) IKOL = IUNIQ
+            DO 360 IVIR = NOCC+1,NOCC+NVIR
+               DO 350 IOCC= 1,NOCC
+                  IJ = IJ + 1
+                  RHS(IJ,IUNIQ) = 8.0D+00*WRK2(IJ)
+     *                  + (4.0D+00*(EIG(IVIR) - EIG(IOCC)))*YA(IJ,IKOL)
+  350          CONTINUE
+  360       CONTINUE
+         END IF
+C
+C    FOR BETA
+C
+         CALL DCOPY(L2,FTEMPB(IXYZF),NXYZF,WRK1,1)
+         CALL EXPND(WRK1,WRK2,L1,0)
+         CALL MRARBR(WRK2,L1,L1,L1,CB(1,NOCCB+1),L1,NVIRB,WRK1,L1)
+         CALL MRTRBR(CB,L1,L1,NOCCB,WRK1,L1,NVIRB,WRK2,NOCCB)
+
+         IF(MODE.EQ.0) THEN
+            IJ = 0
+            DO 325 IVIR = NOCC+1,NOCC+NVIR
+               DO 315 IOCC= 1,NOCC
+                  IJ = IJ + 1
+                  YNEW(IJ,IXYZ) = (-WAX(IJ,IXYZ) - 8.0D+00*WRK2(IJ)) /
+     *                            (4.0D+00*(EIG(IVIR) - EIG(IOCC)))
+  315          CONTINUE
+  325       CONTINUE
+         ELSE
+            IJ = 0
+                          IKOL = IXYZ
+            IF(MODE.EQ.2) IKOL = IUNIQ
+            DO 365 IVIR = NOCCB+1,NOCCB+NVIRB
+               DO 355 IOCC= 1,NOCCB
+                  IJ = IJ + 1
+                  RHSB(IJ,IUNIQ) = 8.0D+00*WRK2(IJ)
+     *          + (4.0D+00*(EIGB(IVIR) - EIGB(IOCC)))*YB(IJ,IKOL)
+  355          CONTINUE
+  365       CONTINUE
+         END IF
+C
+C     Extra exchange terms for rohf
+C
+         if(scftyp.eq.rohf) then
+            NQI  = NOCC + NVIR
+            CALL EXINT4_ROHF(FTEMPB(NXYZF*L2+1),WRK2,WRK1,C,L1,L2,
+     *                       NQI,NOCC,NVIR,NOCCB,NVIRB,
+     *                       YA(1,IKOL),YB(1,IKOL),
+     *                       RHS(1,IUNIQ),RHSB(1,IUNIQ))
+         end if
+C
+  390 CONTINUE
+C        390 is bottom of loop over responses found in this iteration.
+C
+      IF(SCFTYP.EQ.ROHF) THEN
+         CALL SWZVROHF2(RHS,RHSB,NOCCB,NSO,NVIR,NVIRB,NUNIQ)
+      END IF
+C
+      RETURN
+      END
+C
+C*MODULE CPUHF   *DECK CPTA_UHF
+C>    @brief    Calculate the contribution to the inhomogeneity
+C>
+C>    @details  Calculate overlap derivative, and added the 
+C>              energy weighted density like terms to Hessian
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NDER      Energy derivative order
+C>    @param WAX       Derivative of energy with respect to alpha MO and coordiante 
+C>    @param TA        Derivative of overlap matrix for alpha MO
+C>    @param C         Alpha molecular orbital coefficient
+C>    @param E         Alpha molecular orbital energy
+C>    @param DSAO      Derivative of overlap matrix in AO basis
+C>    @param DSMO      Derivative of MO basis
+C>    @param T         Work varaiable for overlap derivative
+C>    @param DS        Work varaiable for overlap derivative
+C>    @param SDIDER    Derivative of dipole moments
+C>    @param F         Dipole integral in AO basis
+C>    @param H         Dipole integral in MO basis
+C>    @param WAXC    Dummy varaiable for future implementation
+C>    @param   IA      Indice for triangular matrix elements
+C>    @param  NUM      Number of atomic orbital
+C>    @param NOCC      Number of alpha occupied molecular orbital
+C>    @param NVIR      Number of alpha virtual  molecular orbital
+C>    @param NORB      Number of molecular orbital
+C>    @param NUM2      Number of elements in triangular matrix of AO basis
+C>    @param NOCC2     Number of elements in triangular matrix of alpha occupied MO
+C>    @param   NXYZ    Number of cartesian coodinate elements
+C>    @param   NAT     Number of atom
+C>    @param NFZC      Number of frozen core molecular orbital
+C>    @param NOCACT    Number of active molecular orbitals
+C>    @param WAXB      Derivative of energy with respect to beta MO and coordiante 
+C>    @param  TB       Derivative of overlap integral for beta
+C>    @param    CB     Molecular orbital coefficient for beta
+C>    @param EB        Beta molecular orbital energy
+C>    @param NOCCB     Number of beta occupied molecular orbital
+C>    @param NVIRB     Number of beta virtual  molecular orbital
+C>    @param NOCCB2    Number of elements in triangular matrix of beta occupied MO
+      SUBROUTINE CPTA_UHF(NDER,WAX,TA,C,E,DSAO,DSMO,T,DS,SDIDER,F,H,
+     *                WAXC,IA,NUM,NOCC,NVIR,NORB,NUM2,NOCC2,NXYZ,
+     *                NAT,NFZC,NOCACT,
+     *                WAXB,TB,CB,EB,NOCCB,NVIRB,NOCCB2)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+C        SDIDER,F,H NEEDED ONLY FOR RHF 2ND DERIVATIVE
+C
+      DIMENSION WAX(NOCC,NVIR,NXYZ),TA(NOCC2,NXYZ),C(NUM,NUM),E(NUM),
+     *          DSAO(NUM2,NXYZ),DSMO(NUM2),T(NUM),DS(NUM,NUM,3),IA(NUM),
+     *          SDIDER(9*NAT),F(NUM2),H(NUM2,2,3),WAXC(NFZC,NOCACT,NXYZ)
+     *         ,WAXB(NOCCB,NVIRB,NXYZ),TB(NOCCB2,NXYZ),CB(NUM,NUM),
+     *          EB(NUM)
+C
+      PARAMETER (MXGTOT=20000, MXSH=5000)
+C
+      COMMON /IOFILE/ IR,IW,IP,IJKO,IJKT,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+C
+C
+      PARAMETER (PT5=0.5D+00, FOUR=4.0D+00, ZERO=0.0D+00)
+C
+C     ----- COMPUTE DS/DA IN THE MO BASIS -----
+C
+      CALL VCLR(DSAO,1,NUM2*NXYZ)
+C
+      DO 150 ISHELL = 1,NSHELL
+         IAT  = KATOM(ISHELL)
+         IXYZ = 3*(IAT-1)
+         LOCI = KLOC(ISHELL) - KMIN(ISHELL)
+         MINI = KMIN(ISHELL)
+         MAXI = KMAX(ISHELL)
+         DO 140 I = MINI,MAXI
+            II   = LOCI + I
+            DO 130 JJ = 1,NUM
+               IJ = IA(MAX(II,JJ)) + MIN(II,JJ)
+               DSAO(IJ,IXYZ+1) = DSAO(IJ,IXYZ+1) + DS(II,JJ,1)
+               DSAO(IJ,IXYZ+2) = DSAO(IJ,IXYZ+2) + DS(II,JJ,2)
+               DSAO(IJ,IXYZ+3) = DSAO(IJ,IXYZ+3) + DS(II,JJ,3)
+  130       CONTINUE
+  140    CONTINUE
+  150 CONTINUE
+C
+c     write(*,*) "testtesttest S^a"
+c     CALL PRTRI(DSAO,num) 
+c     CALL PRTRI(DSAO(1,2),num) 
+c     CALL PRTRI(DSAO(1,3),num) 
+       
+C     ---- GET DIPOLE INTEGRALS AND TRANSFORM TO MO BASIS   ----
+C     ---- WRITE TRANSFORMED INTEGRALS TO DAF FOR LATER USE ----
+C
+      IF(NDER.EQ.2) THEN
+         CALL DAREAD(IDAF,IODA,F,NUM2,95,0)
+         CALL TFTRI(H(1,1,1),F,C,T,NORB,NUM,NUM)
+         CALL TFTRI(H(1,2,1),F,CB,T,NORB,NUM,NUM)
+         CALL DAREAD(IDAF,IODA,F,NUM2,96,0)
+         CALL TFTRI(H(1,1,2),F,C,T,NORB,NUM,NUM)
+         CALL TFTRI(H(1,2,2),F,CB,T,NORB,NUM,NUM)
+         CALL DAREAD(IDAF,IODA,F,NUM2,97,0)
+         CALL TFTRI(H(1,1,3),F,C,T,NORB,NUM,NUM)
+         CALL TFTRI(H(1,2,3),F,CB,T,NORB,NUM,NUM)
+C
+         CALL DAWRIT(IDAF,IODA,H(1,1,1),NUM2*2,252,0)
+         CALL DAWRIT(IDAF,IODA,H(1,1,2),NUM2*2,253,0)
+         CALL DAWRIT(IDAF,IODA,H(1,1,3),NUM2*2,254,0)
+      END IF
+C
+      DO 500 IXYZ=1,NXYZ
+         CALL TFTRI(DSMO,DSAO(1,IXYZ),C,T,NORB,NUM,NUM)
+C
+C     ----- SET -TA- -----
+C
+         DO 220 IOCC=1,NOCC
+            DO 210 JOCC=1,IOCC
+               IJ=IA(IOCC)+JOCC
+               TA(IJ,IXYZ)=(-PT5)*DSMO(IJ)
+  210       CONTINUE
+  220    CONTINUE
+C
+C     ----- CONTRIBUTION TO THE INHOMOGENEITY -----
+C
+         DO 320 IVIR=1,NVIR
+            DO 310 IOCC=1,NOCC
+               IJ=IA(IVIR+NOCC)+IOCC
+               WAX(IOCC,IVIR,IXYZ)=WAX(IOCC,IVIR,IXYZ)
+     *                            -FOUR*DSMO(IJ)*E(IOCC)
+  310       CONTINUE
+  320    CONTINUE
+C
+         IF (NDER.EQ.1 .AND. NFZC.GT.0) THEN
+            DO 340 IACT=1,NOCACT
+               DO 330 IFZC=1,NFZC
+                  IJ=IA(IACT+NFZC)+IFZC
+                  WAXC(IFZC,IACT,IXYZ)=WAXC(IFZC,IACT,IXYZ)
+     *                               -FOUR*DSMO(IJ)*E(IFZC)
+  330          CONTINUE
+  340       CONTINUE
+         END IF
+C
+         IF(NDER.EQ.2) THEN
+            NN=1 + (IXYZ-1)*3
+            SDIDER(NN  )=ZERO
+            SDIDER(NN+1)=ZERO
+            SDIDER(NN+2)=ZERO
+            DO 440 IOCC=1,NOCC
+               DO 430 JOCC=1,IOCC
+                  IJ=IA(IOCC)+JOCC
+                  VAL=DSMO(IJ)
+                  IF (IOCC .NE. JOCC) VAL= VAL + VAL
+                  SDIDER(NN  )=SDIDER(NN  )+(VAL*H(IJ,1,1))
+                  SDIDER(NN+1)=SDIDER(NN+1)+(VAL*H(IJ,1,2))
+                  SDIDER(NN+2)=SDIDER(NN+2)+(VAL*H(IJ,1,3))
+  430          CONTINUE
+  440       CONTINUE
+         END IF
+C
+         CALL TFTRI(DSMO,DSAO(1,IXYZ),CB,T,NORB,NUM,NUM)
+C
+C     ----- SET -TB- -----
+C
+         DO 225 IOCC=1,NOCCB
+            DO 215 JOCC=1,IOCC
+               IJ=IA(IOCC)+JOCC
+               TB(IJ,IXYZ)=(-PT5)*DSMO(IJ)
+  215       CONTINUE
+  225    CONTINUE
+C
+C     ----- CONTRIBUTION TO THE INHOMOGENEITY -----
+C
+         DO 325 IVIR=1,NVIRB
+            DO 315 IOCC=1,NOCCB
+               IJ=IA(IVIR+NOCCB)+IOCC
+               WAXB(IOCC,IVIR,IXYZ)=WAXB(IOCC,IVIR,IXYZ)
+     *                            -FOUR*DSMO(IJ)*EB(IOCC)
+  315       CONTINUE
+  325    CONTINUE
+C     ----- CONTRIBUTION TO DIPOLE DERIVATIVE -----
+C
+         IF(NDER.EQ.2) THEN
+            NN=1 + (IXYZ-1)*3
+            DO 445 IOCC=1,NOCCB
+               DO 435 JOCC=1,IOCC
+                  IJ=IA(IOCC)+JOCC
+                  VAL=DSMO(IJ)
+                  IF (IOCC .NE. JOCC) VAL= VAL + VAL
+                  SDIDER(NN  )=SDIDER(NN  )+(VAL*H(IJ,2,1))
+                  SDIDER(NN+1)=SDIDER(NN+1)+(VAL*H(IJ,2,2))
+                  SDIDER(NN+2)=SDIDER(NN+2)+(VAL*H(IJ,2,3))
+  435          CONTINUE
+  445       CONTINUE
+         END IF
+  500 CONTINUE
+      RETURN
+      END
+c
+C*MODULE CPUHF   *DECK CPWAB3_UHF
+C>    @brief    Calculate the complete Hessian and Dipole moment derivatives
+C>
+C>    @details  Calculate the product between U^b and B^a
+C>              and add it into Hessian
+C>
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param WAX       Derivative of energy with respect to alpha MO and coordiante 
+C>    @param YA        The solution of alpha orbital relaxation term
+C>    @param H         Dipole integral in MO basis
+C>    @prram    DDM    Derivative of dipole moment matrix
+C>    @param   IA      Indice for triangular matrix elements
+C>    @param NROT      Number of indipendent pair between virtual and occupied molecular orbital for alpha
+C>    @param   NXYZ    Number of cartesian coodinate elements
+C>    @param NNXYZ     Number of unique cartesian coodinate elements
+C>    @param NUM2      Number of elements in triangular matrix of AO basis
+C>    @param NOCC      Number of alpha occupied molecular orbital
+C>    @param NVIR      Number of alpha virtual  molecular orbital
+C>    @param WAXB      Derivative of energy with respect to beta MO and coordiante 
+C>    @param YB        The solution of alpha orbital relaxation term
+C>    @param NOCCB     Number of beta occupied molecular orbital
+C>    @param NVIRB     Number of beta virtual  molecular orbital
+C>    @param NROTB     Number of indipendent pair between virtual and occupied molecular orbital for beta
+C>           --- OUTPUT ---
+C>    @param    FCM    Foce constant matrix
+C>    @prram    DDM    Derivative of dipole moment matrix
+      SUBROUTINE CPWAB3_UHF(FCM,WAX,YA,H,DDM,IA,NROT,NXYZ,NNXYZ,
+     *                  NUM2,NOCC,NVIR,
+     *                  WAXB,YB,NOCCB,NVIRB,NROTB)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      LOGICAL POLAR
+C
+      PARAMETER (MXATM=2000)
+C
+      DIMENSION FCM(NXYZ,NXYZ),WAX(NROT,NNXYZ),
+     *          YA(NROT,NNXYZ),H(NUM2,2,3),
+     *          WAXB(NROTB,NNXYZ),YB(NROTB,NNXYZ)
+      DIMENSION DDM(9*NAT),IA(NUM)
+      DIMENSION APOL(6)
+C
+      COMMON /CHFINF/ CHFSLV,CPTYPE,NWDCHF,POLAR,NSPLIT
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJKO,IJKT,IDAF,NAV,IODA(950)
+C
+      PARAMETER (ZERO=0.0D+00, TWO=2.0D+00,HALF=0.5D+00)
+C
+C     ----- ADD FINAL CPHF WAX(A)*Y(B) CONTRIBUTION TO HESSIAN -----
+C
+      DO 210 IXYZ=1,NXYZ
+         DO 200 JXYZ=1,NXYZ
+            DUM=ZERO
+            DO 100 IROT=1,NROT
+               DUM=DUM+WAX(IROT,IXYZ)*YA(IROT,JXYZ)*HALF
+  100       CONTINUE
+            DO 105 IROT=1,NROTB
+               DUM=DUM+WAXB(IROT,IXYZ)*YB(IROT,JXYZ)*HALF
+  105       CONTINUE
+            FCM(IXYZ,JXYZ)=FCM(IXYZ,JXYZ)+DUM
+  200    CONTINUE
+  210 CONTINUE
+C
+C     ---- GET TRANSFORMED DIPOLE INTEGRALS AND CALCULATE RESPONSE ----
+C     ---- FACTOR CONTRIBUTION TO DIPOLE DERIVATIVE                ----
+C
+      CALL DAREAD(IDAF,IODA,H(1,1,1),NUM2*2,252,0)
+      CALL DAREAD(IDAF,IODA,H(1,1,2),NUM2*2,253,0)
+      CALL DAREAD(IDAF,IODA,H(1,1,3),NUM2*2,254,0)
+C
+      CALL VCLR(DDM,1,9*NAT)
+C
+      DO 340 IXYZ=1,NXYZ
+         NN= 1 + (IXYZ-1)*3
+         IROT=0
+         DO 360 IVIR=1,NVIR
+            DO 370 IOCC=1,NOCC
+               IROT=IROT + 1
+               IJ=IA(IVIR+NOCC)+IOCC
+               DDM(NN  )=DDM(NN  )-(TWO*YA(IROT,IXYZ)*H(IJ,1,1))
+               DDM(NN+1)=DDM(NN+1)-(TWO*YA(IROT,IXYZ)*H(IJ,1,2))
+               DDM(NN+2)=DDM(NN+2)-(TWO*YA(IROT,IXYZ)*H(IJ,1,3))
+  370       CONTINUE
+  360    CONTINUE
+         IROT=0
+         DO 365 IVIR=1,NVIRB
+            DO 375 IOCC=1,NOCCB
+               IROT=IROT + 1
+               IJ=IA(IVIR+NOCCB)+IOCC
+               DDM(NN  )=DDM(NN  )-(TWO*YB(IROT,IXYZ)*H(IJ,2,1))
+               DDM(NN+1)=DDM(NN+1)-(TWO*YB(IROT,IXYZ)*H(IJ,2,2))
+               DDM(NN+2)=DDM(NN+2)-(TWO*YB(IROT,IXYZ)*H(IJ,2,3))
+  375       CONTINUE
+  365    CONTINUE
+  340 CONTINUE
+C
+C     ---- CALCULATE ALPHA POLARIZABILITY TENSOR ----
+C
+      IF(POLAR) THEN
+         DO 400 K=1,3
+            DO 410 L=1,K
+            KL=IA(K)+L
+            APOL(KL)=ZERO
+            IROT=0
+               DO 420 IVIR=1,NVIR
+                  DO 430 IOCC=1,NOCC
+                     IROT=IROT + 1
+                     IJ=IA(IVIR+NOCC)+IOCC
+                   APOL(KL)=APOL(KL)-(TWO*YA(IROT,NXYZ+K)*H(IJ,1,L))
+  430             CONTINUE
+  420          CONTINUE
+               DO 425 IVIR=1,NVIRB
+                  DO 435 IOCC=1,NOCCB
+                     IROT=IROT + 1
+                     IJ=IA(IVIR+NOCCB)+IOCC
+                     APOL(KL)=APOL(KL)-(TWO*YB(IROT,NXYZ+K)*H(IJ,2,L))
+  435             CONTINUE
+  425          CONTINUE
+  410       CONTINUE
+  400 CONTINUE
+C
+C     ---- WRITE ALPHA POLARIZABILITY TENSOR TO DAF ----
+C
+      CALL DAWRIT(IDAF,IODA,APOL,6,251,0)
+C
+      END IF
+C
+      RETURN
+      END
+C
+C
+C*MODULE CPUHF   *DECK UDFTFCK
+C>    @brief Calculate DFT contribution to orbital Hessian A for Unrestricted XC terms
+C>
+C>    @details Calculate the second order derivative of Exchange correlation enregy
+C>    with respect to the orbital, and construct the product of A and U^a.
+C>
+C>    @author Hiroya Nakata
+C>    - Jan, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param UHF    Information for open-shell calculation
+C>    @param l1     number of atomic orbital 
+C>    @param l2     number of elements for triangular matrix of AO
+C>    @param IA     indice for diagonal elements of triangular matrix
+C>    @param PMN    Unknown response terms for alpha in AO basis (Density like matrix)
+C>    @param PMNB   Unknown response terms for beta  in AO basis (Density like matrix)
+C>    @param NXYZ   number of cartesian coordinate
+C>           --- OUTPUT ---
+C>    @param FMN    The product of U^a and orbital Hessian A in AO basis:
+C>                  the Fock like matrix for alpha
+C>    @param FMNB   The product of U^a and orbital Hessian A in AO basis:
+C>                  the Fock like matrix for beta
+      SUBROUTINE UDFTFCK(UHF,L1,L2,IA,PMN,PMNB,FMN,FMNB,NXYZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      logical GOPARR,DSKWRK,MASWRK
+      DIMENSION PMN(*),FMN(*)
+      DIMENSION PMNB(*),FMNB(*)
+      DIMENSION IA(*)
+C
+      COMMON /FMCOM / X(1)
+      COMMON /INFGRD/ RHOMIN,ILENG,MAXGRD
+      COMMON /IOFILE/ IR,IW,IP,IJK,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+c
+      CALL GOTFM(NGOTMX)
+      CALL VALFM(LOADFM)
+C
+      IF(l1.eq.0) write(*,*) IA(1),UHF
+c     write(*,*) "MAXGRD =",MAXGRD,ILENG
+C
+      L3  = L1 * L1
+c     LX  = NQMT
+      LVA    = LOADFM + 1
+      LVB    = LVA    + L1*L1
+      LAST   = LVB    + L1*L1
+      LGRD   = LAST
+      LWGT   = LGRD   + MAXGRD*3        ! XYZGRD(MAXGRD*3)
+      LDCH   = LWGT   + MAXGRD          ! XYZWGT(MAXGRD)
+      LRHOI  = LDCH   + 4*L1*ILENG      ! XYZDCH
+      LTAUI  = LRHOI  + 8*MAXGRD        ! DRHOI_(MAXGRD,4,2)
+      LTRAI  = LTAUI  + 2*MAXGRD        ! DTAUI_(MAXGRD,2)
+      LCOEF  = LTRAI  + 10*ILENG*NXYZ   ! TRAI (5,2,ILENG)
+      LEX    = LCOEF  + 32*ILENG*NXYZ   ! COEF (8,4,ILENG)
+      LEX0   = LEX    + 18*ILENG        ! EX (ILENG,18), IF 2ND DERIVS
+      LEC    = LEX0   + ILENG           ! EX0(ILENG)
+      LEC0   = LEC    + 35*ILENG        ! EC (ILENG,35), IF 2ND DERIVS
+      LAOMAX = LEC0   + ILENG           ! EC0(ILENG)
+      LVHA   = LAOMAX + L1              ! AOMAX(L1)
+      LVHB   = LVHA   + L3              ! VHA(L1,L1)
+      LGMO   = LVHB   + L3              ! VHB(L1,L1)
+      LFXC   = LGMO   + L1*8            ! GMO (L1,4,2) FOR ALPHA AND BETA
+      LIAO   = LFXC   + L2*2*NXYZ       ! FXC(L2,2)
+      LIPRGA = LIAO   + L1              ! IAO(L1)
+      LIPRGB = LIPRGA + L3*2            ! IPRGRDA(2,L3)
+      LAST   = LIPRGB + L3*2            ! IPRGRDB(2,L3)
+C
+      NEED1  = LAST - LOADFM - 1
+C
+      IF(NEED1.GT.NGOTMX) THEN
+         if(maswrk) WRITE(iw,*) 'Not enough memory: need',NEED1,' got ',
+     *      NGOTMX
+        CALL ABRT
+      END IF
+C
+      CALL GETFM(NEED1)
+C
+c     CALL DCOPY(L3,DX(1+l2),1,X(J50),1)
+      CALL DAREAD(IDAF,IODA,X(LVA),L3,15,0)
+      CALL DAREAD(IDAF,IODA,X(LVB),L3,19,0)
+C
+c     write(*,*) "Can set TDDFT?"
+C
+      NPTGRD = MAXGRD
+      CALL UTDDFTSET(X(LGRD),X(LWGT),X(LDCH),X(LVA),X(LVB),
+     *     X(LRHOI),X(LTAUI),X(LAOMAX),X(LGMO),ILENG,NPTGRD,L1)
+C
+c     write(*,*) "Can set TDDFT?",MAXGRD,NPTGRD
+C
+      CALL VCLR(X(LFXC),1,L2*NXYZ*2)
+      CALL UTDFXCP2(X(LFXC),RHO,X(LGRD),X(LWGT),X(LDCH),
+     *              PMN,PMNB,X(LRHOI),X(LTAUI),X(LTRAI),
+     *              X(LCOEF),X(LEX),X(LEC),X(LEX0),X(LEC0),X(LAOMAX),
+     *              X(LIPRGA),X(LIPRGB),X(LIAO),
+     *              ILENG,NPTGRD,L1,L2,2,.TRUE.,NXYZ)
+C
+c     write(*,*) "Finish UTDFXCP2 ?"
+c     CALL DAXPY(L2,-8.0D+00,X(J300),1,wrt1,1)
+      LFXCB = LFXC + L2*NXYZ
+C
+       
+      CALL DAXPY(L2*NXYZ,0.50D+00,X(LFXC),1,FMN,1)
+      CALL DAXPY(L2*NXYZ,0.50D+00,X(LFXCB),1,FMNB,1)
+c
+c     write(*,*) "added contributions"
+c     CALL PRTRI(FMN,L1)
+c     CALL PRTRI(FMNB,L1)
+C
+      CALL RETFM(NEED1)
+C            
+      RETURN
+      END
+C
+C
+C*MODULE CPUHF   *DECK UTRADEN2
+C>    @brief Calculate density and density derivative terms for open-shell system
+C>
+C>    @details Calculate the product of density and AO basis 
+C>    or derivative terms at the certain grid points.
+C>
+C>    @author Hiroya Nakata
+C>    - Jan, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param RCUTOFF Cutoff threshold.
+C>    @param DRHOI_  Electronic density at the gridpoint.
+C>    @param DA      response terms in AO basis for alpha
+C>    @param DB      response terms in AO basis for beta
+C>    @param GAO     AO basis function, and its derivative
+C>    @param IPRGRDA Atomic orbital pair to be calculated for alpha
+C>    @param IPRGRDB Atomic orbital pair to be calculated for beta
+C>    @param IST     Starting point for grid integration
+C>    @param IEND    Last     point for grid integration
+C>    @param NPTGRD  Number of total grid point
+C>    @param IMAXA   Number of Atomic orbital pair to be calculated in alpha
+C>    @param IMAXB   Number of Atomic orbital pair to be calculated in beta
+C>    @param l1      number of atomic orbital
+C>    @param ILENG   number of grid point to be calculated
+C>    @param L2      number of elements in triangular matrix of AO basis
+C>    @param NXYZ    number of cartesian coordinate elements
+C>           --- OUTPUT ---
+C>    @param DTRAI_  Product of respons terms and rho or gamma 
+      SUBROUTINE UTRADEN2_CPHF(RCUTOFF,DRHOI_,DTRAI_,DA,DB,GAO,
+     *                    IPRGRDA,IPRGRDB,IST,IEND,NPTGRD,
+     *                    IMAXA,IMAXB,L1,ILENG,L2,NXYZ)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION DRHOI_(NPTGRD,4,2)
+      DIMENSION DTRAI_(5,2,*)
+      DIMENSION DA(NXYZ,L2),DB(NXYZ,L2)
+      DIMENSION GAO(4,L1,*)
+      DIMENSION IPRGRDA(2,*),IPRGRDB(2,*)
+      DATA ZERO      /0.0D+00/
+C
+      CALL VCLR(DTRAI_,1,10*ILENG*NXYZ)
+c     write(*,*) "IMAXA =",IMAXA,IMAXB
+C     -- GRID LOOP
+      DO IPT=IST,IEND
+         IIPT = IPT - IST + 1
+         ROA = DRHOI_(IPT,1,1)
+         ROB = DRHOI_(IPT,1,2)
+         IF(ROA+ROB.LT.RCUTOFF) GO TO 10
+C ALPHA PART
+         DO IXYZ=1,NXYZ
+           TI = ZERO
+           DX = ZERO
+           DY = ZERO
+           DZ = ZERO
+           DD = ZERO
+C
+           DO IPR=1,IMAXA
+             M = IPRGRDA(1,IPR)
+             N = IPRGRDA(2,IPR)
+             IF(M.GT.N) NN = (M*M-M)/2 + N
+             IF(N.GE.M) NN = (N*N-N)/2 + M
+             PM  = GAO(1,M,IIPT)
+             PMX = GAO(2,M,IIPT)
+             PMY = GAO(3,M,IIPT)
+             PMZ = GAO(4,M,IIPT)
+             PN  = GAO(1,N,IIPT)
+             PNX = GAO(2,N,IIPT)
+             PNY = GAO(3,N,IIPT)
+             PNZ = GAO(4,N,IIPT)
+             GX = PMX*PN + PNX*PM
+             GY = PMY*PN + PNY*PM
+             GZ = PMZ*PN + PNZ*PM
+             GG = PMX*PNX + PMY*PNY + PMZ*PNZ
+             DUMN = PM*PN
+             DUM  = DA(IXYZ,NN)*DUMN
+             DUMX = DA(IXYZ,NN)*GX
+             DUMY = DA(IXYZ,NN)*GY
+             DUMZ = DA(IXYZ,NN)*GZ
+             DUMG = DA(IXYZ,NN)*GG
+             TI = TI + DUM
+             DX = DX + DUMX
+             DY = DY + DUMY
+             DZ = DZ + DUMZ
+             DD = DD + DUMG
+           END DO
+           DTRAI_(1,1,IIPT+ILENG*(IXYZ-1)) = TI
+           DTRAI_(2,1,IIPT+ILENG*(IXYZ-1)) = DX
+           DTRAI_(3,1,IIPT+ILENG*(IXYZ-1)) = DY
+           DTRAI_(4,1,IIPT+ILENG*(IXYZ-1)) = DZ
+           DTRAI_(5,1,IIPT+ILENG*(IXYZ-1)) = DD
+C BETA PART
+           TI = ZERO
+           DX = ZERO
+           DY = ZERO
+           DZ = ZERO
+           DD = ZERO
+           DO IPR=1,IMAXB
+              M = IPRGRDB(1,IPR)
+              N = IPRGRDB(2,IPR)
+              IF(M.GT.N) NN = (M*M-M)/2 + N
+              IF(N.GE.M) NN = (N*N-N)/2 + M
+              PM  = GAO(1,M,IIPT)
+              PMX = GAO(2,M,IIPT)
+              PMY = GAO(3,M,IIPT)
+              PMZ = GAO(4,M,IIPT)
+              PN  = GAO(1,N,IIPT)
+              PNX = GAO(2,N,IIPT)
+              PNY = GAO(3,N,IIPT)
+              PNZ = GAO(4,N,IIPT)
+              GX = PMX*PN + PNX*PM
+              GY = PMY*PN + PNY*PM
+              GZ = PMZ*PN + PNZ*PM
+              GG = PMX*PNX + PMY*PNY + PMZ*PNZ
+              DUMN = PM*PN
+              DUM  = DB(IXYZ,NN)*DUMN
+              DUMX = DB(IXYZ,NN)*GX
+              DUMY = DB(IXYZ,NN)*GY
+              DUMZ = DB(IXYZ,NN)*GZ
+              DUMG = DB(IXYZ,NN)*GG
+              TI = TI + DUM
+              DX = DX + DUMX
+              DY = DY + DUMY
+              DZ = DZ + DUMZ
+              DD = DD + DUMG
+           END DO
+           DTRAI_(1,2,IIPT+ILENG*(IXYZ-1)) = TI
+           DTRAI_(2,2,IIPT+ILENG*(IXYZ-1)) = DX
+           DTRAI_(3,2,IIPT+ILENG*(IXYZ-1)) = DY
+           DTRAI_(4,2,IIPT+ILENG*(IXYZ-1)) = DZ
+           DTRAI_(5,2,IIPT+ILENG*(IXYZ-1)) = DD
+         END DO
+   10 CONTINUE
+      END DO
+C     -- GRID LOOP END
+C
+      RETURN
+      END
+C
+C*MODULE CPUHF   *DECK UTDCOEF
+C>
+C>    @brief Integrate function derivative and derivative of density for open-shell
+C>
+C>    @details Calculate the dot product of second order derivative of
+C>    XC function with respect to density and the density derivative terms
+C>    to calculate final product of U*A
+C>
+C>    @author Hiroya Nakata
+C>    - Jan, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param EX      Exchange functional energy and its derivatives
+C>    @param EC      Correlation functional energy and its derivatives
+C>    @param DRHOI_  Electronic density at the gridpoint.
+C>    @param DTRAI_  Product of respons terms and rho or gamma 
+C>    @param NPTGRD  Number of total grid point
+C>    @param RCUTOFF Cutoff threshold.
+C>    @param IEND    Last     point for grid integration
+C>    @param IMAX    Number of Atomic orbital pair to be calculated
+C>    @param ILENG   number of grid point to be calculated
+C>    @param NXYZ    number of cartesian coordinate elements
+C>           --- OUTPUT ---
+C>    @param COEF    Product of Density derivative and function derivative
+      SUBROUTINE UTDCF_CPHF(COEF,EX,EC,DRHOI_,DTRAI_,RCUTOFF,NPTGRD,
+     *     IST,IEND,ILENG,NXYZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      COMMON /XDERIX/ NXDIM(3),KRA,KRB,KGA,KGB,KTA,KTB,KRARA,KRAGA,
+     *                KRATA,KGAGA,KGATA,KTATA,KRBRB,KRBGB,KRBTB,KGBGB,
+     *                KGBTB,KTBTB,KRARARA,KRARAGA,KRARATA,KRAGAGA,
+     *                KRAGATA,KRATATA,KGAGAGA,KGAGATA,KGATATA,KTATATA,
+     *                KRBRBRB,KRBRBGB,KRBRBTB,KRBGBGB,KRBGBTB,KRBTBTB,
+     *                KGBGBGB,KGBGBTB,KGBTBTB,KTBTBTB
+      COMMON /CDERIX/ NCDIM(3),IRA,IRB,IGA,IGB,IGC,ITA,ITB,IRARA,IRARB,
+     *                IRAGA,IRAGB,IRAGC,IRATA,IRATB,IRBRB,IRBGA,IRBGB,
+     *                IRBGC,IRBTA,IRBTB,IGAGA,IGAGB,IGAGC,IGATA,IGATB,
+     *                IGBGB,IGBGC,IGBTA,IGBTB,IGCGC,IGCTA,IGCTB,ITATA,
+     *                ITATB,ITBTB,IRARARA,IRARARB,IRARAGA,IRARAGB,
+     *                IRARAGC,IRARATA,IRARATB,IRARBRB,IRARBGA,IRARBGB,
+     *                IRARBGC,IRARBTA,IRARBTB,IRAGAGA,IRAGAGB,IRAGAGC,
+     *                IRAGATA,IRAGATB,IRAGBGB,IRAGBGC,IRAGBTA,IRAGBTB,
+     *                IRAGCGC,IRAGCTA,IRAGCTB,IRATATA,IRATATB,IRATBTB,
+     *                IRBRBRB,IRBRBGA,IRBRBGB,IRBRBGC,IRBRBTA,IRBRBTB,
+     *                IRBGAGA,IRBGAGB,IRBGAGC,IRBGATA,IRBGATB,IRBGBGB,
+     *                IRBGBGC,IRBGBTA,IRBGBTB,IRBGCGC,IRBGCTA,IRBGCTB,
+     *                IRBTATA,IRBTATB,IRBTBTB,IGAGAGA,IGAGAGB,IGAGAGC,
+     *                IGAGATA,IGAGATB,IGAGBGB,IGAGBGC,IGAGBTA,IGAGBTB,
+     *                IGAGCGC,IGAGCTA,IGAGCTB,IGATATA,IGATATB,IGATBTB,
+     *                IGBGBGB,IGBGBGC,IGBGBTA,IGBGBTB,IGBGCGC,IGBGCTA,
+     *                IGBGCTB,IGBTATA,IGBTATB,IGBTBTB,IGCGCGC,IGCGCTA,
+     *                IGCGCTB,IGCTATA,IGCTATB,IGCTBTB,ITATATA,ITATATB,
+     *                ITATBTB,ITBTBTB
+      DIMENSION COEF(8,4,*)
+      DIMENSION DRHOI_(NPTGRD,4,2)
+      DIMENSION DTRAI_(5,2,*)
+      DIMENSION EX(ILENG,*) ! (ILENG,10)
+      DIMENSION EC(ILENG,*) ! (ILENG,20)
+C
+      DATA TWO       /2.0D+00/
+      DATA FOUR      /4.0D+00/
+C
+      CALL VCLR(COEF,1,ILENG*32*NXYZ)
+C
+      DO IPT=IST,IEND
+         IIPT = IPT-IST+1
+C     --- FOR ALPHA ORBITAL
+         RHOI=DRHOI_(IPT,1,1)
+         IF(RHOI.GT.RCUTOFF) THEN
+          DO IXYZ=1,NXYZ
+            DRHOIX = DRHOI_(IPT,2,1) ! D RHO_ALPHA
+            DRHOIY = DRHOI_(IPT,3,1)
+            DRHOIZ = DRHOI_(IPT,4,1)
+            DRHOJX = DRHOI_(IPT,2,2) ! D RHO_BETA
+            DRHOJY = DRHOI_(IPT,3,2)
+            DRHOJZ = DRHOI_(IPT,4,2)
+            DUMNB  = DTRAI_(1,1,IIPT+(IXYZ-1)*ILENG) ! \PSI_IA
+            DXB    = DTRAI_(2,1,IIPT+(IXYZ-1)*ILENG)
+            DYB    = DTRAI_(3,1,IIPT+(IXYZ-1)*ILENG)
+            DZB    = DTRAI_(4,1,IIPT+(IXYZ-1)*ILENG)
+            DDB    = DTRAI_(5,1,IIPT+(IXYZ-1)*ILENG)
+C
+C     -- DUMGRB: \DEL \PSI_ALPHA * \DEL RHO_ALPHA
+            DUMGRB=DXB*DRHOIX+DYB*DRHOIY+DZB*DRHOIZ
+            DUMGRC=DXB*DRHOJX+DYB*DRHOJY+DZB*DRHOJZ
+C
+C     ---- CONTRACTION
+C     -- EXCHANGE
+C     -- FOR DUMN (PM * PN):OK
+            XDUM1B=EX(IIPT,KRARA)*DUMNB+TWO*EX(IIPT,KRAGA)*DUMGRB
+C     -- FOR DUMGR(DEL R * DEL PM*PN):OK
+            XDUM2B=TWO*EX(IIPT,KRAGA)*DUMNB+FOUR*EX(IIPT,KGAGA)*DUMGRB
+C     -- FOR DUMXP:OK
+            XDUM3B=TWO*EX(IIPT,KGA)
+            XDUM4B=0.5D+0*EX(IIPT,KRATA)*DDB
+            XDUM5B=EX(IIPT,KGATA)*DDB
+            XDUM6B=0.5D+0*EX(IIPT,KRATA)*DUMNB+EX(IIPT,KGATA)*DUMGRB
+     *           +0.25D+0*EX(IIPT,KTATA)*DDB
+C     -- CORRELATION
+C     -- FOR DUMN (PM*PN):OK
+            CDUM1BAA=EC(IIPT,IRARA)*DUMNB+TWO*EC(IIPT,IRAGA)*DUMGRB
+     *           +EC(IIPT,IRAGC)*DUMGRC
+C     -- FOR DUMGR(DEL RHO_A * DEL PM*PN):OKX
+            CDUM2BAA=TWO*EC(IIPT,IRAGA)*DUMNB
+     *           +FOUR*EC(IIPT,IGAGA)*DUMGRB
+     *           +TWO*EC(IIPT,IGAGC)*DUMGRC
+            CDUM2BAC=EC(IIPT,IRAGC)*DUMNB+TWO*EC(IIPT,IGAGC)*DUMGRB
+     *           +EC(IIPT,IGCGC)*DUMGRC
+C     -- FOR DUMXB:OK
+            CDUM3BAA=TWO*EC(IIPT,IGA)
+            CDUM4BAA=0.5D+0*EC(IIPT,IRATA)*DDB
+            CDUM5BAA=EC(IIPT,IGATA)*DDB
+            CDUM5BAC=0.5D+0*EC(IIPT,IGCTA)*DDB
+            CDUM6BAA=0.5D+0*EC(IIPT,IRATA)*DUMNB
+     *           +EC(IIPT,IGATA)*DUMGRB+0.5D+0*EC(IIPT,IGCTA)*DUMGRC
+     *           +0.25D+0*EC(IIPT,ITATA)*DDB
+C     -- TOTAL
+            COEF(1,1,IIPT+(IXYZ-1)*ILENG)=XDUM1B+CDUM1BAA
+            COEF(2,1,IIPT+(IXYZ-1)*ILENG)=XDUM2B+CDUM2BAA ! DEL RHO_A * DEL (PM * PN)
+            COEF(3,1,IIPT+(IXYZ-1)*ILENG)=       CDUM2BAC ! DEL RHO_B * DEL (PM * PN)
+            COEF(4,1,IIPT+(IXYZ-1)*ILENG)=XDUM3B+CDUM3BAA
+            COEF(5,1,IIPT+(IXYZ-1)*ILENG)=XDUM4B+CDUM4BAA
+            COEF(6,1,IIPT+(IXYZ-1)*ILENG)=XDUM5B+CDUM5BAA 
+            COEF(7,1,IIPT+(IXYZ-1)*ILENG)=       CDUM5BAC 
+            COEF(8,1,IIPT+(IXYZ-1)*ILENG)=XDUM6B+CDUM6BAA
+C
+C     ============================
+C     ==== FOR BETA(IA) ALPHA (JB)
+C     ============================
+C
+C     FOR DUMN(PM*PN)
+            CDUM1BAB=EC(IIPT,IRARB)*DUMNB+TWO*EC(IIPT,IRBGA)*DUMGRB
+     *           +EC(IIPT,IRBGC)*DUMGRC
+C     FOR DEL RHO_B * DEL (PM*PN)
+            CDUM2BAB=TWO*EC(IIPT,IRAGB)*DUMNB
+     *           +FOUR*EC(IIPT,IGAGB)*DUMGRB
+     *           +TWO*EC(IIPT,IGBGC)*DUMGRC
+C     FOR DEL RHO_A * DEL (PM*PN)
+            CDUM2BAC=EC(IIPT,IRAGC)*DUMNB+TWO*EC(IIPT,IGAGC)*DUMGRB
+     *           +EC(IIPT,IGCGC)*DUMGRC
+C     --
+            CDUM3BAB = EC(IIPT,IGC)
+            CDUM4BAB=0.5D+0*EC(IIPT,IRBTA)*DDB
+            CDUM5BAB=EC(IIPT,IGBTA)*DDB
+            CDUM5BAC=0.5D+0*EC(IIPT,IGCTA)*DDB
+            CDUM6BAB=0.5D+0*EC(IIPT,IRATB)*DUMNB
+     *           +EC(IIPT,IGATB)*DUMGRB+0.5D+0*EC(IIPT,IGCTB)*DUMGRC
+     *           +0.25D+0*EC(IIPT,ITATB)*DDB
+C     -- TOTAL
+            COEF(1,3,IIPT+(IXYZ-1)*ILENG) = CDUM1BAB
+            COEF(2,3,IIPT+(IXYZ-1)*ILENG) = CDUM2BAB
+            COEF(3,3,IIPT+(IXYZ-1)*ILENG) = CDUM2BAC  !<=== FOR BETA
+            COEF(4,3,IIPT+(IXYZ-1)*ILENG) = CDUM3BAB
+            COEF(5,3,IIPT+(IXYZ-1)*ILENG) = CDUM4BAB
+            COEF(6,3,IIPT+(IXYZ-1)*ILENG) = CDUM5BAB
+            COEF(7,3,IIPT+(IXYZ-1)*ILENG) = CDUM5BAC  
+            COEF(8,3,IIPT+(IXYZ-1)*ILENG) = CDUM6BAB
+          END DO
+         ENDIF
+C
+C
+C     --- FOR BETA ORBITAL
+         RHOI=DRHOI_(IIPT,1,2)
+         IF(RHOI.GT.RCUTOFF) THEN
+          DO IXYZ=1,NXYZ
+            DRHOIX=DRHOI_(IPT,2,2) ! D RHO_BETA
+            DRHOIY=DRHOI_(IPT,3,2)
+            DRHOIZ=DRHOI_(IPT,4,2)
+            DRHOJX=DRHOI_(IPT,2,1) ! D RHO_ALPHA
+            DRHOJY=DRHOI_(IPT,3,1)
+            DRHOJZ=DRHOI_(IPT,4,1)
+            DUMNB =DTRAI_(1,2,IIPT+(IXYZ-1)*ILENG) ! \PSI_IA
+            DXB   =DTRAI_(2,2,IIPT+(IXYZ-1)*ILENG)
+            DYB   =DTRAI_(3,2,IIPT+(IXYZ-1)*ILENG)
+            DZB   =DTRAI_(4,2,IIPT+(IXYZ-1)*ILENG)
+            DDB   =DTRAI_(5,2,IIPT+(IXYZ-1)*ILENG)
+C
+C     -- DUMGRB: \DEL \PSI_BETA * \DEL RHO_BETA
+            DUMGRB=DXB*DRHOIX+DYB*DRHOIY+DZB*DRHOIZ
+C     -- DUMGRC: \DEL \PSI_BETA * \DEL RHO_ALPHA
+            DUMGRC=DXB*DRHOJX+DYB*DRHOJY+DZB*DRHOJZ
+C
+C     ---- CONTRACTION
+C     ============================
+C     ==== FOR BETA BETA
+C     ============================
+C     -- EXCHANGE
+C     -- FOR DUMN (PM * PN):OK
+            XDUM1B=EX(IIPT,KRBRB)*DUMNB+TWO*EX(IIPT,KRBGB)*DUMGRB
+C     -- FOR DUMGR(DEL R * DEL PM*PN):OK
+            XDUM2B=TWO*EX(IIPT,KRBGB)*DUMNB+FOUR*EX(IIPT,KGBGB)*DUMGRB
+C     -- FOR DUMXP:OK
+            XDUM3B=TWO*EX(IIPT,KGB)
+            XDUM4B=0.5D+0*EX(IIPT,KRBTB)*DDB
+            XDUM5B=EX(IIPT,KGBTB)*DDB
+            XDUM6B=0.5D+0*EX(IIPT,KRBTB)*DUMNB+EX(IIPT,KGBTB)*DUMGRB
+     *            +0.25D+0*EX(IIPT,KTBTB)*DDB
+C     -- CORRELATION
+C     -- FOR DUMN (PM*PN):OK
+            CDUM1BAA=EC(IIPT,IRBRB)*DUMNB+TWO*EC(IIPT,IRBGB)*DUMGRB
+     *           +EC(IIPT,IRBGC)*DUMGRC
+C     -- FOR DUMGR(DEL RHO_B * DEL PM*PN):OKX
+            CDUM2BAA=TWO*EC(IIPT,IRBGB)*DUMNB
+     *           +FOUR*EC(IIPT,IGBGB)*DUMGRB
+     *           +TWO*EC(IIPT,IGBGC)*DUMGRC
+C     -- FOR DUMGC(DEL RHO_A * DEL PM*PN):OKX
+            CDUM2BAC=EC(IIPT,IRBGC)*DUMNB+TWO*EC(IIPT,IGBGC)*DUMGRB
+     *           +EC(IIPT,IGCGC)*DUMGRC
+C     -- FOR DUMXB:OK
+            CDUM3BAA=TWO*EC(IIPT,IGB)
+            CDUM4BAA=0.5D+0*EC(IIPT,IRBTB)*DDB
+            CDUM5BAA=EC(IIPT,IGBTB)*DDB
+            CDUM5BAC=0.5D+0*EC(IIPT,IGCTB)*DDB
+            CDUM6BAA=0.5D+0*EC(IIPT,IRBTB)*DUMNB
+     *           +EC(IIPT,IGBTB)*DUMGRB+0.5D+0*EC(IIPT,IGCTB)*DUMGRC
+     *           +0.25D+0*EC(IIPT,ITBTB)*DDB
+C
+C     -- TOTAL:BB
+C
+            COEF(1,4,IIPT+(IXYZ-1)*ILENG)=XDUM1B+CDUM1BAA
+            COEF(2,4,IIPT+(IXYZ-1)*ILENG)=XDUM2B+CDUM2BAA ! DEL RHO_B * DEL (PM * PN)
+            COEF(3,4,IIPT+(IXYZ-1)*ILENG)=       CDUM2BAC ! DEL RHO_A * DEL (PM * PN)
+            COEF(4,4,IIPT+(IXYZ-1)*ILENG)=XDUM3B+CDUM3BAA
+            COEF(5,4,IIPT+(IXYZ-1)*ILENG)=XDUM4B+CDUM4BAA
+            COEF(6,4,IIPT+(IXYZ-1)*ILENG)=XDUM5B+CDUM5BAA 
+            COEF(7,4,IIPT+(IXYZ-1)*ILENG)=       CDUM5BAC 
+            COEF(8,4,IIPT+(IXYZ-1)*ILENG)=XDUM6B+CDUM6BAA
+C
+C     ============================
+C     ==== FOR ALPHA BETA(JB)
+C     ============================
+C
+C
+C     FOR DUMN(PM*PN)
+            CDUM1BAB=EC(IIPT,IRARB)*DUMNB+TWO*EC(IIPT,IRAGB)*DUMGRB
+     *           +EC(IIPT,IRAGC)*DUMGRC
+C     FOR DEL RHO_A * DEL (PM*PN)
+            CDUM2BAB=TWO*EC(IIPT,IRBGA)*DUMNB
+     *           +FOUR*EC(IIPT,IGAGB)*DUMGRB
+     *           +TWO*EC(IIPT,IGAGC)*DUMGRC
+C     FOR DEL RHO_B * DEL (PM*PN)
+            CDUM2BAC=EC(IIPT,IRBGC)*DUMNB+TWO*EC(IIPT,IGBGC)*DUMGRB
+     *           +EC(IIPT,IGCGC)*DUMGRC
+C     --
+            CDUM3BAB = EC(IIPT,IGC)
+            CDUM4BAB=0.5D+0*EC(IIPT,IRATB)*DDB
+            CDUM5BAB=EC(IIPT,IGATB)*DDB
+            CDUM5BAC=0.5D+0*EC(IIPT,IGCTB)*DDB
+            CDUM6BAB=0.5D+0*EC(IIPT,IRBTA)*DUMNB
+     *           +EC(IIPT,IGBTA)*DUMGRB+0.5D+0*EC(IIPT,IGCTA)*DUMGRC
+     *           +0.25D+0*EC(IIPT,ITATB)*DDB
+C
+C     -- TOTAL
+C
+            COEF(1,2,IIPT+(IXYZ-1)*ILENG) = CDUM1BAB
+            COEF(2,2,IIPT+(IXYZ-1)*ILENG) = CDUM2BAB
+            COEF(3,2,IIPT+(IXYZ-1)*ILENG) = CDUM2BAC
+            COEF(4,2,IIPT+(IXYZ-1)*ILENG) = CDUM3BAB
+            COEF(5,2,IIPT+(IXYZ-1)*ILENG) = CDUM4BAB
+            COEF(6,2,IIPT+(IXYZ-1)*ILENG) = CDUM5BAB
+            COEF(7,2,IIPT+(IXYZ-1)*ILENG) = CDUM5BAC  
+            COEF(8,2,IIPT+(IXYZ-1)*ILENG) = CDUM6BAB
+          END DO
+         ENDIF
+      END DO
+      RETURN
+      END
+C
+C*MODULE CPUHF   *DECK UNUMFK_CPHF
+C>    @brief Construct the final product of Fock-like matrix for open-shell
+C>
+C>    @details Calculate the final product of orbital Hessian terms
+C>             by summing up all exhange and correlation contributions.
+C>    @author Hiroya Nakata
+C>    - Jan, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param RHO     Total electron number for the check
+C>    @param RCUTOFF Cutoff threshold.
+C>    @param DRHOI_  Electronic density at the gridpoint.
+C>    @param DTRAI_  Product of respons terms and rho or gamma 
+C>    @param COEF    Product of Density derivative and function derivative
+C>    @param WGT     Grid weighted terms
+C>    @param GAO     AO function and its derivatives
+C>    @param VALGA   Working space
+C>    @param IST     Starting point for grid integration
+C>    @param IEND    Last     point for grid integration
+C>    @param l1      number of cartesian coordinate elements
+C>    @param l2      number of elements in triagnular matrix of AO basis
+C>    @param NPTGRD  Number of total grid point
+C>    @param NXYZ    number of cartesian coordinate elements
+C>    @param ILENG   number of grid point to be calculated
+C>           --- OUTPUT ---
+C>    @param FXC     Complete Fock like matrix
+      SUBROUTINE UNUMFK_CPHF(RHO,RCUTOFF,CUTOFF,FXC,DRHOI_,
+     *     DTRAI_,COEF,WGT,GAO,VALGA,IST,IEND,
+     *     L1,L2,NPTGRD,NXYZ,ILENG)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION FXC   (NXYZ,L2,2) !
+      DIMENSION DRHOI_(NPTGRD,4,2)
+      DIMENSION DTRAI_(5,2,*)
+      DIMENSION COEF  (8,4,*)
+      DIMENSION WGT   (NPTGRD)
+      DIMENSION GAO   (4,L1,*)
+      DIMENSION VALGA (L1,2)
+C
+      LOGICAL  LPRT
+C
+      DATA ZERO      /0.0D+00/
+      DATA TWO       /2.0D+00/
+C
+C     -- GRID LOOP
+C
+      LPRT=.FALSE.
+      DO IPT=IST,IEND
+         IIPT=IPT-IST+1
+         RHOI = DRHOI_(IPT,1,1) ! ALPHA
+         RHOJ = DRHOI_(IPT,1,2) ! BETA
+         IF((RHOI+RHOJ).LT.RCUTOFF) GOTO 200
+         FTOTWT=WGT(IPT)
+C     FOR AA
+         DO IXYZ=1,NXYZ
+          C1AA=COEF(1,1,IIPT+(IXYZ-1)*ILENG)
+          C2AA=COEF(2,1,IIPT+(IXYZ-1)*ILENG)
+          C3AA=COEF(3,1,IIPT+(IXYZ-1)*ILENG)
+          C4AA=COEF(4,1,IIPT+(IXYZ-1)*ILENG)
+          C5AA=COEF(5,1,IIPT+(IXYZ-1)*ILENG)
+          C6AA=COEF(6,1,IIPT+(IXYZ-1)*ILENG)
+          C7AA=COEF(7,1,IIPT+(IXYZ-1)*ILENG)
+          C8AA=COEF(8,1,IIPT+(IXYZ-1)*ILENG)
+C     FOR  AB
+          C1AB=COEF(1,2,IIPT+(IXYZ-1)*ILENG)
+          C2AB=COEF(2,2,IIPT+(IXYZ-1)*ILENG)
+          C3AB=COEF(3,2,IIPT+(IXYZ-1)*ILENG)
+          C4AB=COEF(4,2,IIPT+(IXYZ-1)*ILENG)
+          C5AB=COEF(5,2,IIPT+(IXYZ-1)*ILENG)
+          C6AB=COEF(6,2,IIPT+(IXYZ-1)*ILENG)
+          C7AB=COEF(7,2,IIPT+(IXYZ-1)*ILENG)
+          C8AB=COEF(8,2,IIPT+(IXYZ-1)*ILENG)
+C
+          DRHOIX=DRHOI_(IPT,2,1) ! \DEL \RHO FOR ALPHA ORBITAL
+          DRHOIY=DRHOI_(IPT,3,1)
+          DRHOIZ=DRHOI_(IPT,4,1)
+          DRHOJX=DRHOI_(IPT,2,2) ! \DEL \RHO FOR ALPHA ORBITAL
+          DRHOJY=DRHOI_(IPT,3,2)
+          DRHOJZ=DRHOI_(IPT,4,2)
+          DXB   =DTRAI_(2,1,IIPT+(IXYZ-1)*ILENG) ! \DEL \PSI_I \PSI_A FOR ALPHA ORBITAL
+          DYB   =DTRAI_(3,1,IIPT+(IXYZ-1)*ILENG)
+          DZB   =DTRAI_(4,1,IIPT+(IXYZ-1)*ILENG)
+          DXB2  =DTRAI_(2,2,IIPT+(IXYZ-1)*ILENG) ! \DEL \PSI_I \PSI_A FOR ALPHA ORBITAL
+          DYB2  =DTRAI_(3,2,IIPT+(IXYZ-1)*ILENG)
+          DZB2  =DTRAI_(4,2,IIPT+(IXYZ-1)*ILENG)
+C
+          C1AA=C1AA+C5AA
+          C2AA=C2AA+C6AA
+          C3AA=C3AA+C7AA
+          C1AB=C1AB+C5AB
+          C2AB=C2AB+C6AB
+          C3AB=C3AB+C7AB
+C
+          IND=1
+          AOMAX=ZERO
+          AMAXVAL=ZERO
+          DO M=1,L1
+             PM =GAO(1,M,IIPT)
+             PMX=GAO(2,M,IIPT)
+             PMY=GAO(3,M,IIPT)
+             PMZ=GAO(4,M,IIPT)
+C     FOR  ALPHA ALPHA
+             DUM1 = C1AA/TWO*PM
+             DUM2 = C2AA*(DRHOIX*PMX+DRHOIY*PMY+DRHOIZ*PMZ)
+             DUM3 = C3AA*(DRHOJX*PMX+DRHOJY*PMY+DRHOJZ*PMZ)
+             DUM4 = C4AA*(DXB*PMX+DYB*PMY+DZB*PMZ)
+             VALGA(M,1)=(DUM1+DUM2+DUM3+DUM4)*FTOTWT
+C     FOR  ALPHA BETA
+             DUM1 = C1AB/TWO*PM
+             DUM2 = C2AB*(DRHOIX*PMX+DRHOIY*PMY+DRHOIZ*PMZ)
+             DUM3 = C3AB*(DRHOJX*PMX+DRHOJY*PMY+DRHOJZ*PMZ)
+             DUM4 = C4AB*(DXB2*PMX+DYB2*PMY+DZB2*PMZ)
+C               IF (DUM4 .NE. 0.0D0) WRITE(6,*) DUM4
+             VALGA(M,2)=(DUM1+DUM2+DUM3+DUM4)*FTOTWT
+C
+             VMA=VALGA(M,1)
+             VMB=VALGA(M,2)
+             VM =VMA+VMB
+             IF(LPRT) WRITE(6,*) 'FK ', VM, PM
+             AOMAX=MAX(AOMAX,ABS(PM))
+             AMAXVAL=MAX(AMAXVAL,ABS(VM))
+             CVAL=ABS(PM*AMAXVAL)+ABS(VM*AOMAX)
+             IF(CVAL.LT.CUTOFF) THEN
+                IND=IND+M
+                GOTO 100
+             ENDIF
+             DO N=1,M
+                PN=GAO(1,N,IIPT)
+                PNX=GAO(2,N,IIPT)
+                PNY=GAO(3,N,IIPT)
+                PNZ=GAO(4,N,IIPT)
+                FXC(IXYZ,IND,1)=FXC(IXYZ,IND,1)+
+     *          (C8AA+C8AB)*(PMX*PNX+PMY*PNY+PMZ*PNZ)*FTOTWT
+                FXC(IXYZ,IND,1)=FXC(IXYZ,IND,1)+PM*VALGA(N,1)+VMA*PN  ! FOR FXC_AA
+                FXC(IXYZ,IND,1)=FXC(IXYZ,IND,1)+PM*VALGA(N,2)+VMB*PN  ! FOR FXC_AB
+                IND=IND+1
+             END DO
+ 100         CONTINUE
+          END DO
+C
+C     FOR  BETA
+C     BB
+          C1AA=COEF(1,4,IIPT+(IXYZ-1)*ILENG)
+          C2AA=COEF(2,4,IIPT+(IXYZ-1)*ILENG)
+          C3AA=COEF(3,4,IIPT+(IXYZ-1)*ILENG)
+          C4AA=COEF(4,4,IIPT+(IXYZ-1)*ILENG)
+          C5AA=COEF(5,4,IIPT+(IXYZ-1)*ILENG)
+          C6AA=COEF(6,4,IIPT+(IXYZ-1)*ILENG)
+          C7AA=COEF(7,4,IIPT+(IXYZ-1)*ILENG)
+          C8AA=COEF(8,4,IIPT+(IXYZ-1)*ILENG)
+C     BA
+          C1AB=COEF(1,3,IIPT+(IXYZ-1)*ILENG)
+          C2AB=COEF(2,3,IIPT+(IXYZ-1)*ILENG)
+          C3AB=COEF(3,3,IIPT+(IXYZ-1)*ILENG)
+          C4AB=COEF(4,3,IIPT+(IXYZ-1)*ILENG)
+          C5AB=COEF(5,3,IIPT+(IXYZ-1)*ILENG)
+          C6AB=COEF(6,3,IIPT+(IXYZ-1)*ILENG)
+          C7AB=COEF(7,3,IIPT+(IXYZ-1)*ILENG)
+          C8AB=COEF(8,3,IIPT+(IXYZ-1)*ILENG)
+C
+          DRHOIX=DRHOI_(IPT,2,2) ! \DEL \RHO (BETA)
+          DRHOIY=DRHOI_(IPT,3,2)
+          DRHOIZ=DRHOI_(IPT,4,2)
+          DRHOJX=DRHOI_(IPT,2,1) ! \DEL \RHO FOR ALPHA ORBITAL
+          DRHOJY=DRHOI_(IPT,3,1)
+          DRHOJZ=DRHOI_(IPT,4,1)
+          DXB  =DTRAI_(2,2,IIPT+(IXYZ-1)*ILENG)  ! \DEL \PSI_I \PSI_A FOR ALPHA ORBITAL
+          DYB  =DTRAI_(3,2,IIPT+(IXYZ-1)*ILENG)
+          DZB  =DTRAI_(4,2,IIPT+(IXYZ-1)*ILENG)
+          DXB2 =DTRAI_(2,1,IIPT+(IXYZ-1)*ILENG)  ! \DEL \PSI_I \PSI_A FOR ALPHA ORBITAL
+          DYB2 =DTRAI_(3,1,IIPT+(IXYZ-1)*ILENG)
+          DZB2 =DTRAI_(4,1,IIPT+(IXYZ-1)*ILENG)
+C
+          C1AA=C1AA+C5AA
+          C2AA=C2AA+C6AA
+          C3AA=C3AA+C7AA
+          C1AB=C1AB+C5AB
+          C2AB=C2AB+C6AB
+          C3AB=C3AB+C7AB
+C
+          IND=1
+          AOMAX=ZERO
+          AMAXVAL=ZERO
+          DO M=1,L1
+             PM =GAO(1,M,IIPT)
+             PMX=GAO(2,M,IIPT)
+             PMY=GAO(3,M,IIPT)
+             PMZ=GAO(4,M,IIPT)
+C     FOR  BETA BETA
+             DUM1 = C1AA/TWO*PM
+C               DEL RHO_B * DEL PMN
+             DUM2 = C2AA*(DRHOIX*PMX+DRHOIY*PMY+DRHOIZ*PMZ)
+C               DEL RHO_A * DEL PMN
+             DUM3 = C3AA*(DRHOJX*PMX+DRHOJY*PMY+DRHOJZ*PMZ)
+             DUM4 = C4AA*(DXB*PMX+DYB*PMY+DZB*PMZ)
+             !IF (DUM4 .NE. 0.0D0) WRITE(6,*) DUM4
+             VALGA(M,1)=(DUM1+DUM2+DUM3+DUM4)*FTOTWT
+C     FOR  BETA ALPHA
+             DUM1 = C1AB/TWO*PM
+             DUM2 = C2AB*(DRHOIX*PMX+DRHOIY*PMY+DRHOIZ*PMZ)
+             DUM3 = C3AB*(DRHOJX*PMX+DRHOJY*PMY+DRHOJZ*PMZ)
+             DUM4 = C4AB*(DXB2*PMX+DYB2*PMY+DZB2*PMZ)
+            ! IF (DUM4 .NE. 0.0D0) WRITE(6,*) DUM4
+             VALGA(M,2)=(DUM1+DUM2+DUM3+DUM4)*FTOTWT
+C
+             VMA=VALGA(M,1)
+             VMB=VALGA(M,2)
+             VM =VMA+VMB
+             AOMAX=MAX(AOMAX,ABS(PM))
+             AMAXVAL=MAX(AMAXVAL,ABS(VM))
+             CVAL=ABS(PM*AMAXVAL)+ABS(VM*AOMAX)
+             IF(CVAL.LT.CUTOFF) THEN
+                IND=IND+M
+                GOTO 120
+             ENDIF
+             DO N=1,M
+                PN=GAO(1,N,IIPT)
+                PNX=GAO(2,N,IIPT)
+                PNY=GAO(3,N,IIPT)
+                PNZ=GAO(4,N,IIPT)
+                FXC(IXYZ,IND,2)=FXC(IXYZ,IND,2)+
+     *          (C8AA+C8AB)*(PMX*PNX+PMY*PNY+PMZ*PNZ)*FTOTWT
+                FXC(IXYZ,IND,2)=FXC(IXYZ,IND,2)+PM*VALGA(N,1)+VMA*PN ! FOR BB
+                FXC(IXYZ,IND,2)=FXC(IXYZ,IND,2)+PM*VALGA(N,2)+VMB*PN ! FOR BA
+                IND=IND+1
+             END DO
+ 120         CONTINUE
+          END DO
+C
+C     -- DEBUG DENSITY
+         END DO
+         RHO   =RHO   + (RHOI+RHOJ) *WGT(IPT)
+  200 CONTINUE
+C               FXC(IND,1)=FXC(IND,2)
+      END DO
+C     --END GRID LOOP
+C
+      RETURN
+      END
+C
+C
+C*MODULE CPUHF   *DECK EXINT3_ROHF
+C>
+C>    @brief Exchange integral terms for ROHF for Wax 
+C>
+C>    @details Calculate the contribution of ROHF orbital hessian
+C>    terms to second order derivative of the energy with respect to the orbital
+C>    and coordinate from exchange integral of singly occupied molecular orbitals 
+C>
+C>    @author Hiroya Nakata
+C>    - Aug, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param WRK1   work space and dimension is l3*2
+C>    @param WRK2   work space and dimension is l3*2
+C>    @param WRK3   work space and dimension is l3*2
+C>    @param C      molecular orbital coefficient
+C>    @param l1     number of atomic orbital 
+C>    @param l2     number of elements for triangular matrix of AO
+C>    @param NORB   number of moleclar orbital
+C>    @param NOCC   number of occupied molecular orbital for alpha
+C>    @param NVIR   number of virtual  molecular orbital for alpha
+C>    @param NOCCB  number of occupied molecular orbital for beta
+C>    @param NVIRB  number of virtual  molecular orbital for beta
+C>    @param Sa     Derivative of over-lap matrix 
+C>    @param NXYZ   number of cartesian coordinate elements
+C>           --- OUTPUT ---
+C>    @param WAX    The product of U^a and orbital Hessian A for alpha
+C>    @param WAXB   The product of U^a and orbital Hessian A for beta
+      SUBROUTINE EXINT3_ROHF(F,WRK1,WRK2,WRK3,C,L1,L2,NORB,
+     *           NOCC,NVIR,NOCCB,NVIRB,WAX,WAXB,SA,NXYZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION  F(L2),WRK1(*),WRK2(*),WRK3(*),C(L1,L1),
+     *           WAX(NOCC,NVIR,NXYZ),WAXB(NOCCB,NVIRB,NXYZ),
+     *           SA(L2,NXYZ)
+C
+      PARAMETER (MXGTOT=20000, MXSH=5000,MXAO=8192)
+      PARAMETER (ZERO=0.0D+00, ONE=1.0D+00,TWO=2.0D+00)
+C
+      COMMON /IOFILE/ IR,IW,IP,IJKO,IJKT,IDAF,NAV,IODA(950)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /IJPAIR/ IA(MXAO)
+C     
+      SCAL =8.0D+00
+C     
+      L3 = L1 * L1
+      NQI= NORB
+      CALL VCLR(SA,1,L2*NXYZ)
+C
+      CALL DAREAD(IDAF,IODA,WRK1,L3,63,0)
+      CALL DAREAD(IDAF,IODA,WRK2,L3,64,0)
+      CALL DAREAD(IDAF,IODA,WRK3,L3,65,0)
+
+
+      DO 150 ISHELL = 1,NSHELL
+         IAT  = KATOM(ISHELL)
+         IXYZ = 3*(IAT-1)
+         LOCI = KLOC(ISHELL) - KMIN(ISHELL)
+         MINI = KMIN(ISHELL)
+         MAXI = KMAX(ISHELL)
+         DO 140 I = MINI,MAXI
+            II   = LOCI + I
+            DO 130 JJ = 1,L1
+               IJ = IA(MAX(II,JJ)) + MIN(II,JJ)
+c              write(6,'("IA chk=",3I4)') IJ,II,JJ
+               SA(IJ,IXYZ+1) = SA(IJ,IXYZ+1) + WRK1(II+(JJ-1)*L1)
+               SA(IJ,IXYZ+2) = SA(IJ,IXYZ+2) + WRK2(II+(JJ-1)*L1)
+               SA(IJ,IXYZ+3) = SA(IJ,IXYZ+3) + WRK3(II+(JJ-1)*L1)
+  130       CONTINUE
+  140    CONTINUE
+  150 CONTINUE
+
+      CALL TFTRI(WRK2,F,C,WRK3,L1,L1,L1)
+      CALL CPYTSQ(WRK2,WRK1,NORB,1)
+C
+      DO IXYZ=1,NXYZ
+        CALL TFTRI(WRK2,SA(1,IXYZ),C,WRK3,L1,L1,L1)
+        CALL VCLR(WRK3,1,L1*L1)
+     
+C       I run s.o.+vir 
+        DO I = NOCCB+1,NORB
+         SCALI=ZERO
+         IF(I.LE.NOCC) SCALI=ONE
+C        K run d.o. + s.o.
+         DO K = 1,NOCC
+           SCALK=ONE
+           IF(K.LE.NOCCB) SCALK=TWO 
+           VAL0 =abs((SCALI-SCALK)/TWO)
+           IF(VAL0.NE.ZERO) THEN
+c            write(6,*) "IK Chk=",I,K
+             IK =IA(I) + K
+             WRK3(I+(K-1)*NORB)=VAL0*WRK2(IK)
+           END IF
+         END DO
+        END DO
+c       I run vir 
+        DO I = 1,NVIR
+c       J run s.o. 
+          DO J = NOCCB+1,NOCC
+           SCALJ=ONE
+c          K run d.o. 
+           DO K = 1,NOCCB
+            SCALK=TWO 
+            VAL0 =abs((SCALJ-SCALK)/TWO)
+            JK =IA(J) + K
+            IK =I+NOCC+ NORB*(K-1)
+            WAX(J,I,IXYZ)=WAX(J,I,IXYZ)+VAL0*WRK2(JK)*WRK1(IK)*SCAL
+           END DO
+          END DO
+        END DO
+C     S^{ik} fi-fk + EX_{kj}
+        CALL DGEMM('N','N',NQI,NQI,NQI,SCAL,WRK3,NQI,WRK1,NQI,ZERO,
+     *             WRK2,NQI)
+C
+c       I run vir 
+        DO I = 1,NVIR
+c       J run d.o+s.o. 
+          DO J = 1,NOCC
+           IJ = I+NOCC+NORB*(J-1)
+           WAX(J,I,IXYZ)=WAX(J,I,IXYZ)+WRK2(IJ)
+          END DO
+        END DO
+C
+c       I run s.o.+vir 
+        DO I = 1,NVIRB
+c       J run d.o+s.o. 
+          DO J = 1,NOCCB
+           IJ = I+NOCCB+NORB*(J-1)
+           WAXB(J,I,IXYZ)=WAXB(J,I,IXYZ)+WRK2(IJ)
+          END DO
+        END DO
+C
+C
+      END DO
+
+      RETURN
+      END 
+C
+C
+C*MODULE CPUHF   *DECK SWZVROHF2
+C>
+C>    @brief Construct complete Fock like matrix for ROHF
+C>
+C>    @details Gather Alpha Fock like matrix and Beta Fock like
+C>    matrix together to construct the total matrix product (A*U^a)
+C>
+C>    @author Hiroya Nakata
+C>    - Aug, 2013- Subroutine written
+C>
+C>           --- IN/OUTPUT ---
+C>    @param YA    Alpha Fock like matrix (Z*A)
+C>    @param YB    Beta  Fock like matrix (Z*B)
+C>           --- INPUT ---
+C>    @param NOCD  number of doubly occupied molecular orbital
+C>    @param NOCS  number of singly occupied molecular orbital
+C>    @param NVIRA number of virtual orbital for alpha
+C>    @param NVIRB number of virtual orbital for beta
+C>    @param NXYZ   number of cartesian coordinate elements
+C>
+      subroutine SWZVROHF2(YA,YB,NOCD,NOCS,NVIRA,NVIRB,NXYZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION YA(NOCD+NOCS,NVIRA,NXYZ) 
+      DIMENSION YB(NOCD,NVIRB,NXYZ)
+C      
+c     write(*,'(2f11.8)')ZVECA(ivir,iocc),ZVECB(ivir+NOCS,iocc)
+c     write(*,'("chk val",4I4)') NOCD,NOCS,NVIRA,NVIRB
+      do ixyz=1,nxyz
+        do iv=1,nvira 
+          do io = 1,NOCD
+            YA(io,iv,ixyz)      = YB(io,iv+NOCS,ixyz) + YA(io,iv,ixyz)
+            YA(io,iv,ixyz)      = YA(io,iv,ixyz)      * 0.5D+00    
+            YB(io,iv+NOCS,ixyz) = YA(io,iv,ixyz) 
+          end do
+        end do
+      end do
+C
+      RETURN
+      END
+C
+C*MODULE CPUHF   *DECK EXINT4_ROHF
+C>    @brief Exchange integral terms for ROHF orbital Hessian A
+C>
+C>    @details Calculate the contribution of ROHF orbital hessian
+C>    terms of exchange integral from singly occupied molecular orbitals 
+C>
+C>    @author Hiroya Nakata
+C>    - Aug, 2013- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param WRT1   two electron integral terms of singly occupied orbital
+C>    @param WRK3   work space and dimension is l3*2
+C>    @param WRK1   work space and dimension is l3*2
+C>    @param CX     molecular orbital coefficient
+C>    @param l1     number of atomic orbital 
+C>    @param l2     number of elements for triangular matrix of AO
+C>    @param NQI    number of moleclar orbital
+C>    @param NOCC   number of occupied molecular orbital for alpha
+C>    @param NVIR   number of virtual  molecular orbital for alpha
+C>    @param NOCCB  number of occupied molecular orbital for beta
+C>    @param NVIRB  number of virtual  molecular orbital for beta
+C>    @param ZVEC0A Y^a      for alpha molecular orbital
+C>    @param ZVEC0B Y^a      for beta  molecular orbital
+C>           --- OUTPUT ---
+C>    @param ZVEC1A The product of Y^a      and orbital Hessian A for alpha
+C>    @param ZVEC1B The product of Y^a      and orbital Hessian A for beta
+C>
+      SUBROUTINE EXINT4_ROHF(WRT1,WRK3,WRK1,CX,L1,L2,
+     *                       NQI,NOCC,NVIR,NOCCB,NVIRB,
+     *                       ZVEC0A,ZVEC0B,ZVEC1A,ZVEC1B)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (TWO=2.0D+00)
+      PARAMETER (ONE=1.0D+00,ZERO=0.0D+00)
+C
+      DIMENSION WRT1(*),CX(l1,*)
+      DIMENSION WRK3(NQI,NQI,2),WRK1(*)
+      DIMENSION ZVEC0A(NOCC,NVIR),ZVEC0B(NOCCB,NVIRB)
+      DIMENSION ZVEC1A(NOCC,NVIR),ZVEC1B(NOCCB,NVIRB)
+C
+      SCAL = 8.0D+00
+C
+C     AO -->  MO
+      CALL TFTRI(WRK1,WRT1,CX,WRK3,L1,L1,L1)
+c     write(*,*) "TEST00"
+c     write(*,*) (WRK1(iii),III=1,L1)
+C
+      DO I = 1,NQI
+        SCALI=ZERO
+        IF(I.LE.NOCCB) SCALI = TWO 
+        IF(I.LE.NOCC.AND.I.GT.NOCCB) SCALI = ONE
+        DO K = 1,I
+C
+          WRK3(I,K,1) = ZERO
+          WRK3(K,I,1) = ZERO
+C
+          SCALK=ZERO
+          IF(K.LE.NOCCB) SCALK = TWO 
+          IF(K.LE.NOCC.AND.K.GT.NOCCB) SCALK = ONE
+          DUM       = abs((SCALI-SCALK)/TWO) 
+          IF(DUM.NE.ZERO) THEN
+            IF(SCALI.EQ.ZERO) THEN
+C         ALPHA ZVEC0 IS USED
+              IVIR = I - NOCC
+              KOCC = K 
+              WRK3(I,K,1) = DUM * ZVEC0A(KOCC,IVIR)
+c             WRK3(K,I,1) = DUM * ZVEC0A(IVIR,KOCC)
+            ELSE IF(SCALI.EQ.ONE) THEN
+C         BETA  ZVEC0 IS USED
+              IVIR = I - NOCCB
+              KOCC = K 
+c             WRK3(K,I,1) = DUM * ZVEC0B(IVIR,KOCC)
+              WRK3(I,K,1) = DUM * ZVEC0B(KOCC,IVIR)
+            END IF
+          END IF
+        END DO
+      END DO
+      CALL CPYTSQ(WRK1,WRK1(l2+1),NQI,1)
+C   CONSTRUCT TERM1, TERM2, TERM4,
+      CALL DGEMM('N','N',NQI,NQI,NQI,SCAL,WRK3,NQI,WRK1(L2+1),NQI,
+     *             ZERO, WRK3(1,1,2),NQI)
+C     ALPHA (from virtual to doubly or singly occupied orbital)
+      DO I=1,NVIR
+         DO J=1,NOCC
+           II=I+NOCC
+           ZVEC1A(J,I)=ZVEC1A(J,I)+WRK3(II,J,2)
+         END DO
+C     TERM 4
+         DO J=NOCCB+1,NOCC
+           II=I+NOCC
+           ZVEC1A(J,I)=ZVEC1A(J,I)+WRK3(J,II,2)
+         END DO
+      END DO
+C     BETA  (from virtual or singly occupied to doubly occupied orbital)
+      DO I=1,NVIRB
+         DO J=1,NOCCB
+           II=I+NOCCB
+           ZVEC1B(J,I)=ZVEC1B(J,I)+WRK3(II,J,2)
+         END DO
+      END DO
+C   CONSTRUCT TERM3, TERM5 and TERM6         
+      CALL DGEMM('N','N',NQI,NQI,NQI,SCAL,WRK1(l2+1),NQI,
+     *     WRK3,NQI,ZERO, WRK3(1,1,2),NQI)
+C     ALPHA (from virtual to doubly or singly occupied orbital)
+      DO I=1,NVIR
+         DO J=1,NOCC
+           II=I+NOCC
+           ZVEC1A(J,I)=ZVEC1A(J,I)+WRK3(II,J,2)
+         END DO
+      END DO
+C     BETA  (from virtual or singly occupied to doubly occupied orbital)
+      DO I=1,NVIRB
+         DO J=1,NOCCB
+           II=I+NOCCB
+           ZVEC1B(J,I)=ZVEC1B(J,I)+WRK3(II,J,2)
+         END DO
+      END DO
+C     TERM3
+      DO I=1,NVIRB-NVIR
+         DO J=1,NOCCB
+           II=I+NOCCB
+           ZVEC1B(J,I)=ZVEC1B(J,I)+WRK3(J,II,2)
+         END DO
+      END DO
+
+      RETURN
+      END
+C
+C
+C*MODULE CPUHF   *DECK CPWAB1_ROHF
+C>    @brief ROHF specific term related to energy weighted density terms
+C>
+C>    @details    Calculate S^a*F*S^b and add the contribution to total
+C>                Hessian matrix.
+C>            
+C>    @author Hiroya Nakata
+C>    - Apr, 2013- Subroutine written
+C>
+C>           --- INPUT/OUTPUT ---
+C>    @param    FCM    Foce constant matrix
+C>           --- INPUT ---
+C>    @param  TA       Derivative of overlap integral for alpha
+C>    @param  TB       Derivative of overlap integral for beta
+C>    @param NOCC      Number of alpha occupied molecular orbital
+C>    @param NOCCB     Number of beta occupied molecular orbital
+C>    @param NOCC2     Number of elements in triangular matrix of alpha occupied MO
+C>    @param NOCCB2    Number of elements in triangular matrix of beta occupied MO
+C>    @param   NXYZ    Number of cartesian coodinate elements
+C>    @param WRK       temporary work for two electron integral
+C>    @param   IA      Indice for triangular matrix elements
+C>    @param   L1      Number of atomic orbital
+C>    @param NQMT      Number of molecular orbital
+      SUBROUTINE CPWAB1_ROHF(FCM,TA,TB,C,NOCC,NOCCB,NOCC2,NOCCB2,
+     *           NXYZ,WRK,IA,L1,NQMT)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION FCM(NXYZ,NXYZ),TA(NOCC2,NXYZ)
+      DIMENSION TB(NOCCB2,NXYZ),WRK(*),C(*)
+      DIMENSION IA(*)
+C
+      COMMON /IOFILE/ IR,IW,IP,IJKO,IJKT,IDAF,NAV,IODA(950)
+C
+      PARAMETER (ZERO=0.0D+00, FOUR=4.0D+00)
+C
+C     ----- ADD (EI+EJ)*TA*TB CONTRIBUTION TO HESSIAN -----
+c     SCAL=EIGHT
+      SCAL = FOUR*2.0D+00
+      l2   = (L1+L1*L1)/2
+c     l3   = l1*l1
+      CALL DAREAD(IDAF,IODA,WRK(L2+1),l2,14,0)
+      CALL TFTRI(WRK,WRK(L2+1),C,WRK(L2*2+1),NQMT,L1,L1)
+C
+      DO 210 IXYZ=1,NXYZ
+         DO 200 JXYZ=1,IXYZ
+            DUM=ZERO
+            DO IOCC=1,NOCC
+               DO JOCC=1,NOCC
+                 IJ=IA(MAX(IOCC,JOCC))+MIN(IOCC,JOCC)
+                 DO  KOCC=1,NOCC
+                  KI=IA(MAX(IOCC,KOCC))+MIN(IOCC,KOCC)
+                  JK=IA(MAX(KOCC,JOCC))+MIN(KOCC,JOCC)
+                  DUM=DUM+WRK(IJ)*TA(KI,IXYZ)*TA(JK,JXYZ)
+                 END DO
+               END DO 
+            END DO 
+            DUM=DUM*SCAL
+            FCM(IXYZ,JXYZ)=FCM(IXYZ,JXYZ)+DUM
+            IF(JXYZ.EQ.IXYZ) GO TO 200
+            FCM(JXYZ,IXYZ)=FCM(JXYZ,IXYZ)+DUM
+  200    CONTINUE
+  210 CONTINUE
+C
+      CALL DAREAD(IDAF,IODA,WRK(L2+1),l2,18,0)
+      CALL TFTRI(WRK,WRK(L2+1),C,WRK(L2*2+1),NQMT,L1,L1)
+C
+      DO 230 IXYZ=1,NXYZ
+         DO 220 JXYZ=1,IXYZ
+            DUM=ZERO
+            DO IOCC=1,NOCCB
+              DO JOCC=1,NOCCB
+                IJ=IA(MAX(IOCC,JOCC))+MIN(IOCC,JOCC)
+                DO  KOCC=1,NOCCB
+                 KI=IA(MAX(IOCC,KOCC))+MIN(IOCC,KOCC)
+                 JK=IA(MAX(KOCC,JOCC))+MIN(KOCC,JOCC)
+                 DUM=DUM+WRK(IJ)*TB(KI,IXYZ)*TB(JK,JXYZ)
+                END DO
+              END DO
+            END DO
+            DUM=DUM*SCAL
+            FCM(IXYZ,JXYZ)=FCM(IXYZ,JXYZ)+DUM
+            IF(JXYZ.EQ.IXYZ) GO TO 220
+            FCM(JXYZ,IXYZ)=FCM(JXYZ,IXYZ)+DUM
+  220    CONTINUE
+  230 CONTINUE
+C
+      RETURN
+      END

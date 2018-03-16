@@ -1,0 +1,129 @@
+!   F2 energy from CR-CCSD(T)_L theory...only 20 AOs, tests frozen virtuals
+!   This run's machine resource requirements are trivial.
+!   Test case was supplied by Marta in November 2005
+!
+!   run in D4h symmetry, where the symmetry apparatus in GAMESS ensures
+!   clean pi-x and pi-y orbitals, the energies are
+!      G.S. CR-CC(2,3),A CORRECTION  -.004896, TOTAL E=     -198.9657353073
+!      G.S. CR-CC(2,3),B CORRECTION  -.004624, TOTAL E=     -198.9654632927
+!      G.S. CR-CC(2,3),C CORRECTION  -.006272, TOTAL E=     -198.9671117227
+!      G.S. CR-CC(2,3),D CORRECTION  -.006191, TOTAL E=     -198.9670302186
+!   The numbers above are the expected result obtained by this input.
+!
+!   this test requires 0 seconds on 2.66 GHz Cloverton (30 Oct 2009)
+!
+!   ---------------------------------------------------------------------
+!   run in C1 symmetry on an IBM, taking its diagonalization's choice for
+!   how the pi orbitals turn out, we get
+!      G.S. CR-CC(2,3),A CORRECTION  -.004896, TOTAL E=     -198.9657353073
+!      G.S. CR-CC(2,3),B CORRECTION  -.004624, TOTAL E=     -198.9654632927
+!      G.S. CR-CC(2,3),C CORRECTION  -.006291, TOTAL E=     -198.9671308426
+!      G.S. CR-CC(2,3),D CORRECTION  -.006213, TOTAL E=     -198.9670523448
+!   From this we can see the type D energy, which is considered the best
+!   energy result, is not invariant to rotation of degenerate orbitals,
+!   but type A is, and thus is the most suitable for nuclear derivatives.
+!
+!   Therefore, an optimization will work on energy -A- as follows:
+!   NSERCH=  0     ENERGY=    -198.9657353, RMS GRADIENT =  .0410314
+!   NSERCH=  1     ENERGY=    -198.9725466, RMS GRADIENT =  .0075003
+!   NSERCH=  2     ENERGY=    -198.9730170, RMS GRADIENT =  .0032381
+!   NSERCH=  3     ENERGY=    -198.9731063, RMS GRADIENT =  .0006374
+!   NSERCH=  4     ENERGY=    -198.9731093, RMS GRADIENT =  .0000405
+!   NSERCH=  5     ENERGY=    -198.9731093, RMS GRADIENT =  .0000005
+!   numerical results have not changed since 19 March 2007
+!
+ $contrl scftyp=rhf cctyp=cr-ccl runtyp=energy units=bohr $end
+--- $contrl runtyp=optimize numgrd=.true. $end
+ $system mwords=1 $end
+ $guess  guess=huckel $end
+ $ccinp  ncore=2 nfzv=2 $end
+ $eominp noact=2 nuact=7 $end
+
+--- $contrl cctyp=cr-eom $end
+--- $scf nconv=10 $end
+--- $ccinp nfzv=2 ncore=2 iconv=10 ccprp=.true. $end
+--- $eominp maxeom=100 cvgeom=1.0d-7 minit=1 meom=0 noact=2 nuact=7 $end
+--- $eominp nstate(1)=0,0,0,0 $end
+
+      comment out this data group to use a no-symmetry one below.
+
+ $data
+F2...this is not cc-pVDZ for F, it is Marta's "DZDUNN" from external file?
+Dnh 4
+
+F   9.0   0.00000000    0.0000000    2.6681600/2
+ s 6
+    1          9994.7900000      0.002016998646
+    2          1506.0300000      0.015294989735
+    3           350.2690000      0.073109950931
+    4           104.0530000      0.246419834613
+    5            34.8432000      0.612592588852
+    6             4.3688000      0.242488837251
+ s 1
+    1            12.2164000      1.0
+ s 1
+    1             1.2078000      1.0
+ s 1
+    1             0.3634000      1.0
+ p 4
+    1            44.3555000      0.020868000628
+    2            10.0820000      0.130092003916
+    3             2.9959000      0.396219011926
+    4             0.9383000      0.620368018673
+ p 1
+    1             0.2733000      1.0
+
+ $end
+
+ $data
+F2...this allows arbitrary scrambling of pi orbitals due to C1 group
+C1
+F   9.0   0.00000000    0.0000000   -2.6681600/2
+ s 6
+    1          9994.7900000      0.002016998646
+    2          1506.0300000      0.015294989735
+    3           350.2690000      0.073109950931
+    4           104.0530000      0.246419834613
+    5            34.8432000      0.612592588852
+    6             4.3688000      0.242488837251
+ s 1
+    1            12.2164000      1.0
+ s 1
+    1             1.2078000      1.0
+ s 1
+    1             0.3634000      1.0
+ p 4
+    1            44.3555000      0.020868000628
+    2            10.0820000      0.130092003916
+    3             2.9959000      0.396219011926
+    4             0.9383000      0.620368018673
+ p 1
+    1             0.2733000      1.0
+
+F   9.0   0.00000000    0.0000000    2.6681600/2
+ s 6
+    1          9994.7900000      0.002016998646
+    2          1506.0300000      0.015294989735
+    3           350.2690000      0.073109950931
+    4           104.0530000      0.246419834613
+    5            34.8432000      0.612592588852
+    6             4.3688000      0.242488837251
+ s 1
+    1            12.2164000      1.0
+ s 1
+    1             1.2078000      1.0
+ s 1
+    1             0.3634000      1.0
+ p 4
+    1            44.3555000      0.020868000628
+    2            10.0820000      0.130092003916
+    3             2.9959000      0.396219011926
+    4             0.9383000      0.620368018673
+ p 1
+    1             0.2733000      1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

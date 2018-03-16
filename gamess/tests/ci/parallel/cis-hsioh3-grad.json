@@ -1,0 +1,685 @@
+{
+  "name": "cis-hsioh3-grad.log",
+  "validation": [
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-1087.8726063183",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "382.9698340388",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "189.1856182149",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-515.7171540646",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "189.1856182149",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "382.9698340388",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-1603.6644405795",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-1031.5089883258",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL KINETIC ENERGY",
+      "value": "515.7918342612",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "1.9998552125",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-516.0525651563",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "GRADIENT",
+      "name": "MAXIMUM GRADIENT",
+      "value": "0.081858342",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "GRADIENT",
+      "name": "RMS GRADIENT",
+      "value": "0.027961561",
+      "type": "float",
+      "precision": 7,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE X : STATE -5",
+      "value": "-0.314918",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE X : STATE -4",
+      "value": "0.455549",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE X : STATE -3",
+      "value": "-1.003905",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE X : STATE -2",
+      "value": "-0.287750",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE X : STATE -1",
+      "value": "-0.177354",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Y : STATE -5",
+      "value": "0.495394",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Y : STATE -4",
+      "value": "-0.598977",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Y : STATE -3",
+      "value": "-0.161532",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Y : STATE -2",
+      "value": "0.594640",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Y : STATE -1",
+      "value": "0.180894",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Z : STATE -5",
+      "value": "0.377462",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Z : STATE -4",
+      "value": "-0.051302",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Z : STATE -3",
+      "value": "-1.106711",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Z : STATE -2",
+      "value": "0.236671",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE Z : STATE -1",
+      "value": "0.508409",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE NORM : STATE -5",
+      "value": "0.697902",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE NORM : STATE -4",
+      "value": "0.754275",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE NORM : STATE -3",
+      "value": "1.502907",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE NORM : STATE -2",
+      "value": "0.701719",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "STATE DIPOLE",
+      "name": "DIPOLE NORM : STATE -1",
+      "value": "0.568028",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "3.900980",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -5",
+      "value": "-0.049711",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -4",
+      "value": "0.069037",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -3",
+      "value": "0.185997",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -2",
+      "value": "-0.392031",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE X : TRANSITION -1",
+      "value": "-0.138985",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -5",
+      "value": "-0.194633",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -4",
+      "value": "0.082862",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -3",
+      "value": "-0.048239",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -2",
+      "value": "0.017564",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Y : TRANSITION -1",
+      "value": "-0.676005",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -5",
+      "value": "-0.212282",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -4",
+      "value": "0.001944",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -3",
+      "value": "0.293076",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -2",
+      "value": "0.018982",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE Z : TRANSITION -1",
+      "value": "-0.410922",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -5",
+      "value": "0.292262",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -4",
+      "value": "0.107871",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -3",
+      "value": "0.350450",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -2",
+      "value": "0.392883",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TRANSITION DIPOLE",
+      "name": "TRANSITION DIPOLE NORM : TRANSITION -1",
+      "value": "0.803216",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "TDDFT",
+      "name": "OSCILLATOR STRENGTH : TRANSITION 1",
+      "value": "0.003972",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "TDDFT",
+      "name": "OSCILLATOR STRENGTH : TRANSITION 2",
+      "value": "0.000528",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "TDDFT",
+      "name": "OSCILLATOR STRENGTH : TRANSITION 3",
+      "value": "0.000474",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "TDDFT",
+      "name": "OSCILLATOR STRENGTH : TRANSITION 4",
+      "value": "0.000167",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "TDDFT",
+      "name": "OSCILLATOR STRENGTH : TRANSITION 5",
+      "value": "0.000259",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS ENERGY : STATE -1",
+      "value": "-515.7048622265",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 1e-09
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS TRANSITION DIPOLE X : STATE -1",
+      "value": "-0.095221",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS TRANSITION DIPOLE Y : STATE -1",
+      "value": "0.046286",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS TRANSITION DIPOLE Z : STATE -1",
+      "value": "-0.076979",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS TRANSITION DIPOLE NORM : STATE -1",
+      "value": "0.130902",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE X : STATE -5",
+      "value": "-0.314918",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE X : STATE -4",
+      "value": "0.455549",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE X : STATE -3",
+      "value": "-1.003905",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE X : STATE -2",
+      "value": "-0.287750",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE X : STATE -1",
+      "value": "-0.177354",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Y : STATE -5",
+      "value": "0.495394",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Y : STATE -4",
+      "value": "-0.598977",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Y : STATE -3",
+      "value": "-0.161532",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Y : STATE -2",
+      "value": "0.594640",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Y : STATE -1",
+      "value": "0.180894",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Z : STATE -5",
+      "value": "0.377462",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Z : STATE -4",
+      "value": "-0.051302",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Z : STATE -3",
+      "value": "-1.106711",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Z : STATE -2",
+      "value": "0.236671",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE Z : STATE -1",
+      "value": "0.508409",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE NORM : STATE -5",
+      "value": "0.697902",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE NORM : STATE -4",
+      "value": "0.754275",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE NORM : STATE -3",
+      "value": "1.502907",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE NORM : STATE -2",
+      "value": "0.701719",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    },
+    {
+      "header": "CI-SINGLE",
+      "name": "CIS EXPTCTN. VAL. DIPOLE NORM : STATE -1",
+      "value": "0.568028",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 5e-05
+    }
+  ]
+}

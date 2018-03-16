@@ -1,0 +1,21 @@
+{
+  "name": "cmirs-superoxide.log",
+  "validation": [
+    {
+      "header": "SPIN",
+      "name": "S-SQUARED",
+      "value": "0.756",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.000013",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

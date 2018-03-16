@@ -1,0 +1,42 @@
+!   protonated methanol in water.   SMD/IEF-PCM using M06-2X functional.
+!
+!   The 1st step is a gas-phase total energy calculation:
+!   FINAL R-M06-2X ENERGY IS     -115.95190020409 FTER  18 ITERATIONS
+!
+!   The 2nd step is a liquid-phase total energy calculation:
+!   SURFACE AREA=    65.23794128(A**2)    CAVITY VOLUME=  42.34883410 (A**3)
+!   FINAL R-M06-2X ENERGY IS     -116.0796919821 AFTER   9 ITERATIONS
+!
+!   The free energy of solvation is a difference between those two
+!
+!             -------   RESULTS OF SMD CALCULATION   -------
+!     DELTA INTERNAL ENERGY        =    1.09 KCAL/MOL
+!     ELECTROSTATIC INTERACTION    =  -84.60 KCAL/MOL
+!     CDS INTERACTION              =    3.33 KCAL/MOL
+!     FREE ENERGY OF SOLVATION     =  -80.19 KCAL/MOL
+!     FREE ENERGY OF SOLVATION     =  -78.30 KCAL/MOL (1 ATM STANDARD STATE)
+!
+!  This run takes 55 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!
+ $CONTRL SCFTYP=RHF dfttyp=m06-2x icharg=+1 RUNTYP=ENERGY ispher=1 $end
+ $system mwords=1 $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+
+ $PCM    SOLVNT=WATER SMD=.T. IEF=-3 $END
+ $TESCAV MTHALL=2 NTSALL=240 $END
+
+ $DATA
+SMD/M06-2X/6-31G(d) solvation energy - protonated methanol CH3OH2+ in water
+C1
+H         1   -0.996782    1.138765    0.000000
+C         6    0.038330    0.800183    0.000000
+O         8    0.038330   -0.725816    0.000000
+H         1    0.585508    1.066678    0.901842
+H         1    0.585508    1.066678   -0.901842
+H         1   -0.355429   -1.133347   -0.803114
+H         1   -0.355429   -1.133347    0.803114
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

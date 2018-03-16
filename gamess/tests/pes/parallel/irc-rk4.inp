@@ -1,0 +1,36 @@
+!  NH3 pyramidalization, by the 4th order Runge-Kutta stepper
+!     (see the similar AMPC4 test case for more details)
+!
+!  the RK4 stepper should yield this path information:
+!     point 1, STOTAL= 0.17134, RHF E= -56.1650174004
+!     point 2, STOTAL= 0.17756, RHF E= -56.1650274863
+!     point 3, STOTAL= 0.18321, RHF E= -56.1650341539
+!     point 4, STOTAL= 0.18942, RHF E= -56.1650414397
+!  the predicted point 5 should be at S=0.196361, r(NH)=0.98711,
+!  and ang(HNH)=119.56.  Its energy is not computed in this run.
+!
+!  This run takes 0 seconds on a 2.66 GHz Cloverton (30 Apr 2015)
+!  results haven't changed significantly since 1999
+!
+ $CONTRL SCFTYP=RHF RUNTYP=IRC NZVAR=6  $END
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 $end
+ $DATA
+AMMONIA ... 6-31G...INTRINSIC REACTION COORDINATE
+CNV      3
+
+NITROGEN    7.0
+HYDROGEN    1.0   0.9864
+ $END
+ $GUESS  GUESS=huckel $END
+ $ZMAT   IZMAT(1)=1,1,2  1,1,3  1,1,4  2,3,1,2  2,4,1,2  3,4,1,2,3  $END
+ $IRC    PACE=RK4  SADDLE=.TRUE.  STRIDE=0.01  EVIB=0.0001
+         FORWRD=.TRUE.  STABLZ=.FALSE.  NPOINT=5
+         FREQ=424.3   CMODE(1)=0.0,0.0,0.123701201,
+                            0.0,0.0,-0.572915937,
+                            0.0,0.0,-0.572915937,
+                            0.0,0.0,-0.572915937      $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

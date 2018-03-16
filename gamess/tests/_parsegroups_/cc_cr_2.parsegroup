@@ -1,0 +1,54 @@
+{
+  "parse_header" : "COUPLED-CLUSTER : COMPLETELY RENORMALIZED",
+  "parse_group" : [
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)IA.*$",
+     "parse_name"   : "GS CR-CCSD(T)  IA ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)IB.*$",
+     "parse_name"   : "GS CR-CCSD(T)  IB ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)IC.*$",
+     "parse_name"   : "GS CR-CCSD(T)  IC ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)ID.*$",
+     "parse_name"   : "GS CR-CCSD(T)  ID ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)IIA.*$",
+     "parse_name"   : "GS CR-CCSD(T) IIA ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)IIB.*$",
+     "parse_name"   : "GS CR-CCSD(T) IIB ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)IIC.*$",
+     "parse_name"   : "GS CR-CCSD(T) IIC ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^ GROUND STATE CR-CCSD\\(T\\)IID.*$",
+     "parse_name"   : "GS CR-CCSD(T) IID ENERGY",
+     "parse_value_index" : 1,
+     "parse_instance" : -1
+   }
+  ]
+}

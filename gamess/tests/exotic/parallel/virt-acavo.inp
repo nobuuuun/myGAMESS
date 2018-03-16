@@ -1,0 +1,57 @@
+!   C4H4...ACAVO-type altered virtuals...100 AOs, 96 MOs.
+!   the HOMO is #14 and 1st unocc is #15.
+!
+!   converged E= -153.6838881571, 13 iters,
+!   but the point of this run is eigenvalues:
+!   ACAVO=.TRUE.: e(14,b2)=-0.2955  e(15,b1)= -0.3040   <--- this run
+!         MVOQ=4: e(14,b2)=-0.2955  e(15,b2)= -1.0746
+!
+!   This run takes 1 seconds on a 2.66 GHz Cloverton (28 APr 2015)
+!   results have not changed since 2005.
+!
+ $contrl scftyp=rhf runtyp=energy coord=zmt nzvar=22 ispher=+1 $end
+ $system mwords=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 diffsp=.t. diffs=.t. $end
+ $guess  guess=huckel $end
+ $scf    acavo=.true. mvoq=0 $end
+ $data
+methylenecyclopropene...RHF/6-31++G(d,p) geometry (6d geometry)
+Cnv 2
+
+C 
+C 1 rCCa
+C 2 rCCb 1 aCCC
+C 2 rCCb 1 aCCC  3 180.0
+H 1 rCHa 2 aHCCa 3   0.0
+H 1 rCHa 2 aHCCa 3 180.0
+H 3 rCHb 2 aHCCb 1   0.0
+H 4 rCHb 2 aHCCb 1   0.0
+
+rCCa=1.3255845
+rCCb=1.4259892
+rCHa=1.0741248
+rCHb=1.0686219
+aCCC=152.77249
+aHCCa=120.75970
+aHCCb=148.83911
+ $end
+ $zmat  izmat(1)=1,1,2, 1,2,3, 1,2,4, 1,3,4, 1,1,5, 1,1,6, 1,3,7, 1,4,8, 
+           2,1,2,3,  2,1,2,4,  4,1,2,3,4,
+           2,5,1,6,  2,5,1,2,  2,6,1,2,  4,2,1,5,6,   3,3,2,1,5,
+           2,7,3,2,  2,7,3,4,  4,7,3,2,4,
+           2,8,4,2,  2,8,4,3,  4,8,4,2,3
+
+        ijs(1)= 1,1,  2,2,  3,3,  4,4,  5,5,  6,6,  7,7,  8,8,
+            9, 9,10, 9,   11,10,
+           12,11,13,11,14,11,   13,12,14,12,   15,13,   16,14,
+           17,15,18,15,   19,16,
+           20,17,21,17,   22,18
+
+        sij(1)=1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
+            1.0,-1.0,    1.0,
+            2.0,-1.0,-1.0,    1.0,-1.0,   1.0,   1.0,
+            1.0,-1.0,    1.0,
+            1.0,-1.0,    1.0   $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,21 @@
+#!/bin/csh
+set E0=-2.7272489283
+set G0=0.0000000
+set I0=0.00616
+set W0=1161.289
+
+set E=`grep "FINAL RDFTB" $1 | tail -1 | awk '{ print $5 }'`0
+set G=`grep "RMS G" $1 | tail -1 | awk '{ print $8 }'`0
+set I=`grep "IR INTENSITY:" $1 | tail -1 | awk '{ print $5 }'`0
+set W=`grep "^    18    " $1 | tail -1 | awk '{ print $2 }'`0
+set ierr=0
+set Eerr=`$chkabs $E $E0 $tolE`
+if($status != 0) set ierr=1
+set Gerr=`$chkabs $G $G0 $tolG`
+if($status != 0) set ierr=1
+set Ierr=`$chkabs $I $I0 $tolI`
+if($status != 0) set ierr=1
+set Werr=`$chkabs $W $W0 $tolW`
+if($status != 0) set ierr=1
+echo -n "Eerr=$Eerr Gerr=$Gerr Ierr=$Ierr Werr=$Werr. "
+exit $ierr

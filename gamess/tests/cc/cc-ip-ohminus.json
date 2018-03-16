@@ -1,0 +1,157 @@
+{
+  "name": "cc-ip-ohminus.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-75.1775966328",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 1",
+      "value": "0.0859554406",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 2",
+      "value": "0.3069873947",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 3",
+      "value": "0.0438475587",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 4",
+      "value": "0.0607587565",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 5",
+      "value": "-0.0088917989",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 6",
+      "value": "0.0175355672",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 7",
+      "value": "-0.0088917989",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt IONIZATION ENERGY : STATE 8",
+      "value": "0.0175355672",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 1",
+      "value": "-75.3092614321",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 2",
+      "value": "-75.0882294780",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 3",
+      "value": "-75.3513693140",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 4",
+      "value": "-75.3344581161",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 5",
+      "value": "-75.4041086716",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 6",
+      "value": "-75.3776813054",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 7",
+      "value": "-75.4041086716",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : IP-EOM",
+      "name": "IP-EOMCCSDt ENERGY : STATE 8",
+      "value": "-75.3776813054",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SPIN",
+      "name": "S-SQUARED",
+      "value": "-0.000",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "3.935972",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

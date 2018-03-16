@@ -1,0 +1,165 @@
+{
+  "name": "cc-crcctq-f2.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-198.6856703757",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "MBPT(2) ENERGY",
+      "value": "-199.0795859484",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD    ENERGY",
+      "value": "-199.0884585720",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD[T] ENERGY",
+      "value": "-199.0979164644",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER",
+      "name": "CCSD(T) ENERGY",
+      "value": "-199.0974826517",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "R-CCSD[T] ENERGY",
+      "value": "-199.0969858164",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "R-CCSD(T) ENERGY",
+      "value": "-199.0965940187",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "CR-CCSD[T] ENERGY",
+      "value": "-199.0963313224",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "CR-CCSD(T) ENERGY",
+      "value": "-199.0959605979",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "   CCSD(TQ),B : CR-CC(Q) ENERGY",
+      "value": "-199.0988047379",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "R1-CCSD(TQ),A : CR-CC(Q) ENERGY",
+      "value": "-199.0977932137",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "R1-CCSD(TQ),B : CR-CC(Q) ENERGY",
+      "value": "-199.0977567010",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "R2-CCSD(TQ),A : CR-CC(Q) ENERGY",
+      "value": "-199.0979737182",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "R2-CCSD(TQ),B : CR-CC(Q) ENERGY",
+      "value": "-199.0979071508",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "CR-CCSD(TQ),A : CR-CC(Q) ENERGY",
+      "value": "-199.0977723179",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : CR-CC(Q)",
+      "name": "CR-CCSD(TQ),B : CR-CC(Q) ENERGY",
+      "value": "-199.0977198601",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "T1 DIAGNOSTIC",
+      "value": "0.00954125",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T1 VECTOR",
+      "value": "0.03570008",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "COUPLED-CLUSTER : DIAGNOSTIC",
+      "name": "NORM OF THE T2 VECTOR",
+      "value": "0.30367320",
+      "type": "float",
+      "precision": 8,
+      "tolerance": 1e-07
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.000000",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "parse_header" : "RAMAN INTENSITY",
+  "parse_group" : [
+   {
+     "regex_string" : "^ Raman Intensity at omega =.*$",
+     "parse_name"   : "RAMAN INTENSITY",
+     "parse_precision" : 2,
+     "parse_tolerance" : 0.1,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 6,
+     "parse_instance" : -1,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "STATE"
+   }
+  ]
+}

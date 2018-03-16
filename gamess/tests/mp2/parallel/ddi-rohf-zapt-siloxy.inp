@@ -1,0 +1,28 @@
+!  Test of RMP style open shell MP2 on triplet (H2SiO)2 cyclic dimer
+!
+!   UHF: F.NAL E=-728.7721882113, 13 iters, E(.P2)= -729.2609489629
+!  ROHF: FINAL E=-728.7692583095, 12 iters, E(MP2)= -729.2603286240
+!
+!  This run takes 1 second on 2.66 GHz Cloverton ( 1 Apr 2015)
+!  results haven't changed much since at least 2005
+!
+ $contrl scftyp=rohf mult=3 runtyp=energy mplevl=2 nzvar=12 $end
+ $system mwords=2 memddi=5 $end
+ $mp2    code=ddi ospt=zapt $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  1,1,4,  1,2,3,  1,2,4,  3,4,1,2,3,
+                  1,1,5,  1,2,6,  2,5,1,2,  2,6,2,1,  3,6,2,1,4,
+                  3,5,1,2,3 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $data
+TCSCF geometry of Si2O2H2
+Cnv 2
+
+SILICON    14.0   1.2068010643   0.0000000000  -0.0173723587
+OXYGEN      8.0   0.0000000000   1.1722030788  -0.0066411809
+HYDROGEN    1.0   2.0196267999   0.0000000000  -1.2587152251
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

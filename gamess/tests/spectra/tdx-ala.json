@@ -1,0 +1,269 @@
+{
+  "name": "tdx-ala.log",
+  "validation": [
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "WAVEFUNCTION NORMALIZATION",
+      "value": "1.0000000000",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ONE ELECTRON ENERGY",
+      "value": "-937.5406914742",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TWO ELECTRON ENERGY",
+      "value": "364.5138719764",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEAR REPULSION ENERGY",
+      "value": "251.1588785141",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL ENERGY",
+      "value": "-321.8679409838",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+      "value": "251.1588785141",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "ELECTRON-ELECTRON POTENTIAL ENERGY",
+      "value": "364.5138719764",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+      "value": "-1258.8796898420",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL POTENTIAL ENERGY",
+      "value": "-643.2069393515",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "TOTAL KINETIC ENERGY",
+      "value": "321.3389983677",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "WAVEFUNCTION PROPERTIES",
+      "name": "VIRIAL RATIO (V/T)",
+      "value": "2.0016460580",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-321.8679409838",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 1",
+      "value": "1.55",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 2",
+      "value": "1.19",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 3",
+      "value": "0.72",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 4",
+      "value": "0.21",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " FREQUENCY 5",
+      "value": "0.49",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 1",
+      "value": "0.00001",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 2",
+      "value": "0.01338",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 3",
+      "value": "0.00577",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 4",
+      "value": "0.00041",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "HESSIAN",
+      "name": " IR INTENSITY 5",
+      "value": "0.00126",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.25
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "1.405241",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "RAMAN INTENSITY",
+      "name": "RAMAN INTENSITY : STATE 1",
+      "value": "0.43",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "RAMAN INTENSITY",
+      "name": "RAMAN INTENSITY : STATE 2",
+      "value": "0.21",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "RAMAN INTENSITY",
+      "name": "RAMAN INTENSITY : STATE 3",
+      "value": "2.38",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "RAMAN INTENSITY",
+      "name": "RAMAN INTENSITY : STATE 4",
+      "value": "0.12",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "RAMAN INTENSITY",
+      "name": "RAMAN INTENSITY : STATE 5",
+      "value": "0.46",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "HYPER RAMAN INTENSITY",
+      "name": "HYPER RAMAN INTENSITY : STATE 1",
+      "value": "15.71",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "HYPER RAMAN INTENSITY",
+      "name": "HYPER RAMAN INTENSITY : STATE 2",
+      "value": "204.52",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "HYPER RAMAN INTENSITY",
+      "name": "HYPER RAMAN INTENSITY : STATE 3",
+      "value": "146.90",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "HYPER RAMAN INTENSITY",
+      "name": "HYPER RAMAN INTENSITY : STATE 4",
+      "value": "84.38",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    },
+    {
+      "header": "HYPER RAMAN INTENSITY",
+      "name": "HYPER RAMAN INTENSITY : STATE 5",
+      "value": "22.43",
+      "type": "float",
+      "precision": 2,
+      "tolerance": 0.1
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+!  This artificial anion, InH2-, is meant to be a short test of
+!  ECP CI gradients for a case with a semi-core ECP basis set.
+!  There are extra complications from ECP, so it is good to keep
+!  this test case as well, as the non-ECP gradients.
+!  There are 38 AOs, and 1009 configurations in the CI-SD.
+!
+!      NSERCH:   0  E=     -189.4241465219, R.M.S.=  0.0012192
+!      NSERCH:   1  E=     -189.4241489228, R.M.S.=  0.0007540
+!      NSERCH:   2  E=     -189.4241848774, R.M.S.=  0.0005093
+!      NSERCH:   3  E=     -189.4241963869, R.M.S.=  0.0001234
+!      NSERCH:   4  E=     -189.4241969028, R.M.S.=  0.0000148
+!      NSERCH:   5  E=     -189.4241969141, R.M.S.=  0.0000005
+!
+!  This run takes 4 seconds on a 2.66 GHz Cloverton (18 Jun 2014)
+!  answers haven't changed since 2009 (and probably a decade before that)
+!
+ $contrl scftyp=rhf cityp=guga runtyp=optimize pp=sbkjc icharg=-1 $end
+ $system mwords=1 $end
+ $statpt opttol=0.00001 $end
+ $cidrt  group=c2v nfzc=9 ndoc=3 nval=26 iexcit=2 $end
+ $basis  gbasis=sbkjc $end
+ $guess  guess=huckel $end
+ $data
+InH2- ion
+Cnv 2
+
+In    49.0    .0000000000    .0000000000   -.5570192213
+H      1.0    .0000000000   1.3931525578    .7800454108
+ $end
+
+! TRAVIS-CI SMALL
+

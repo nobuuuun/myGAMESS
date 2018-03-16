@@ -1,0 +1,18 @@
+{
+  "parse_header" : "GRADIENT",
+  "parse_group" : [
+   {
+     "regex_string" : "^                   MAXIMUM GRADIENT =.*$",
+     "parse_name"   : "MAXIMUM GRADIENT",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_precision" : 7,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^                       RMS GRADIENT =.*$",
+     "parse_name"   : "RMS GRADIENT",
+     "parse_recipe" : "lastinstance_lastindex",
+     "parse_precision" : 7
+   }
+  ]
+}

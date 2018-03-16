@@ -1,0 +1,25 @@
+{
+  "parse_header" : "STATE ENERGIES",
+  "parse_group" : [
+   {
+     "regex_string" : "^ STATE #(\\s*)[0-9]+(\\s*)ENERGY =(\\s*)([-]{0,1}[0-9]+\\.[0-9]+).*$",
+     "parse_name"   : "ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "STATE"
+   },
+   {
+     "regex_string" : "^ STATE(\\s*)[0-9]+(\\s*)ENERGY=(\\s*)([-]{0,1}[0-9]+\\.[0-9]+).*$",
+     "parse_name"   : "ENERGY",
+     "parse_precision" : -1,
+     "parse_tolerance" : -1,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_multiple_instances" : -5,
+     "parse_multiple_label" : "STATE"
+   }
+  ]
+}

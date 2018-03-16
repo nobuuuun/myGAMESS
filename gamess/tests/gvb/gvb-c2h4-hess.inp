@@ -1,0 +1,35 @@
+!   single determinant triplet analytic hessians:
+!      change SCFTYP to ROHF, GVB, or MCSCF
+!   you will need to comment out $SCF for the ROHF case.
+!      F.NAL  ROHF ENERGY IS  -77.9580115937 AFTER   8 ITERATIONS
+!      FINAL   GVB ENERGY IS  -77.9580115937 AFTER   8 ITERATIONS
+!      F.NAL MCSCF ENERGY IS  -77.9580115929 AFTER  15 ITERATIONS
+!   Each run gives a doubly degenerate imaginary fr.quency,
+!   for a pucking motion at the carbon atoms:
+!      imag FREQ: ROHF= 200.42i, GVB= 201.46i, MCSCF= 204.33i (e symmetry)
+!
+!   this run takes 1 seconds on 2.66 GHz Cloverton (10 Sep 2013)
+!
+!      answers updated 10 Sep 2013, old answers had been saved as
+!      ROHF= 204.36i, GVB= 204.26i, MCSCF= 204.34i, 8/8/18 iters
+!
+ $contrl scftyp=gvb mult=3 runtyp=hessian $end
+ $system mwords=10 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $det    ncore=7 nact=2 nels=2 $end
+ $scf    nco=7 nseto=1 no=2 couple=.true.  f(1)=1.0,0.5
+         alpha(1)= 2.0, 1.0, 0.5
+          beta(1)=-1.0,-0.5,-0.5  $end
+ $trans dirtrf=.t. $end
+ $data
+C2H4 at triplet geometry
+Dnd 2
+
+C           6.0   0.0000000000   0.0000000000   0.7324824456
+H           1.0   0.6492311967   0.6492311967   1.2925454191
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

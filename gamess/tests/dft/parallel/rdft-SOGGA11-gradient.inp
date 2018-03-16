@@ -1,0 +1,26 @@
+ $CONTRL DFTTYP=SOGGA11 $END
+ $SYSTEM MWORDS=100 $END
+ $CONTRL MAXIT=200 SCFTYP=RHF RUNTYP=gradient ISPHER=1 UNITS=ANGS
+  EXETYP=RUN COORD=UNIQUE ICHARG=0                   $END
+ $BASIS GBASIS=MIDI                                  $END
+ $SCF DIRSCF=.TRUE.                                  $END
+ $SCF DIIS=.TRUE.                                    $END
+ $SCF SOSCF=.FALSE.                                  $END
+ $STATPT NSTEP=100 OPTTOL=1D-7                       $END
+ $DFT NRAD=48 NLEB=590                               $END
+ $DATA
+ ethyl-alcohol
+C1
+ C           6.0  -1.5166524965   0.2429878258   0.0233028864
+ C           6.0  -0.2320926907  -0.5860603815   0.0670000065
+ O           8.0   0.9501049476   0.2526223823  -0.0609121650
+ H           1.0   0.9867434142   0.8344631636   0.7472581392
+ H           1.0  -2.4088567044  -0.4004882952   0.0234984408
+ H           1.0  -1.5207537969   0.8609191030  -0.8847498517
+ H           1.0  -1.5792995790   0.9120933177   0.8960371554
+ H           1.0  -0.1832013511  -1.2628615879  -0.7940901557
+ H           1.0  -0.1998854931  -1.2035991178   0.9824749039
+ $END
+
+!
+!TRAVIS-CI SMALL

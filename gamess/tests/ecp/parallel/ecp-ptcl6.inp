@@ -1,0 +1,20 @@
+!  PtCl6-2 very easy ECP convergence test...118 AOs, 31 occupied MOs.
+!
+!  FINAL E=-207.1383538401, 11 iters, RMS grad=0.000006486
+!
+!  This run takes 2 seconds on a 42.6 GHz Opteron ( 9 Nov 2005)
+!
+ $contrl scftyp=rhf icharg=-2 runtyp=gradient pp=sbkjc $end
+ $system mwords=1 $end
+ $basis  gbasis=sbkjc ndfunc=1 $end
+ $guess  guess=huckel $end
+ $data
+PtCl6 2-
+Oh
+
+Pt    78.0
+Cl    17.0    .0000000000    .0000000000   2.3821151006
+ $end
+
+! TRAVIS-CI SMALL
+

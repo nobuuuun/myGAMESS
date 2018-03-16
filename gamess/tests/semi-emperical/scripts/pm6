@@ -1,0 +1,21 @@
+#!/bin/bash
+
+
+
+finalE0=-112.30189
+
+finalE=`grep "HEAT OF FORMATION" $1 | head -n 1 | awk '{print $5}'`
+
+tolE0=$tolE
+
+error=0
+
+#total energy
+diffe=`$chkabs $finalE0 $finalE $tolE0`
+if [ $? -ne 0 ]
+then
+  error=$((error + 1))
+fi
+
+printf "RPM6error=%12.8f\n" $diffe
+exit $error

@@ -1,0 +1,25 @@
+!   AuCl4 anion...test of 3rd order DK transformation
+!   Sapporo core/valence basis has 192 AOs and 173 MOs.
+!   The RI step keeps 536 GTOs, dropping only two.
+!
+!   FINAL E= -20856.1090605486, 12 iters, RMS= 0.015058447
+!
+!   This run takes 49 seconds on a 2.66 GHz Cloverton (11 Aug 2015)
+!
+ $contrl scftyp=rhf icharg=-1 relwfn=dk runtyp=gradient ispher=1 $end
+ $system mwords=8 $end
+ $relwfn norder=3 $end
+ $basis  gbasis=SPKrDZC $end
+ $guess  guess=huckel $end
+ $data
+AuCl4 anion...square planar...this is the MIDI RHF NR geometry
+Dnh 4
+
+Au   79.0    .0000000000    .0000000000    .0000000000
+Cl   17.0   1.7230477203   1.7230477203    .0000000000
+ $end
+
+! TRAVIS-CI SMALL
+! TRAVIS-CI SKIP
+! ACCURACY BETWEEN INTEL AND GCC DOES NOT MATCH
+

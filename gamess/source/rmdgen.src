@@ -1,0 +1,291 @@
+C 18 Apr 16 - SRP - tweaks for RMD
+! 18 Mar 14 - OS & SRP - Created source file for FMO/RMD multistate method
+!***********************************************************************
+!*MODULE RMDGEN  *DECK STATE_SEARCH
+!> @brief      Routine sets up RMD molecular dynamics runs
+!>
+!> @author     Olaseni Sode and Spencer R. Pruitt
+!>             -2014
+!>
+!> @details    Routine generates all relevant states
+!>
+!> @date : March 18, 2014 - Olaseni Sode & Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @date : February 18, 2015 - Spencer R. Pruitt
+!>         Changed empirical parameters and added MAX_HOPS as
+!>         passed variable
+!>
+!> @date : April 29, 2015 - Spencer R. Pruitt
+!>         Added MAX_STATES as a pass variable, fixing the number
+!>         of states for a given value of NHOPS
+!>
+!> @param nstates : number of fragmentation states
+!>
+!> @param nfrg : number of fragments
+!>
+!> @param MAX_HOPS : maximum number of hops to allow
+!>
+!> @param MAX_STATES :  maximum number of states to find
+!>
+!> @param init_fragment : initial fragment
+!>
+!> @param init_charges :  initial charges
+!>
+!> @param coord1d : 1D array of coordinates
+!>
+!> @param atom_name : array of atom names
+!>
+!> @param nat : number of atoms
+!***********************************************************************
+      subroutine state_search (nstates,nfrg,MAX_HOPS,MAX_STATES,
+     $                        init_fragment,init_charges,coord1d,
+     $                        atom_name,nat)
+
+      use rmddat, only : reactive      
+
+      implicit none
+
+      double precision, parameter :: cut_OH  = 4.5353D+00 ! Distance cutoff in state search between O and H atoms
+      double precision, parameter :: cut_OH2 = cut_OH * cut_OH !
+      
+      integer, allocatable :: charges(:)
+      integer, allocatable :: fragment(:)
+      integer, allocatable :: available(:)
+      integer, allocatable :: hop_array(:)
+      integer, allocatable :: toBecomeUnavailableNextHop(:) ! Helper array for keeping track of which oxygens are unavailable
+      double precision, allocatable :: coord(:)
+      integer, allocatable :: element(:)
+
+      integer :: nat            ! SRP: Number of atoms
+      integer :: nfrg
+
+      integer :: init_fragment(30*nat)
+      integer :: init_charges(30*nfrg)
+
+      double precision :: coord1d(3*nat)
+
+      integer :: atom_name(nat)
+
+      integer :: natoms
+      integer :: MAX_SPACE
+      integer :: MAX_HOPS
+      integer :: MAX_STATES
+      integer :: ireactive 
+      integer :: hop_length     ! How many hop elements we've counted
+      integer :: hop            ! Hop level
+      integer :: state          ! Current state index from which we are searching
+      integer :: nextstate      ! Next state index in search
+      integer :: ifrag
+      integer :: nstates        ! Number states found
+      integer :: jfrag
+      integer :: kfrag
+      integer :: nBecomeUnavailableNextHop ! Helper counter for keeping track of which oxygens are unavailable
+
+      double precision :: dx
+      double precision :: dy
+      double precision :: dz
+      double precision :: dd
+
+      integer :: count
+      integer :: i
+      integer :: j
+      integer :: k
+      integer :: s
+      integer :: f
+
+      integer :: ME, MASTER, NPROC, IBTYP, IPTIM
+      logical :: GOPARR, DSKWRK, MASWRK
+      
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+      natoms = nat
+      MAX_SPACE = MAX_STATES*natoms
+
+      if(.not.allocated(fragment)) allocate(fragment(1:MAX_SPACE))
+      if(.not.allocated(charges)) allocate(charges(1:MAX_SPACE))
+      if(.not.allocated(hop_array)) allocate(hop_array(1:MAX_SPACE))
+      if(.not.allocated(available)) allocate(available(1:natoms))
+      if(.not.allocated(coord)) allocate(coord(1:natoms*3))
+      if(.not.allocated(element)) allocate(element(1:natoms))
+      if(.not.allocated(toBecomeUnavailableNextHop))
+     $   allocate( toBecomeUnavailableNextHop (1:MAX_SPACE) )
+
+      charges(:)=0
+      coord(:) = coord1d(:)
+      element(:) = atom_name(:)
+
+!     Array of init_charges is not the same size as charges
+
+      do i=1,nfrg
+        charges(i)=init_charges(i)
+      enddo
+
+      nextstate = 1
+      hop = 0
+      hop_length = 1
+      nstates = 1
+      state = 0
+      ireactive = 1
+      nBecomeUnavailableNextHop = 0
+
+!     Find the reactive fragment (fragment consisting of 4 atoms)
+!     If no reactive fragment is found the default will be set to 1
+
+      do f = 1, nfrg
+	count=0
+        do i = 1, natoms
+	  ifrag = init_fragment(i)
+	  if (ifrag == f) then
+	    count = count + 1
+	  endif
+        enddo
+	if (count == 4) then
+	  ireactive=f
+	  exit
+	endif
+      enddo
+
+! Initialize availability and reactive fragment
+! Here, we assume that state zero is the pivot state
+
+      do i = 1, natoms
+
+         fragment(i) = init_fragment(i)
+
+         available(i) = 1       ! Default all to be available
+         hop_array(i) = 0       ! Default to zero, pivot state
+
+!         write (6,*) '  This is atom number = ', i
+!         write (6,*) '  This is atom index  = ', element(i)
+!         write (6,*) '  This atom belongs to fragment  = ', fragment(i)
+
+         ifrag = fragment(i)
+
+! Check if fragment is reactive
+
+         if (ifrag == ireactive) then
+            reactive(i) = 1     ! Fragment reactive
+            if (element(i) == 8) then
+               available(i) = 0 ! Hydronium oxygen is unavailable to accept
+            endif
+         else
+            reactive(i) = 0     ! Fragment not reactive
+         endif
+      enddo
+
+! *** Breadth first search ***
+! Loop until one of following is met:
+! 1. Exhausted all possible donations
+! 2. Maximum hops reached
+! 3. Maximum states reached
+
+      do while ( state<nextstate .and. state<MAX_STATES .and.
+     $            hop<MAX_HOPS )
+
+! Loop through atoms of state and attempt to donate
+! hydronium H's to all possible O's within cutoff that are available
+         do i = 1, natoms
+
+            if ( element(i)==1 .and. available(i)==1 .and.
+     &           reactive(state*natoms+i)==1 ) then
+
+               do j = 1, natoms
+
+                  if ( element(j)==8 .and. available(j)==1
+     &               .and. reactive(state*natoms+j)==0 ) then
+                     dx = coord(3*(i-1)+1) - coord(3*(j-1)+1)
+                     dy = coord(3*(i-1)+2) - coord(3*(j-1)+2)
+                     dz = coord(3*(i-1)+3) - coord(3*(j-1)+3)
+                     dd = dx*dx + dy*dy + dz*dz
+
+                     if ( dd < cut_OH2) then
+              ! Copy current state to next state, setting acceptor fragment
+              ! as the hydronium fragment in the next state
+                        do k = 1, natoms
+               fragment(nstates*natoms+k)  = fragment(state*natoms+k)
+              !add one hop
+               hop_array(nstates*natoms+k) = hop_array(state*natoms+k)+1
+               hop_length = hop_length+1
+
+               if ( fragment(state*natoms+k) ==
+     $              fragment(state*natoms+j) ) then
+                  reactive(nstates*natoms+k) = 1
+               else
+                  reactive(nstates*natoms+k) = 0
+               endif
+                        enddo
+
+              ! Swap fragment index of donated H atom and set to hydronium
+              jfrag = fragment(nextstate*natoms+i)
+              fragment(nextstate*natoms+i) = fragment(state*natoms+j)
+              kfrag = fragment(state*natoms+j)
+              charges(jfrag+nfrg*nextstate)=0
+              charges(kfrag+nfrg*nextstate)=1
+              reactive(nextstate*natoms+i) = 1
+
+              ! New way to handle bifurcation
+              ! Oxygens remain available until we move on to the next hop
+              nBecomeUnavailableNextHop = nBecomeUnavailableNextHop + 1
+              toBecomeUnavailableNextHop(nBecomeUnavailableNextHop) = j
+
+              nstates = nstates+1
+              nextstate = nextstate+1
+
+                     endif
+                  endif
+               enddo
+        available(i) = 0 ! Make donated H atom unavailable for donation now
+            endif
+         enddo
+
+    ! Move on to next state
+         state = state+1
+         if (hop_length > state) then
+            hop = hop_array(state*natoms+1)
+
+            do k = 1, nBecomeUnavailableNextHop
+        ! Make tagged oxygens unavailable now
+               available( toBecomeUnavailableNextHop(k) ) = 0
+
+            enddo
+      ! Clear the vector for next round
+            nBecomeUnavailableNextHop = 0
+
+         endif
+
+      enddo ! close while loop
+
+      if(maswrk) then
+
+      write ( 6, '(a)' )    '  State search done'
+      write ( 6, '(a,i2)' ) '  Final state hop: ', hop
+      write ( 6, '(a,i2)' ) '  Number of states found: ', nstates
+      write(6,9000)
+      write (6,*) ' ZAN        X              Y',
+     *'              Z       Fragmentation States (INDAT)'
+      write(6,9000)
+
+      do i = 1, natoms
+         write ( 6, '(i4,f15.10,f15.10,f15.10,$)' )
+     &   element(i), coord((i-1)*3+1),coord((i-1)*3+2),coord((i-1)*3+3)
+         do s = 1, nstates
+            write( 6, '(i3,$)' ) fragment((s-1)*natoms + i)
+         enddo
+         write( 6, '(a)' ) ' '
+      enddo
+      endif
+
+      init_fragment(:) = fragment(:)
+      init_charges(:) = charges(:)
+
+      deallocate ( fragment )
+      deallocate ( charges )
+      deallocate ( hop_array )
+      deallocate ( available )
+      deallocate ( coord )
+      deallocate ( element )
+      deallocate ( toBecomeUnavailableNextHop )
+ 9000 FORMAT(2X,80(1H-))
+      return
+      end

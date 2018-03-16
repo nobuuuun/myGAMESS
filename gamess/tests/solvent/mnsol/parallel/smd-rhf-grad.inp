@@ -1,0 +1,39 @@
+!   5-fluorouracil in fluorobenzene.
+!   Analytical gradients in solution based on SMD/IEF-PCM protocol
+!
+!   FINAL RHF E= -511.3216643608, 13 iters, RMS= 0.013606702
+!
+!   This run takes 69 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!
+ $CONTRL SCFTYP=RHF RUNTYP=GRADIENT $end
+ $system mwords=1 $end
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+
+ $PCM    SMD=.T. IEF=-3 SOLVNT=C6H5F $END
+!      note that a solvent can be defined by giving its explicit
+!      parameters, such as those for fluorobenzene below:
+x$PCM    SMD=.T. IEF=-3 
+x        EPS=5.42 SOLA=0.0 SOLB=0.1 SOLC=0.857
+x        SOLG=38.37 SOLH=0.143 SOLN=1.4684 $END
+ $TESCAV MTHALL=2 NTSALL=240 $END
+
+ $DATA
+ SMD/HF/6-31G(d) analytical gradients - 5-fluorouracil in fluorobenzene
+C1
+    C          6                     1.141467   -0.533867    0.000024
+    C          6                     0.219183   -1.510611    0.000115
+    C          6                     0.766783    0.881395    0.000604
+    F          9                     2.450890   -0.803045   -0.000175
+    N          7                    -1.129467   -1.213616    0.000057
+    C          6                    -1.635462    0.083524   -0.000622
+    N          7                    -0.630954    1.049278   -0.000017
+    O          8                    -2.827821    0.336192    0.000137
+    O          8                     1.527895    1.832549   -0.000124
+    H          1                     0.499004   -2.558073    0.000208
+    H          1                    -1.828595   -1.956260    0.000242
+    H          1                    -0.957890    2.019536    0.000013
+ $END
+
+
+
+! TRAVIS-CI SMALL

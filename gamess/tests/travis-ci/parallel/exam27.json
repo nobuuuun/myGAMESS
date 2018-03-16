@@ -1,0 +1,74 @@
+{
+  "name": "exam27.log",
+  "validation": [
+    {
+      "header": "parse_header",
+      "name": "SEMI-EMPIRICAL ENERGY",
+      "value": "-9.1287351998",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "parse_header",
+      "name": "HEAT OF FORMATION",
+      "value": "-3.06615",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "ELECTROSTATICS",
+      "name": "DIPOLE MOMENT",
+      "value": "0.135101",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "DRC",
+      "name": "KINETIC ENERGY : DRC",
+      "value": "0.00163",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "DRC",
+      "name": "POTENTIAL ENERGY : DRC",
+      "value": "-9.12874",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "DRC",
+      "name": "TOTAL ENERGY : DRC",
+      "value": "-9.12710",
+      "type": "float",
+      "precision": 5,
+      "tolerance": 0.005
+    },
+    {
+      "header": "DRC",
+      "name": "VELOCITY ARRAY",
+      "value": [
+        "-0.000000000105",
+        "0.000000000000",
+        "-0.006230798226",
+        "0.000022900799",
+        "-0.000039664459",
+        "0.028857623668",
+        "0.000022900800",
+        "0.000039664458",
+        "0.028857623666",
+        "-0.000045800137",
+        "0.000000000000",
+        "0.028857623667"
+      ],
+      "type": "float_array",
+      "precision": 12,
+      "tolerance": 5e-10
+    }
+  ]
+}

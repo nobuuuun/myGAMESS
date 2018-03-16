@@ -1,0 +1,42 @@
+!   (CH2)                       6-311+G(d) has 110 AOs
+!       \
+!        C===CH2    3 such resonance diagrams --> D3h geometry
+!       /
+!   (CH2)      negative spin density example from
+!
+!   The main point of this test case is to check the spin densities!
+!
+!   "spin density and spin correlation in triplet states"
+!        A.D.McLachlan  Mol.Phys. 5, 51-62(1962)
+!   This is a good introduction to early work on experimental
+!   and theoretical identification of negative spin density
+!   in radical states, as well as triplets.
+!
+!   D3h is a minimum, as shown by analytic hessian calculation:
+!
+!   FINAL UHF E= -154.9294658744, <S**2>=2.199, Mulliken spin populations
+!   are +1.175388 on exo C's, -0.970709 on center C, -0.092576 on H's
+!   but diffuse functions make those numbers dodgy.  Spin density at
+!   nuclei are exo C= +0.1371038, center C= -0.1739969, H= -0.0237102
+!
+!   analytic FREQ= 451.80 (e'), 489.67 (a1"), ... 3389.09 (a2'), 3394.25 (e')
+!    seminum FREQ= 451.76 (a'), 489.78 (a'"), ... 3389.11 (a2'), 3394.37 (e')
+!
+!   This test takes 42 seconds on 2.66 GHz Clovertion (5 Dec 2014)
+!
+ $contrl scftyp=uhf mult=3 runtyp=hessian $end
+ $system mwords=5 $end
+ $basis  gbasis=n311 ngauss=6 diffsp=.true. ndfunc=1 $end
+ $scf    dirscf=.true. $end
+ $data
+triplet state of C(CH2)3...UHF/6-311+G(d) geometry...pos.definite
+Dnh 3
+
+C           6.0   0.0000000000   0.0000000000   0.0000000000
+C           6.0   1.4164722202   0.0000000000   0.0000000000
+H           1.0   1.9736799823   0.9191305394   0.0000000000
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

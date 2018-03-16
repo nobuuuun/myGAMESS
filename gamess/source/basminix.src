@@ -1,0 +1,2203 @@
+C 15 MAR 16 - JCK - NEW MODULE FOR HF3c BASIS SETS
+C
+C*MODULE BASMINIX *DECK BASMINIX
+C>
+C>    @brief Minix basis
+C>
+C>    @details provide the minix basis set for the hf-3c method
+C>
+C>    @author Jimmy Kromann
+C>
+C>    @param  NUCZ   Nuclear charges
+C>    @param  CSINP  Temporary coefficients for s functions
+C>    @param  CPINP  Temporary coefficients for p functions
+C>    @param  CDINP  Temporary coefficients for d functions
+C>    @param  CFINP  Temporary coefficients for f functions
+C>    @param  SCFAC  Scaling factors for s, p, d, and f orbitals
+C>    @param  IERR1  Error code to show the violation of MXSH
+C>    @param  IERR2  Error code to show the violation of MXGTOT
+C>    @param  INTYP  Type of the given shell
+C>    @param  NANGM  Angular momentum of the given type
+C>    @param  NBFS   Number of basis functions of the given type
+C>    @param  MINF   KMIN of the given type
+C>    @param  MAXF   KMAX of the given type
+C>    @param  LOC    Counter for KLOC
+C>    @param  NS     Number of shells for the given atom
+C>    @param  EX     Gaussian exponents
+C>    @param  CS     Coefficients for s functions
+C>    @param  CP     Coefficients for p functions
+C>    @param  CD     Coefficients for d functions
+C>    @param  CF     Coefficients for f functions
+C>    @param  KSTART Pointer to Gauss fucntions
+C>    @param  KATOM  Which atom the shell is centered on
+C>    @param  KTYPE  Angular momentum (see ATOMS subroutine)
+C>    @param  KNG    Number of Gauss functions for the given shell
+C>    @param  KLOC   Position in terms of atomic orbitals
+C>    @param  KMIN   Lower bound of the shell
+C>    @param  KMAX   Upper bound of the shell
+C>    @param  NSHELL Number of shells
+C>    @param  MXGTOT Maximum number of Gauss functions
+C>    @param  MXSH   Maximum number of shells
+C>
+C
+      SUBROUTINE BASMINIX(NUCZ,CSINP,CPINP,CDINP,CFINP,
+     *                  SCFAC,IERR1,IERR2,INTYP,NANGM,NBFS,MINF,MAXF,
+     *                  LOC,NGAUSS,NS,EX,CS,CP,CD,CF,KSTART,KATOM,KTYPE,
+     *                  KNG,KLOC,KMIN,KMAX,NSHELL,MXGTOT,MXSH)
+C
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      LOGICAL DONE, GOPARR,DSKWRK,MASWRK, MIDI
+C
+      DIMENSION CSINP(MXGTOT),CPINP(MXGTOT),CDINP(MXGTOT),CFINP(MXGTOT),
+     *          INTYP(*),NANGM(*),NBFS(*),MINF(*),MAXF(*),NS(*),
+     *          EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),CF(MXGTOT),
+     *          KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *          KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),SCFAC(4)
+
+      DIMENSION EEX(45),COEF(45)
+C
+      PARAMETER (MXATM=2000)
+C
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+      DATA ZERO,ONE,PT5,PT75,PT1875/0.0D+00,1.0D+00,0.5D+00,0.75D+00,
+     *            1.875D+00/
+      DATA PI32,TM6,TM10/5.56832799683170D+00,1.0D-06,1.0D-10/
+C
+C     THE MINIX BASIS SET
+C
+C     Table 1. Composition of the MINIX basis set
+C
+C     Element Basis
+C
+C     H-He    MINIS
+C     B-Ne    MINIS
+C     Li-Be   MINIS+1(p)
+C     Na-Mg   MINIS+1(p)
+C     Al-Ar   MINIS+1(d)
+C     K-Zn    SV
+C     Ga-Kr   SVP
+C     Rb-Xe   def2-SV(P) with ECP
+
+      IF(NUCZ.GT.36) THEN
+         IF (MASWRK) WRITE(IW,*)
+     *      'MINIX BASIS SETS ONLY GO TO KRYPTON.'
+         CALL ABRT
+      END IF
+
+      SCALE = ZERO
+      NG = -2**20
+      IGAUSS = NG
+      ITYP = NG
+
+      IERR3=0
+
+      DONE = .FALSE.
+
+      DO 100 I = 1,45
+         EEX(I) = ZERO
+         COEF(I) = ZERO
+  100 CONTINUE
+C
+      IF(NUCZ.LE.0) THEN
+         IF(MASWRK) WRITE(IW,9020) 'MINIX-TYPE', NUCZ
+         CALL ABRT
+      END IF
+ 9020 FORMAT(1X,'REQUESTED BUILT-IN ',A,
+     *          ' BASIS FOR ATOM WITH ILLEGAL CHARGE=',I4)
+C
+C
+C     ----- HYDROGEN TO HELIUM -----
+C
+      IF (NUCZ .GT. 2) GO TO 120
+      CALL MINIXONE(EEX,COEF,NUCZ)
+      GO TO 200
+C
+C     ----- LITHIUM TO NEON -----
+C
+  120 IF (NUCZ .GT. 10) GO TO 130
+      CALL MINIXTWO(EEX,COEF,NUCZ)
+      GO TO 200
+C
+C     ----- SODIUM TO ARGON -----
+C
+  130 IF (NUCZ .GT. 18) GO TO 140
+      CALL MINIXTHREE(EEX,COEF,NUCZ)
+      GO TO 200
+C
+C     ----- POTASSIUM TO KRYPTON -----
+C
+  140 IF(NUCZ.GT.36) GO TO 190
+      CALL MINIXFOUR(EEX,COEF,NUCZ)
+      GO TO 200
+C
+C     ----- PAST KRYPTON IS NOT IMPLEMENTED -----
+C
+  190 CONTINUE
+      STOP
+
+
+  200 CONTINUE
+      IPASS = 0
+  210 IPASS = IPASS+1
+      SCS = SCFAC(1)
+      SCP = SCFAC(2)
+      SCD = SCFAC(3)
+      MIDI = .FALSE.
+      CALL HSHELL(IW,NUCZ,IPASS,MIDI,ITYP,IGAUSS,NG,SCALE,
+     *            SCS,SCP,SCD,DONE)
+      IF(DONE. AND. IERR3.NE.0) THEN
+            CALL ABRT
+      ENDIF
+      IF(DONE) RETURN
+C
+C     ----- DEFINE THE CURRENT SHELL -----
+C
+      NSHELL = NSHELL+1
+      IF(NSHELL.GT.MXSH) THEN
+         IERR1=1
+         RETURN
+      END IF
+      NS(NAT) = NS(NAT)+1
+      KMIN(NSHELL) = MINF(ITYP)
+      KMAX(NSHELL) = MAXF(ITYP)
+      KSTART(NSHELL) = NGAUSS+1
+      KATOM(NSHELL) = NAT
+      KTYPE(NSHELL) = NANGM(ITYP)
+      INTYP(NSHELL) = ITYP
+      KNG(NSHELL) = IGAUSS
+      KLOC(NSHELL) = LOC+1
+      NGAUSS = NGAUSS+IGAUSS
+      IF(NGAUSS.GT.MXGTOT) THEN
+         IERR2=1
+         RETURN
+      END IF
+      LOC = LOC+NBFS(ITYP)
+      K1 = KSTART(NSHELL)
+      K2 = K1+KNG(NSHELL)-1
+CJCK      SCALE = SCALE*SCALE
+CJCK
+CJCK  DO NOT SCALE MINIX, BECAUSE MINIS IS ALREADY SCALED
+CJCK  SCALE = 1.0d0
+CJCK
+      DO 440 I = 1,IGAUSS
+         K = K1+I-1
+CJCK         EX(K) = EEX(NG+I) * SCALE
+         EX(K) = EEX(NG+I)
+         IF(ITYP.EQ.1) CSINP(K) = COEF(NG+I)
+         IF(ITYP.EQ.2) CPINP(K) = COEF(NG+I)
+         IF(ITYP.EQ.3) CDINP(K) = COEF(NG+I)
+         IF(ITYP.EQ.4) CFINP(K) = COEF(NG+I)
+         CS(K) = ZERO
+         CP(K) = ZERO
+         CD(K) = ZERO
+         CF(K) = ZERO
+         IF(ITYP.EQ.1) CS(K) = CSINP(K)
+         IF(ITYP.EQ.2) CP(K) = CPINP(K)
+         IF(ITYP.EQ.3) CD(K) = CDINP(K)
+         IF(ITYP.EQ.4) CF(K) = CFINP(K)
+  440 CONTINUE
+C
+C     ----- ALWAYS UNNORMALIZE PRIMITIVES -----
+C
+      DO 460 K = K1,K2
+         EE = EX(K)+EX(K)
+         FACS = PI32/(EE*SQRT(EE))
+         FACP = PT5*FACS/EE
+         FACD = PT75*FACS/(EE*EE)
+         FACF = PT1875*FACS/(EE**3)
+         IF(ITYP.EQ.1) CS(K) = CS(K)/SQRT(FACS)
+         IF(ITYP.EQ.2) CP(K) = CP(K)/SQRT(FACP)
+         IF(ITYP.EQ.3) CD(K) = CD(K)/SQRT(FACD)
+         IF(ITYP.EQ.4) CF(K) = CF(K)/SQRT(FACF)
+  460 CONTINUE
+C
+C     ----- IF(NORMF.EQ.0) NORMALIZE BASIS FUNCTIONS -----
+C
+      IF (NORMF .EQ. 1) GO TO 210
+      FACS = ZERO
+      FACP = ZERO
+      FACD = ZERO
+      FACF = ZERO
+      DO 510 IG = K1,K2
+         DO 500 JG = K1,IG
+            EE = EX(IG)+EX(JG)
+            FAC = EE*SQRT(EE)
+            DUMS = CS(IG)*CS(JG)/FAC
+            DUMP = PT5*CP(IG)*CP(JG)/(EE*FAC)
+            DUMD = PT75*CD(IG)*CD(JG)/(EE*EE*FAC)
+            DUMF = PT1875*CF(IG)*CF(JG)/(EE*EE*EE*FAC)
+            IF (IG .EQ. JG) GO TO 480
+               DUMS = DUMS+DUMS
+               DUMP = DUMP+DUMP
+               DUMD = DUMD+DUMD
+               DUMF = DUMF+DUMF
+  480       CONTINUE
+            FACS = FACS+DUMS
+            FACP = FACP+DUMP
+            FACD = FACD+DUMD
+            FACF = FACF+DUMF
+  500    CONTINUE
+  510 CONTINUE
+C
+      FAC=ZERO
+      IF(ITYP.EQ.1 .AND. FACS.GT.TM10) FAC=ONE/SQRT(FACS*PI32)
+      IF(ITYP.EQ.2 .AND. FACP.GT.TM10) FAC=ONE/SQRT(FACP*PI32)
+      IF(ITYP.EQ.3 .AND. FACD.GT.TM10) FAC=ONE/SQRT(FACD*PI32)
+      IF(ITYP.EQ.4 .AND. FACF.GT.TM10) FAC=ONE/SQRT(FACF*PI32)
+C                                 VERIFY NORMALIZATION
+      TNORM = ABS(ONE-FAC)
+      IF(TNORM.LT.TM6) GO TO 520
+      IF(MIDI  .AND.  IGAUSS.LT.3) GO TO 520
+      IF(MIDI  .AND.  ITYP.EQ.4  .AND.  IGAUSS.EQ.3) GO TO 520
+C
+      IF (MASWRK) THEN
+         WRITE(IW,9000) FAC,NUCZ,IPASS,ITYP
+         WRITE(IW,9010) (EEX(NG+K),K=1,IGAUSS)
+         WRITE(IW,9010) (COEF(NG+K),K=1,IGAUSS)
+      ENDIF
+      IERR3=IERR3+1
+C
+  520 CONTINUE
+      DO 550 IG = K1,K2
+         IF(ITYP.EQ.1) CS(IG) = FAC*CS(IG)
+         IF(ITYP.EQ.2) CP(IG) = FAC*CP(IG)
+         IF(ITYP.EQ.3) CD(IG) = FAC*CD(IG)
+         IF(ITYP.EQ.4) CF(IG) = FAC*CF(IG)
+         IF(ITYP.EQ.1) CSINP(IG) = FAC*CSINP(IG)
+         IF(ITYP.EQ.2) CPINP(IG) = FAC*CPINP(IG)
+         IF(ITYP.EQ.3) CDINP(IG) = FAC*CDINP(IG)
+         IF(ITYP.EQ.4) CFINP(IG) = FAC*CFINP(IG)
+  550 CONTINUE
+      GO TO 210
+C
+ 9000 FORMAT(/1X,'ERROR!!! NORMALIZATION FACTOR=',E16.8/
+     *     1X,'FOR ATOM Z=',I3,' SHELL NO.',I3,' ITYP=',I4/
+     *     1X,'(ITYP OF 1,2,3,4 MEANS AN S,P,D,F SHELL)'/
+     *     1X,'CHECK BUILT IN HUZINAGA EXPONENTS AND CONT. COEFS')
+ 9010 FORMAT(3F16.10)
+
+
+      END SUBROUTINE
+C
+CJCK  SUBROUTINES FOR THE ELEMENTS
+C
+C*MODULE BASMINIX *DECK MINIXONE
+C>    @brief Minix hydrogen to helium
+C>
+C>    @details Basis for hydrogen to helium
+C>
+C>    @author Jimmy Kromann
+C>
+C>    @param  E      Gaussian exponents
+C>    @param  C      Contraction coefficients
+C>    @param  NUCZ   Nuclear charges
+C>
+      SUBROUTINE MINIXONE(E,C,NUCZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION E(3),C(3)
+C
+      IF(NUCZ.EQ.2) GO TO 200
+C
+C           HYDROGEN
+C
+C          3  s
+      E(1) = 7.034063D+00
+      C(1) = 0.070452D+00
+      E(2) = 1.064756D+00
+      C(2) = 0.407826D+00
+      E(3) = 0.236559D+00
+      C(3) = 0.647752D+00
+      RETURN
+C
+C           HELIUM
+C
+C          3  s
+  200 CONTINUE
+      E(1) = 13.626736D+00
+      C(1) = 0.080241D+00
+      E(2) = 1.999349D+00
+      C(2) = 0.409143D+00
+      E(3) = 0.382993D+00
+      C(3) = 0.657278D+00
+      RETURN
+      END SUBROUTINE
+C
+C*MODULE BASMINIX *DECK MINIXTWO
+C>    @brief Minix Lithium to Neon
+C>
+C>    @details Basis for Lithium to Neon
+C>
+C>    @author Jimmy Kromann
+C>
+C>    @param  E      Gaussian exponents
+C>    @param  C      Contraction coefficients
+C>    @param  NUCZ   Nuclear charges
+C>
+      SUBROUTINE MINIXTWO(E,C,NUCZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION E(9),C(9)
+C
+      IBR=NUCZ-2
+      GO TO (100,200,300,400,500,600,700,800), IBR
+C
+C           LITHIUM
+C
+  100 CONTINUE
+C          3  s
+      E(1) = 35.04615D+00
+      C(1) = 0.07376D+00
+      E(2) = 5.20169D+00
+      C(2) = 0.397471D+00
+      E(3) = 1.05624D+00
+      C(3) = 0.665092D+00
+C          3  s
+      E(4) = 0.851253D+00
+      C(4) = -0.09397D+00
+      E(5) = 0.083951D+00
+      C(5) = 0.5701D+00
+      E(6) = 0.032554D+00
+      C(6) = 0.49975D+00
+C           1  p
+      E(7) = 0.1D+00
+      C(7) = 1.0D+00
+      RETURN
+C
+C           BERYLLIUM
+C
+  200 CONTINUE
+C          3  s
+      E(1) = 456.95285000D+00
+      C(1) = 0.66910000000D+00
+      E(2) = 68.365430000D+00
+      C(2) = 0.38934900000D+00
+      E(3) = 14.619760000D+00
+      C(3) = 0.67051800000D+00
+C          3  s
+      E(4) = 19.327190000D+00
+      C(4) = -0.80250000000D+00
+      E(5) = 1.4418200000D+00
+      C(5) = 0.59529800000D+00
+      E(6) = 0.44408000000D+00
+      C(6) = 0.48486800000D+00
+C          3  p
+      E(7) = 13.352520000D+00
+      C(7) = 0.12884000000D+00
+      E(8) = 2.7794700000D+00
+      C(8) = 0.48044100000D+00
+      E(9) = 0.60097000000D+00
+      C(9) = 0.61167200000D+00
+      RETURN
+C
+C           BORON
+C
+  300 CONTINUE
+C          3  s
+      E(1) = 456.95285000D+00
+      C(1) = 0.66910000000D+00
+      E(2) = 68.365430000D+00
+      C(2) = 0.38934900000D+00
+      E(3) = 14.619760000D+00
+      C(3) = 0.67051800000D+00
+C          3  s
+      E(4) = 19.327190000D+00
+      C(4) = -0.80250000000D+00
+      E(5) = 1.4418200000D+00
+      C(5) = 0.59529800000D+00
+      E(6) = 0.44408000000D+00
+      C(6) = 0.48486800000D+00
+C          3  p
+      E(7) = 13.352520000D+00
+      C(7) = 0.12884000000D+00
+      E(8) = 2.7794700000D+00
+      C(8) = 0.48044100000D+00
+      E(9) = 0.60097000000D+00
+      C(9) = 0.61167200000D+00
+      RETURN
+C
+C           CARBON
+C
+  400 CONTINUE
+C          3  s
+      E(1) = 153.17226D+00
+      C(1) = 0.07074D+00
+      E(2) = 23.07303D+00
+      C(2) = 0.39538D+00
+      E(3) = 4.92329D+00
+      C(3) = 0.663311D+00
+C          3  s
+      E(4) = 6.616612D+00
+      C(4) = -0.08138D+00
+      E(5) = 0.525856D+00
+      C(5) = 0.574853D+00
+      E(6) = 0.169958D+00
+      C(6) = 0.502413D+00
+C          3  p
+      E(7) = 4.91292D+00
+      C(7) = 0.109931D+00
+      E(8) = 0.997616D+00
+      C(8) = 0.462713D+00
+      E(9) = 0.232685D+00
+      C(9) = 0.627514D+00
+      RETURN
+C
+C           NITROGEN
+C
+  500 CONTINUE
+C          3  s
+      E(1) = 218.36449D+00
+      C(1) = 0.06787D+00
+      E(2) = 32.59889D+00
+      C(2) = 0.390202D+00
+      E(3) = 6.91739D+00
+      C(3) = 0.670083D+00
+C          3  s
+      E(4) = 8.919426D+00
+      C(4) = -0.08089D+00
+      E(5) = 0.706141D+00
+      C(5) = 0.567202D+00
+      E(6) = 0.225054D+00
+      C(6) = 0.511092D+00
+C          3  p
+      E(7) = 6.556272D+00
+      C(7) = 0.115919D+00
+      E(8) = 1.349079D+00
+      C(8) = 0.469958D+00
+      E(9) = 0.312209D+00
+      C(9) = 0.618448D+00
+      RETURN
+C
+C           OXYGEN
+C
+  600 CONTINUE
+C          3  s
+      E(1) = 281.86658D+00
+      C(1) = 0.06906D+00
+      E(2) = 42.416D+00
+      C(2) = 0.393159D+00
+      E(3) = 9.09562D+00
+      C(3) = 0.665669D+00
+C          3  s
+      E(4) = 11.789326D+00
+      C(4) = -0.08082D+00
+      E(5) = 0.912894D+00
+      C(5) = 0.58209D+00
+      E(6) = 0.286661D+00
+      C(6) = 0.49716D+00
+C          3  p
+      E(7) = 8.27414D+00
+      C(7) = 0.124271D+00
+      E(8) = 1.715463D+00
+      C(8) = 0.476594D+00
+      E(9) = 0.383013D+00
+      C(9) = 0.613044D+00
+      RETURN
+C
+C           FLUORINE
+C
+  700 CONTINUE
+C          3  s
+      E(1) = 368.37112D+00
+      C(1) = 0.06704D+00
+      E(2) = 55.06106D+00
+      C(2) = 0.389249D+00
+      E(3) = 11.74767D+00
+      C(3) = 0.670788D+00
+C          3  s
+      E(4) = 15.364708D+00
+      C(4) = -0.08055D+00
+      E(5) = 1.167546D+00
+      C(5) = 0.587729D+00
+      E(6) = 0.363141D+00
+      C(6) = 0.491979D+00
+C          3  p
+      E(7) = 10.725667D+00
+      C(7) = 0.12627D+00
+      E(8) = 2.225817D+00
+      C(8) = 0.477948D+00
+      E(9) = 0.486105D+00
+      C(9) = 0.614008D+00
+      RETURN
+C
+C           NEON
+C
+  800 CONTINUE
+C          3  s
+      E(1) = 456.95285D+00
+      C(1) = 0.06691D+00
+      E(2) = 68.36543D+00
+      C(2) = 0.389349D+00
+      E(3) = 14.61976D+00
+      C(3) = 0.670518D+00
+C          3  s
+      E(4) = 19.32719D+00
+      C(4) = -0.08025D+00
+      E(5) = 1.44182D+00
+      C(5) = 0.595298D+00
+      E(6) = 0.44408D+00
+      C(6) = 0.484868D+00
+C          3  p
+      E(7) = 13.35252D+00
+      C(7) = 0.12884D+00
+      E(8) = 2.77947D+00
+      C(8) = 0.480441D+00
+      E(9) = 0.60097D+00
+      C(9) = 0.611672D+00
+      RETURN
+      END SUBROUTINE
+
+
+C*MODULE BASMINIX *DECK MINIXTHREE
+C>    @brief Minix Sodium to Argon
+C>
+C>    @details Basis for Sodium to Argon
+C>
+C>    @author Jimmy Kromann
+C>
+C>    @param  E      Gaussian exponents
+C>    @param  C      Contraction coefficients
+C>    @param  NUCZ   Nuclear charges
+C>
+      SUBROUTINE MINIXTHREE(E,C,NUCZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION E(16),C(16)
+C
+      IBR=NUCZ-10
+      GO TO (100,200,300,400,500,600,700,800), IBR
+C
+C           SODIUM
+C
+  100 CONTINUE
+C          3  s
+      E(1) = 542.76053D+00
+      C(1) = 0.06841D+00
+      E(2) = 81.95947D+00
+      C(2) = 0.392092D+00
+      E(3) = 17.72377D+00
+      C(3) = 0.666084D+00
+C          3  s
+      E(4) = 23.28042D+00
+      C(4) = -0.083801D+00
+      E(5) = 1.86834D+00
+      C(5) = 0.582794D+00
+      E(6) = 0.62325D+00
+      C(6) = 0.492474D+00
+C          3  s
+      E(7) = 0.617611D+00
+      C(7) = -0.115762D+00
+      E(8) = 0.065219D+00
+      C(8) = 0.695863D+00
+      E(9) = 0.025351D+00
+      C(9) = 0.381047D+00
+C          3  p
+      E(10) = 17.83636D+00
+      C(10) = 0.12571D+00
+      E(11) = 3.79569D+00
+      C(11) = 0.480461D+00
+      E(12) = 0.87751D+00
+      C(12) = 0.602281D+00
+C          1  p
+      E(13) = 0.05D+00
+      C(13) = 1.0D+00
+      RETURN
+C
+C           MAGNESIUM
+C
+  200 CONTINUE
+C          3  s
+      E(1) = 650.643367D+00
+      C(1) = 0.06803D+00
+      E(2) = 98.37078D+00
+      C(2) = 0.390738D+00
+      E(3) = 21.32249D+00
+      C(3) = 0.667267D+00
+C          3  s
+      E(4) = 27.97738D+00
+      C(4) = -0.08672D+00
+      E(5) = 2.32652D+00
+      C(5) = 0.585697D+00
+      E(6) = 0.81808D+00
+      C(6) = 0.486497D+00
+C          3  s
+      E(7) = 1.084751D+00
+      C(7) = -0.127651D+00
+      E(8) = 0.118314D+00
+      C(8) = 0.650773D+00
+      E(9) = 0.043124D+00
+      C(9) = 0.436272D+00
+C          3  p
+      E(10) = 23.21662D+00
+      C(10) = 0.12146D+00
+      E(11) = 5.00222D+00
+      C(11) = 0.479291D+00
+      E(12) = 1.20465D+00
+      C(12) = 0.598942D+00
+C          1  p
+      E(13) = 0.2D+00
+      C(13) = 1.0D+00
+      RETURN
+C
+C           ALUMINUM
+C
+  300 CONTINUE
+C          3  s
+      E(1) = 777.44334D+00
+      C(1) = 0.066887D+00
+      E(2) = 117.23153D+00
+      C(2) = 0.387768D+00
+      E(3) = 25.376297D+00
+      C(3) = 0.670703D+00
+C          3  s
+      E(4) = 33.356253D+00
+      C(4) = -0.088956D+00
+      E(5) = 2.801315D+00
+      C(5) = 0.601061D+00
+      E(6) = 1.022733D+00
+      C(6) = 0.468786D+00
+C          3  s
+      E(7) = 1.685246D+00
+      C(7) = -0.151389D+00
+      E(8) = 0.204969D+00
+      C(8) = 0.659386D+00
+      E(9) = 0.07479D+00
+      C(9) = 0.438693D+00
+C          3  p
+      E(10) = 30.56958D+00
+      C(10) = 0.112353D+00
+      E(11) = 6.644701D+00
+      C(11) = 0.467467D+00
+      E(12) = 1.654395D+00
+      C(12) = 0.609782D+00
+C          3  p
+      E(13) = 0.056613D+00
+      C(13) = 0.39647D+00
+      E(14) = 0.37992D+00
+      C(14) = 0.226433D+00
+      E(15) = 0.146881D+00
+      C(15) = 0.500586D+00
+C          1  d
+      E(16) = 0.3D+00
+      C(16) = 1.0D+00
+      RETURN
+C
+C           SILICON
+C
+  400 CONTINUE
+C          3  s
+      E(1) = 909.23487D+00
+      C(1) = 0.066405D+00
+      E(2) = 137.12456D+00
+      C(2) = 0.386222D+00
+      E(3) = 29.71481D+00
+      C(3) = 0.67224D+00
+C          3  s
+      E(4) = 39.129423D+00
+      C(4) = -0.090999D+00
+      E(5) = 3.335981D+00
+      C(5) = 0.611615D+00
+      E(6) = 1.251259D+00
+      C(6) = 0.45686D+00
+C          3  s
+      E(7) = 2.197649D+00
+      C(7) = -0.168733D+00
+      E(8) = 0.275927D+00
+      C(8) = 0.675453D+00
+      E(9) = 0.100425D+00
+      C(9) = 0.429419D+00
+C          3  p
+      E(10) = 37.881761D+00
+      C(10) = 0.108753D+00
+      E(11) = 8.304598D+00
+      C(11) = 0.463515D+00
+      E(12) = 2.120792D+00
+      C(12) = 0.611334D+00
+C          3  p
+      E(13) = 0.545789D+00
+      C(13) = 0.238913D+00
+      E(14) = 0.076007D+00
+      C(14) = 0.345453D+00
+      E(15) = 0.20822D+00
+      C(15) = 0.542295D+00
+C          1  d
+      E(16) = 0.35D+00
+      C(16) = 1.0D+00
+      RETURN
+C
+C           PHOSPHORUS
+C
+  500 CONTINUE
+C          3  s
+      E(1) = 1053.2658D+00
+      C(1) = 0.065865D+00
+      E(2) = 158.79044D+00
+      C(2) = 0.384578D+00
+      E(3) = 34.424407D+00
+      C(3) = 0.673963D+00
+C          3  s
+      E(4) = 45.450377D+00
+      C(4) = -0.092655D+00
+      E(5) = 3.899926D+00
+      C(5) = 0.626513D+00
+      E(6) = 1.488507D+00
+      C(6) = 0.441039D+00
+C          3  s
+      E(7) = 2.469483D+00
+      C(7) = -0.180549D+00
+      E(8) = 0.320872D+00
+      C(8) = 0.680952D+00
+      E(9) = 0.116832D+00
+      C(9) = 0.429142D+00
+C          3  p
+      E(10) = 46.100019D+00
+      C(10) = 0.105388D+00
+      E(11) = 10.165057D+00
+      C(11) = 0.459712D+00
+      E(12) = 2.644794D+00
+      C(12) = 0.613714D+00
+C          3  p
+      E(13) = 0.679059D+00
+      C(13) = 0.235885D+00
+      E(14) = 0.257826D+00
+      C(14) = 0.55416D+00
+      E(15) = 0.092783D+00
+      C(15) = 0.33653D+00
+C          1  d
+      E(16) = 0.45D+00
+      C(16) = 1.0D+00
+      RETURN
+C
+C           SULFUR
+C
+  600 CONTINUE
+C          3  s
+      E(1) = 1201.4584D+00
+      C(1) = 0.065765D+00
+      E(2) = 181.39212D+00
+      C(2) = 0.383948D+00
+      E(3) = 39.404795D+00
+      C(3) = 0.674372D+00
+C          3  s
+      E(4) = 52.13903D+00
+      C(4) = -0.094232D+00
+      E(5) = 4.528799D+00
+      C(5) = 0.635468D+00
+      E(6) = 1.754938D+00
+      C(6) = 0.431506D+00
+C          3  s
+      E(7) = 2.920526D+00
+      C(7) = 0.190042D+00
+      E(8) = 0.392187D+00
+      C(8) = -0.685527D+00
+      E(9) = 0.142699D+00
+      C(9) = -0.429272D+00
+C          3  p
+      E(10) = 54.644071D+00
+      C(10) = 0.103673D+00
+      E(11) = 12.122902D+00
+      C(11) = 0.45819D+00
+      E(12) = 3.206504D+00
+      C(12) = 0.6134D+00
+C          3  p
+      E(13) = 0.887615D+00
+      C(13) = 0.229436D+00
+      E(14) = 0.111743D+00
+      C(14) = 0.3537D+00
+      E(15) = 0.3271D+00
+      C(15) = 0.55296D+00
+C          1  d
+      E(16) = 0.55D+00
+      C(16) = 1.0D+00
+      RETURN
+C
+C           CHLORINE
+C
+  700 CONTINUE
+C          3  s
+      E(1) = 1362.022D+00
+      C(1) = 0.065544D+00
+      E(2) = 205.8111D+00
+      C(2) = 0.382987D+00
+      E(3) = 44.772167D+00
+      C(3) = 0.67521D+00
+C          3  s
+      E(4) = 59.225732D+00
+      C(4) = -0.09562D+00
+      E(5) = 5.213902D+00
+      C(5) = 0.641426D+00
+      E(6) = 2.047346D+00
+      C(6) = 0.425153D+00
+C          3  s
+      E(7) = 3.447124D+00
+      C(7) = 0.196401D+00
+      E(8) = 0.473785D+00
+      C(8) = -0.69236D+00
+      E(9) = 0.171321D+00
+      C(9) = -0.426193D+00
+C          3  p
+      E(10) = 64.099958D+00
+      C(10) = 0.101789D+00
+      E(11) = 14.287139D+00
+      C(11) = 0.456107D+00
+      E(12) = 3.828135D+00
+      C(12) = 0.614282D+00
+C          3  p
+      E(13) = 1.103904D+00
+      C(13) = 0.235903D+00
+      E(14) = 0.133236D+00
+      C(14) = 0.3466D+00
+      E(15) = 0.399178D+00
+      C(15) = 0.558066D+00
+C          1  d
+      E(16) = 0.65D+00
+      C(16) = 1.0D+00
+      RETURN
+C
+C           ARGON
+C
+  800 CONTINUE
+C          3  s
+      E(1) = 1536.9325D+00
+      C(1) = 0.065159D+00
+      E(2) = 232.17765D+00
+      C(2) = 0.381807D+00
+      E(3) = 50.521685D+00
+      C(3) = 0.676446D+00
+C          3  s
+      E(4) = 66.933949D+00
+      C(4) = -0.09674D+00
+      E(5) = 5.918552D+00
+      C(5) = 0.652749D+00
+      E(6) = 2.339342D+00
+      C(6) = 0.413573D+00
+C          3  s
+      E(7) = 4.045307D+00
+      C(7) = 0.200736D+00
+      E(8) = 0.565701D+00
+      C(8) = -0.696268D+00
+      E(9) = 0.204065D+00
+      C(9) = -0.424843D+00
+C          3  p
+      E(10) = 74.352915D+00
+      C(10) = 0.100079D+00
+      E(11) = 16.631346D+00
+      C(11) = 0.454226D+00
+      E(12) = 4.503927D+00
+      C(12) = 0.615259D+00
+C          3  p
+      E(13) = 1.357091D+00
+      C(13) = 0.237276D+00
+      E(14) = 0.488113D+00
+      C(14) = 0.55836D+00
+      E(15) = 0.162126D+00
+      C(15) = 0.346165D+00
+C          1  d
+      E(16) = 0.696D+00
+      C(16) = 1.0D+00
+      RETURN
+      END
+
+
+C*MODULE BASMINIX *DECK MINIXFOUR
+C>    @brief Minix hydrogen to helium
+C>
+C>    @details Basis for Potassium to Krypton
+C>
+C>    @author Jimmy Kromann
+C>
+C>    @param  E      Gaussian exponents
+C>    @param  C      Contraction coefficients
+C>    @param  NUCZ   Nuclear charges
+C>
+      SUBROUTINE MINIXFOUR(E,C,NUCZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION E(30),C(30)
+C
+      IF(NUCZ.EQ.19) GO TO 100
+      IF(NUCZ.EQ.20) GO TO 200
+      IF(NUCZ.LE.30) CALL MINIXTMONE(E,C,NUCZ)
+      IF(NUCZ.LE.30) RETURN
+      IBR=NUCZ-30
+      GO TO (300,400,500,600,700,800), IBR
+C
+C           POTASSIUM
+C
+  100 CONTINUE
+C          6  s
+      E(1) = 31478.746764D+00
+      C(1) = 0.0039838653994D+00
+      E(2) = 4726.8876066D+00
+      C(2) = 0.030501759762D+00
+      E(3) = 1075.4345353D+00
+      C(3) = 0.15073752622D+00
+      E(4) = 303.39811023D+00
+      C(4) = 0.51912939801D+00
+      E(5) = 98.327112831D+00
+      C(5) = 1.0366957005D+00
+      E(6) = 33.636222177D+00
+      C(6) = 0.76398963199D+00
+C          3  s
+      E(7) = 65.639209962D+00
+      C(7) = -0.28242617106D+00
+      E(8) = 7.3162592218D+00
+      C(8) = 1.691493586D+00
+      E(9) = 2.8902580135D+00
+      C(9) = 1.2965331953D+00
+C          3  s
+      E(10) = 4.5459748965D+00
+      C(10) = -0.0076343555273D+00
+      E(11) = 0.70404124062D+00
+      C(11) = 0.02563571896D+00
+      E(12) = 0.28266888959D+00
+      C(12) = 0.016606859208D+00
+C          1  s
+      E(13) = 0.02905816402D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.012111638157D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 361.22492154D+00
+      C(15) = 0.020906479823D+00
+      E(16) = 84.670222166D+00
+      C(16) = 0.1504364174D+00
+      E(17) = 26.469088236D+00
+      C(17) = 0.55440061077D+00
+      E(18) = 9.2658077615D+00
+      C(18) = 1.0409009991D+00
+      E(19) = 3.3423388293D+00
+      C(19) = 0.67825341194D+00
+C          3  p
+      E(20) = 1.5100876104D+00
+      C(20) = 0.75248191146D+00
+      E(21) = 0.56568375163D+00
+      C(21) = 1.3708585031D+00
+      E(22) = 0.20817008495D+00
+      C(22) = 0.66047633079D+00
+      RETURN
+C
+C           CALCIUM
+C
+  200 CONTINUE
+C          6  s
+      E(1) = 35138.713929D+00
+      C(1) = 0.003948252074D+00
+      E(2) = 5276.4111348D+00
+      C(2) = 0.030234243552D+00
+      E(3) = 1200.4692589D+00
+      C(3) = 0.14952019681D+00
+      E(4) = 338.71810542D+00
+      C(4) = 0.51597345713D+00
+      E(5) = 109.85385922D+00
+      C(5) = 1.0339510296D+00
+      E(6) = 37.608880299D+00
+      C(6) = 0.76937933526D+00
+C          3  s
+      E(7) = 73.107977555D+00
+      C(7) = -0.28268525011D+00
+      E(8) = 8.2407705688D+00
+      C(8) = 1.6796092142D+00
+      E(9) = 3.2959812993D+00
+      C(9) = 1.2803766016D+00
+C          3  s
+      E(10) = 5.2341800914D+00
+      C(10) = -0.0076868604561D+00
+      E(11) = 0.84187220515D+00
+      C(11) = 0.025382375978D+00
+      E(12) = 0.36510294029D+00
+      C(12) = 0.016512171511D+00
+C          1  s
+      E(13) = 0.051222402884D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.019825111408D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 413.11313893D+00
+      C(15) = 0.020327135354D+00
+      E(16) = 96.935786224D+00
+      C(16) = 0.14730276362D+00
+      E(17) = 30.372154659D+00
+      C(17) = 0.54887167322D+00
+      E(18) = 10.68477683D+00
+      C(18) = 1.0440659818D+00
+      E(19) = 3.882125835D+00
+      C(19) = 0.68653490684D+00
+C          3  p
+      E(20) = 1.7993016295D+00
+      C(20) = 0.75410246871D+00
+      E(21) = 0.6918905653D+00
+      C(21) = 1.3409296599D+00
+      E(22) = 0.26364024096D+00
+      C(22) = 0.56391989435D+00
+      RETURN
+C
+C           GALLIUM
+C
+  300 CONTINUE
+C          6  s
+      E(1) = 87842.126296D+00
+      C(1) = 0.0014271588798D+00
+      E(2) = 13189.496402D+00
+      C(2) = 0.010938894097D+00
+      E(3) = 3000.9482141D+00
+      C(3) = 0.054308200127D+00
+      E(4) = 847.38425966D+00
+      C(4) = 0.18951055983D+00
+      E(5) = 276.00980642D+00
+      C(5) = 0.38615185918D+00
+      E(6) = 95.216672071D+00
+      C(6) = 0.30051082719D+00
+C          3  s
+      E(7) = 184.00703968D+00
+      C(7) = -0.11124461963D+00
+      E(8) = 21.827051433D+00
+      C(8) = 0.64831322918D+00
+      E(9) = 9.0026963761D+00
+      C(9) = 0.44358383594D+00
+C          3  s
+      E(10) = 16.033176938D+00
+      C(10) = -0.23014299555D+00
+      E(11) = 2.6707724878D+00
+      C(11) = 0.72946861516D+00
+      E(12) = 1.125283417D+00
+      C(12) = 0.46214976951D+00
+C          1  s
+      E(13) = 0.15967608829D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.057643044753D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 1167.2665844D+00
+      C(15) = 0.0090974021307D+00
+      E(16) = 275.38062789D+00
+      C(16) = 0.068456273343D+00
+      E(17) = 87.37507307D+00
+      C(17) = 0.26922293888D+00
+      E(18) = 31.59725467D+00
+      C(18) = 0.53507897882D+00
+      E(19) = 11.824122798D+00
+      C(19) = 0.3527906276D+00
+C          3  p
+      E(20) = 6.2881845133D+00
+      C(20) = 0.3393824453D+00
+      E(21) = 2.519985324D+00
+      C(21) = 0.56871947608D+00
+      E(22) = 1.0169726306D+00
+      C(22) = 0.27717694939D+00
+C          1  p
+      E(23) = 0.24748373604D+00
+      C(23) = 1.0D+00
+C          1  p
+      E(24) = 0.066685294163D+00
+      C(24) = 1.0D+00
+C          4  d
+      E(25) = 65.354237674D+00
+      C(25) = 0.027370146382D+00
+      E(26) = 18.504656747D+00
+      C(26) = 0.15099463976D+00
+      E(27) = 6.3179620632D+00
+      C(27) = 0.37485328545D+00
+      E(28) = 2.1641389426D+00
+      C(28) = 0.47510606851D+00
+C          1  d
+      E(29) = 0.66693092754D+00
+      C(29) = 0.29843287401D+00
+C          1  d
+      E(30) = 0.207D+00
+      C(30) = 1.0D+00
+      RETURN
+C
+C           GERMANIUM
+C
+  400 CONTINUE
+C          6  s
+      E(1) = 93889.836642D+00
+      C(1) = 0.001423397606D+00
+      E(2) = 14097.497528D+00
+      C(2) = 0.010910795654D+00
+      E(3) = 3207.5477309D+00
+      C(3) = 0.054183705943D+00
+      E(4) = 905.76727269D+00
+      C(4) = 0.18922820349D+00
+      E(5) = 295.11014693D+00
+      C(5) = 0.38612847001D+00
+      E(6) = 101.84713141D+00
+      C(6) = 0.30164050736D+00
+C          3  s
+      E(7) = 196.56719662D+00
+      C(7) = -0.1111877094D+00
+      E(8) = 23.405292522D+00
+      C(8) = 0.64616007369D+00
+      E(9) = 9.6839116702D+00
+      C(9) = 0.44188904568D+00
+C          3  s
+      E(10) = 17.269736544D+00
+      C(10) = -0.23027421375D+00
+      E(11) = 2.896462216D+00
+      C(11) = 0.73017169398D+00
+      E(12) = 1.2553621412D+00
+      C(12) = 0.46197222255D+00
+C          1  s
+      E(13) = 0.20213081492D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.073867910982D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 1259.2085995D+00
+      C(15) = 0.0090115464252D+00
+      E(16) = 297.15626382D+00
+      C(16) = 0.067986841689D+00
+      E(17) = 94.353387522D+00
+      C(17) = 0.26853856488D+00
+      E(18) = 34.176329677D+00
+      C(18) = 0.53659649219D+00
+      E(19) = 12.816139615D+00
+      C(19) = 0.35633514961D+00
+C          3  p
+      E(20) = 6.8471029784D+00
+      C(20) = 0.33900693119D+00
+      E(21) = 2.7717363939D+00
+      C(21) = 0.56809365264D+00
+      E(22) = 1.1458418175D+00
+      C(22) = 0.27246539884D+00
+C          1  p
+      E(23) = 0.30679631536D+00
+      C(23) = 1.0D+00
+C          1  p
+      E(24) = 0.089283644115D+00
+      C(24) = 1.0D+00
+C          4  d
+      E(25) = 74.782168177D+00
+      C(25) = 0.025755860205D+00
+      E(26) = 21.310849759D+00
+      C(26) = 0.14536816132D+00
+      E(27) = 7.3464792363D+00
+      C(27) = 0.37134209859D+00
+      E(28) = 2.5656271395D+00
+      C(28) = 0.48002998436D+00
+C          1  d
+      E(29) = 0.8198177307D+00
+      C(29) = 0.28978790744D+00
+C          1  d
+      E(30) = 0.246D+00
+      C(30) = 1.0D+00
+      RETURN
+C
+C           ARSENIC
+C
+  500 CONTINUE
+C          6  s
+      E(1) = 100146.52554D+00
+      C(1) = 0.0014258349617D+00
+      E(2) = 15036.861711D+00
+      C(2) = 0.010930176963D+00
+      E(3) = 3421.2902833D+00
+      C(3) = 0.05429417461D+00
+      E(4) = 966.16965717D+00
+      C(4) = 0.18976078153D+00
+      E(5) = 314.87394026D+00
+      C(5) = 0.38775195453D+00
+      E(6) = 108.7082379D+00
+      C(6) = 0.3040281204D+00
+C          3  s
+      E(7) = 209.5423895D+00
+      C(7) = -0.11162094204D+00
+      E(8) = 25.038221139D+00
+      C(8) = 0.64697607762D+00
+      E(9) = 10.390964343D+00
+      C(9) = 0.44223608673D+00
+C          3  s
+      E(10) = 18.555090093D+00
+      C(10) = -0.22994190569D+00
+      E(11) = 3.1281217449D+00
+      C(11) = 0.73319107613D+00
+      E(12) = 1.3884885073D+00
+      C(12) = 0.45533653943D+00
+C          1  s
+      E(13) = 0.24714362141D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.09142942867D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 1355.6443507D+00
+      C(15) = 0.0089182507898D+00
+      E(16) = 319.9992927D+00
+      C(16) = 0.067454750717D+00
+      E(17) = 101.67734092D+00
+      C(17) = 0.2675977211D+00
+      E(18) = 36.886323845D+00
+      C(18) = 0.5377684452D+00
+      E(19) = 13.861115909D+00
+      C(19) = 0.35992570244D+00
+C          3  p
+      E(20) = 7.4260666912D+00
+      C(20) = 0.34036849637D+00
+      E(21) = 3.0316247187D+00
+      C(21) = 0.57030149334D+00
+      E(22) = 1.278307834D+00
+      C(22) = 0.26606170238D+00
+C          1  p
+      E(23) = 0.37568503356D+00
+      C(23) = 1.0D+00
+C          1  p
+      E(24) = 0.11394805454D+00
+      C(24) = 1.0D+00
+C          4  d
+      E(25) = 84.445514539D+00
+      C(25) = 0.024518402724D+00
+      E(26) = 24.190416102D+00
+      C(26) = 0.14107454677D+00
+      E(27) = 8.4045015119D+00
+      C(27) = 0.36875228915D+00
+      E(28) = 2.9808970748D+00
+      C(28) = 0.48409561362D+00
+C          1  d
+      E(29) = 0.97909243359D+00
+      C(29) = 0.28250268781D+00
+C          1  d
+      E(30) = 0.293D+00
+      C(30) = 1.0D+00
+      RETURN
+C
+C           SELENIUM
+C
+  600 CONTINUE
+C          6  s
+      E(1) = 106612.20027D+00
+      C(1) = 0.0014274889113D+00
+      E(2) = 16007.604701D+00
+      C(2) = 0.010943525114D+00
+      E(3) = 3642.1699707D+00
+      C(3) = 0.054374171596D+00
+      E(4) = 1028.5912993D+00
+      C(4) = 0.19018092947D+00
+      E(5) = 335.30298888D+00
+      C(5) = 0.38913021696D+00
+      E(6) = 115.80129154D+00
+      C(6) = 0.30620207088D+00
+C          3  s
+      E(7) = 222.9332502D+00
+      C(7) = -0.11198808009D+00
+      E(8) = 26.726257934D+00
+      C(8) = 0.64752124207D+00
+      E(9) = 11.124501923D+00
+      C(9) = 0.44241976651D+00
+C          3  s
+      E(10) = 19.888520061D+00
+      C(10) = -0.22857227762D+00
+      E(11) = 3.3668473803D+00
+      C(11) = 0.73591359951D+00
+      E(12) = 1.5249277839D+00
+      C(12) = 0.44330199577D+00
+C          1  s
+      E(13) = 0.29630037912D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.11009288974D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 1455.906812D+00
+      C(15) = 0.0088203597043D+00
+      E(16) = 343.75101831D+00
+      C(16) = 0.066875851967D+00
+      E(17) = 109.29554964D+00
+      C(17) = 0.2664057808D+00
+      E(18) = 39.707711022D+00
+      C(18) = 0.53834928422D+00
+      E(19) = 14.950185232D+00
+      C(19) = 0.36303281993D+00
+C          3  p
+      E(20) = 8.0208962094D+00
+      C(20) = 0.34153807025D+00
+      E(21) = 3.2934649756D+00
+      C(21) = 0.57257906583D+00
+      E(22) = 1.4058602438D+00
+      C(22) = 0.25549813222D+00
+C          1  p
+      E(23) = 0.45076123226D+00
+      C(23) = 1.0D+00
+C          1  p
+      E(24) = 0.13353413325D+00
+      C(24) = 1.0D+00
+C          4  d
+      E(25) = 94.494024044D+00
+      C(25) = 0.023490101098D+00
+      E(26) = 27.18818526D+00
+      C(26) = 0.13747735767D+00
+      E(27) = 9.5091567352D+00
+      C(27) = 0.36649929124D+00
+      E(28) = 3.4170516853D+00
+      C(28) = 0.48750989884D+00
+C          1  d
+      E(29) = 1.1479590083D+00
+      C(29) = 0.27657943383D+00
+C          1  d
+      E(30) = 0.338D+00
+      C(30) = 1.0D+00
+      RETURN
+C
+C           BROMINE
+C
+  700 CONTINUE
+C          6  s
+      E(1) = 113286.38776D+00
+      C(1) = 0.0014283037779D+00
+      E(2) = 17009.626303D+00
+      C(2) = 0.010950417496D+00
+      E(3) = 3870.1842567D+00
+      C(3) = 0.054421006604D+00
+      E(4) = 1093.0357227D+00
+      C(4) = 0.19047907695D+00
+      E(5) = 356.39721797D+00
+      C(5) = 0.39024642737D+00
+      E(6) = 123.12539643D+00
+      C(6) = 0.30814432514D+00
+C          3  s
+      E(7) = 236.74084007D+00
+      C(7) = -0.11228065671D+00
+      E(8) = 28.46866107D+00
+      C(8) = 0.64775962312D+00
+      E(9) = 11.883443722D+00
+      C(9) = 0.44235575986D+00
+C          3  s
+      E(10) = 21.269633312D+00
+      C(10) = -0.22642576323D+00
+      E(11) = 3.6129226841D+00
+      C(11) = 0.73823712008D+00
+      E(12) = 1.6626648969D+00
+      C(12) = 0.42683868694D+00
+C          1  s
+      E(13) = 0.34823793232D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.13019031394D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 1560.2801881D+00
+      C(15) = 0.0087166669072D+00
+      E(16) = 368.47859205D+00
+      C(16) = 0.06624363742D+00
+      E(17) = 117.22978849D+00
+      C(17) = 0.26495610385D+00
+      E(18) = 42.648909248D+00
+      C(18) = 0.53839160587D+00
+      E(19) = 16.087225096D+00
+      C(19) = 0.36579387888D+00
+C          3  p
+      E(20) = 8.6352810058D+00
+      C(20) = 0.34248787366D+00
+      E(21) = 3.5613665502D+00
+      C(21) = 0.57500678213D+00
+      E(22) = 1.5292626609D+00
+      C(22) = 0.24330394172D+00
+C          1  p
+      E(23) = 0.53064294848D+00
+      C(23) = 1.0D+00
+C          1  p
+      E(24) = 0.15702758965D+00
+      C(24) = 1.0D+00
+C          4  d
+      E(25) = 104.85518642D+00
+      C(25) = 0.022650147581D+00
+      E(26) = 30.281143688D+00
+      C(26) = 0.1345548323D+00
+      E(27) = 10.651394267D+00
+      C(27) = 0.36474454537D+00
+      E(28) = 3.8699456233D+00
+      C(28) = 0.49044587056D+00
+C          1  d
+      E(29) = 1.3240876762D+00
+      C(29) = 0.2713728904D+00
+C          1  d
+      E(30) = 0.389D+00
+      C(30) = 1.0D+00
+      RETURN
+C
+C           KRYPTON
+C
+  800 CONTINUE
+C          6  s
+      E(1) = 120165.64875D+00
+      C(1) = 0.0014294234496D+00
+      E(2) = 18042.500169D+00
+      C(2) = 0.01095959702D+00
+      E(3) = 4105.1800388D+00
+      C(3) = 0.05447964747D+00
+      E(4) = 1159.4447248D+00
+      C(4) = 0.19081239122D+00
+      E(5) = 378.13810346D+00
+      C(5) = 0.39140445949D+00
+      E(6) = 130.67610045D+00
+      C(6) = 0.31007346689D+00
+C          3  s
+      E(7) = 250.96373353D+00
+      C(7) = -0.11258604011D+00
+      E(8) = 30.26593038D+00
+      C(8) = 0.64816322524D+00
+      E(9) = 12.668110757D+00
+      C(9) = 0.44240238994D+00
+C          3  s
+      E(10) = 22.697940101D+00
+      C(10) = -0.22391964908D+00
+      E(11) = 3.8673017398D+00
+      C(11) = 0.74060953026D+00
+      E(12) = 1.8013706671D+00
+      C(12) = 0.40803658445D+00
+C          1  s
+      E(13) = 0.40308639136D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.15170527749D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 1668.5736623D+00
+      C(15) = 0.0086215009803D+00
+      E(16) = 394.13862798D+00
+      C(16) = 0.065665506884D+00
+      E(17) = 125.46644854D+00
+      C(17) = 0.26366576697D+00
+      E(18) = 45.704992729D+00
+      C(18) = 0.53867658574D+00
+      E(19) = 17.270133229D+00
+      C(19) = 0.36865167502D+00
+C          3  p
+      E(20) = 9.269948777D+00
+      C(20) = 0.34346189015D+00
+      E(21) = 3.8364617719D+00
+      C(21) = 0.57784776196D+00
+      E(22) = 1.6467163312D+00
+      C(22) = 0.23075615197D+00
+C          1  p
+      E(23) = 0.61479686489D+00
+      C(23) = 1.0D+00
+C          1  p
+      E(24) = 0.18319467414D+00
+      C(24) = 1.0D+00
+C          4  d
+      E(25) = 115.55868603D+00
+      C(25) = 0.021945485333D+00
+      E(26) = 33.477985864D+00
+      C(26) = 0.13211212879D+00
+      E(27) = 11.834450207D+00
+      C(27) = 0.36333306964D+00
+      E(28) = 4.3408254894D+00
+      C(28) = 0.49300484446D+00
+C          1  d
+      E(29) = 1.5079273157D+00
+      C(29) = 0.26676858913D+00
+C          1  d
+      E(30) = 0.443D+00
+      C(30) = 1.0D+00
+      RETURN
+      END
+
+
+C*MODULE BASMINIX *DECK MINIXTMONE
+C>    @brief Minix larger elements
+C>
+C>    @details Basis for nucz le 30
+C>
+C>    @author Jimmy Kromann
+C>
+C>    @param  E      Gaussian exponents
+C>    @param  C      Contraction coefficients
+C>    @param  NUCZ   Nuclear charges
+C>
+      SUBROUTINE MINIXTMONE(E,C,NUCZ)
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION E(27),C(27)
+C
+      IBR=NUCZ-20
+      GO TO (100,200,300,400,500,600,700,800,900,1000), IBR
+C
+C     SCANDIUM (4-F)
+C
+  100 CONTINUE
+C          6  s
+      E(1) = 38956.081804D+00
+      C(1) = 0.0039293205858D+00
+      E(2) = 5849.5733637D+00
+      C(2) = 0.030093221229D+00
+      E(3) = 1330.8813154D+00
+      C(3) = 0.1489037095D+00
+      E(4) = 375.55534165D+00
+      C(4) = 0.51464282906D+00
+      E(5) = 121.8726137D+00
+      C(5) = 1.033770807D+00
+      E(6) = 41.760243729D+00
+      C(6) = 0.77436851627D+00
+C          3  s
+      E(7) = 81.060633953D+00
+      C(7) = -0.28318552316D+00
+      E(8) = 9.2059823972D+00
+      C(8) = 1.6770806984D+00
+      E(9) = 3.7063215732D+00
+      C(9) = 1.2594733678D+00
+C          3  s
+      E(10) = 5.9888909988D+00
+      C(10) = -0.0077821367493D+00
+      E(11) = 0.97363432378D+00
+      C(11) = 0.025499692745D+00
+      E(12) = 0.42041019223D+00
+      C(12) = 0.01619156082D+00
+C          1  s
+      E(13) = 0.059440551913D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.022897806303D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 466.31481262D+00
+      C(15) = 0.019984300385D+00
+      E(16) = 109.51217097D+00
+      C(16) = 0.14561043072D+00
+      E(17) = 34.375921827D+00
+      C(17) = 0.54687466223D+00
+      E(18) = 12.142096955D+00
+      C(18) = 1.0479006012D+00
+      E(19) = 4.4336767669D+00
+      C(19) = 0.68894890327D+00
+C          3  p
+      E(20) = 2.0971291866D+00
+      C(20) = 0.75619214724D+00
+      E(21) = 0.80977606956D+00
+      C(21) = 1.3178212235D+00
+      E(22) = 0.30834046588D+00
+      C(22) = 0.54312268173D+00
+C          4  d
+      E(23) = 19.240334928D+00
+      C(23) = 0.027039082144D+00
+      E(24) = 5.1178995899D+00
+      C(24) = 0.13803684743D+00
+      E(25) = 1.6554278827D+00
+      C(25) = 0.34869086403D+00
+      E(26) = 0.5401635561D+00
+      C(26) = 0.48594185717D+00
+C          1  d
+      E(27) = 0.16211214518D+00
+      C(27) = 0.34374449689D+00
+      RETURN
+C
+C     TITANIUM (5-F)
+C
+  200 CONTINUE
+C          6  s
+      E(1) = 42961.512185D+00
+      C(1) = 0.0039127635355D+00
+      E(2) = 6450.9759169D+00
+      C(2) = 0.029969820489D+00
+      E(3) = 1467.7210915D+00
+      C(3) = 0.14836352707D+00
+      E(4) = 414.20997355D+00
+      C(4) = 0.51347285324D+00
+      E(5) = 134.4871584D+00
+      C(5) = 1.0335365483D+00
+      E(6) = 46.122209796D+00
+      C(6) = 0.7785423393D+00
+C          3  s
+      E(7) = 89.447762543D+00
+      C(7) = -0.28385401259D+00
+      E(8) = 10.22334606D+00
+      C(8) = 1.6772785333D+00
+      E(9) = 4.1353774271D+00
+      C(9) = 1.2411928456D+00
+C          3  s
+      E(10) = 6.7896181452D+00
+      C(10) = -0.0078399994518D+00
+      E(11) = 1.1106730691D+00
+      C(11) = 0.025495493019D+00
+      E(12) = 0.47565975578D+00
+      C(12) = 0.016061172892D+00
+C          1  s
+      E(13) = 0.065986956934D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.02521034225D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 522.03684782D+00
+      C(15) = 0.019754179642D+00
+      E(16) = 122.68649489D+00
+      C(16) = 0.14460677619D+00
+      E(17) = 38.572903611D+00
+      C(17) = 0.54669004165D+00
+      E(18) = 13.672169319D+00
+      C(18) = 1.053164754D+00
+      E(19) = 5.0118529359D+00
+      C(19) = 0.69111213363D+00
+C          3  p
+      E(20) = 2.4131928282D+00
+      C(20) = 0.75803437136D+00
+      E(21) = 0.9325227005D+00
+      C(21) = 1.3036241399D+00
+      E(22) = 0.3542905839D+00
+      C(22) = 0.536386533D+00
+C          4  d
+      E(23) = 23.465125957D+00
+      C(23) = 0.026536380115D+00
+      E(24) = 6.3332593832D+00
+      C(24) = 0.13796453963D+00
+      E(25) = 2.0766489946D+00
+      C(25) = 0.35312644228D+00
+      E(26) = 0.69027361954D+00
+      C(26) = 0.48647124166D+00
+C          1  d
+      E(27) = 0.21088738554D+00
+      C(27) = 0.33026314258D+00
+      RETURN
+C
+C     VANADIUM (6-D)
+C
+  300 CONTINUE
+C          6  s
+      E(1) = 47160.37606D+00
+      C(1) = 0.0014498688908D+00
+      E(2) = 7081.4110871D+00
+      C(2) = 0.011106435251D+00
+      E(3) = 1611.1621223D+00
+      C(3) = 0.055005423585D+00
+      E(4) = 454.72940551D+00
+      C(4) = 0.19060252591D+00
+      E(5) = 147.71321208D+00
+      C(5) = 0.38435022957D+00
+      E(6) = 50.69953895D+00
+      C(6) = 0.29095546792D+00
+C          3  s
+      E(7) = 98.262492669D+00
+      C(7) = -0.10942337856D+00
+      E(8) = 11.294293099D+00
+      C(8) = 0.64539490399D+00
+      E(9) = 4.5853360105D+00
+      C(9) = 0.47117880777D+00
+C          3  s
+      E(10) = 7.6359689588D+00
+      C(10) = -0.22454949054D+00
+      E(11) = 1.2539836689D+00
+      C(11) = 0.72594852764D+00
+      E(12) = 0.53271935387D+00
+      C(12) = 0.45560582748D+00
+C          1  s
+      E(13) = 0.072246239566D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.027358087448D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 580.55044988D+00
+      C(15) = 0.0097315110917D+00
+      E(16) = 136.52341127D+00
+      C(16) = 0.071531241137D+00
+      E(17) = 42.98395882D+00
+      C(17) = 0.27197688414D+00
+      E(18) = 15.282798763D+00
+      C(18) = 0.52618988893D+00
+      E(19) = 5.6202495154D+00
+      C(19) = 0.34452533498D+00
+C          3  p
+      E(20) = 2.7485386415D+00
+      C(20) = 0.34040396496D+00
+      E(21) = 1.0618550073D+00
+      C(21) = 0.5798399612D+00
+      E(22) = 0.40235518645D+00
+      C(22) = 0.23911643083D+00
+C          4  d
+      E(23) = 27.358434017D+00
+      C(23) = 0.02664192705D+00
+      E(24) = 7.4540604253D+00
+      C(24) = 0.13995311726D+00
+      E(25) = 2.4633917847D+00
+      C(25) = 0.35751066639D+00
+      E(26) = 0.82480925277D+00
+      C(26) = 0.48488354148D+00
+C          1  d
+      E(27) = 0.25257904742D+00
+      C(27) = 0.32332844995D+00
+      RETURN
+C
+C     CHROMIUM (7-S)
+C
+  400 CONTINUE
+C          6  s
+      E(1) = 51528.086349D+00
+      C(1) = 0.0014405823106D+00
+      E(2) = 7737.2103487D+00
+      C(2) = 0.011036202287D+00
+      E(3) = 1760.374847D+00
+      C(3) = 0.054676651806D+00
+      E(4) = 496.87706544D+00
+      C(4) = 0.18965038103D+00
+      E(5) = 161.46520598D+00
+      C(5) = 0.3829541285D+00
+      E(6) = 55.466352268D+00
+      C(6) = 0.29090050668D+00
+C          3  s
+      E(7) = 107.54732999D+00
+      C(7) = -0.109322811D+00
+      E(8) = 12.408671897D+00
+      C(8) = 0.64472599471D+00
+      E(9) = 5.0423628826D+00
+      C(9) = 0.4626271256D+00
+C          3  s
+      E(10) = 8.5461640165D+00
+      C(10) = -0.22711013286D+00
+      E(11) = 1.3900441221D+00
+      C(11) = 0.73301527591D+00
+      E(12) = 0.56066602876D+00
+      C(12) = 0.44225565433D+00
+C          1  s
+      E(13) = 0.071483705972D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.028250687604D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 640.48536096D+00
+      C(15) = 0.0096126715203D+00
+      E(16) = 150.69711194D+00
+      C(16) = 0.070889834655D+00
+      E(17) = 47.503755296D+00
+      C(17) = 0.2706525899D+00
+      E(18) = 16.934120165D+00
+      C(18) = 0.52437343414D+00
+      E(19) = 6.240968059D+00
+      C(19) = 0.34107994714D+00
+C          3  p
+      E(20) = 3.0885463206D+00
+      C(20) = 0.33973986903D+00
+      E(21) = 1.1791047769D+00
+      C(21) = 0.57272062927D+00
+      E(22) = 0.43369774432D+00
+      C(22) = 0.24582728206D+00
+C          4  d
+      E(23) = 27.559479426D+00
+      C(23) = 0.030612488044D+00
+      E(24) = 7.4687020327D+00
+      C(24) = 0.15593270944D+00
+      E(25) = 2.4345903574D+00
+      C(25) = 0.36984421276D+00
+      E(26) = 0.78244754808D+00
+      C(26) = 0.47071118077D+00
+C          1  d
+      E(27) = 0.21995774311D+00
+      C(27) = 0.33941649889D+00
+      RETURN
+C
+C     MANGANESE (6-D)
+C
+  500 CONTINUE
+C          6  s
+      E(1) = 56137.009037D+00
+      C(1) = 0.0014321304702D+00
+      E(2) = 8429.2063943D+00
+      C(2) = 0.010972509162D+00
+      E(3) = 1917.8277233D+00
+      C(3) = 0.054382468712D+00
+      E(4) = 541.36230198D+00
+      C(4) = 0.18884335129D+00
+      E(5) = 176.00069142D+00
+      C(5) = 0.38198025054D+00
+      E(6) = 60.50047701D+00
+      C(6) = 0.29156772596D+00
+C          3  s
+      E(7) = 117.17282882D+00
+      C(7) = -0.10933661328D+00
+      E(8) = 13.596973368D+00
+      C(8) = 0.64305039431D+00
+      E(9) = 5.5483996341D+00
+      C(9) = 0.45848970584D+00
+C          3  s
+      E(10) = 9.466285353D+00
+      C(10) = -0.22538977259D+00
+      E(11) = 1.559500607D+00
+      C(11) = 0.72307758657D+00
+      E(12) = 0.65230205868D+00
+      C(12) = 0.45300721536D+00
+C          1  s
+      E(13) = 0.084003734475D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.031256098581D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 706.00497535D+00
+      C(15) = 0.0095055518167D+00
+      E(16) = 166.1972882D+00
+      C(16) = 0.070356271142D+00
+      E(17) = 52.452061906D+00
+      C(17) = 0.27005556982D+00
+      E(18) = 18.746932862D+00
+      C(18) = 0.52574344602D+00
+      E(19) = 6.9282991622D+00
+      C(19) = 0.34254033223D+00
+C          3  p
+      E(20) = 3.4772204938D+00
+      C(20) = 0.33994073736D+00
+      E(21) = 1.3406906449D+00
+      C(21) = 0.57203836254D+00
+      E(22) = 0.50498803038D+00
+      C(22) = 0.23847605831D+00
+C          4  d
+      E(23) = 35.423264935D+00
+      C(23) = 0.026985304111D+00
+      E(24) = 9.7814221451D+00
+      C(24) = 0.14383458648D+00
+      E(25) = 3.2673488767D+00
+      C(25) = 0.36418958377D+00
+      E(26) = 1.1026472189D+00
+      C(26) = 0.48152670661D+00
+C          1  d
+      E(27) = 0.33743205934D+00
+      C(27) = 0.3145875436D+00
+      RETURN
+C
+C     IRON (5-F)
+C
+  600 CONTINUE
+C          6  s
+      E(1) = 60923.640643D+00
+      C(1) = 0.0014302254466D+00
+      E(2) = 9147.8893982D+00
+      C(2) = 0.010958790038D+00
+      E(3) = 2081.3505927D+00
+      C(3) = 0.054332554248D+00
+      E(4) = 587.55977067D+00
+      C(4) = 0.18884995009D+00
+      E(5) = 191.0904399D+00
+      C(5) = 0.38253069946D+00
+      E(6) = 65.732730112D+00
+      C(6) = 0.29308335984D+00
+C          3  s
+      E(7) = 127.25891928D+00
+      C(7) = -0.10964564925D+00
+      E(8) = 14.83091301D+00
+      C(8) = 0.64387631332D+00
+      E(9) = 6.0653307408D+00
+      C(9) = 0.45472347323D+00
+C          3  s
+      E(10) = 10.44994371D+00
+      C(10) = -0.22539639952D+00
+      E(11) = 1.7245228003D+00
+      C(11) = 0.72164398156D+00
+      E(12) = 0.71772177325D+00
+      C(12) = 0.44985492922D+00
+C          1  s
+      E(13) = 0.091449828308D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.033706691021D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 773.43750995D+00
+      C(15) = 0.0094325735144D+00
+      E(16) = 182.15149714D+00
+      C(16) = 0.070029620575D+00
+      E(17) = 57.547272758D+00
+      C(17) = 0.26993651996D+00
+      E(18) = 20.614988935D+00
+      C(18) = 0.52700011047D+00
+      E(19) = 7.634855789D+00
+      C(19) = 0.34284148028D+00
+C          3  p
+      E(20) = 3.871932799D+00
+      C(20) = 0.33974402988D+00
+      E(21) = 1.4924724132D+00
+      C(21) = 0.56842594005D+00
+      E(22) = 0.56061284958D+00
+      C(22) = 0.23649365839D+00
+C          4  d
+      E(23) = 38.968133419D+00
+      C(23) = 0.027879664382D+00
+      E(24) = 10.800067078D+00
+      C(24) = 0.14858319982D+00
+      E(25) = 3.6136457999D+00
+      C(25) = 0.36905479496D+00
+      E(26) = 1.2129967888D+00
+      C(26) = 0.47745100883D+00
+C          1  d
+      E(27) = 0.3652439317D+00
+      C(27) = 0.31418142304D+00
+      RETURN
+C
+C     COBALT (4-F)
+C
+  700 CONTINUE
+C          6  s
+      E(1) = 65902.208257D+00
+      C(1) = 0.0014284614936D+00
+      E(2) = 9895.3896027D+00
+      C(2) = 0.010946072783D+00
+      E(3) = 2251.4305789D+00
+      C(3) = 0.05428595389D+00
+      E(4) = 635.61097084D+00
+      C(4) = 0.18885179079D+00
+      E(5) = 206.78820681D+00
+      C(5) = 0.38301634994D+00
+      E(6) = 71.179242971D+00
+      C(6) = 0.29443551266D+00
+C          3  s
+      E(7) = 137.7726804D+00
+      C(7) = -0.10990221736D+00
+      E(8) = 16.118079243D+00
+      C(8) = 0.64455537395D+00
+      E(9) = 6.603032771D+00
+      C(9) = 0.45116787924D+00
+C          3  s
+      E(10) = 11.479915788D+00
+      C(10) = -0.2259384691D+00
+      E(11) = 1.8956426324D+00
+      C(11) = 0.72231409008D+00
+      E(12) = 0.78466232067D+00
+      C(12) = 0.44903812296D+00
+C          1  s
+      E(13) = 0.098425774432D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.035945741932D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 843.64358575D+00
+      C(15) = 0.0093866097254D+00
+      E(16) = 198.76386994D+00
+      C(16) = 0.069880208716D+00
+      E(17) = 62.854963098D+00
+      C(17) = 0.27037070345D+00
+      E(18) = 22.56284228D+00
+      C(18) = 0.5290478688D+00
+      E(19) = 8.3713209127D+00
+      C(19) = 0.34357029579D+00
+C          3  p
+      E(20) = 4.28587198D+00
+      C(20) = 0.34027999036D+00
+      E(21) = 1.6508041817D+00
+      C(21) = 0.56693392384D+00
+      E(22) = 0.61834231096D+00
+      C(22) = 0.23617979783D+00
+C          4  d
+      E(23) = 42.927867612D+00
+      C(23) = 0.028487788365D+00
+      E(24) = 11.942533053D+00
+      C(24) = 0.15206951283D+00
+      E(25) = 4.0046495664D+00
+      C(25) = 0.37310913999D+00
+      E(26) = 1.3413193804D+00
+      C(26) = 0.47549837676D+00
+C          1  d
+      E(27) = 0.40015009743D+00
+      C(27) = 0.31346831424D+00
+      RETURN
+C
+C     NICKEL (3-D)
+C
+  800 CONTINUE
+C          6  s
+      E(1) = 71074.803211D+00
+      C(1) = 0.0014260386729D+00
+      E(2) = 10672.020941D+00
+      C(2) = 0.010928236994D+00
+      E(3) = 2428.1389007D+00
+      C(3) = 0.054212626938D+00
+      E(4) = 685.53595148D+00
+      C(4) = 0.18874768902D+00
+      E(5) = 223.10072863D+00
+      C(5) = 0.38324616985D+00
+      E(6) = 76.842014042D+00
+      C(6) = 0.29550637144D+00
+C          3  s
+      E(7) = 148.71122016D+00
+      C(7) = -0.11014443059D+00
+      E(8) = 17.459154987D+00
+      C(8) = 0.64521426988D+00
+      E(9) = 7.1625280665D+00
+      C(9) = 0.44797838103D+00
+C          3  s
+      E(10) = 12.556137125D+00
+      C(10) = -0.22645403224D+00
+      E(11) = 2.0735740488D+00
+      C(11) = 0.72320959286D+00
+      E(12) = 0.85382640602D+00
+      C(12) = 0.44868026476D+00
+C          1  s
+      E(13) = 0.10536766271D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.038134087688D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 916.73608662D+00
+      C(15) = 0.009343963561D+00
+      E(16) = 216.06139913D+00
+      C(16) = 0.069737374902D+00
+      E(17) = 68.383914817D+00
+      C(17) = 0.27073495012D+00
+      E(18) = 24.593843952D+00
+      C(18) = 0.53078301549D+00
+      E(19) = 9.1392960204D+00
+      C(19) = 0.34410229438D+00
+C          3  p
+      E(20) = 4.7193371746D+00
+      C(20) = 0.34076082016D+00
+      E(21) = 1.8161849234D+00
+      C(21) = 0.56580169611D+00
+      E(22) = 0.6784075072D+00
+      C(22) = 0.23616717361D+00
+C          4  d
+      E(23) = 47.093832108D+00
+      C(23) = 0.028982316948D+00
+      E(24) = 13.146463975D+00
+      C(24) = 0.1549499595D+00
+      E(25) = 4.4170548925D+00
+      C(25) = 0.37633115111D+00
+      E(26) = 1.4771565078D+00
+      C(26) = 0.47365096014D+00
+C          1  d
+      E(27) = 0.43735921792D+00
+      C(27) = 0.31247837833D+00
+      RETURN
+C
+C     COPPER (2-S)
+C
+  900 CONTINUE
+C          6  s
+      E(1) = 76381.348056D+00
+      C(1) = 0.0014336079896D+00
+      E(2) = 11468.777499D+00
+      C(2) = 0.010986749865D+00
+      E(3) = 2609.4246495D+00
+      C(3) = 0.054513652465D+00
+      E(4) = 736.75033098D+00
+      C(4) = 0.18990128258D+00
+      E(5) = 239.82419958D+00
+      C(5) = 0.38581959211D+00
+      E(6) = 82.656829252D+00
+      C(6) = 0.29790607498D+00
+C          3  s
+      E(7) = 160.13544196D+00
+      C(7) = -0.11146778567D+00
+      E(8) = 18.834177695D+00
+      C(8) = 0.65349301031D+00
+      E(9) = 7.7176595741D+00
+      C(9) = 0.44770534421D+00
+C          3  s
+      E(10) = 13.710846717D+00
+      C(10) = -0.22870911122D+00
+      E(11) = 2.234989567D+00
+      C(11) = 0.73464423031D+00
+      E(12) = 0.87818360069D+00
+      C(12) = 0.43273070874D+00
+C          1  s
+      E(13) = 0.087187458064D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.032969114665D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 991.24075782D+00
+      C(15) = 0.0093878498798D+00
+      E(16) = 233.69376116D+00
+      C(16) = 0.070208282458D+00
+      E(17) = 74.020930927D+00
+      C(17) = 0.2732352222D+00
+      E(18) = 26.664967447D+00
+      C(18) = 0.53580792728D+00
+      E(19) = 9.9192087478D+00
+      C(19) = 0.34575794906D+00
+C          3  p
+      E(20) = 5.1519553926D+00
+      C(20) = 0.34229108083D+00
+      E(21) = 1.9638205828D+00
+      C(21) = 0.56456592484D+00
+      E(22) = 0.71560097037D+00
+      C(22) = 0.24078584318D+00
+C          4  d
+      E(23) = 47.33504959D+00
+      C(23) = 0.032375547758D+00
+      E(24) = 13.161666077D+00
+      C(24) = 0.16810218684D+00
+      E(25) = 4.3693777244D+00
+      C(25) = 0.38477707982D+00
+      E(26) = 1.4132925109D+00
+      C(26) = 0.46147880178D+00
+C          1  d
+      E(27) = 0.38878001452D+00
+      C(27) = 0.32388873258D+00
+      RETURN
+C
+C     ZINC (1-S)
+C
+ 1000 CONTINUE
+C          6  s
+      E(1) = 82000.711629D+00
+      C(1) = 0.0014210764D+00
+      E(2) = 12312.471777D+00
+      C(2) = 0.010891499487D+00
+      E(3) = 2801.3944193D+00
+      C(3) = 0.054057188059D+00
+      E(4) = 790.99424302D+00
+      C(4) = 0.18847463904D+00
+      E(5) = 257.56551079D+00
+      C(5) = 0.38346549346D+00
+      E(6) = 88.8149334D+00
+      C(6) = 0.29723794197D+00
+C          3  s
+      E(7) = 171.86353716D+00
+      C(7) = -0.11051849523D+00
+      E(8) = 20.302534785D+00
+      C(8) = 0.64607716984D+00
+      E(9) = 8.3464123068D+00
+      C(9) = 0.44220117322D+00
+C          3  s
+      E(10) = 14.84753694D+00
+      C(10) = -0.22705309278D+00
+      E(11) = 2.4495029507D+00
+      C(11) = 0.72433217935D+00
+      E(12) = 0.99845821824D+00
+      C(12) = 0.44836495592D+00
+C          1  s
+      E(13) = 0.11891307937D+00
+      C(13) = 1.0D+00
+C          1  s
+      E(14) = 0.04229742876D+00
+      C(14) = 1.0D+00
+C          5  p
+      E(15) = 1071.5185372D+00
+      C(15) = 0.0092767797235D+00
+      E(16) = 252.69712152D+00
+      C(16) = 0.069541149434D+00
+      E(17) = 80.100829126D+00
+      C(17) = 0.27156772564D+00
+      E(18) = 28.903393172D+00
+      C(18) = 0.53401355573D+00
+      E(19) = 10.768899879D+00
+      C(19) = 0.34501323446D+00
+C          3  p
+      E(20) = 5.644621253D+00
+      C(20) = 0.34129600164D+00
+      E(21) = 2.1678291347D+00
+      C(21) = 0.56390521973D+00
+      E(22) = 0.80540898341D+00
+      C(22) = 0.23676109735D+00
+C          4  d
+      E(23) = 56.088939191D+00
+      C(23) = 0.02958886914D+00
+      E(24) = 15.751908917D+00
+      C(24) = 0.15872571404D+00
+      E(25) = 5.3115812367D+00
+      C(25) = 0.37976229159D+00
+      E(26) = 1.7737904917D+00
+      C(26) = 0.46898959172D+00
+C          1  d
+      E(27) = 0.51975583665D+00
+      C(27) = 0.30907149078D+00
+      RETURN
+      END
+
+

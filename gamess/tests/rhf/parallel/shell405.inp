@@ -1,0 +1,105 @@
+!   model for Shell 405: Ir6 octahedron on (-OSiH2OAl-)3/SiH "alumina"
+!   custom basis set: 462 AOs, 431 MOs, 126 occupied (65 cores)
+!
+!   Used in a model study of hydrazine decomposition over Shell 405,
+!   "The decomposition of hydrazine in gas phase and over an Iridium catalyst"
+!   M.W.Schmidt, M.S.Gordon  Z. fuer Physikalische Chemie, 227, 1301-1336(2013)
+!
+!   FINAL E= -2958.8410551703, 22 iters, HOMO(125&126) is e=-0.2579,
+!   the first canonical virtual has symmetry a1 at -0.0001
+!
+!   This system starts at -2954.6798542393 with the new 2013 initial
+!   guess code, not kicking on DIIS until iteration 2 (-2955.7138596664).
+!   Iterations 3 & 4 take a +53, -56 Hartree bump, but must keep the
+!   total density symmetric, as iter 4= -2958.4032417327, and the
+!   convergence is good after that.  Force starting DIIS on iter 1 fails!
+!
+!   This system usually needed a little extra accuracy in the direct SCF,
+!   otherwise everything is by default keyword choices.
+!
+!   this run takes 853 seconds on 2.66 GHz Cloverton (10 April 2013)
+!
+ $contrl scftyp=rhf runtyp=energy PP=read ispher=1 icut=11 $end
+ $system mwords=40 $end
+ $scf    dirscf=.true. fdiff=.false. $end
+ $guess  guess=huckel $end
+ $data 
+Shell 405 model...naked of any reacting hydrazine....Ir=SBKJC, rest=6-31G(d)
+Cnv 3
+
+Ir  77.0   1.4550712575   0.0000000000   1.7032241281
+Ir  77.0  -1.6728557944   0.0000000000  -0.4261827964
+O    8.0   2.4580597339   1.6368601363  -2.0090201989
+Si  14.0  -3.5569704220   0.0000000000  -2.5122650815
+H    1.0  -4.8510974980   0.0000000000  -1.8223656857
+H    1.0  -3.7357046340   0.0000000000  -3.9730103430
+Al  13.0   1.8106741107   0.0000000000  -2.3859451437
+Si  14.0   0.0000000000   0.0000000000  -3.9902869482
+H    1.0   0.0000000000   0.0000000000  -5.4687883541
+ $end
+
+ $basis  basnam(1)=irbas,irbas,irbas,irbas,irbas,irbas,
+            obas,obas,obas,obas,obas,obas,
+            sibas,sibas,sibas,hbas,hbas,hbas,hbas,hbas,hbas,
+            albas,albas,albas,
+            sibas,hbas $end
+ $Irbas
+sbkjc
+
+ $end
+ $Nbas
+n31 6
+d 1 ; 1 0.80 1.0
+
+ $end
+ $Obas
+n31 6
+d 1 ; 1 0.80 1.0
+
+ $end
+ $Albas
+n31 6
+d 1 ; 1 0.325 1.0
+
+ $Sibas
+n31 6
+d 1 ; 1 0.395 1.0
+
+ $end
+ $Hbas
+n31 6
+p 1 ; 1 1.10 1.0
+
+ $end
+
+ $ecp 
+ir-ecp sbkjc
+ir-ecp
+ir-ecp
+ir-ecp
+ir-ecp
+ir-ecp
+O-ecp none
+O-ecp none
+O-ecp none
+O-ecp none
+O-ecp none
+O-ecp none
+Si-ecp none
+Si-ecp none
+Si-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+H-ecp none
+Al-ecp none
+Al-ecp none
+Al-ecp none
+Si-ecp none
+H-ecp none
+ $end
+
+! TRAVIS-CI MEDIUM
+

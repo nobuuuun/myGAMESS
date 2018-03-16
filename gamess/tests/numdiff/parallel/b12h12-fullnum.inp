@@ -1,0 +1,32 @@
+!  Test of fully numeric nuclear hessian, for a very symmetric molecule.
+!  B12H12 -2 ion has Ih symmetry, but must be run in the subgroup Th,
+!  nonetheless 4-fold and 5-fold degeneracies will be found in the run.
+!  So symmetry labels below are for the subgroup, not the full group Ih.
+!
+!  In Th, there are 594 energy displacements, not 10,944 displacements.
+!
+!  fully numeric:
+!  FREQ=  365.78(tu+eu),            489.72(eg),  489.80(tg), ...
+!        3225.74(eg), 3225.75(tg), 3234.64(tu), 3253.61(ag)
+!
+!  seminumeric: 
+!  F.EQ=  365.59(tu), 370.98(eu),   488.37(tg),  491.08(eg), ...
+!        3226.02(eg+tg),           3234.92(tu), 3253.77(ag)
+!
+!  This job takes 9 seconds on a 2.66 GHz Cloverton (15 Apr 2015)
+!  results haven't changed hardly since 2005
+!
+ $contrl scftyp=rhf runtyp=hessian icharg=-2 molplt=.t. $end
+ $system mwords=2 $end
+ $basis  gbasis=am1 $end
+ $force  method=fullnum nvib=2 $end
+ $data
+closo-borane B12H12 -2 ion
+Th
+
+B           5.0  -1.4221398329   0.8789307547   0.0000000000
+H           1.0  -2.4321592233   1.5031570642   0.0000000000
+ $end
+
+! TRAVIS-CI SMALL
+

@@ -1,0 +1,49 @@
+!   TMM test case...CCT basis has 230 AOs, 204 MOs (16 occupied)
+!   G.E.Scuseria, T.Tsuchimochi, J.Chem.Phys. 134, 064101/1-14(2011)
+!   Table V is reproduced by the 2nd line of results just below.
+!
+!   Constrained UHF plus MP2 is equivalent to ROHF plus its OSPT=RMP!
+!
+!   The first run has S**2= 2.217, the other three exactly 2.000:
+!     F.NAL  UHF E= -154.9529054281, 13 iters, E(UMP2)= -155.5420460418
+!     FINAL CUHF E= -154.9172114654, 11 iters, E(UMP2)= -155.5572101348
+!     F.NAL ROHF E= -154.9172114642, 10 iters, E(RMP) = -155.5572101309
+!     F.NAL ROHF E= -154.9172114642, 10 iters, E(ZAPT)= -155.5543787092
+!   The middle two runs should print 2nd order single and double excitations
+!     alpha SX= -0.0069650246, beta SX= -0.0068699515, DX= -0.6261636933
+!
+!   The resolution of the identity approximation gives about 0.0016 less,
+!      UHF E= -154.9529054281, E(RI- UMP-2)= -155.5436468780
+!     CUHF E= -154.9172114654, E(RI-CUMP-2)= -155.5585790410
+!   generating the same exactly computed SX terms, but with a RI-DX.
+!
+!   This run takes 129 seconds on 2.66 GHz CLoverton ( 1 Apr 2015)
+!
+!   the serial MP2 codes were run on 2.66 GHz Cloverton (18 Feb 2013):
+!   UHF-MP2= 164, CUHF-MP2= 156, ROHF-RMP= 152, ROHF-ZAPT= 138 s.conds
+!
+ $contrl scftyp=uhf mult=3 mplevl=2 runtyp=energy ispher=1 $end
+ $system mwords=100 memddi=20 $end
+ $basis  gbasis=cct $end
+ $scf    dirscf=.true. cuhf=.true. $end
+ $mp2    code=serial $end
+
+x$contrl scftyp=rohf $end
+x$mp2    ospt=rmp $end
+
+x$mp2    code=rimp2 $end
+x$rimp2  othaux=.true. stol=1d-8 ivmtd=2 gosmp=.false. usedm=.false. $end
+x$auxbas cabnam=svp $end
+
+ $data
+TMM geometry opt CASSCF(10,10)/cc-pVDZ
+Dnh 3
+
+C  6.0      0.000000      0.000000      0.000000
+C  6.0      1.438000      0.000000      0.000000
+H  1.0      1.993138      0.927568      0.000000
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

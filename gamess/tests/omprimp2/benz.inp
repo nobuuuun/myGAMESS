@@ -1,0 +1,22 @@
+!This runs utilizes the  non-threaded RIMP2 code.
+!You can request the non-threaded RIMP2 code even
+!when you compile with OpenMP.
+!
+ $CONTRL SCFTYP=RHF MPLEVL=2 RUNTYP=ENERGY ispher=1 $END
+ $SYSTEM MWORDS=100 memddi=100 $END
+ $GUESS  GUESS=HUCKEL $END
+ $BASIS  GBASIS=CCD $END
+ $SCF    DIRSCF=.TRUE. $END
+ $INTGRL INTOMP=1 $END
+
+ $mp2    code=rimp2 $end
+ $rimp2  othaux=.f. ivmtd=2 gosmp=.f. usedm=.true. $end
+ $auxbas cabnam=ccd $end
+
+ $DATA
+C6H6 MP2/cc-pVDZ MP2/6-31G Opt geom
+Dnh 6
+
+C    6.0  0.0000000000  1.3882822686  0.0000000000
+H    1.0  0.0000000000  2.4617106305  0.0000000000
+ $END

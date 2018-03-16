@@ -1,0 +1,73 @@
+!   try RHF/ROHF references with CR-CCL/CR-EOML, on a closed shell system.
+!   Note that the combo ROHF/CR-EOML is not available, but ROHF/EOM-CCSD is.
+!   The test demonstrates that ROHF codes on a closed shell singlet do
+!   give us back the same answers as RHF codes.  See 'cc-multiref' for
+!   a case where ROHF's CCSD finds different solution than the RHF codes.
+!
+!   the ROHF/EOM-CCSD run takes 195 seconds on 2.66 GHz Cloverton (22 Feb 2012)
+!
+!  a) CFTYP=RHF, CCTYP=CR-CCL
+!     FINAL RHF ENERGY IS     -282.6841947747 AFTER  13 ITERATION
+!     CCSD                       ENERGY: -283.2433984456  CORR.E= -0.5592036709
+!     CR-CC(2,3) OR CR-CCSD(T)_L ENERGY: -283.2594015089  CORR.E= -0.5752067342
+!
+!  b) SCFTYP=ROHF MULT=1, CCTYP=CR-CCL:
+!     FINAL ROHF ENERGY IS    -282.6841947747 AFTER  14 ITERATIONS
+!     CCSD                       E=     -283.2433984479  CORR. E= -0.5592036732
+!     CR-CC(2,3) OR CR-CCSD(T)_L E=     -283.2594015097  CORR. E= -0.5752067350
+!  so good, the reference state is treated the same by CR-CCL!
+!
+!  c) SCFTYP=RHF, CCTYP=CR-EOML:
+!                     SUMMARY OF RESULTS  (right CCSD on reference state)
+!     REFERENCE ENERGY:     -282.6841947747
+!       MBPT(2) ENERGY:     -283.2199288865   CORR.E=  -0.5357341118
+!       CCSD    ENERGY:     -283.2433984456   CORR.E=  -0.5592036709
+!              ---- SUMMARY OF EOM-CCSD CALCULATIONS ----   (right EOM-CCSD)
+!                EXCITATION      EXCITATION      TOTAL
+!   SYMMETRY     ENERGY (H)      ENERGY (EV)     ENERGY (H)          ITERATIONS
+!      A         0.19916048         5.419      -283.04423797          CONVERGED
+!      A         0.25871900         7.040      -282.98467944          CONVERGED
+!      A         0.30337996         8.255      -282.94001849          CONVERGED
+!  The RHF-reference run does a left CCSD on the reference, and
+!  three left EOM-CCSD and finally "MM(2,3)-style" perturbative
+!  triples on each state, including the reference state: 
+!     GROUND STATE CR-CC(2,3),D CORRECTION -0.016003, TOTAL E= -283.2594014824
+!  I don't add any of these other results since they don't exist in next run.
+!
+!  d) SCFTYP=ROHF MULT=1, CCTYP=EOM-CCSD:
+!                        SUMMARY OF CCSD RESULTS
+!    REFERENCE ENERGY:     -282.6841947747
+!         CCSD ENERGY:     -283.2433984479   CORR. E=  -0.5592036732
+!                  ---- SUMMARY OF EOM-CCSD CALCULATIONS ----
+!           SPIN    EXCITATION     EXCITATION     TOTAL
+!   SYMM    MULT    ENERGY (H)     ENERGY (EV)    ENERGY (H)     ITERATIONS
+!    A       3      0.21624550        5.884    -283.02715295     CONVERGED
+!    A       3      0.18672190        5.081    -283.05667655     CONVERGED
+!    A       1      0.19916030        5.419    -283.04423815     CONVERGED
+!  so we learn this code generates other spins, but note that the 
+!  one singlet it finds is identical to the closed shell's run.
+!  Note that there's no attempt to generate a open shell MP2 energy!
+!
+!
+ $contrl scftyp=rohf mult=1 cctyp=eom-ccsd runtyp=energy units=bohr $end
+ $system mwords=25 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=0 npfunc=0 $end
+ $guess  guess=huckel $end
+ $eominp minit=1 noact=2 nuact=7 nstate(1)=3 $end
+ $data
+glycine...H2N-CH2-COOH...Jan's GLY12 isomer...AM1 structure
+C1
+O 8    -2.877091949897   -1.507375565672    -.398996049903
+C 6     -.999392972049    -.222326510867     .093940021615
+C 6     1.633098051399   -1.126399113321     .723677865007
+O 8    -1.316707936360    2.330484008081     .195537896270
+N 7     3.588772131647     .190046035276    -.635572324857
+H 1     1.738434758147   -3.192291478262     .201142047999
+H 1     1.805107822402    -.972547254301    2.850386782716
+H 1     3.367427816470    2.065392438845    -.521139962778
+H 1     5.288732713155    -.301105855518     .028508872837
+H 1    -3.050135067115    2.755707159769    -.234244183166
+ $end
+
+! TRAVIS-CI SMALL
+

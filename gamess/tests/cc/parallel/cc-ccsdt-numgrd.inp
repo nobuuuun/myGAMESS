@@ -1,0 +1,41 @@
+!    water...test of numerial gradient (and spherical harmonics).
+!    This may be run this as CCSD or CCSD(T), and as serial or parallel
+!    the run is very fast so the parallel job ought to be run just p=1.
+!
+!    SCF energy is -76.0088976950.
+!    Serial or parallel CCSD= -76.2030759547  CCSD(T)= -76.2048294586
+!       RMS   serial CCSD= 0.004981391   CCSD(T)= 0.005741820
+!       RMS parallel CCSD= 0.004981351   CCSD(T)= 0.005741845
+!                                                 -----------
+!    underline is expected root mean square gradient from this test case.
+!
+!    parallel CCSD gradient takes 0 second on 2.66 GHz Cloverton ( 3 Apr 2015)
+!    results have not changes since November 2006
+!
+!    -----------------------------------------------------------------------
+!    Very small differences in CC energies at displaced geometries
+!    due to the parallel code not restarting with previous amplitudes
+!    causes the above small differences in gradient.
+!
+!    CCSD(T) will optimize in the following way,
+!      NSERCH=  0     ENERGY=     -76.2048295, r.m.s. GRADIENT =  .0057418
+!      NSERCH=  1     ENERGY=     -76.2049677, r.m.s. GRADIENT =  .0021506
+!      NSERCH=  2     ENERGY=     -76.2049685, r.m.s. GRADIENT =  .0011833
+!      NSERCH=  3     ENERGY=     -76.2050026, r.m.s. GRADIENT =  .0002374
+!      NSERCH=  4     ENERGY=     -76.2050029, r.m.s. GRADIENT =  .0000384
+!      NSERCH=  5     ENERGY=     -76.2050029, r.m.s. GRADIENT =  .0000002
+!
+ $contrl scftyp=rhf cctyp=ccsd(t) runtyp=gradient ispher=1 numgrd=.true. $end
+ $system parall=.true. mwords=1 memddi=1 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $data
+water CC gradient test
+Cnv 2
+
+O           8.0    .0000000000    .0000000000   -.0615544042
+H           1.0    .7574776761    .0000000000    .5307772021
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,32 @@
+!   [FeF4]-, (e)2(t2)3 configuration, high spin 6-A1 state.
+!   339 AOs, 277 MOs in the ACCT basis set, 34 occ. alpha, 29 occ. beta.
+!   This test came from Jerry in 2011 as just CCT, its problems now fixed.
+!
+!   Initial guess generates a correct open shell structure, but RSTRCT
+!   is truly required to prevent wild energy oscillations, and converge.
+!   the empty orbitals end up in a strange order, but occupied are OK:
+!      24-26=t2= -0.4097, 27-29=t1= -0.3816  filled
+!      30-31=e = -0.1387, 32-34=t2= -0.1115  alpha occupied
+!      35   =a1= +0.2389                     vacant
+!
+!   FINAL E= -1660.6651395321, 16 iters
+!   spin density at nucleus: Fe alpha= 5911.52517, beta= 5911.52517 (0.0 diff)
+!                            F  alpha=  215.36947, beta=  215.33288 (0.0365898)
+!
+!   This run takes 228 seconds on 2.66 GHz Cloverton (31 Mar 2015)
+!
+ $CONTRL SCFTYP=ROHF mult=6 icharg=-1 RUNTYP=energy ISPHER=1 $END
+ $SYSTEM mwords=10 $end
+ $basis  gbasis=acct $end
+ $guess  guess=huckel $end
+ $scf    rstrct=.true. $end
+ $data
+open shell [FeF4]-, Td
+Td
+
+Fe     26.0   0.0000000000   0.0000000000   0.0000000000
+F       9.0   1.0553662063   1.0553662063   1.0553662063
+ $END
+
+! TRAVIS-CI SMALL
+

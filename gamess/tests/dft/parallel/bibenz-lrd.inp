@@ -1,0 +1,56 @@
+!   LC-BOP+LRD benzene sandwich test calculation,
+!   from Yasuhiro Ikabata, March 2011.
+!
+!   FINAL E= -462.8798567309, 28 iters, RMS grad= 0.048794407
+!   **** DISPERSION CORRECTION ENERGY (A.U.) ****
+!       ELRD(   6  )=       -0.0107172347
+!       ELRD(   8  )=       -0.0056923883
+!       ELRD(  10  )=       -0.0031852695
+!       ELRD(6,MULT)=        0.0000000000
+!       ELRD(6+8+10)=       -0.0195948924
+!   Energy without LRD correction is  -462.8602618385, pure BOP= -464.071646
+!   the former is reproduced by a BOP run with LC set on, and its mu=0.47.
+!
+!   This run takes 376 seconds on 2.66 GHz Cloverton (12 Mar 2011)
+!
+!   Note, our old Sun/Solaris and also Dell/gfortran had troubles with
+!   the preliminary SCF cycles (so MAXIT is bumped up)!
+!
+!   LRD overhead is small: LC-BOP needs 439, pure BOP needs 296 s.conds.
+!
+!   If run as a geometry optimization, results should be as follows:
+! NSERCH:   0  E=     -462.8798567310  GRAD. MAX=  0.1069294  R.M.S.=  0.0487944
+! NSERCH:   1  E=     -462.9632423800  GRAD. MAX=  0.0507407  R.M.S.=  0.0212652
+! NSERCH:   2  E=     -463.0226457734  GRAD. MAX=  0.0148361  R.M.S.=  0.0079369
+! NSERCH:   3  E=     -463.0362082273  GRAD. MAX=  0.0048611  R.M.S.=  0.0023684
+! NSERCH:   4  E=     -463.0388757090  GRAD. MAX=  0.0034588  R.M.S.=  0.0017279
+! NSERCH:   5  E=     -463.0415249099  GRAD. MAX=  0.0036516  R.M.S.=  0.0020726
+! NSERCH:   6  E=     -463.0441543453  GRAD. MAX=  0.0024721  R.M.S.=  0.0014438
+! NSERCH:   7  E=     -463.0461312925  GRAD. MAX=  0.0012963  R.M.S.=  0.0006167
+! NSERCH:   8  E=     -463.0470750885  GRAD. MAX=  0.0006219  R.M.S.=  0.0003352
+! NSERCH:   9  E=     -463.0475103632  GRAD. MAX=  0.0002233  R.M.S.=  0.0001513
+! NSERCH:  10  E=     -463.0476043991  GRAD. MAX=  0.0002071  R.M.S.=  0.0000896
+! NSERCH:  11  E=     -463.0476188550  GRAD. MAX=  0.0000840  R.M.S.=  0.0000372
+! NSERCH:  12  E=     -463.0476202008  GRAD. MAX=  0.0000265  R.M.S.=  0.0000123
+! NSERCH:  13  E=     -463.0476202085  GRAD. MAX=  0.0000073  R.M.S.=  0.0000035
+! NSERCH:  14  E=     -463.0476201558  GRAD. MAX=  0.0000002  R.M.S.=  0.0000001
+!   Optimized coordinates:
+! C           6.0   1.3854736731   0.0000000000   1.8433456319
+! H           1.0   2.4746248420   0.0000000000   1.8325837233
+!
+ $CONTRL SCFTYP=RHF DFTTYP=LCBOPLRD RUNTYP=GRADIENT ISPHER=1 maxit=50 $END
+ $SYSTEM MWORDS=20 $END
+ $DFT    MLTINT=.F. $END
+ $BASIS  GBASIS=ACCD $END
+ $statpt opttol=1.0d-05 $end
+ $DATA
+benzene sandwich...dispersion test
+Dnh 6
+
+C           6.0   1.3391541168   0.0000000000   1.5
+H           1.0   2.3177263406   0.0000000000   1.5
+ $END
+
+! TRAVIS-CI SMALL
+! 
+

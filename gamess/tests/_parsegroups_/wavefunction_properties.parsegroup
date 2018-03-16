@@ -1,0 +1,132 @@
+{
+  "parse_header" : "WAVEFUNCTION PROPERTIES",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)WAVEFUNCTION NORMALIZATION =.*$",
+     "parse_name"   : "WAVEFUNCTION NORMALIZATION",
+     "parse_case_sensitive" : true,
+     "parse_type" : "float",
+     "parse_precision" : 10,
+     "parse_tolerance" : -1,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 0,
+     "parse_instance" : -1,
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^(\\s*)ONE ELECTRON ENERGY =.*$",
+     "parse_name"   : "ONE ELECTRON ENERGY",
+     "parse_recipe" : "lastinstance_firstindex",
+     "parse_tolerance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)TWO ELECTRON ENERGY =.*$",
+     "parse_name"   : "TWO ELECTRON ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)NUCLEAR REPULSION ENERGY =.*$",
+     "parse_name"   : "NUCLEAR REPULSION ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)TOTAL ENERGY =.*$",
+     "parse_name"   : "TOTAL ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)NUCLEUS-NUCLEUS POTENTIAL ENERGY =.*$",
+     "parse_name"   : "NUCLEUS-NUCLEUS POTENTIAL ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)ELECTRON-ELECTRON POTENTIAL ENERGY =.*$",
+     "parse_name"   : "ELECTRON-ELECTRON POTENTIAL ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)NUCLEUS-ELECTRON POTENTIAL ENERGY =.*$",
+     "parse_name"   : "NUCLEUS-ELECTRON POTENTIAL ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ ELECTRON-FRAGMENT MULTIPOLE ENERGY =.*$",
+     "parse_name"   : "ELECTRON-FRAGMENT MULTIPOLE ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ ELECTRON-FRAGMENT REMAINDER ENERGY =.*$",
+     "parse_name"   : "ELECTRON-FRAGMENT REMAINDER ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^        STATIC INTERFRAGMENT ENERGY =.*$",
+     "parse_name"   : "STATIC INTERFRAGMENT ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^            FRAGMENT-NUCLEAR ENERGY =.*$",
+     "parse_name"   : "FRAGMENT-NUCLEAR ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^    TOTAL FRAGMENT INDUCTION ENERGY =.*$",
+     "parse_name"   : "TOTAL FRAGMENT INDUCTION ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ ELECTRON-FRAGMENT DISPERSION ENERGY =.*$",
+     "parse_name"   : "ELECTRON-FRAGMENT DISPERSION ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ ELECTRON-FRAGMENT EXCHANGE REPULSION =.*$",
+     "parse_name"   : "ELECTRON-FRAGMENT EXCHANGE REPULSION",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)TOTAL POTENTIAL ENERGY =.*$",
+     "parse_name"   : "TOTAL POTENTIAL ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)TOTAL KINETIC ENERGY =.*$",
+     "parse_name"   : "TOTAL KINETIC ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^            SOLUTE POTENTIAL ENERGY =.*$",
+     "parse_name"   : "SOLUTE POTENTIAL ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^              SOLUTE KINETIC ENERGY =.*$",
+     "parse_name"   : "SOLUTE KINETIC ENERGY",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^(\\s*)VIRIAL RATIO \\(V\\/T\\) =.*$",
+     "parse_name"   : "VIRIAL RATIO (V/T)",
+     "parse_tolerance" : -1,
+     "parse_recipe" : "lastinstance_firstindex"
+   }
+  ]
+}

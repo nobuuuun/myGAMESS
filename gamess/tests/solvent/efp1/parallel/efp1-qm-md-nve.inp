@@ -1,0 +1,50 @@
+!   MD NVE simulation with 1 ab initio water and 3 RHF-like EFP1 waters.
+!   This test comes from Soohaeng.
+!
+!        after 200 steps,
+!   AT T=        100.00 fsec, this run's step no.=     200
+!   POT  ENERGY      =     -4.772472626E+04 KCAL/MOL
+!   TRANS    KE      =           3.90794298 KCAL/MOL
+!   ROT      KE      =           0.89154810 KCAL/MOL
+!   TOT      KE      =           4.79949108 KCAL/MOL
+!   TOT  ENERGY      =     -4.771992677E+04 KCAL/MOL  0.02567465
+!   TEMPERATURE      =         178.90247307 K
+!
+!   This is an NVE run, indicating energy should be converged.
+!   The highest and lowest total energies in this run are
+!        -47719.88414 and -47719.95863 KCAL/MOL
+!
+!   this test takes 74 seconds on a 2.66 GHz Cloverton (10 Dec 2008)
+!
+ $contrl scftyp=rhf runtyp=md $end
+ $basis  GBASIS=DH NPFUNC=1 NDFUNC=1 $END
+ $md     mdint=vverlet nsteps=200 dt=0.50d-15
+         batht=200.0
+         mbt=.true. mbr=.true. jevery=1 kevery=10 $end
+
+ $data
+H2O
+C1
+O   8.0       .5754303844   -1.1547341682     .0211294746
+H   1.0       .8173324599    -.8387947512     .8833705481
+H   1.0      -.4143850980   -1.1025580772     .0669877140
+ $end 
+
+ $efrag
+
+FRAGNAME=H2ORHF  #  1
+O1                 1.218816224744    2.939495080738   -1.204001236527
+H2                 1.541968363086    2.211731603037   -1.710766931970
+H3                  .344402153617    3.117302376618   -1.511674849006
+FRAGNAME=H2ORHF  #  2
+O1                -2.795752019738   -4.257992547478    1.569918272794
+H2                -2.917206879641   -4.030551755722     .661954695706
+H3                -2.032619040227   -4.811897913729    1.611092960267
+FRAGNAME=H2ORHF  #  3
+O1                -3.155950016673   -2.139118441316    3.373934765970
+H2                -3.222894913980   -2.911685607788    2.835848520020
+H3                -3.854194607586   -2.188192292459    4.007120917479
+ $end
+
+! TRAVIS-CI SMALL
+

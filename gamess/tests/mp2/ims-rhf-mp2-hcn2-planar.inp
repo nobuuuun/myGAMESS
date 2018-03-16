@@ -1,0 +1,139 @@
+!  test of MP2 etc. on a partially biradical species...HCN2 anion
+!    M.S.Gordon, S.R.Kass  J.Phys.Chem. 99, 6548-6550(1995)
+!  using 6-31++G(d,p) has just 63 AOs.  This is "planar" isomer #2.
+!
+!  FINAL E(RHF)=-147.1813960582, 14 iters, E(MP2)= -147.6829919961
+!  MP2 occupancies deviate from 2/0,
+!  namely 1st order wfn's occupations are 1.8847 and 0.1053.
+!  There are only very modest occ.no. below zero, none above two.
+!
+!  this test takes 2 seconds on 2.66 GHz Cloverton ( 1 Apr 2015)
+!
+!  -----------------------------------------------------------------
+!  This molecule's geometry will open the NCN angle if optimized
+!  with a multireference wavefunction, increasing the NN distance.
+!  But what if we did not know that, instead we just suspect that
+!  this species might have multireference character?
+!
+!        the following results can be obtained at the RHF geometry,
+!        as diagnostics of possible multireference character:
+!
+!  RHF tells us that e(HOMO)= -0.0626 and e(LUMO)=+0.1621 which are
+!     close together (remember this is an anion, HOMO should be high)
+!  MP2 natural orbital occupation no's are
+!     3*2.0,..., 1.9523,1.9190,1.8847, 0.1053,0.0673,0.0296, ...,-0.0009
+!     n(occ)=21.6195, n(vir)=0.3805  (last 5 occ.no.are very small negative)
+!  CCSD prints that the T1 diagnostic is 0.02423957 (> Lee/Taylor's 0.02),
+!     1.9806 1.9711 1.9665 1.9602 1.9527 1.9550 1.8902 1.9257 0.0000 0.0000
+!     0.0000 0.0000 0.0000 0.1043 0.0002 0.0004 0.0002 0.0186 0.0004 0.0001
+!     0.0714 0.0188 0.0145 0.0279 0.0271 0.0173 0.0101 0.0075 0.0006 0.0083
+!     0.0006 0.0007 0.0029 0.0091 0.0001 0.0034 0.0007 0.0000 0.0050 0.0060
+!     0.0067 0.0032 0.0041 0.0041 0.0070 0.0034 0.0018 0.0011 0.0011 0.0014
+!     0.0009 0.0012 0.0003 0.0005 0.0017 0.0005 0.0002 0.0001 0.0027 0.0003
+!     which sums to 15.60 e- in principal natural orbitals, 0.40 e- outside.
+!     and one also gets individual T1 and T2 amplitudes to contemplate.
+!  MCSCF full valence space (16e-, 13 orbitals) has active occ.no.
+!     1.9964 1.9940 1.9842 1.9777 1.9765 1.9739 1.9369 1.8811
+!     0.1254 0.0849 0.0275 0.0251 0.0163
+!     which sums to 0.28 electrons outside RHF occupied orbitals.
+!     If you take the trouble to read in natural orbitals, to get
+!     the coefficient of the SCF determinant using the NOs,
+!     then C0=0.9322794, meaning C0**2 = 86.9% of the wavefunction.
+!
+!  all results above at RHF geometry.
+!
+!  It is clear that there is an important a1 -> b1 double excitation,
+!  for NN sigma to NN sigma* (canonical orbital 10 to 17 by CCSD's T2).
+!  It is a little outside the range of a pi to pi* double, which
+!  typically is about 0.10 e-, but only a little.  The T1 diagnostic
+!  is a bit bigger than the threshold for concern, the relaxed density
+!  of MP2 has some very tiny negative values, but all in all, the
+!  indications of multireference character are modest.
+!
+!  It requires MCSCF geometry optimization to reveal the full extent
+!  of this molecule's multireference character, the NN sigma* becomes
+!  more and more important as rNN increases.
+!
+!      RHF geometry is rCN=1.274, rNN=1.818, rCH=1.098, aHCN=134.5
+!      DFT geometry is rCN=1.310, rNN=1.939, rCH=1.112, aHCN=132.2 (revTPSS)
+!      MP2 geometry is rCN=1.324, rNN=2.025, rCH=1.100, aHCN=130.1
+!     CCSD geometry is rCN=1.308, rNN=1.966, rCH=1.103, aHCN=131.3
+!  CCSD(T) geometry is rCN=1.320, rNN=2.057, rCH=1.107, aHCN=128.8
+!    MCSCF geometry is rCN=1.323, rNN=2.082, rCH=1.130, aHCN=128.1
+!
+!  At its optimal geometry, MCSCF occupation numbers are
+!    1.9958 1.9940 1.9827 1.9751 1.9742 1.9717 1.9252 1.7928
+!    0.2160 0.0963 0.0312 0.0258 0.0193  (0.39 e- outside RHF)
+!  and now we have an orbital occupancy falling below 1.8 e-.
+!
+!  Note that the single reference method's geometries track the MCSCF
+!  in this case, since the multireference character is "modest".
+!  This certainly isn't always the case!
+!
+ $contrl scftyp=rhf $end
+ $system mwords=3 memddi=0 $end
+!      by default we run MP2 for its occupation numbers,
+ $contrl mplevl=2 $end
+ $mp2    code=ims mp2prp=.true. $end
+!      to get the famous T1 diagnostic, and CCSD occupation numbers,
+--- $contrl cctyp=ccsd $end
+--- $system mwords=80 $end
+--- $ccinp  ccprp=.true. $end
+!      to run a DFT,
+--- $contrl dfttyp=revTPSS $end
+!      to run full valence MCSCF, also provide VVOS=.TRUE. orbs from RHF
+!      there are 415,297 determinants in C2v
+--- $contrl scftyp=mcscf mplevl=2 local=ruednbrg $end
+--- $system mwords=15 $end
+--- $guess  guess=moread norb=63 $end
+--- $det    ncore=3 nact=13 nels=16 $end
+--- $local  orient=.true. $end
+
+ $contrl runtyp=energy $end
+ $contrl icharg=-1 nzvar=6 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 diffsp=.t. diffs=.t. $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  1,2,3,  1,1,4,  2,4,1,2,  4,4,1,3,2 $end
+ $data
+diazirinyl anion, HCN2- open form at RHF/6-31++G(d,p)
+Cnv 2
+
+C 6.0   0.0000000000   0.0000000000  -0.0435530432
+N 7.0   0.9091338169   0.0000000000   0.8484105266
+H 1.0   0.0000000000   0.0000000000  -1.1416032259
+ $end
+
+RHF geometry:          -147.1813960582
+C 6.0   0.0000000000   0.0000000000  -0.0435530432
+N 7.0   0.9091338169   0.0000000000   0.8484105266
+H 1.0   0.0000000000   0.0000000000  -1.1416032259
+
+revTPSS geometry:      -148.2076203133
+C 6.0   0.0000000000   0.0000000000  -0.0354859532
+N 7.0   0.9695762614   0.0000000000   0.8451824355
+H 1.0   0.0000000000   0.0000000000  -1.1479522542
+
+MP2 geometry:          -147.6926011359
+C 6.0   0.0000000000   0.0000000000  -0.0165292842
+N 7.0   1.0125131897   0.0000000000   0.8359341650
+H 1.0   0.0000000000   0.0000000000  -1.1166687172
+
+CCSD geometry:         -147.6854560   (by numerical nuclear gradients)
+C 6.0   0.0000000000   0.0000000000  -0.0233263503
+N 7.0   0.9827594247   0.0000000000   0.8391963580
+H 1.0   0.0000000000   0.0000000000  -1.1263892940
+
+CCSD(T) geometry:      -147.7174814   (by numerical nuclear gradients)
+C 6.0   0.0000000000   0.0000000000   0.0007381621
+N 7.0   1.0287430965   0.0000000000   0.8281544237
+H 1.0   0.0000000000   0.0000000000  -1.1060804004
+
+MCSCF geometry:        -147.3956357086
+C 6.0   0.0000000000   0.0000000000   0.0091528338
+N 7.0   1.0413443389   0.0000000000   0.8250852793
+H 1.0   0.0000000000   0.0000000000  -1.1209849453
+MRMP energy at this geometry is -147.700748
+
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

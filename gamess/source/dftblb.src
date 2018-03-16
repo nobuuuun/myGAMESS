@@ -1,0 +1,4968 @@
+C 18 Apr 16 - YN  - updates for FMO 5.2
+C 29 Sep 14 - YN  - Implement Density-Functional Tight-Binding Method
+C
+C*MODULE DFTBLB    *DECK DFTB_INPUT
+C>
+C>    @brief   Read and prepare DFTB input information
+C>
+C>    @details Read input information from $DFTB directive.
+C>             Read the location of Slater-Koster files from $DFTBSK
+C>             directive, and then store parameters to parameters in
+C>             SKTAB common block.
+C>
+C>    @author  Yoshio Nishimoto
+C>             - Sep, 2014- Subroutine written
+C>    @date    Feb, 2016 - Yoshio Nishimoto
+C>             - Many improvements
+C>    @date    Jun, 2016 - Yoshio Nishimoto
+C>             - Default parameters are modified
+C>
+C
+C     DETAILS OF OVERALL IMPLEMENTATION OF DFTB IN GAMESS
+C
+C     The code of DFTB part comes from so called as Padreborn DFTB,
+C     which is sometimes called old DFTB.  Therefore, the implementation
+C     is different from DFTB+.
+C     YN acknowledge authors of Paderborn DFTB,
+C       P. Blaudeck, D. Porezag, G. Jungnickel, J. Elsner, M. Haugk,
+C       Th. Frauenheim, G. Seifert, and M. Elstner
+C
+C     Possible References:
+C     NCC-DFTB (DFTB1)
+C       Porezag, D. et al. Phys. Rev. B 1995, 51, 12947-12957.
+C       Seiferg, G. et al. Int. J. Quantum Chem. 1996, 58, 185-192.
+C     SCC-DFTB (DFTB2)
+C       Elstner, M. et al. Phys. Rev. B 1998, 58, 7260-7268.
+C     DFTB3
+C       Gaus, M. et al. J. Chem. Theory Comput. 2011, 7, 931-948.
+C
+C     Memo of DFTB specific dictionary files
+C     556 :: Atom-resolved Mulliken population
+C     557 :: Shell-resolved Mulliken population
+C     558 :: Shell-resolved spin population
+C     559 :: Atom-resolved shift contribution
+C     560 :: Shell-resolved shift contribution
+C     561 :: Shell-resolved spin shift contribution
+C     562 :: Occupation number (Alpha)
+C     563 :: Occupation number (Beta)
+C     564 :: Non-perturbed Hamiltonian (only in FMO-DFTB)
+C     565 :: Contribution of PCM (only in FMO-DFTB)
+C     566 :: Atom-resolved shift contribution of ESP (only in FMO-DFTB)
+C     567 :: Atom-resolved shift contribution of ESP (only in FMO-DFTB3)
+C     568 :: Temporary storage for Slater-Koster parameters
+C
+      SUBROUTINE DFTB_INPUT(KS,NS)
+C
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MXATM=2000, MXSPE=10, MXAO=8192
+      INTEGER,PARAMETER :: MXSH=5000, MXGTOT=20000
+      INTEGER,PARAMETER :: DDI_WORLD=0,DDI_GROUP=1
+C
+      INTEGER KS(*),NS(*)
+C
+      COMMON /BASSPH/ QMTTOL,ISPHER
+      DOUBLE PRECISION :: QMTTOL
+      INTEGER :: ISPHER
+C
+      COMMON /DFTB  / DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+      LOGICAL DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+      logical xcorr  !! Flag for X correction for halogen.
+      logical araman !! Flag for analytic polarizability derivative
+C
+      COMMON /DFTBHS/ DEGTHR1,DEGTHR2,MODHSS,MODPRJ
+      DOUBLE PRECISION DEGTHR1, DEGTHR2
+      INTEGER MODHSS,MODPRJ
+C
+      COMMON /DFTBMX/ SIMPLE,ITYPMX,TBROYDEN
+      DOUBLE PRECISION :: SIMPLE
+      INTEGER :: ITYPMX
+      LOGICAL :: TBROYDEN
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      DOUBLE PRECISION :: ETEMP,DFTBDP,DAMPXHE,HUBDER,ZREF,SPNCST,SPE
+      INTEGER :: NSPE,MAXANG,ISPE,IND,IDFTBD
+C
+C     COMMON /DFTBAR/ ARAMAN
+C     LOGICAL :: ARAMAN
+C
+      COMMON /DFTBRE/ REPCUT(MXSPE,MXSPE),NUMREP(MXSPE,MXSPE),
+     *                LREPINTV(MXSPE,MXSPE),LREPSHORT(MXSPE,MXSPE),
+     *                LREPCOEFF(MXSPE,MXSPE)
+      DOUBLE PRECISION REPCUT
+      INTEGER NUMREP,LREPINTV,LREPSHORT,LREPCOEFF
+C
+      COMMON /DFTBSK/ SKDIM(MXSPE,MXSPE),SKSPIN(MXSPE),QREFL(3,MXSPE),
+     *                HUBBL(3,MXSPE),QREF(MXSPE),HUBB(MXSPE),SKCUT2,
+     *                NEEDSK,LSKHTAB(MXSPE,MXSPE),LSKSTAB(MXSPE,MXSPE),
+     *                LSKGRID(MXSPE,MXSPE),LSKSELF(MXSPE)
+      DOUBLE PRECISION SKDIM,SKSPIN,QREFL,HUBBL,QREF,HUBB,SKCUT2
+      INTEGER NEEDSK,LSKHTAB,LSKSTAB,LSKGRID,LSKSELF
+C
+C     COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+C    *                SPE(MXATM),NSPE,MAXANG(MXATM),ISPE(MXATM),
+C    *                IND(MXATM+1),IDFTBD
+C     DOUBLE PRECISION :: ETEMP,DFTBDP,DAMPXHE,HUBDER,SPE
+C     INTEGER :: NSPE,MAXANG,ISPE,IND,IDFTBD
+C
+C     COMMON /DFTBSK/ SKHTAB(10,MXTAB,MXSPE,MXSPE),
+C    *                SKSTAB(10,MXTAB,MXSPE,MXSPE),SKSELF(3,MXSPE),
+C    *                SKGRID(2,MXSPE,MXSPE),SKDIM(MXSPE,MXSPE),
+C    *                SKSPIN(MXSPE),REPCOEFF(6,MXINT,MXSPE,MXSPE),
+C    *                REPINTV(2,MXINT,MXSPE,MXSPE),
+C    *                REPSHORT(3,MXSPE,MXSPE),REPCUT(MXSPE,MXSPE),
+C    *                QREFL(3,MXSPE),HUBBL(3,MXSPE),QREF(MXSPE),
+C    *                HUBB(MXSPE),SKCUT2,ZREF(MXATM),SPNCST(6,MXSPE),
+C    *                NUMREP(MXSPE,MXSPE)
+C     DOUBLE PRECISION :: SKHTAB,SKSTAB,SKSELF,SKGRID,SKDIM,SKSPIN,
+C    *  HUBBL,QREFL,REPCUT,REPINTV,REPSHORT,REPCOEFF,QREF,HUBB,SKCUT2,
+C    *  ZREF,SPNCST
+C     INTEGER :: NUMREP
+C
+      COMMON /DFTDC / DC,IDCVER,DCCHG,DCABC,DCSR,DCS6,DCS8,DCALP,DCA1,
+     *                DCA2
+      LOGICAL :: DC,DCCHG,DCABC
+      INTEGER :: IDCVER
+      DOUBLE PRECISION :: DCSR,DCS6,DCS8,DCALP,DCA1,DCA2
+      COMMON /MACHSW/ KDIAG,ICORFL,IXDR,modio,mem10,lpnt10,mem10m
+      INTEGER :: KDIAG,ICORFL,IXDR,modio,mem10,lpnt10,mem10m
+C
+      COMMON /FMCOM / X(1)
+      DOUBLE PRECISION X
+C
+      COMMON /FMODTB/ LGAMMA,LZREF,LISPE,LSHIFTG,LSHIFTCT,
+     *                LGAMMAD,MODESD,MODGAMMA,LDCTMP,LGAMMA3,LGAMMA3D,
+     *                LNBOND,LCTMUL
+      INTEGER :: LGAMMA,LZREF,LISPE,LSHIFTG,LSHIFTCT,LGAMMAD,MODESD,
+     *  MODGAMMA,LDCTMP,LGAMMA3,LGAMMA3D,LNBOND,LCTMUL
+C
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,WASGDDI,MLGDDI,NSUBGR,
+     *                MEUNIV,NPUNIV
+      INTEGER ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     *        NSUBGR,MEUNIV,NPUNIV
+      LOGICAL ISGDDI,PAROUT,INITGDDI,WASGDDI,MLGDDI
+C
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     & ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      INTEGER :: NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,IAN
+      DOUBLE PRECISION :: ZAN,C
+C
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      INTEGER :: IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA
+C
+      COMMON /MASSES/ ZMASS(MXATM)
+      DOUBLE PRECISION :: ZMASS
+C
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      DOUBLE PRECISION :: EX,CS,CP,CD,CF,CG,CH,CI
+      INTEGER :: KSTART,KATOM,KTYPE,KNG,KLOC,KMIN,KMAX,NSHELL
+C
+      COMMON /RUNLAB/ TITLE(10),ANAM(MXATM),B(MXATM),BFLAB(MXAO)
+      DOUBLE PRECISION :: TITLE,ANAM,B,BFLAB
+C     character*8 a(MXATM)
+C     EQUIVALENCE (a,anam)
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      INTEGER :: ME,MASTER,NPROC,IBTYP,IPTIM
+      LOGICAL :: GOPARR,DSKWRK,MASWRK
+C
+      INTEGER :: I,J,IEOF,JRET,NFTDFTB,NDER,NSK,NDFTB,NUMA,IS
+      DOUBLE PRECISION :: DFTBD
+      CHARACTER(4)   :: C4
+      CHARACTER(8)   :: DUM1
+      CHARACTER(150) :: DUM3,SKPATH(MXSPE,MXSPE)
+      DOUBLE PRECISION C8/8H        /,NONE/8HNONE    /,UFF/8HUFF     /,
+     *                 LJ/8HLJ      /,SK/8HSK      /,DFT/8HDFT     /,
+     *                 SKHP/8HSKHP    /,GRIMME/8HGRIMME  /
+
+      LOGICAL :: SKJUDGE(MXSPE,MXSPE)
+C
+C       ----- SET UP NAMELIST $DFTB TABLES -----
+C
+C NNAM : NUMBER OF ARGUMENTS TO READ
+C DFTB : ONLY CONTAINS "DFTB    " CHARACTERS
+C QNAM : ARGUMENTS TO READ (CHARACTERS)
+C KQNAM : SEE NAMEIO SUBROUTINE in nameio.src (46-675)
+C
+C SCC (LOGICAL) : SCC (TRUE) OR NCC (FALSE)
+C SRSCC (LOGICAL) : SHELL-RESOLVED SCC, USES DIFFERENT HUBBARD VALUES
+C   FOR DIFFERENT SHELLS
+C
+      INTEGER,PARAMETER      :: NNAM = 25
+      CHARACTER(8),PARAMETER :: CHDFTB = "DFTB    "
+      CHARACTER(8)           :: QNAM(NNAM)
+      INTEGER                :: KQNAM(NNAM)
+      LOGICAL :: PRTORB
+
+      ISPHER = 1 !! FORCE TO USE 5D.  THIS IS ONLY CHIOCE FOR DFTB.
+      IF (MASWRK) THEN
+        WRITE (IW,*)
+        WRITE (IW,*)
+     *    " **********************************************************"
+        WRITE (IW,*)
+     *    " **  DENSITY-FUNCTIONAL TIGHT-BINDING (DFTB) CALCULATION **"
+        WRITE (IW,*)
+     *    " **********************************************************"
+        WRITE (IW,*)
+     *    "       WRITTEN BY YOSHIO NISHIMOTO (NAGOYA UNIVERSITY)"
+        WRITE (IW,*)
+      END IF
+      QNAM( 1) = "SCC     "
+      QNAM( 2) = "ETEMP   "
+      QNAM( 3) = "BROYDN  "
+      QNAM( 4) = "ITYPMX  "
+      QNAM( 5) = "MODESD  "
+      QNAM( 6) = "MODGAM  "
+      QNAM( 7) = "DISP    "
+      QNAM( 8) = "DISPPR  "
+      QNAM( 9) = "DFTB3   "
+      QNAM(10) = "DAMPXH  "
+      QNAM(11) = "DAMPEX  "
+      QNAM(12) = "HUBDER  "
+      QNAM(13) = "LRDFTB  "
+      QNAM(14) = "PRTORB  "
+      QNAM(15) = "SPNCST  "
+      QNAM(16) = "SRSCC   "
+      QNAM(17) = "MAXANG  "
+      QNAM(18) = "NDFTB   "
+      QNAM(19) = "MODHSS  "
+      QNAM(20) = "ARAMAN  "
+      QNAM(21) = "XCORR   "
+      QNAM(22) = "DGTHR1  "
+      QNAM(23) = "DGTHR2  "
+      QNAM(24) = "MODPRJ  "
+      QNAM(25) = "QREF    "
+C     0 : LOGICAL
+C     1 : INTEGER
+C     3 : DOUBLE PRECISION
+C     5 : CHARACTERS
+      KQNAM( 1) = 0
+      KQNAM( 2) = 3
+      KQNAM( 3) = 0
+      KQNAM( 4) = 1
+      KQNAM( 5) = 1
+      KQNAM( 6) = 1
+      KQNAM( 7) = 5
+      KQNAM( 8) = 3 + 14*MXSPE*10
+      KQNAM( 9) = 0
+      KQNAM(10) = 0
+      KQNAM(11) = 3
+      KQNAM(12) = 3 + MXSPE*10
+      KQNAM(13) = 0
+      KQNAM(14) = 0
+      KQNAM(15) = 3 + 6*MXSPE*10
+      KQNAM(16) = 0
+      KQNAM(17) = 1
+      KQNAM(18) = 1
+      KQNAM(19) = 1
+      KQNAM(20) = 0
+      KQNAM(21) = 0
+      KQNAM(22) = 3
+      KQNAM(23) = 3
+      KQNAM(24) = 1
+      KQNAM(25) = 3 + MXSPE*10
+C
+      MODESD    = 0
+      MODGAMMA  = 0
+      DFTBD     = NONE
+      DFTB3     = .FALSE.
+      DAMPXH    = .FALSE.
+      DAMPXHE   = 4.0D+00 !! (JCTC 2013, 9, 338-354)
+      LRDFTB    = .FALSE.
+      PRTORB    = .FALSE.
+      SRSCC     = .FALSE.
+      NDFTB     = 0
+      MODHSS    = -1
+      ARAMAN    = .FALSE.
+      XCORR     = .FALSE.
+      DEGTHR1   = 1.0D-06
+      DEGTHR2   = 1.0D-12
+      MODPRJ    = 0
+      CALL VCLR(SPNCST,1,6*MXSPE)
+      DO I = 1, MXSPE
+        HUBDER(I) = 1.0D+06
+      END DO
+      DO I = 1, 14*MXSPE
+        DFTBDP(I) = 1.0D+06
+      END DO
+C
+C       COUNT HOW MANY SPECIES EXIST,
+C       AND GET THESE SEPARATE SPECIES
+C
+      NSPE = 0
+C     INITIALIZE SPE MATRIX
+      DO I = 1, NAT
+        SPE(I) = C8
+      END DO
+C
+      DO I = 1, NAT
+        IF (I.EQ.1) THEN
+          NSPE = NSPE + 1
+          SPE(NSPE) = ANAM(1)
+          ISPE(I) = NSPE
+        ELSE
+          DO J = 1, NAT
+            IF (ANAM(I)==SPE(J)) THEN
+              ISPE(I) = J
+              EXIT
+            END IF
+            IF (J.GT.NSPE) THEN
+              NSPE = NSPE + 1
+              SPE(NSPE) = ANAM(I)
+              ISPE(I) = NSPE
+              EXIT
+            END IF
+          END DO
+        END IF
+      END DO
+      SPE(NSPE+1:NAT) = C8
+      KQNAM(17) = KQNAM(17) + NSPE*10
+C
+C       ----- INITIALIZE VARIABLES FOR NAMELIST $DFTB -----
+C
+      SCC      = .TRUE.
+      ETEMP    =  0.0D+00
+      ITYPMX   = 0  !! BROYDEN'S METHOD BY DEFAULT
+      DO I = 1, NSPE
+        MAXANG(I) = -1
+      END DO
+      DO I = 1, NSPE
+        QREF(I) = -1
+      END DO
+C
+C     CALL SEQOPN(IR,'INPUT','OLD',.TRUE.,'FORMATTE')
+      IEOF = 0
+      CALL SEQREW(IR)
+      CALL FNDGRP(IR,' $DFTB  ',IEOF)
+      IF (IEOF.EQ.1) THEN
+        IF (MASWRK) WRITE (IW,*) "$DFTB KEYWORD NOT FOUND"
+        GO TO 10
+      END IF
+C
+      JRET = 0
+      CALL NAMEIO(IR,JRET,CHDFTB,NNAM,QNAM,KQNAM,
+     &     SCC,ETEMP,TBROYDEN,ITYPMX,MODESD,
+     &     MODGAMMA,DFTBD,DFTBDP,DFTB3,DAMPXH,
+     &     DAMPXHE,HUBDER,LRDFTB,PRTORB,SPNCST,
+     &     SRSCC,MAXANG,NDFTB,MODHSS,ARAMAN,
+     &     XCORR,DEGTHR1,DEGTHR2,MODPRJ,QREF,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0)
+      IF (JRET.EQ.2) THEN
+        IF (MASWRK) WRITE (IW,'(" TYPING ERROR IN $DFTB INPUT")')
+        CALL ABRT
+      END IF
+C
+C     SET DEFAULT MAXIMUM ANGULAR MOMENTUM
+C
+   10 CONTINUE
+      IF (MASWRK) WRITE (IW,'(" NUMBER OF SPECIES:",I3)') NSPE
+      DO I = 1, NSPE
+        IF (MAXANG(I).EQ.-1) THEN
+          CALL DFTB_RMNUM(SPE(I),DUM1)
+          CALL UPRCAS(DUM1,8)
+          CALL DFTB_CONV_AN(NUMA,DUM1)
+          IF (NUMA.EQ. 1) MAXANG(I) = 1 !! H
+          IF (NUMA.EQ. 2) MAXANG(I) = 1 !! HE
+          IF (NUMA.EQ. 3) MAXANG(I) = 2 !! LI
+          IF (NUMA.EQ. 4) MAXANG(I) = 2 !! BE
+          IF (NUMA.EQ. 5) MAXANG(I) = 2 !! B
+          IF (NUMA.EQ. 6) MAXANG(I) = 2 !! C
+          IF (NUMA.EQ. 7) MAXANG(I) = 2 !! N
+          IF (NUMA.EQ. 8) MAXANG(I) = 2 !! O
+          IF (NUMA.EQ. 9) MAXANG(I) = 2 !! F
+          IF (NUMA.EQ.10) MAXANG(I) = 2 !! NE
+          IF (NUMA.EQ.11) MAXANG(I) = 2 !! NA
+          IF (NUMA.EQ.12) MAXANG(I) = 3 !! MG
+          IF (NUMA.EQ.13) MAXANG(I) = 3 !! AL
+          IF (NUMA.EQ.14) MAXANG(I) = 3 !! SI
+          IF (NUMA.EQ.15) MAXANG(I) = 3 !! P
+          IF (NUMA.EQ.16) MAXANG(I) = 3 !! S
+          IF (NUMA.EQ.17) MAXANG(I) = 3 !! CL
+          IF (NUMA.EQ.18) MAXANG(I) = 3 !! AR
+          IF (NUMA.EQ.19) MAXANG(I) = 3 !! K
+          IF (NUMA.EQ.20) MAXANG(I) = 3 !! CA
+          IF (NUMA.EQ.21) MAXANG(I) = 3 !! SC
+          IF (NUMA.EQ.22) MAXANG(I) = 3 !! TI
+          IF (NUMA.EQ.23) MAXANG(I) = 3 !! V
+          IF (NUMA.EQ.24) MAXANG(I) = 3 !! CR
+          IF (NUMA.EQ.25) MAXANG(I) = 3 !! MN
+          IF (NUMA.EQ.26) MAXANG(I) = 3 !! FE
+          IF (NUMA.EQ.27) MAXANG(I) = 3 !! CO
+          IF (NUMA.EQ.28) MAXANG(I) = 3 !! NI
+          IF (NUMA.EQ.29) MAXANG(I) = 3 !! CU
+          IF (NUMA.EQ.30) MAXANG(I) = 3 !! ZN
+          IF (NUMA.EQ.31) MAXANG(I) = 3 !! GA
+          IF (NUMA.EQ.32) MAXANG(I) = 3 !! GE
+          IF (NUMA.EQ.33) MAXANG(I) = 3 !! AS
+          IF (NUMA.EQ.34) MAXANG(I) = 3 !! SE
+          IF (NUMA.EQ.35) MAXANG(I) = 3 !! BR
+          IF (NUMA.EQ.36) MAXANG(I) = 2 !! KR
+          IF (NUMA.EQ.37) MAXANG(I) = 2 !! RB
+          IF (NUMA.EQ.38) MAXANG(I) = 2 !! SR
+          IF (NUMA.EQ.39) MAXANG(I) = 3 !! Y 
+          IF (NUMA.EQ.40) MAXANG(I) = 3 !! ZR
+          IF (NUMA.EQ.41) MAXANG(I) = 3 !! NB
+          IF (NUMA.EQ.42) MAXANG(I) = 3 !! MO
+          IF (NUMA.EQ.43) MAXANG(I) = 3 !! TC
+          IF (NUMA.EQ.44) MAXANG(I) = 3 !! RU
+          IF (NUMA.EQ.45) MAXANG(I) = 3 !! RH
+          IF (NUMA.EQ.46) MAXANG(I) = 3 !! PD
+          IF (NUMA.EQ.47) MAXANG(I) = 3 !! AG
+          IF (NUMA.EQ.48) MAXANG(I) = 3 !! CD
+          IF (NUMA.EQ.49) MAXANG(I) = 3 !! IN
+          IF (NUMA.EQ.50) MAXANG(I) = 3 !! SN
+          IF (NUMA.EQ.51) MAXANG(I) = 3 !! SB
+          IF (NUMA.EQ.52) MAXANG(I) = 3 !! TE
+          IF (NUMA.EQ.53) MAXANG(I) = 3 !! I
+          IF (NUMA.EQ.54) MAXANG(I) = 2 !! XE
+          IF (MAXANG(I).EQ.-1) THEN
+          WRITE (IW,'(" ERROR FOUND WHILE LOOKING FOR MAXANG FOR ",A8)')
+     *        SPE(I)
+            CALL ABRT
+          END IF
+          IF (MASWRK) THEN
+            IF (MAXANG(I).EQ.1) THEN
+              WRITE (IW,'("        SPECIES",I2," :  ",A8,
+     *          "WITH S     ORBITAL")')  I, SPE(I)
+            ELSE IF (MAXANG(I).EQ.2) THEN
+              WRITE (IW,'("        SPECIES",I2," :  ",A8,
+     *          "WITH S+P   ORBITALS")') I, SPE(I)
+            ELSE IF (MAXANG(I).EQ.3) THEN
+              WRITE (IW,'("        SPECIES",I2," :  ",A8,
+     *          "WITH S+P+D ORBITALS")') I, SPE(I)
+            END IF
+          END IF
+        ELSE
+          IF (MASWRK) THEN
+            IF (MAXANG(I).EQ.1) THEN
+              WRITE (IW,'("        SPECIES",I2," :  ",A8,
+     *          "WITH S     ORBITAL  (USER DEFINED)")') I, SPE(I)
+            ELSE IF (MAXANG(I).EQ.2) THEN
+              WRITE (IW,'("        SPECIES",I2," :  ",A8,
+     *          "WITH S+P   ORBITALS (USER DEFINED)")') I, SPE(I)
+            ELSE IF (MAXANG(I).EQ.3) THEN
+              WRITE (IW,'("        SPECIES",I2," :  ",A8,
+     *          "WITH S+P+D ORBITALS (USER DEFINED)")') I, SPE(I)
+            END IF
+          END IF
+        END IF
+      END DO
+      IF (MASWRK) WRITE (IW,*)
+C
+C       CALCULATION OF INDICES FOR MATRICES H AND S
+C
+      IND(1) = 0
+      DO I = 1, NAT
+        IND(I+1) = IND(I) + MAXANG(ISPE(I))**2
+      END DO
+C
+C       CALCULATE THE NUMBER OF SHELLS
+C
+      KS(1) = 1
+      DO I = 1, NAT
+        NSHELL = NSHELL + MAXANG(ISPE(I))
+        NS(I) = MAXANG(ISPE(I))
+        KS(I+1) = KS(I) + MAXANG(ISPE(I))
+      END DO
+C
+      NUM  = IND(NAT+1)
+      NQMT = IND(NAT+1)
+C
+C     CHECK NDFTB VALUE
+C
+      IF (NDFTB.EQ.1) THEN
+        IF (DFTB3) THEN
+          IF (MASWRK)
+     *      WRITE (IW,'(" NDFTB=1 IS IMCOMPATIBLE WITH DFTB3")')
+          CALL ABRT
+        END IF
+        SCC = .FALSE.
+        DFTB3 = .FALSE.
+      ELSE IF (NDFTB.EQ.2) THEN
+        IF (DFTB3) THEN
+        IF (MASWRK) WRITE (IW,'(" NDFTB=2 IS IMCOMPATIBLE WITH DFTB3")')
+          CALL ABRT
+        END IF
+        IF (.NOT.SCC) THEN
+          IF (MASWRK)
+     *      WRITE (IW,'(" NDFTB=2 IS IMCOMPATIBLE WITH SCC=.FALSE.")')
+          CALL ABRT
+        END IF
+        SCC = .TRUE.
+        DFTB3 = .FALSE.
+      ELSE IF (NDFTB.EQ.3) THEN
+        SCC = .TRUE.
+        DFTB3 = .TRUE.
+      ELSE
+        NDFTB = 2 !! SCC-DFTB BY DEFAULT
+        IF (.NOT.SCC) NDFTB = 1
+        IF (DFTB3) NDFTB = 3
+      END IF
+      IF (.NOT.DAMPXH) DAMPXHE = 0.0D+00
+C
+C     PRINT DFTB OPTIONS
+C
+      IF (MASWRK) THEN
+        WRITE (IW,'("     $DFTB OPTIONS")')
+        WRITE (IW,'("     -------------")')
+        WRITE (IW,'(" NDFTB =",I8,4X,   " SCC   =",L8,4X,
+     *              " DFTB3 =",L8      )') NDFTB,SCC,DFTB3
+        WRITE (IW,'(" SRSCC =",L8,4X,   " DAMPXH=",L8,4X,
+     *              " DAMPEX=",F8.2    )') SRSCC,DAMPXH,DAMPXHE
+        WRITE (IW,'(" DISP  =",A8,4X,   " ITYPMX=",I8,4X,
+     *              " ETEMP =",F8.2    )') DFTBD,ITYPMX,ETEMP
+        WRITE (IW,'(" MODESD=",I8,4X,   " MODGAM=",I8,4X,
+     *              " PRTORB=",L8      )') MODESD,MODGAMMA,PRTORB
+        WRITE (IW,*)
+      END IF
+C
+C     CHECK ELECTRONIC TEMPERATURE
+C
+      IF (ETEMP.LT.0.0D+00) THEN
+        IF (MASWRK) WRITE (IW,'(" ETEMP.LT.0.0D+00 IS NOT ALLOWED")')
+        CALL ABRT 
+      END IF
+C
+C     DAMP DFTB OPTIONS
+C
+      IF (MASWRK) THEN
+        IF (.NOT.SCC.AND.(DFTB3.OR.DAMPXH)) THEN
+         WRITE (IW,'(" NCC-DFTB IS IMCOMPATIBLE WITH DFTB3 OR DAMPXH")')
+         CALL ABRT
+        END IF
+        IF (SCC) THEN
+          WRITE (IW,'(" --- SCC CALCULATION ---")')
+          IF (DFTB3) THEN
+            WRITE (IW,'("     INCLUDE 3RD ORDER CORRECTION")')
+            CALL DFTB_3RD_PARAM(NSPE,SPE,HUBDER,IW,MAXANG,MASWRK,SRSCC)
+          END IF
+          IF (DAMPXH) THEN
+            WRITE (IW,'("     USE X-H DAMPING: ",F8.5)') DAMPXHE
+          END IF
+        ELSE IF (.NOT.SCC) THEN
+          WRITE (IW,'(" --- NCC CALCULATION ---")')
+        END IF
+        WRITE (IW,*)
+      END IF
+C
+C     MIXING METHOD
+C
+      IF (ITYPMX.GT.3.OR.ITYPMX.LT.-1.OR.ITYPMX.EQ.1) THEN
+        IF (MASWRK) WRITE (IW,*) "UNKNOWN ITYPMX ... CHANGED TO -1"
+        ITYPMX = -1
+      END IF
+      IF (MASWRK) THEN
+        IF (ITYPMX.EQ.0)
+     *    WRITE (IW,'(" BROYDEN''S CHARGE MIXING")')
+C       IF (ITYPMX.EQ.1)
+C    *    WRITE (IW,'(" ANDERSON''S CHARGE MIXING WILL BE USED.")')
+        IF (ITYPMX.EQ.2)
+     *    WRITE (IW,'(" DIIS CHARGE UPDATE")')
+        IF (ITYPMX.EQ.3)
+     *    WRITE (IW,'(" SIMPLE CHARGE MIXING")')
+        IF (ITYPMX.EQ.-1)
+     *    WRITE (IW,'(" USE GAMESS STANDARD SUBROUTINES FOR SCF")')
+      END IF
+C
+C     CHECK IF SPHERICALLY-RESOLVED SCC (SASCC) OR SHELL-RESOLVED
+C     SCC (SRSCC).  SASCC IS THE DEFAULT CHOICE.
+C     IT SHOULD NOT BE COMBINED WITH EITHER NCC OR DFTB3 (NOW)
+C
+      IF (SRSCC.AND..NOT.SCC) THEN
+        IF (MASWRK) WRITE (IW,*)"NCC-DFTB CANNOT BE COMBINED WITH SRSCC"
+        CALL ABRT
+      END IF
+C
+C     CHECK DISPERSION CORRECTION
+C
+      DC = .FALSE.
+      IDFTBD = 0
+      IF (DFTBD.EQ.UFF.OR.DFTBD.EQ.LJ) THEN
+        IDFTBD = 1
+        DC = .TRUE.
+        IF (MASWRK)
+     *    WRITE (IW,'(" LENNARD-JONES TYPE DISPERSION IS TURNED ON")')
+      ELSE IF (DFTBD.EQ.SK) THEN
+        IDFTBD = 2
+        DC = .TRUE.
+        IF (MASWRK)
+     *    WRITE (IW,'(" SLATER-KIRKWOOD TYPE DISPERSION IS TURNED ON")')
+      ELSE IF (DFTBD.EQ.DFT.OR.DFTBD.EQ.GRIMME) THEN
+        IDFTBD = 3
+        DC = .TRUE.
+        IF (MASWRK)
+     *    WRITE (IW,'(" DFT-D[1,2,3] TYPE DISPERSION IS TURNED ON")')
+        CALL DERCHK(NDER)
+C       IF (NDER.EQ.2) THEN
+C         WRITE (IW,'(" NDER.EQ.2 (HESSIAN) IS NOT AVAILABLE")')
+C         CALL ABRT
+C       END IF
+      ELSE IF (DFTBD.EQ.SKHP) THEN
+        IDFTBD = 4
+        DC = .TRUE.
+        IF (MASWRK)
+     *    WRITE (IW,'(" SLATER-KIRKWOOD TYPE DISPERSION ",
+     *      "(HYBRID-POLARIZED) IS TURNED ON")')
+      ELSE IF (DFTBD.NE.NONE) THEN
+        WRITE (IW,'(" ''DISP'' OPTION IS NOT RECOGNIZED.")')
+        CALL ABRT
+      END IF
+C
+C     PUT PARAMETERS FOR DISPERSION CORRECTION
+C
+      IF (DC.AND.IDFTBD.NE.3)
+     *  CALL DFTB_DISP_PARAM(DFTBDP,IW,NSPE,DFTBD,SPE,MASWRK)
+C
+C     READ SLATER-KOSTER TABLE FROM $DFTBSK SECTION
+C
+      IEOF = 0
+      CALL SEQREW(IR)
+      CALL FNDGRP(IR,' $DFTBSK',IEOF)
+      IF (IEOF.EQ.1) THEN
+        IF (MASWRK) THEN
+          WRITE (IW,*) "$DFTBSK KEYWORD NOT FOUND"
+          WRITE (IW,*)
+     *      "APPROPRIATE PARAMETERS MUST EXIST IN $DFTBSK FOR DFTB"
+        END IF
+        CALL ABRT
+      END IF
+
+      IF (.NOT.MASWRK) GOTO 100
+      CALL DFTB_READ_SKWFC(1,SKPATH)
+      SKJUDGE = .FALSE.
+      NFTDFTB = 21
+      NSK = 0
+      DO I = 1, NSPE
+        DO J = 1, NSPE
+          DUM3 = SKPATH(I,J)
+          IF (LEN_TRIM(DUM3).EQ.0) CYCLE
+          OPEN (UNIT=NFTDFTB,FILE=ADJUSTL(TRIM(DUM3)),STATUS='OLD',
+     *          IOSTAT=IS,FORM='FORMATTED',ACTION='READ')
+          CLOSE (NFTDFTB)
+          IF (IS.EQ.0) THEN
+            SKJUDGE(I,J) = .TRUE.
+            NSK = NSK + 1
+            CYCLE
+          END IF
+          WRITE (IW,*)
+          WRITE (IW,'(" ERROR INFORMATION FOR FILE: ",A)') TRIM(DUM3)
+          WRITE (IW,'(" IOSTAT = ", i3)') IS
+C         Erorr code: https://software.intel.com/en-us/node/525375
+c         IF (IS.EQ. 9) THEN
+c           WRITE (IW,'(" PERMISSION DENIED")')
+c         ELSE IF (IS.EQ.29) THEN
+c           WRITE (IW,'(" FILE MAY NOT EXIST?")')
+c         ELSE IF (IS.EQ.30) THEN
+c           WRITE (IW,'(" OPEN FAILURE")')
+c         ELSE IF (IS.EQ.41) THEN
+c           WRITE (IW,'(" INSUFFICIENT VIRTUAL MEMORY")')
+c         ELSE IF (IS.EQ.42) THEN
+c           WRITE (IW,'(" NO SUCH DEVICE")')
+c         ELSE
+c           WRITE (IW,'(" UNKNOWN ERROR...")')
+c         END IF
+        END DO
+      END DO
+
+      WRITE (IW,'(/,X,I3," SLATER-KOSTER FILES WILL BE READ")') NSK
+      DO I = 1, NSPE
+        DO J = 1, NSPE
+          IF (.NOT.SKJUDGE(I,J)) THEN
+            IF (NSK.NE.-1) WRITE (IW,'(/,X,"ERROR!")')
+            NSK = -1
+            WRITE (IW,'(X,"SLATER-KOSTER FILE FOR ",A4," - ",A4,
+     *        " HAS NOT BEEN FOUND")') SPE(I),SPE(J)
+          END IF
+        END DO
+      END DO
+      WRITE (IW,*)
+C
+  100 CONTINUE
+C
+      IF (GOPARR) CALL DDI_BCAST(2354,'I',NSK,1,MASTER)
+      IF (NSK.EQ.-1) THEN
+        IF (MASWRK)
+     *    WRITE(IW,*) ' PERHAPS ATOMS IN $DATA AND $DFTBSK MISMATCH?'
+        CALL ABRT
+      END IF
+C
+C
+C     ----- ALLOCATE DYNAMIC MEMORY FOR SLATER-KOSTER FILES -----
+C     MEMORY LENGTH IS NEEDSK
+C
+      CALL DFTB_SKMEM(0)
+C
+C     ----- NOW, READ SLATER-KOSTER PARAMETERS -----
+C
+      IF (MASWRK) THEN
+        WRITE (IW,*) " START READING SLATER-KOSTER FILES"
+        WRITE (IW,*)
+        SKCUT2 = 0.0D+00
+        DO I = 1, NSPE
+          DO J = 1, NSPE
+            CALL DFTB_SKTAB(I,J,SKPATH(I,J),X(LSKHTAB(I,J)),
+     *           X(LSKSTAB(I,J)),X(LSKSELF(I)),X(LSKGRID(I,J)),
+     *           X(LREPCOEFF(I,J)),X(LREPINTV(I,J)),
+     *           X(LREPSHORT(I,J)))
+          END DO
+        END DO
+      END IF
+      IF (ISGDDI) CALL GDDI_SCOPE(DDI_WORLD)
+      IF (GOPARR.and.mem10.ne.0) 
+     *  CALL DDI_BCAST(2354,'F',X(LSKHTAB(1,1)),NEEDSK,MASTER)
+      CALL DAWRIT(IDAF,IODA,X(LSKHTAB(1,1)),NEEDSK,568,0)
+      IF (ISGDDI) CALL GDDI_SCOPE(DDI_GROUP)
+      !! THEN, DEALLOCATE.
+      CALL DFTB_SKMEM(2)
+C
+      IF (MASWRK) CALL DFTB_SPNCST(SPNCST,NSPE,MAXANG,IW,SPE)
+C
+      IF (GOPARR) THEN
+C       CALL DDI_BCAST(2354,'F',SKHTAB  ,10*MXTAB*MXSPE*MXSPE,MASTER)
+C       CALL DDI_BCAST(2355,'F',SKSTAB  ,10*MXTAB*MXSPE*MXSPE,MASTER)
+C       CALL DDI_BCAST(2356,'F',SKSELF  ,3*MXSPE             ,MASTER)
+C       CALL DDI_BCAST(2357,'F',SKGRID  ,2*MXSPE*MXSPE       ,MASTER)
+        CALL DDI_BCAST(2358,'F',SKDIM   ,MXSPE*MXSPE         ,MASTER)
+        CALL DDI_BCAST(2359,'F',SKSPIN  ,MXSPE               ,MASTER)
+C       CALL DDI_BCAST(2360,'F',REPCOEFF,6*MXINT*MXSPE*MXSPE ,MASTER)
+C       CALL DDI_BCAST(2361,'F',REPINTV ,2*MXINT*MXSPE*MXSPE ,MASTER)
+C       CALL DDI_BCAST(2362,'F',REPSHORT,3*MXSPE*MXSPE       ,MASTER)
+        CALL DDI_BCAST(2363,'F',REPCUT  ,MXSPE*MXSPE         ,MASTER)
+        CALL DDI_BCAST(2364,'F',QREFL   ,3*MXSPE             ,MASTER)
+        CALL DDI_BCAST(2365,'F',HUBBL   ,3*MXSPE             ,MASTER)
+        CALL DDI_BCAST(2366,'I',NUMREP  ,MXSPE*MXSPE         ,MASTER)
+        CALL DDI_BCAST(2367,'F',QREF    ,MXSPE               ,MASTER)
+        CALL DDI_BCAST(2368,'F',HUBB    ,MXSPE               ,MASTER)
+        CALL DDI_BCAST(2369,'F',SKCUT2  ,1                   ,MASTER)
+        CALL DDI_BCAST(2370,'I',ITYPMX  ,1                   ,MASTER)
+        IF (DFTB3) CALL DDI_BCAST(2371,'F',HUBDER,NSPE       ,MASTER)
+        I = 1
+        IF (.NOT.MASWRK) CALL DFTB_SETLAB(I,DUM1)
+      END IF
+      CALL DFTB_SETLAB(1,C4)
+C
+C         SET NUCLEAR CHARGES FOR ALL ATOMS
+C
+      CALL VCLR(ZREF,1,NAT)
+      DO I = 1, NAT
+        ZREF(I) = QREF(ISPE(I))
+      END DO
+      !! ADDED FOR SCRF BUT NOT CHECKED FOR OTHER PURPOSES
+      CALL RAMS(ZMASS,0)
+C
+C     ----- CALCULATE NUMBER OF REFERENCE ELECTRONS -----
+C
+      NE = 0
+      DO I = 1, NAT
+        NE = INT(NE + ZREF(I) + 1.0D-02)
+      END DO
+
+C     NUM  = NORB !! NUMBER OF CARTESIAN BASIS FUNCTIONS
+C     NQMT = NORB
+C     IF (MASWRK) THEN
+C       WRITE (IW,*)
+C       WRITE (IW,*) " FOLLOWING VALUES ARE ADAPTED TO DFTB!"
+C     END IF
+C
+C     CALL SEQREW(IR)
+C     CALL SEQCLO(IR,'KEEP')
+C
+      CALL DFTB_ORB
+      IF (MASWRK.AND.PRTORB) THEN
+C       DO I = 1, NSPE
+C         IF (MAXANG(I).GT.2) THEN
+C           WRITE (IW,*) " PRTORB IS NOT AVAILABLE FOR D FUNCTIONS"
+C           CALL ABRT
+C         END IF
+C       END DO
+        WRITE (IW,*) " NOTE THAT DFTB USES PSEUDO-SLATER TYPE ORBITALS"
+        WRITE (IW,*) " THIS IS JUST FOR APPROXIMATION"
+        CALL DFTB_SHOW_MINI(NAT,ISPE,MAXANG,ANAM,B)
+      END IF
+      CALL FLSHBF(IW)
+      RETURN
+C
+      END SUBROUTINE DFTB_INPUT
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_RMNUM
+C>
+C>    @brief Remove numbers, period, and comma from INC
+C>
+C>    @details Remove numbers, period, and comma from INC and put OUTC
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param INC Input characters
+C>           --- OUTPUT ---
+C>    @param OUTC Output characters, which should not contain numbers,
+C>           period, and comma
+C
+      SUBROUTINE DFTB_RMNUM(INC,OUTC)
+C
+      IMPLICIT NONE
+C
+      CHARACTER(8), INTENT(IN) :: INC
+      CHARACTER(8), INTENT(OUT) :: OUTC
+C
+      INTEGER :: I,II
+      CHARACTER(8) :: TMP
+      CHARACTER(12) :: CHARA,BLANK
+      DATA CHARA /'.,1234567890'/
+      DATA BLANK /'            '/
+C
+      TMP = INC
+      DO I = 1, 8
+        II = INDEX(CHARA,TMP(I:I))
+        IF (II.GT.0) TMP(I:I) = BLANK(II:II)
+      END DO
+      II = LEN_TRIM(TMP)
+      OUTC = INC(1:II)
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_RMNUM
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_SPNCST
+C>
+C>    @brief Check input spin constants for DFTB
+C>
+C>    @details Check spin constants for DFTB, particularly if
+C>             SCFTYP=ROHF and all spin constants are zero, program is
+C>             going to use same-electron RO-DFTB
+C>             Show spin constants
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param SPNCST Spin constant array
+C>    @param NSPE Number of species
+C>    @param MAXANG Maximum angular momentum of each species
+C>    @param IW (6)
+C>    @param SPE Name of each species
+C
+      SUBROUTINE DFTB_SPNCST(SPNCST,NSPE,MAXANG,IW,SPE)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: NSPE
+      DOUBLE PRECISION, INTENT(IN) :: SPNCST(6,NSPE),SPE(NSPE)
+      INTEGER, INTENT(IN) :: MAXANG(NSPE),IW
+C
+      DOUBLE PRECISION, PARAMETER :: ZERO=0.0D+00
+      DOUBLE PRECISION :: CHARA8
+      INTEGER :: I,J
+C
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+      DOUBLE PRECISION :: SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,UHF
+      INTEGER ::          MPLEVL,MPCTYP
+c     CHARACTER(8) :: SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+c    *                MPLEVL,MPCTYP
+      data UHF/8HUHF     /
+C
+      IF (SCFTYP.NE.UHF) RETURN
+C
+      DO I = 1, NSPE
+        DO J = 1, 6
+          IF (SPNCST(J,I).NE.ZERO) GO TO 100
+        END DO
+      END DO
+C
+      WRITE (IW,'(/"ALL SPIN CONSTANTS ARE ZERO")')
+      WRITE (IW,'("RESULTS WILL BE SAME TO ROHF CALCULATION")')
+C
+      RETURN
+C
+100   WRITE (IW,'(/" SPIN CONSTANTS FOR UHF CALCULATION")')
+      DO I = 1, NSPE
+        CHARA8 = SPE(I)
+        WRITE (IW,'(/3X,A8)') CHARA8
+        IF (MAXANG(I).EQ.1) WRITE (IW,'(9X,"S")')
+        IF (MAXANG(I).EQ.2) WRITE (IW,'(9X,"S",8X,"P")')
+        IF (MAXANG(I).EQ.3) WRITE (IW,'(9X,"S",8X,"P",8X,"D")')
+        WRITE (IW,'(3X,"S",1(X,F8.4))') SPNCST(1,I)
+        IF (MAXANG(I).EQ.1) CYCLE
+        WRITE (IW,'(3X,"P",2(X,F8.4))') (SPNCST(J,I),J=2,3)
+        IF (MAXANG(I).EQ.2) CYCLE
+        WRITE (IW,'(3X,"D",3(X,F8.4))') (SPNCST(J,I),J=4,6)
+      END DO
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_SPNCST
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_SPNCST
+C>
+C>    @brief Find "$" character
+C>
+C>    @details Finds "$" character in the STR argument.  This is used
+C>             only to detect the end of $DFTBSK directive
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param STR Input character
+C>           --- OUTPUT ---
+C>    @param NRET (Integer) if STR contains "$" character, return with 1
+C
+      SUBROUTINE DFTB_SLKOCH(STR,NRET)
+
+      IMPLICIT NONE
+
+      CHARACTER(*),INTENT(IN) :: STR
+      INTEGER,INTENT(OUT) :: NRET
+
+      INTEGER :: I
+
+      NRET = 0
+      DO I = 1, LEN_TRIM(STR)
+        IF (STR(I:I).EQ."$") NRET = 1
+      END DO
+
+      RETURN
+
+      END SUBROUTINE DFTB_SLKOCH
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_NUCZ
+C>    @brief Subtract frozen core-electrons for DFTB
+C>
+C>    @details DFTB does not use inner shells.  Therefore they have to
+C>             be removed to calculate Mulliken charges.
+C>             For instance, atomic number of C is 6, however is 4
+C>             in DFTB.
+C>             In FMO-DFTB calculation, "FMOZAN" is wrong for DFTB,
+C>             therefore the call of this subroutine from fmoprop
+C>             subroutine always have to correct ZI number (IMODE=2).
+C>             On the other hand, "ZAN" array is correct for FMO-DFTB,
+C>             so the call from MULKEN subroutine should not do
+C>             anything (IMODE=1 and NFG.NE.0).  Normal DFTB calculation
+C>             uses incorrect "ZAN" array, so this sobroutine has to
+C>             correct ZI (IMODE=1 and NFG=0).
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- IN/OUT PUT ---
+C>    @param ZI (in) atomic number (out) nuclear charge of DFTB
+C>    @param IMODE See above
+C>
+C
+      SUBROUTINE DFTB_NUCZ(ZI,IMODE)
+C
+      IMPLICIT NONE
+C
+      common /fmoinf/ nfg,nlayer,natfmo,nbdfg,naotyp,nbody
+      integer nfg,nlayer,natfmo,nbdfg,naotyp,nbody
+C
+      DOUBLE PRECISION, INTENT(INOUT) :: ZI
+      INTEGER, INTENT(IN) :: IMODE
+C
+      IF (IMODE.EQ.1.AND.NFG.NE.0) RETURN
+C
+      IF (ZI.LE.2.0D+00) THEN !! H, Li
+        RETURN
+      ELSE IF (ZI.LE.1.0D+01) THEN !! Li-Ne
+        ZI = ZI - 2.0D+00
+      ELSE IF (ZI.LE.1.8D+01) THEN !! Na-Ar
+        ZI = ZI - 1.0D+01
+      ELSE IF (ZI.LE.3.0D+01) THEN !! K-Zn
+        ZI = ZI - 1.8D+01
+      ELSE IF (ZI.LE.3.6D+01) THEN !! Ga-Kr
+        ZI = ZI - 2.8D+01
+      !! THE REST ARE TENTATIVE VALUES (HAVE TO BE CHECKED!)
+      ELSE IF (ZI.LE.4.8D+01) THEN !! Rb-Cd
+        ZI = ZI - 3.6D+01
+      ELSE IF (ZI.LE.5.4D+01) THEN !! In-Xe
+        ZI = ZI - 4.6D+01
+      ELSE IF (ZI.LE.8.6D+01) THEN
+        WRITE (6,'(" NUCLEAR CHARGE MAY BE INCORRECTLY ASSIGNED FOR",
+     *               A8)') ZI
+        ZI = ZI - 5.4D+01
+      END IF
+
+      RETURN
+
+      END SUBROUTINE DFTB_NUCZ
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DISP_PARAM
+C>    @brief Put DFTB-D parameters
+C>
+C>    @details Put DFTB-D parameters.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date   Feb, 2016 - Yoshio Nishimoto
+C>    - Added Slater-Kirkwoord (Hybrid-Polarized)
+C>
+C>           --- INPUT ---
+C>    @param IW (6)
+C>    @param NSPE Number of species
+C>    @param SPE Name of species (character)
+C>    @param DFTBD Type of dispersion correction (character)
+C>    @param MASWRK ...
+C>           --- OUTPUT ---
+C>    @param DFTBDP DFTB-D parameters
+C
+      SUBROUTINE DFTB_DISP_PARAM(DFTBDP,IW,NSPE,DFTBD,SPE,MASWRK)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: IW,NSPE
+      DOUBLE PRECISION, INTENT(IN) :: SPE(*),DFTBD
+      DOUBLE PRECISION, INTENT(INOUT) :: DFTBDP(*)
+      LOGICAL, INTENT(IN) :: MASWRK
+C
+      DOUBLE PRECISION, PARAMETER :: AA_AU = 1.889726D+00
+      DOUBLE PRECISION, PARAMETER :: AA_AU3 = AA_AU**3!,ZERO=0.0D+00
+C     DOUBLE PRECISION, PARAMETER :: KCAL_AU = 1.593601372D-03
+C     FOLLOWING VALUE IS USED IN DFTB+, MAYBE.
+      DOUBLE PRECISION, PARAMETER :: KCAL_AU = 1.594668386D-03
+      DOUBLE PRECISION, PARAMETER :: BIG = 1.0D+06
+C
+      INTEGER :: I,J,NUMA
+      DOUBLE PRECISION :: CHARA8
+      DOUBLE PRECISION UFF/8HUFF     /, LJ/8HLJ      /, SK/8HSK      /,
+     *                 SKHP/8HSKHP    /
+C
+C     STORE PARAMETERS OF DISTANCE AND ENERGY FOR DISPERSION
+C     CORRECTION
+C     ALL VALUES ARE CONVERTED INTO ATOMIC UNIT
+C
+      J = 1
+      IF (DFTBD.EQ.UFF.OR.DFTBD.EQ.LJ) THEN
+        IF (MASWRK) THEN
+          WRITE (IW,'(/" SETTING PARAMETERS FOR UFF-TYPE DISPERSION")')
+          WRITE (IW,'( " DISTANCE IN ANGSTROM, ENERGY IN KCAL/MOL"/)')
+          WRITE (IW,'("               DISTANCE       ENERGY")')
+        END IF
+        !! REFERENCE
+        !! J. Am. Chem. Soc. 1992, 114, 10024-10035.
+        !! See Table I, and its 4th and 5th columns (nonbond distance
+        !! and energy)
+        DO I = 1, NSPE
+          CALL DFTB_RMNUM(SPE(I),CHARA8)
+          CALL UPRCAS(CHARA8,8)
+          IF (DFTBDP(J+0).EQ.BIG.AND.DFTBDP(J+1).EQ.BIG) THEN
+            CALL DFTB_CONV_AN(NUMA,CHARA8)
+C           CHARA8 = SPE(I)
+            IF (NUMA.EQ.1) THEN
+              DFTBDP(J+0) = 2.886D+00*AA_AU
+              DFTBDP(J+1) = 0.044D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.2) THEN
+              DFTBDP(J+0) = 2.362D+00*AA_AU
+              DFTBDP(J+1) = 0.056D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.3) THEN
+              DFTBDP(J+0) = 2.451D+00*AA_AU
+              DFTBDP(J+1) = 0.025D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.4) THEN
+              DFTBDP(J+0) = 2.745D+00*AA_AU
+              DFTBDP(J+1) = 0.085D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.5) THEN
+              DFTBDP(J+0) = 4.083D+00*AA_AU
+              DFTBDP(J+1) = 0.180D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.6) THEN
+              DFTBDP(J+0) = 3.851D+00*AA_AU
+              DFTBDP(J+1) = 0.105D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.7) THEN
+              DFTBDP(J+0) = 3.660D+00*AA_AU
+              DFTBDP(J+1) = 0.069D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.8) THEN
+              DFTBDP(J+0) = 3.500D+00*AA_AU
+              DFTBDP(J+1) = 0.060D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.9) THEN
+              DFTBDP(J+0) = 3.364D+00*AA_AU
+              DFTBDP(J+1) = 0.050D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.10) THEN
+              DFTBDP(J+0) = 3.243D+00*AA_AU
+              DFTBDP(J+1) = 0.042D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.11) THEN
+              DFTBDP(J+0) = 2.983D+00*AA_AU
+              DFTBDP(J+1) = 0.030D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.12) THEN
+              DFTBDP(J+0) = 3.021D+00*AA_AU
+              DFTBDP(J+1) = 0.111D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.13) THEN
+              DFTBDP(J+0) = 4.499D+00*AA_AU
+              DFTBDP(J+1) = 0.505D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.14) THEN
+              DFTBDP(J+0) = 4.295D+00*AA_AU
+              DFTBDP(J+1) = 0.402D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.15) THEN
+              DFTBDP(J+0) = 4.147D+00*AA_AU
+              DFTBDP(J+1) = 0.305D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.16) THEN
+              DFTBDP(J+0) = 4.035D+00*AA_AU
+              DFTBDP(J+1) = 0.274D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.17) THEN
+              DFTBDP(J+0) = 3.947D+00*AA_AU
+              DFTBDP(J+1) = 0.227D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.18) THEN
+              DFTBDP(J+0) = 3.868D+00*AA_AU
+              DFTBDP(J+1) = 0.185D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.19) THEN
+              DFTBDP(J+0) = 3.812D+00*AA_AU
+              DFTBDP(J+1) = 0.035D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.20) THEN
+              DFTBDP(J+0) = 3.399D+00*AA_AU
+              DFTBDP(J+1) = 0.238D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.21) THEN
+              DFTBDP(J+0) = 3.295D+00*AA_AU
+              DFTBDP(J+1) = 0.019D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.22) THEN
+              DFTBDP(J+0) = 3.175D+00*AA_AU
+              DFTBDP(J+1) = 0.017D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.23) THEN
+              DFTBDP(J+0) = 3.144D+00*AA_AU
+              DFTBDP(J+1) = 0.016D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.24) THEN
+              DFTBDP(J+0) = 3.023D+00*AA_AU
+              DFTBDP(J+1) = 0.015D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.25) THEN
+              DFTBDP(J+0) = 2.961D+00*AA_AU
+              DFTBDP(J+1) = 0.013D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.26) THEN
+              DFTBDP(J+0) = 2.912D+00*AA_AU
+              DFTBDP(J+1) = 0.013D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.27) THEN
+              DFTBDP(J+0) = 2.872D+00*AA_AU
+              DFTBDP(J+1) = 0.014D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.28) THEN
+              DFTBDP(J+0) = 2.834D+00*AA_AU
+              DFTBDP(J+1) = 0.015D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.29) THEN
+              DFTBDP(J+0) = 3.495D+00*AA_AU
+              DFTBDP(J+1) = 0.005D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.30) THEN
+              DFTBDP(J+0) = 2.763D+00*AA_AU
+              DFTBDP(J+1) = 0.124D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.31) THEN
+              DFTBDP(J+0) = 4.383D+00*AA_AU
+              DFTBDP(J+1) = 0.415D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.32) THEN
+              DFTBDP(J+0) = 4.280D+00*AA_AU
+              DFTBDP(J+1) = 0.379D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.33) THEN
+              DFTBDP(J+0) = 4.230D+00*AA_AU
+              DFTBDP(J+1) = 0.309D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.34) THEN
+              DFTBDP(J+0) = 4.205D+00*AA_AU
+              DFTBDP(J+1) = 0.291D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.35) THEN
+              DFTBDP(J+0) = 4.189D+00*AA_AU
+              DFTBDP(J+1) = 0.251D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.36) THEN
+              DFTBDP(J+0) = 4.141D+00*AA_AU
+              DFTBDP(J+1) = 0.220D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.37) THEN
+              DFTBDP(J+0) = 4.114D+00*AA_AU
+              DFTBDP(J+1) = 0.040D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.38) THEN
+              DFTBDP(J+0) = 3.641D+00*AA_AU
+              DFTBDP(J+1) = 0.235D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.39) THEN
+              DFTBDP(J+0) = 3.345D+00*AA_AU
+              DFTBDP(J+1) = 0.072D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.40) THEN
+              DFTBDP(J+0) = 3.124D+00*AA_AU
+              DFTBDP(J+1) = 0.069D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.41) THEN
+              DFTBDP(J+0) = 3.165D+00*AA_AU
+              DFTBDP(J+1) = 0.059D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.42) THEN
+              DFTBDP(J+0) = 3.052D+00*AA_AU
+              DFTBDP(J+1) = 0.056D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.43) THEN
+              DFTBDP(J+0) = 2.998D+00*AA_AU
+              DFTBDP(J+1) = 0.048D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.44) THEN
+              DFTBDP(J+0) = 2.963D+00*AA_AU
+              DFTBDP(J+1) = 0.056D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.45) THEN
+              DFTBDP(J+0) = 2.929D+00*AA_AU
+              DFTBDP(J+1) = 0.053D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.46) THEN
+              DFTBDP(J+0) = 2.899D+00*AA_AU
+              DFTBDP(J+1) = 0.048D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.47) THEN
+              DFTBDP(J+0) = 3.148D+00*AA_AU
+              DFTBDP(J+1) = 0.036D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.48) THEN
+              DFTBDP(J+0) = 2.848D+00*AA_AU
+              DFTBDP(J+1) = 0.228D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.49) THEN
+              DFTBDP(J+0) = 4.463D+00*AA_AU
+              DFTBDP(J+1) = 0.599D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.50) THEN
+              DFTBDP(J+0) = 4.392D+00*AA_AU
+              DFTBDP(J+1) = 0.567D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.51) THEN
+              DFTBDP(J+0) = 4.420D+00*AA_AU
+              DFTBDP(J+1) = 0.449D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.52) THEN
+              DFTBDP(J+0) = 4.470D+00*AA_AU
+              DFTBDP(J+1) = 0.398D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.53) THEN
+              DFTBDP(J+0) = 4.500D+00*AA_AU
+              DFTBDP(J+1) = 0.339D+00*KCAL_AU
+            ELSE IF (NUMA.EQ.54) THEN
+              DFTBDP(J+0) = 4.404D+00*AA_AU
+              DFTBDP(J+1) = 0.332D+00*KCAL_AU
+            ELSE
+              WRITE (IW,*)
+     *          "UNRECOGNIZED ATOMIC SYMBOL IN DFTB_DISP_PARAM"
+              WRITE (IW,'(A,A8/)') "PARAMETERS ARE MISSING FOR ",CHARA8
+              CALL ABRT
+            END IF
+            IF (MASWRK) WRITE (IW,'(X,A8,":",3X,F10.5,3X,F10.5)')
+     *        CHARA8,DFTBDP(J)/AA_AU,DFTBDP(J+1)/KCAL_AU
+          ELSE
+            DFTBDP(J+0) = DFTBDP(J+0)*AA_AU
+            DFTBDP(J+1) = DFTBDP(J+1)*KCAL_AU
+            IF (MASWRK) WRITE (IW,'(X,A8,":",3X,F10.5,3X,F10.5,
+     *        " (USER DEFINED)")')
+     *        CHARA8,DFTBDP(J)/AA_AU,DFTBDP(J+1)/KCAL_AU
+          END IF
+          J = J + 2
+        END DO
+      ELSE IF (DFTBD.EQ.SK) THEN
+        IF (MASWRK) THEN
+          WRITE (IW,'(/" SETTING PARAMETERS FOR SK-TYPE DISPERSION")')
+          WRITE (IW,'(" ATOMIC POLARIZABILITIE ",
+     *                "(A^3), RADIUS (A), AND CHARGE")')
+        END IF
+        DO I = 1, NSPE
+          CALL DFTB_RMNUM(SPE(I),CHARA8)
+          CALL UPRCAS(CHARA8,8)
+          IF (DFTBDP(J).EQ.BIG.AND.DFTBDP(J+1).EQ.BIG.AND.
+     *        DFTBDP(J+2).EQ.BIG) THEN
+            IF (MASWRK) THEN
+              WRITE (IW,*)
+              WRITE (IW,'(" - NO PARAMETERS FOR ",A8)') CHARA8
+              WRITE (IW,'(" - YOU MUST USE DFTBDP KEYWORD")')
+            END IF
+          ELSE
+            DFTBDP(J+0) = DFTBDP(J+0)*AA_AU3
+            DFTBDP(J+1) = DFTBDP(J+1)*AA_AU
+            DFTBDP(J+2) = DFTBDP(J+2)
+            IF (MASWRK) WRITE (IW,'(X,A8,":",3X,F10.5,3X,F10.5,3X,F10.5,
+     *                            " (USER DEFINED)")')
+     *        CHARA8,DFTBDP(J)/AA_AU3,DFTBDP(J+1)/AA_AU,DFTBDP(J+2)
+          END IF
+          J = J + 3
+        END DO
+      ELSE IF (DFTBD.EQ.SKHP) THEN
+        IF (MASWRK) THEN
+          WRITE (IW,'(/" SETTING PARAMETERS FOR SK-TYPE (HYBRID-",
+     *    "POLARIZED) DISPERSION")')
+          WRITE (IW,'(" FIRST LINE SHOWS SPECIES AND COVALENT RADIUS",
+     *    " IN ANGSTROM UNIT")')
+          WRITE (IW,'(" SECOND LINE SHOWS 6 ATOMIC POLARIZABILITIES ",
+     *    "(A^3), 6 RADII (A), AND CHARGE")')
+        END IF
+        DO I = 1, NSPE
+          CALL DFTB_RMNUM(SPE(I),CHARA8)
+          CALL UPRCAS(CHARA8,8)
+          IF (DFTBDP(J   ).EQ.BIG.AND.DFTBDP(J+ 1).EQ.BIG.AND.
+     *        DFTBDP(J+ 2).EQ.BIG.AND.DFTBDP(J+ 3).EQ.BIG.AND.
+     *        DFTBDP(J+ 4).EQ.BIG.AND.DFTBDP(J+ 5).EQ.BIG.AND.
+     *        DFTBDP(J+ 6).EQ.BIG.AND.DFTBDP(J+ 7).EQ.BIG.AND.
+     *        DFTBDP(J+ 8).EQ.BIG.AND.DFTBDP(J+ 9).EQ.BIG.AND.
+     *        DFTBDP(J+10).EQ.BIG.AND.DFTBDP(J+11).EQ.BIG.AND.
+     *        DFTBDP(J+12).EQ.BIG.AND.DFTBDP(J+13).EQ.BIG) THEN
+              CALL DFTB_CONV_AN(NUMA,CHARA8)
+            IF (MASWRK) THEN
+              WRITE (IW,*)
+              WRITE (IW,'(" - NO PARAMETERS FOR ",A8)') CHARA8
+              WRITE (IW,'(" - YOU MUST USE DFTBDP KEYWORD")')
+            END IF
+          ELSE
+            DFTBDP(J+ 0) = DFTBDP(J+ 0)*AA_AU
+            DFTBDP(J+ 1) = DFTBDP(J+ 1)*AA_AU3
+            DFTBDP(J+ 2) = DFTBDP(J+ 2)*AA_AU3
+            DFTBDP(J+ 3) = DFTBDP(J+ 3)*AA_AU3
+            DFTBDP(J+ 4) = DFTBDP(J+ 4)*AA_AU3
+            DFTBDP(J+ 5) = DFTBDP(J+ 5)*AA_AU3
+            DFTBDP(J+ 6) = DFTBDP(J+ 6)*AA_AU3
+            DFTBDP(J+ 7) = DFTBDP(J+ 7)*AA_AU
+            DFTBDP(J+ 8) = DFTBDP(J+ 8)*AA_AU
+            DFTBDP(J+ 9) = DFTBDP(J+ 9)*AA_AU
+            DFTBDP(J+10) = DFTBDP(J+10)*AA_AU
+            DFTBDP(J+11) = DFTBDP(J+11)*AA_AU
+            DFTBDP(J+12) = DFTBDP(J+12)*AA_AU
+            DFTBDP(J+13) = DFTBDP(J+13) 
+            IF (MASWRK) THEN
+              WRITE (IW,'(X,A8," (USER DEFINED) : COVALENT RADIUS =",
+     *          F8.5)')CHARA8,DFTBDP(J)/AA_AU
+              WRITE (IW,'(11X,6F6.3," /",6F4.1," /",F5.2)')
+     *      DFTBDP(J+ 1)/AA_AU3,DFTBDP(J+ 2)/AA_AU3,DFTBDP(J+ 3)/AA_AU3,
+     *      DFTBDP(J+ 4)/AA_AU3,DFTBDP(J+ 5)/AA_AU3,DFTBDP(J+ 6)/AA_AU3,
+     *      DFTBDP(J+ 7)/AA_AU ,DFTBDP(J+ 8)/AA_AU ,DFTBDP(J+ 9)/AA_AU ,
+     *      DFTBDP(J+10)/AA_AU ,DFTBDP(J+11)/AA_AU ,DFTBDP(J+12)/AA_AU ,
+     *      DFTBDP(J+13)
+            END IF
+          END IF
+          J = J + 14
+        END DO
+      END IF
+      IF (MASWRK) WRITE (IW,*)
+C
+      END SUBROUTINE DFTB_DISP_PARAM
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_3RD_PARAM
+C>    @brief Put DFTB3 parameters
+C>
+C>    @details Put DFTB3 parameters, which are called Hubbard derivative
+C>             These are taken from the 3ob parameter set.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date   Feb, 2016 - Yoshio Nishimoto
+C>    - DFTB3 with SRSCC
+C>    @date   Jun, 2016 - Yoshio Nishimoto
+C>    - Default parameters are modified
+C>
+C>           --- INPUT ---
+C>    @param NSPE Number of species
+C>    @param SPE Name of species (character)
+C>    @param IW 6
+C>    @param MASWRK ...
+C>           --- OUTPUT ---
+C>    @param HUBDER Hubbard derivatives
+C
+      SUBROUTINE DFTB_3RD_PARAM(NSPE,SPE,HUBDER,IW,MAXANG,MASWRK,SRSCC)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: NSPE,IW,SPE(*),MAXANG(*)
+      DOUBLE PRECISION, INTENT(INOUT) :: HUBDER(*)
+      LOGICAL, INTENT(IN) :: MASWRK,SRSCC
+C
+      DOUBLE PRECISION :: CHARA8
+      INTEGER :: I,J,K,NUMA,NN
+      CHARACTER(1) :: ORB(3)
+C
+C     STORE PARAMETERS OF HUBBARD DERIVATIVES FOR 3RD ORDER CORRECTION
+C     THE DEFAULT PARAMETERS ARE TAKEN FROM
+C         J. Chem. Theory Comput. 2013,   9,  338- 354. (Table 1)
+C         J. Chem. Theory Comput. 2014,  10, 1518-1537. (Table 1)
+C         J. Phys. Chem. B        2015, 119, 1062-1082. (Table 1)
+C         J. Chem. Theory Comput. 2015,  11,  334- 342. (Table 1)
+C         J. Chem. Theory Comput. 2015,  11, 4205-4219. (Table 3)
+C
+      J = 1
+      IF (MASWRK) THEN
+        WRITE (IW,'(/" SETTING HUBBARD DERIVATIVES FOR DFTB3")')
+      END IF
+      DO I = 1, NSPE
+        IF (SRSCC) THEN
+          NN = MAXANG(I)
+          ORB(1) = 'S'
+          ORB(2) = 'P'
+          ORB(3) = 'D'
+        ELSE
+          NN = 1
+        END IF
+        DO K = 1, NN
+          IF (HUBDER(J).EQ.1.0D+06) THEN
+            CALL DFTB_RMNUM(SPE(I),CHARA8)
+            CALL UPRCAS(CHARA8,8)
+            CALL DFTB_CONV_AN(NUMA,CHARA8)
+            IF (NUMA.EQ.1) THEN
+              HUBDER(J) = -0.1857D+00
+            ELSE IF (NUMA.EQ.6) THEN
+              HUBDER(J) = -0.1492D+00
+            ELSE IF (NUMA.EQ.7) THEN
+              HUBDER(J) = -0.1535D+00
+            ELSE IF (NUMA.EQ.8) THEN
+              HUBDER(J) = -0.1575D+00
+            ELSE IF (NUMA.EQ.9) THEN !! F
+              HUBDER(J) = -0.1623D+00
+            ELSE IF (NUMA.EQ.11) THEN !! Na
+              HUBDER(J) = -0.0454D+00
+            ELSE IF (NUMA.EQ.12) THEN !! Mg
+              HUBDER(J) = -0.0200D+00
+            ELSE IF (NUMA.EQ.15) THEN !! P
+              HUBDER(J) = -0.14D+00
+            ELSE IF (NUMA.EQ.16) THEN !! S
+              HUBDER(J) = -0.11D+00
+            ELSE IF (NUMA.EQ.17) THEN !! Cl
+              HUBDER(J) = -0.0697D+00
+            ELSE IF (NUMA.EQ.19) THEN !! K
+              HUBDER(J) = -0.0339D+00
+            ELSE IF (NUMA.EQ.20) THEN !! Ca
+              HUBDER(J) = -0.0340D+00
+            ELSE IF (NUMA.EQ.29) THEN !! Cu (not yet checked)
+              IF (K.LE.1) HUBDER(J) = -0.0575D+00
+              IF (K.EQ.3) HUBDER(J) = -0.2000D+00
+            ELSE IF (NUMA.EQ.30) THEN !! Zr
+              HUBDER(J) = -0.0300D+00
+            ELSE IF (NUMA.EQ.35) THEN !! Br
+              HUBDER(J) = -0.0573D+00
+            ELSE IF (NUMA.EQ.53) THEN !! I
+              HUBDER(J) = -0.0433D+00
+            ELSE
+              IF (MASWRK) THEN
+              WRITE (IW,*)"UNRECOGNIZED ATOMIC SYMBOL IN DFTB_3RD_PARAM"
+                WRITE (IW,'(A,A8/)') " OR PARAMETERS ARE MISSING FOR ",
+     *            CHARA8
+              END IF
+              CALL ABRT
+            END IF
+            IF (SRSCC) THEN
+              IF (MASWRK)
+     *          WRITE (IW,'(X,A8," (",A1," ORBITAL) :",3X,F10.5)')
+     *          SPE(I),ORB(K),HUBDER(J)
+            ELSE
+              IF (MASWRK) WRITE (IW,'(X,A8,":",3X,F10.5)')
+     *          SPE(I),HUBDER(J)
+            END IF
+          ELSE
+            IF (SRSCC) THEN
+              IF (MASWRK)WRITE(IW,'(X,A8," (",A1," ORBITAL) :",3X,F10.5,
+     *            " (USER DEFINED)")')
+     *            SPE(I),ORB(K),HUBDER(J)
+            ELSE
+              IF (MASWRK) WRITE(IW,'(X,A8,":",3X,F10.5,
+     *            " (USER DEFINED)")') SPE(I),HUBDER(J)
+            END IF
+          END IF
+          J = J + 1
+        END DO
+      END DO
+C
+      END SUBROUTINE DFTB_3RD_PARAM
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_SHOW_STO3G
+C>    @brief Show MINI exponent and coefficients
+C>
+C>    @details Show MINI exponent and coefficients.  These are called
+C>             by $DFTB PRTORB=.TRUE. $END., then it can be read by
+C>             MacMolPlt program.
+C>             Note that DFTB uses an kind of Slater-type orbital,
+C>             so the projection to STO-3G orbital is just an
+C>             approximation, hopefully good approximation.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NAT Number of atoms
+C>    @param ZANINP nuclear charges on atomic table
+C>    @param A Name of atoms
+C>    @param B
+C
+      SUBROUTINE DFTB_SHOW_MINI(NAT,ISPE,MAXANG,A,B)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      CHARACTER(8) :: A(*),B(*)
+      DIMENSION :: EX(3),CC(3)
+      INTEGER, INTENT(IN) :: ISPE(NAT),MAXANG(*)
+C
+      IW = 6
+      WRITE (IW,9080)
+      WRITE (IW,9090)
+      WRITE (IW,9100)
+      WRITE (IW,9110)
+      NSHELL = 0
+      NPRIM = 0
+      DO IAT = 1, NAT
+        WRITE (IW,9120) A(IAT),B(IAT)
+        ISHELL = MAXANG(ISPE(IAT))
+C       IF (NUCZ.LE.2) THEN
+C         ISHELL = 1
+C       ELSE IF (NUCZ.LE.10) THEN
+C         ISHELL = 2
+C       END IF
+C       IPRIM = ISHELL*3
+        DO ISH = 1, ISHELL
+          NSHELL = NSHELL + 1
+          CALL DFTB_PUT_MINI(A(IAT),ISH,EX,CC)
+          DO IPR = 1, 3
+            NPRIM = NPRIM + 1
+            IF (ISH.EQ.1) THEN
+              WRITE (IW,9130) NSHELL,'S ',NPRIM,EX(IPR),CC(IPR)
+            ELSE IF (ISH.EQ.2) THEN
+              WRITE (IW,9130) NSHELL,'P ',NPRIM,EX(IPR),CC(IPR)
+            ELSE IF (ISH.EQ.3) THEN
+              WRITE (IW,9130) NSHELL,'D ',NPRIM,EX(IPR),CC(IPR)
+            END IF
+          END DO
+          IF (ISH.NE.ISHELL) WRITE (IW,*)
+        END DO
+      END DO
+C
+ 9080 FORMAT(/5X,'ATOMIC BASIS SET'/5X,16(1H-))
+ 9090 FORMAT(1X,'THE CONTRACTED PRIMITIVE FUNCTIONS HAVE BEEN',
+     *          ' UNNORMALIZED')
+ 9100 FORMAT(1X,'THE CONTRACTED BASIS FUNCTIONS ARE NOW NORMALIZED',
+     *          ' TO UNITY')
+ 9110 FORMAT(/1X,' SHELL TYPE  PRIMITIVE        EXPONENT',
+     *       10X,'CONTRACTION COEFFICIENT(S)')
+ 9120 FORMAT(/1X,A8,A2/)
+ 9130 FORMAT(1X,I6,3X,A2,I7,F22.7, F18.12)
+C9140 FORMAT(1X,I6,3X,A2,I7,F22.7,2F18.12)
+C
+      END SUBROUTINE DFTB_SHOW_MINI
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_PUT_MINI
+C>    @brief Get MINI exponent and coefficients
+C>
+C>    @details Get MINI exponent and coefficients.  They are simply
+C>             taken from outputs of calculations for isolated atom.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param A Name of atoms
+C>    @param ISH Number of shells (s=1, p=2, d=3, ...)
+C>    @param EX Exponent
+C>    @param CC Contraction coefficients
+C
+      SUBROUTINE DFTB_PUT_MINI(A,ISH,EX,CC)
+C
+      IMPLICIT NONE
+C
+      CHARACTER(8),INTENT(IN) :: A
+      INTEGER, INTENT(IN) :: ISH
+      DOUBLE PRECISION, INTENT(OUT) :: EX(3),CC(3)
+C
+      CHARACTER(8) :: B
+      INTEGER :: NUMA
+C
+      CALL DFTB_RMNUM(A,B)
+      CALL DFTB_CONV_AN(NUMA,B)
+C
+      IF (NUMA.EQ.1) THEN
+        EX(1) = 7.0340625D+00
+        EX(2) = 1.0647563D+00
+        EX(3) = 0.2365594D+00
+        CC(1) = 0.070452003325D+00
+        CC(2) = 0.407826019247D+00
+        CC(3) = 0.647752030571D+00
+      ELSE IF (NUMA.EQ.2) THEN
+        EX(1) = 13.6267360D+00
+        EX(2) = 1.9993490D+00
+        EX(3) = 0.3829930D+00
+        CC(1) = 0.080240952730D+00
+        CC(2) = 0.409142758974D+00
+        CC(3) = 0.657277612798D+00
+      ELSE IF (NUMA.EQ.3) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 0.8512533D+00
+          EX(2) = 0.0839505D+00
+          EX(3) = 0.0325542D+00
+          CC(1) = -0.09396993147D+00
+          CC(2) = 0.570100058422D+00
+          CC(3) = 0.499750063553D+00
+        ELSE IF (ISH.EQ.2) THEN
+          !! TENTATIVE !!
+          EX(1) = 0.8512533D+00
+          EX(2) = 0.0839505D+00
+          EX(3) = 0.0325542D+00
+          CC(1) = -0.09396993147D+00
+          CC(2) = 0.570100058422D+00
+          CC(3) = 0.499750063553D+00
+        END IF
+      ELSE IF (NUMA.EQ.4) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 2.3348562D+00
+          EX(2) = 0.1969758D+00
+          EX(3) = 0.0674494D+00
+          CC(1) = -0.082820392502D+00
+          CC(2) = 0.557552749521D+00
+          CC(3) = 0.516042553279D+00
+        ELSE IF (ISH.EQ.2) THEN
+          !! TENTATIVE !!
+          EX(1) = 2.3348562D+00
+          EX(2) = 0.1969758D+00
+          EX(3) = 0.0674494D+00
+          CC(1) = -0.082820392502D+00
+          CC(2) = 0.557552749521D+00
+          CC(3) = 0.516042553279D+00
+        END IF
+      ELSE IF (NUMA.EQ.5) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 4.4578539D+00
+          EX(2) = 0.3693150D+00
+          EX(3) = 0.1225550D+00
+          CC(1) = -0.082419195645D+00
+          CC(2) = 0.559064370460D+00
+          CC(3) = 0.516794772694D+00
+        ELSE IF (ISH.EQ.2) THEN
+          EX(1) = 3.2148920D+00
+          EX(2) = 0.6461357D+00
+          EX(3) = 0.1539156D+00
+          CC(1) = 0.105900108350D+00
+          CC(2) = 0.457180536048D+00
+          CC(3) = 0.631860749821D+00
+        END IF
+      ELSE IF (NUMA.EQ.6) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 6.6166118D+00
+          EX(2) = 0.5258556D+00
+          EX(3) = 0.1699578D+00
+          CC(1) = -0.081380500552D+00
+          CC(2) = 0.574853203898D+00
+          CC(3) = 0.502412803407D+00
+        ELSE IF (ISH.EQ.2) THEN
+          EX(1) = 4.9129201D+00
+          EX(2) = 0.9976164D+00
+          EX(3) = 0.2326851D+00
+          CC(1) = 0.109930601675D+00
+          CC(2) = 0.462712707051D+00
+          CC(3) = 0.627513709563D+00
+        END IF
+      ELSE IF (NUMA.EQ.7) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 8.9194264D+00
+          EX(2) = 0.7061408D+00
+          EX(3) = 0.2250537D+00
+          CC(1) = -0.080890299919D+00
+          CC(2) = 0.567201999435D+00
+          CC(3) = 0.511091799491D+00
+        ELSE IF (ISH.EQ.2) THEN
+          EX(1) = 6.5562719D+00
+          EX(2) = 1.3490793D+00
+          EX(3) = 0.3122085D+00
+          CC(1) = 0.115919498304D+00
+          CC(2) = 0.469958193126D+00
+          CC(3) = 0.618447590954D+00
+        END IF
+      ELSE IF (NUMA.EQ.8) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 11.7893262D+00
+          EX(2) = 0.9128941D+00
+          EX(3) = 0.2866610D+00
+          CC(1) = -0.080819896351D+00
+          CC(2) = 0.582089473721D+00
+          CC(3) = 0.497159577555D+00
+        ELSE IF (ISH.EQ.2) THEN
+          EX(1) = 8.2741400D+00
+          EX(2) = 1.7154628D+00
+          EX(3) = 0.3830133D+00
+          CC(1) = 0.124270892747D+00
+          CC(2) = 0.476593472182D+00
+          CC(3) = 0.613044464218D+00
+        END IF
+      ELSE IF (NUMA.EQ.9) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 15.3647082D+00
+          EX(2) = 1.1675456D+00
+          EX(3) = 0.3631411D+00
+          CC(1) = -0.080549895948D+00
+          CC(2) = 0.587728970438D+00
+          CC(3) = 0.491979175254D+00
+        ELSE IF (ISH.EQ.2) THEN
+          EX(1) = 10.7256673D+00
+          EX(2) = 2.2258173D+00
+          EX(3) = 0.4861047D+00
+          CC(1) = 0.126269505768D+00
+          CC(2) = 0.477948221832D+00
+          CC(3) = 0.614007728047D+00
+        END IF
+      ELSE IF (NUMA.EQ.10) THEN
+        IF (ISH.EQ.1) THEN
+          EX(1) = 19.3271900D+00
+          EX(2) = 1.4418200D+00
+          EX(3) = 0.4440800D+00
+          CC(1) = -0.080249695714D+00
+          CC(2) = 0.595297668204D+00
+          CC(3) = 0.484868074102D+00
+        ELSE IF (ISH.EQ.2) THEN
+          EX(1) = 13.3525200D+00
+          EX(2) = 2.7794700D+00
+          EX(3) = 0.6009700D+00
+          CC(1) = 0.128840304208D+00
+          CC(2) = 0.480441215691D+00
+          CC(3) = 0.611671619976D+00
+        END IF
+      END IF
+C
+      END SUBROUTINE DFTB_PUT_MINI
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_CONV_AN
+C>
+C>    @brief Convert element name to atomic number
+C>
+C>    @details Convert element name to atomic number
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param CHARA8 Name of atom
+C>           --- OUTPUT ---
+C>    @param NUMA Atominuc Number
+C
+      SUBROUTINE DFTB_CONV_AN(NUMA,CHARA8)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(OUT) :: NUMA
+      DOUBLE PRECISION, INTENT(IN) :: CHARA8
+C
+      DOUBLE PRECISION :: CTMP
+      DOUBLE PRECISION
+     *   H1/8H1       /,  H2/8HH       /,  H3/8HHYDROGEN/,
+     *  HE1/8H2       /, HE2/8HHE      /, HE3/8HHELIUM  /,
+     *  LI1/8H3       /, LI2/8HLI      /, LI3/8HLITHIUM /,
+     *  BE1/8H4       /, BE2/8HBE      /, BE3/8HBERYLIUM/,
+     *   B1/8H5       /,  B2/8HB       /,  B3/8HBORON   /,
+     *   C1/8H6       /,  C2/8HC       /,  C3/8HCARBON  /,
+     *   N1/8H7       /,  N2/8HN       /,  N3/8HNITROGEN/,
+     *   O1/8H8       /,  O2/8HO       /,  O3/8HOXYGEN  /,
+     *   F1/8H9       /,  F2/8HF       /,  F3/8HFLUORINE/,
+     *  NE1/8H10      /, NE2/8HNE      /, NE3/8HNEON    /,
+     *  NA1/8H11      /, NA2/8HNA      /, NA3/8HSODIUM  /,
+     *  MG1/8H12      /, MG2/8HMG      /, MG3/8HMAGNESIU/,
+     *  AL1/8H13      /, AL2/8HAL      /, AL3/8HALUMINIU/,
+     *  SI1/8H14      /, SI2/8HSI      /, SI3/8HSILICON /,
+     *   P1/8H15      /,  P2/8HP       /,  P3/8HPHOSPHOR/,
+     *   S1/8H16      /,  S2/8HS       /,  S3/8HSULFUR  /,
+     *  CL1/8H17      /, CL2/8HCL      /, CL3/8HCHLORINE/,
+     *  AR1/8H18      /, AR2/8HAR      /, AR3/8HARGON   /,
+     *   K1/8H19      /,  K2/8HK       /,  K3/8HPOTASIUM/,
+     *  CA1/8H20      /, CA2/8HCA      /, CA3/8HCALCIUM /,
+     *  SC1/8H21      /, SC2/8HSC      /, SC3/8HSCANDIUM/,
+     *  TI1/8H22      /, TI2/8HTI      /, TI3/8HTITANIUM/,
+     *   V1/8H23      /,  V2/8HV       /,  V3/8HVANADIUM/,
+     *  CR1/8H24      /, CR2/8HCR      /, CR3/8HCHROMIUM/,
+     *  MN1/8H25      /, MN2/8HMN      /, MN3/8HMANGANES/,
+     *  FE1/8H26      /, FE2/8HFE      /, FE3/8HIRON    /,
+     *  CO1/8H27      /, CO2/8HCO      /, CO3/8HCOBALT  /,
+     *  NI1/8H28      /, NI2/8HNI      /, NI3/8HNICKEL  /,
+     *  CU1/8H29      /, CU2/8HCU      /, CU3/8HCOPPER  /,
+     *  ZN1/8H30      /, ZN2/8HZN      /, ZN3/8HZINC    /,
+     *  GA1/8H31      /, GA2/8HGA      /, GA3/8HGALLIUM /,
+     *  GE1/8H32      /, GE2/8HGE      /, GE3/8HGERMANIU/,
+     *  AS1/8H33      /, AS2/8HAS      /, AS3/8HARSENIUM/,
+     *  SE1/8H34      /, SE2/8HSE      /, SE3/8HSELENIUM/,
+     *  BR1/8H35      /, BR2/8HBR      /, BR3/8HBROMINE /,
+     *  KR1/8H36      /, KR2/8HKR      /, KR3/8HKRYPTON /,
+     *  RB1/8H37      /, RB2/8HRB      /, RB3/8HRUBIDIUM/,
+     *  SR1/8H38      /, SR2/8HSR      /, SR3/8HSTRONTIU/,
+     *   Y1/8H39      /,  Y2/8HY       /,  Y3/8HYTTRIUM /,
+     *  ZR1/8H40      /, ZR2/8HZR      /, ZR3/8HZIRCONIU/,
+     *  NB1/8H41      /, NB2/8HNB      /, NB3/8HNIOBIUM /,
+     *  MO1/8H42      /, MO2/8HMO      /, MO3/8HMOLYBDEN/,
+     *  TC1/8H43      /, TC2/8HTC      /, TC3/8HTECHNETI/,
+     *  RU1/8H44      /, RU2/8HRU      /, RU3/8HRUTHENIU/,
+     *  RH1/8H45      /, RH2/8HRH      /, RH3/8HRHODIUM /,
+     *  PD1/8H46      /, PD2/8HPD      /, PD3/8HPALLADIU/,
+     *  AG1/8H47      /, AG2/8HAG      /, AG3/8HSILVER  /,
+     *  CD1/8H48      /, CD2/8HCD      /, CD3/8HCADMIUM /,
+     *  IN1/8H49      /, IN2/8HIN      /, IN3/8HINDIUM  /,
+     *  SN1/8H50      /, SN2/8HSN      /, SN3/8HTIN     /,
+     *  SB1/8H51      /, SB2/8HSB      /, SB3/8HANTIMONY/,
+     *  TE1/8H52      /, TE2/8HTE      /, TE3/8HTELLERIU/,
+     *   I1/8H53      /,  I2/8HI       /,  I3/8HIODINE  /,
+     *  XE1/8H54      /, XE2/8HXE      /, XE3/8HXENON   /
+C
+      CTMP = CHARA8
+      IF (CTMP.EQ. H1.OR.CTMP.EQ. H2.OR.CTMP.EQ. H3) NUMA =  1
+      IF (CTMP.EQ.HE1.OR.CTMP.EQ.HE2.OR.CTMP.EQ.HE3) NUMA =  2
+      IF (CTMP.EQ.LI1.OR.CTMP.EQ.LI2.OR.CTMP.EQ.LI3) NUMA =  3
+      IF (CTMP.EQ.BE1.OR.CTMP.EQ.BE2.OR.CTMP.EQ.BE3) NUMA =  4
+      IF (CTMP.EQ. B1.OR.CTMP.EQ. B2.OR.CTMP.EQ. B3) NUMA =  5
+      IF (CTMP.EQ. C1.OR.CTMP.EQ. C2.OR.CTMP.EQ. C3) NUMA =  6
+      IF (CTMP.EQ. N1.OR.CTMP.EQ. N2.OR.CTMP.EQ. N3) NUMA =  7
+      IF (CTMP.EQ. O1.OR.CTMP.EQ. O2.OR.CTMP.EQ. O3) NUMA =  8
+      IF (CTMP.EQ. F1.OR.CTMP.EQ. F2.OR.CTMP.EQ. F3) NUMA =  9
+      IF (CTMP.EQ.NE1.OR.CTMP.EQ.NE2.OR.CTMP.EQ.NE3) NUMA = 10
+      IF (CTMP.EQ.NA1.OR.CTMP.EQ.NA2.OR.CTMP.EQ.NA3) NUMA = 11
+      IF (CTMP.EQ.MG1.OR.CTMP.EQ.MG2.OR.CTMP.EQ.MG3) NUMA = 12
+      IF (CTMP.EQ.AL1.OR.CTMP.EQ.AL2.OR.CTMP.EQ.AL3) NUMA = 13
+      IF (CTMP.EQ.SI1.OR.CTMP.EQ.SI2.OR.CTMP.EQ.SI3) NUMA = 14
+      IF (CTMP.EQ. P1.OR.CTMP.EQ. P2.OR.CTMP.EQ. P3) NUMA = 15
+      IF (CTMP.EQ. S1.OR.CTMP.EQ. S2.OR.CTMP.EQ. S3) NUMA = 16
+      IF (CTMP.EQ.CL1.OR.CTMP.EQ.CL2.OR.CTMP.EQ.CL3) NUMA = 17
+      IF (CTMP.EQ.AR1.OR.CTMP.EQ.AR2.OR.CTMP.EQ.AR3) NUMA = 18
+      IF (CTMP.EQ. K1.OR.CTMP.EQ. K2.OR.CTMP.EQ. K3) NUMA = 19
+      IF (CTMP.EQ.CA1.OR.CTMP.EQ.CA2.OR.CTMP.EQ.CA3) NUMA = 20
+      IF (CTMP.EQ.SC1.OR.CTMP.EQ.SC2.OR.CTMP.EQ.SC3) NUMA = 21
+      IF (CTMP.EQ.TI1.OR.CTMP.EQ.TI2.OR.CTMP.EQ.TI3) NUMA = 22
+      IF (CTMP.EQ. V1.OR.CTMP.EQ. V2.OR.CTMP.EQ. V3) NUMA = 23
+      IF (CTMP.EQ.CR1.OR.CTMP.EQ.CR2.OR.CTMP.EQ.CR3) NUMA = 24
+      IF (CTMP.EQ.MN1.OR.CTMP.EQ.MN2.OR.CTMP.EQ.MN3) NUMA = 25
+      IF (CTMP.EQ.FE1.OR.CTMP.EQ.FE2.OR.CTMP.EQ.FE3) NUMA = 26
+      IF (CTMP.EQ.CO1.OR.CTMP.EQ.CO2.OR.CTMP.EQ.CO3) NUMA = 27
+      IF (CTMP.EQ.NI1.OR.CTMP.EQ.NI2.OR.CTMP.EQ.NI3) NUMA = 28
+      IF (CTMP.EQ.CU1.OR.CTMP.EQ.CU2.OR.CTMP.EQ.CU3) NUMA = 29
+      IF (CTMP.EQ.ZN1.OR.CTMP.EQ.ZN2.OR.CTMP.EQ.ZN3) NUMA = 30
+      IF (CTMP.EQ.GA1.OR.CTMP.EQ.GA2.OR.CTMP.EQ.GA3) NUMA = 31
+      IF (CTMP.EQ.GE1.OR.CTMP.EQ.GE2.OR.CTMP.EQ.GE3) NUMA = 32
+      IF (CTMP.EQ.AS1.OR.CTMP.EQ.AS2.OR.CTMP.EQ.AS3) NUMA = 33
+      IF (CTMP.EQ.SE1.OR.CTMP.EQ.SE2.OR.CTMP.EQ.SE3) NUMA = 34
+      IF (CTMP.EQ.BR1.OR.CTMP.EQ.BR2.OR.CTMP.EQ.BR3) NUMA = 35
+      IF (CTMP.EQ.KR1.OR.CTMP.EQ.KR2.OR.CTMP.EQ.KR3) NUMA = 36
+      IF (CTMP.EQ.RB1.OR.CTMP.EQ.RB2.OR.CTMP.EQ.RB3) NUMA = 37
+      IF (CTMP.EQ.SR1.OR.CTMP.EQ.SR2.OR.CTMP.EQ.SR3) NUMA = 38
+      IF (CTMP.EQ. Y1.OR.CTMP.EQ. Y2.OR.CTMP.EQ. Y3) NUMA = 39
+      IF (CTMP.EQ.ZR1.OR.CTMP.EQ.ZR2.OR.CTMP.EQ.ZR3) NUMA = 40
+      IF (CTMP.EQ.NB1.OR.CTMP.EQ.NB2.OR.CTMP.EQ.NB3) NUMA = 41
+      IF (CTMP.EQ.MO1.OR.CTMP.EQ.MO2.OR.CTMP.EQ.MO3) NUMA = 42
+      IF (CTMP.EQ.TC1.OR.CTMP.EQ.TC2.OR.CTMP.EQ.TC3) NUMA = 43
+      IF (CTMP.EQ.RU1.OR.CTMP.EQ.RU2.OR.CTMP.EQ.RU3) NUMA = 44
+      IF (CTMP.EQ.RH1.OR.CTMP.EQ.RH2.OR.CTMP.EQ.RH3) NUMA = 45
+      IF (CTMP.EQ.PD1.OR.CTMP.EQ.PD2.OR.CTMP.EQ.PD3) NUMA = 46
+      IF (CTMP.EQ.AG1.OR.CTMP.EQ.AG2.OR.CTMP.EQ.AG3) NUMA = 47
+      IF (CTMP.EQ.CD1.OR.CTMP.EQ.CD2.OR.CTMP.EQ.CD3) NUMA = 48
+      IF (CTMP.EQ.IN1.OR.CTMP.EQ.IN2.OR.CTMP.EQ.IN3) NUMA = 49
+      IF (CTMP.EQ.SN1.OR.CTMP.EQ.SN2.OR.CTMP.EQ.SN3) NUMA = 50
+      IF (CTMP.EQ.SB1.OR.CTMP.EQ.SB2.OR.CTMP.EQ.SB3) NUMA = 51
+      IF (CTMP.EQ.TE1.OR.CTMP.EQ.TE2.OR.CTMP.EQ.TE3) NUMA = 52
+      IF (CTMP.EQ. I1.OR.CTMP.EQ. I2.OR.CTMP.EQ. I3) NUMA = 53
+      IF (CTMP.EQ.XE1.OR.CTMP.EQ.XE2.OR.CTMP.EQ.XE3) NUMA = 54
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_CONV_AN
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_CNVSQ
+C>
+C>    @brief Indexing for DFTB
+C>
+C>    @details Convert two values for symmetric square matrix to a value
+C>             of upper triangular matrix in a sequantial manner
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C
+      SUBROUTINE DFTB_CNVSQ(I,J,N)
+C
+      IMPLICIT NONE
+C
+      INTEGER :: I, J, N
+C
+C     CoNVert two values to a SeQuential value.
+C
+      IF (I.GE.J) THEN
+        N = I*(I-1)/2 + J
+      ELSE
+        N = J*(J-1)/2 + I
+      END IF
+C
+      END SUBROUTINE DFTB_CNVSQ
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_EREP
+C>
+C>    @brief Calculate Erep for DFTB
+C>
+C>    @details Calculate Erep (sum of repulsive potential energy)
+C>             for DFTB
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NAT Number of atoms
+C>    @param C Coordinate
+C>    @param ISPE Index of species
+C>    @param NUMREP Number of grids for specific pairs
+C>    @param REPCUT Cutoff distance for specific pairs
+C>    @param REPINTV Lower and upper bound of each grid of repulsive
+C>                   potential for specific pairs
+C>    @param REPSHORT Coefficients (and exponent) for short range
+C>                    respulsive potential
+C>    @param REPSHORT Coefficients for medium (4 terms) and long (6
+C>                    terms) range respulsive potential
+C>    @param ZREF Nuclear charges of each atom
+C>    @param QREF Reference nuclear charges of each species
+C>           --- OUTPUT ---
+C>    @param EREP Sum of repulsive energy
+C>    @param DISTMAT Matrix of distance between each atom (up. triang.)
+C>
+C
+      SUBROUTINE DFTB_EREP(NAT,C,ISPE,NSPE,NUMREP,REPCUT,
+     & REPINTV,REPSHORT,REPCOEFF,EREP,DISTMAT,ZREF,QREF)
+C
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MXINT=150,MXSPE=10
+C
+      INTEGER,INTENT(IN) :: NAT
+      DOUBLE PRECISION,INTENT(IN) :: C(3,NAT)
+      INTEGER,INTENT(IN) :: ISPE(NAT)
+      INTEGER,INTENT(IN) :: NSPE
+      INTEGER,INTENT(IN) :: NUMREP(MXSPE,MXSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPCUT(MXSPE,MXSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPINTV(2,MXINT,NSPE,NSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPSHORT(3,NSPE,NSPE)
+      DOUBLE PRECISION,INTENT(IN) :: REPCOEFF(6,MXINT,NSPE,NSPE)
+      DOUBLE PRECISION,INTENT(OUT):: DISTMAT(*)
+      DOUBLE PRECISION,INTENT(IN) :: ZREF(NAT),QREF(NSPE)
+
+      DOUBLE PRECISION,INTENT(OUT) :: EREP
+
+      INTEGER :: I,J,K,L,SPE1,SPE2,NSEQ
+      DOUBLE PRECISION :: VAL, X, X1, DIST, CI, CJ,TQ1,TQ2
+C
+      EREP = 0.0D+00
+      DO I = 1, NAT
+        SPE1 = ISPE(I)
+        TQ1 = 1.0D+00 / QREF(SPE1)
+        CI = ZREF(I)*TQ1
+        DO J = 1, I-1
+          SPE2 = ISPE(J)
+          TQ2 = 1.0D+00 / QREF(SPE2)
+          CJ = ZREF(J)*TQ2
+          DIST = SQRT( (C(1,I)-C(1,J))**2
+     &               + (C(2,I)-C(2,J))**2
+     &               + (C(3,I)-C(3,J))**2 )
+          CALL DFTB_CNVSQ(I,J,NSEQ)
+          DISTMAT(NSEQ) = DIST
+          IF (DIST.LT.1.0D-02) THEN
+C         ----- VAL = 0.0 IF DISTANCE IS LESS THAN 0.01 AU
+            VAL = 0.0D+00
+          ELSE IF (DIST.GT.REPCUT(SPE1,SPE2)) THEN
+C         ----- VAL = 0.0 IF DISTANCE IS MORE THAN CUTOFF
+            VAL = 0.0D+00
+          ELSE
+            IF (DIST.LT.REPINTV(1,1,SPE1,SPE2)) THEN
+C            --- SHORT RANGE REPULSIVE PART ---
+              VAL = EXP(-REPSHORT(1,SPE1,SPE2)*DIST
+     &                 + REPSHORT(2,SPE1,SPE2))
+     &              + REPSHORT(3,SPE1,SPE2)
+            ELSE
+              DO K = 1, NUMREP(SPE1,SPE2)
+                IF (DIST.GE.REPINTV(1,K,SPE1,SPE2)
+     &              .AND. DIST.LE.REPINTV(2,K,SPE1,SPE2)) EXIT
+              END DO
+              VAL = REPCOEFF(1,K,SPE1,SPE2)
+              X1  = DIST - REPINTV(1,K,SPE1,SPE2)
+              X   = X1
+              IF (K.LT.NUMREP(SPE1,SPE2)) THEN
+C            --- MEDIUM RANGE REPULSIVE PART ---
+                DO L = 2, 4
+                  VAL = VAL + REPCOEFF(L,K,SPE1,SPE2) * X
+                  X   = X * X1
+                END DO
+              ELSE
+C            --- LONG RANGE REPULSIVE PART ---
+                DO L = 2, 6
+                  VAL = VAL + REPCOEFF(L,K,SPE1,SPE2) * X
+                  X   = X * X1
+                END DO
+              END IF
+            END IF
+          END IF
+          VAL = VAL * CI * CJ
+C         WRITE (6,'(3I3,X,F14.7,X,F8.5)') I, J, K, VAL, DIST
+          EREP = EREP + VAL
+        END DO
+      END DO
+
+      RETURN
+
+      END SUBROUTINE DFTB_EREP
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DMTEIG
+C>
+C>    @brief Calculate energy-weighted density matrix
+C>
+C>    @details Calculate energy-weighted density matrix, with occupation
+C>             number.  This is a copy of ...
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date    Jun, 2016 - Yoshio Nishimoto
+C>    - Bug fix for zero electron
+C>
+C>           --- INPUT ---
+C>    @param VEC MO vector (C_{\mu i})
+C>    @param OCC Occupation number
+C>    @param EIG eigenvalue (or what we call orbital energy)
+C>    @param M,N,LDV
+C>          --- OUTPUT ---
+C>    @param D energy-weighted density matrix
+C>
+C
+      SUBROUTINE DFTB_DMTEIG(D,VEC,OCC,EIG,M,N,LDV)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      DIMENSION D(*),VEC(LDV,N),OCC(N),EIG(N)
+C
+      LOGICAL GOPARR,DSKWRK,MASWRK,PARALL3
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+C     GENERATE DENSITY MATRIX -D- IN THE AO BASIS, WHEN THE
+C     FIRST -M- MOLECULAR ORBITALS IN -V- HAVE OCCUPATION
+C     NUMBERS -X-.  THE DIMENSION OF -D- IS GIVEN BY -N-.
+C     THUS, THE DENSITY MATRIX IS D = V * X * V-TRANSPOSE.
+C
+      L2 = (N*N+N)/2
+      CALL VCLR(D,1,L2)
+      IF (M.EQ.0) RETURN
+C
+      PARALL3 = GOPARR  .AND.  M.GT.MXSQN3()
+      IPCOUNT = ME - 1
+C
+      DO 100 K = 1,N
+         IF(PARALL3) THEN
+            IPCOUNT = IPCOUNT + 1
+            IF (MOD(IPCOUNT,NPROC).NE.0) GO TO 100
+         END IF
+         IJ = 1
+         DO I = 1,N
+            CALL DAXPY(I,EIG(K)*OCC(K)*VEC(I,K),VEC(1,K),1,D(IJ),1)
+            IJ = IJ + I
+         ENDDO
+  100 CONTINUE
+C
+      IF (PARALL3) CALL DDI_GSUMF(1,D,L2)
+      RETURN
+
+      END SUBROUTINE DFTB_DMTEIG
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DMTOCC
+C>
+C>    @brief Calculate density matrix
+C>
+C>    @details Calculate density matrix with occupation number.
+C>             Maybe this is faster than the default density matrix
+C>             subroutine?
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param VEC MO vector (C_{\mu i})
+C>    @param OCC Occupation number
+C>    @param WORK work
+C>    @param N,LDV
+C>          --- OUTPUT ---
+C>    @param D density matrix
+C>
+C
+      SUBROUTINE DFTB_DMTOCC(D,VEC,OCC,WORK,N,LDV)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      DIMENSION D(*),VEC(LDV,N),OCC(N),WORK(N,N)
+C
+C     LOGICAL GOPARR,DSKWRK,MASWRK
+C
+C     COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+      DOUBLE PRECISION, PARAMETER :: ONE = 1.0D+00, ZERO = 0.0D+00
+C
+C     GENERATE DENSITY MATRIX -D- IN THE AO BASIS, WHEN THE
+C     FIRST -M- MOLECULAR ORBITALS IN -V- HAVE OCCUPATION
+C     NUMBERS -X-.  THE DIMENSION OF -D- IS GIVEN BY -N-.
+C     THUS, THE DENSITY MATRIX IS D = V * X * V-TRANSPOSE.
+C
+      L2 = (N*N+N)/2
+      L3 = N*N
+      CALL VCLR(D,1,L2)
+      CALL VCLR(WORK,1,L3)
+C
+C
+      DO I = N, 1, -1
+        MAXIND = I
+        IF (OCC(I).GT.1.0D-08) EXIT
+      END DO
+C
+      DO I = 1, MAXIND
+        !! A : EIGVEC
+        !! X : OCC
+        !! ALPHA = 1.0
+        !! BETA  = 0.0
+        CALL DSCAL(LDV,SQRT(OCC(I)),VEC(1,I),1)
+      END DO
+C
+      !! VEC :: EIGENVECTORS
+      !! D   :: DENSITY MATRIX
+      CALL DSYRK('L','N',N,MAXIND,ONE,VEC,N,ZERO,WORK,N)
+      CALL CPYSQT(WORK,D,N,1)
+C
+      DO I = 1, MAXIND
+        CALL DSCAL(LDV,1.0D+00/SQRT(OCC(I)),VEC(1,I),1)
+      END DO
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_DMTOCC
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_GAM2
+C>
+C>    @brief Calculate DFTB2 gamma
+C>
+C>    @details Calculate gamma values for DFTB2
+C>               Gamma_{AB} = 1/R - S(Ua,Ub,R)
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>    @param DIST distance between A-B
+C>    @param VALUE Temporary matrix made before calling this function.
+C>    @param DAMPXH Whether X-H damping is used or not
+C>    @param DAMPXHE Exponent for X-H damping
+C>    @param SPE1,SPE2 Characters of A and B (Used when DAMPXH=.TRUE.)
+C>
+C
+      DOUBLE PRECISION FUNCTION DFTB_GAM2(DIST,DISTI,VALUE,
+     * DAMPXH,DAMPXHE,SPE1,SPE2)
+C
+      IMPLICIT NONE
+C
+      DOUBLE PRECISION :: DIST,VALUE(12),DAMPXHE,SPE1,SPE2
+      LOGICAL :: DAMPXH
+C
+      DOUBLE PRECISION, PARAMETER :: ZERO=0.0D+00
+      DOUBLE PRECISION, PARAMETER :: DISTTOL=1.0D-08,HUBTOL=1.0D-04
+C
+      DOUBLE PRECISION :: TAUA,TAUB,TAUMEAN,DISTI,TAUAB3I,TMP
+      DOUBLE PRECISION H/8HH       /
+C
+      DFTB_GAM2 = ZERO
+      TAUA = VALUE(1)
+      TAUB = VALUE(2)
+      IF (DIST.LE.DISTTOL) THEN
+        DFTB_GAM2 = VALUE(12)
+        RETURN
+      ELSE IF (ABS(TAUA-TAUB).LE.HUBTOL) THEN
+        TAUMEAN = VALUE(3)
+        DFTB_GAM2 = exp(-TAUMEAN*DIST)
+     &  * (DISTI + VALUE(4) + VALUE(5)*DIST + VALUE(6)*(DIST*DIST))
+      ELSE
+        TAUAB3I = DISTI * VALUE(11)
+        DFTB_GAM2 = EXP(-TAUA*DIST) * (VALUE(7) - VALUE( 9)*TAUAB3I)
+     &            + EXP(-TAUB*DIST) * (VALUE(8) + VALUE(10)*TAUAB3I)
+      END IF
+C
+      IF (DAMPXH) THEN
+        IF (SPE1.EQ.H.OR.SPE2.EQ.H) THEN
+          TMP = VALUE(12)**DAMPXHE
+          DFTB_GAM2 = DFTB_GAM2 * EXP(-TMP*(DIST*DIST))
+        END IF
+      END IF
+C
+      DFTB_GAM2 = DISTI - DFTB_GAM2
+C
+      RETURN
+C
+      END FUNCTION DFTB_GAM2
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_GAM3
+C>
+C>    @brief Calculate DFTB3 gamma
+C>
+C>    @details Calculate gamma values for DFTB3 (only for FMO?)
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>    @param DIST distance between A-B
+C>    @param VAL1,VAL2 \Gamma_{AB} and \Gamma{BA}
+C>    @param HUBA,HUBB Hubbard values of atom A and B
+C>    @param VALUE1,VALUE2 Temporary array made before calling it
+C>    @param DAMPXH Whether X-H damping is used or not
+C>    @param DAMPXHE Exponent for X-H damping
+C>    @param SPE1,SPE2 Characters of A and B (Used when DAMPXH=.TRUE.)
+C>
+C
+      SUBROUTINE DFTB_GAM3(DIST,DISTI,VAL1,VAL2,HUBA,HUBB,VALUE1,VALUE2,
+     * DAMPXH,DAMPXHE,SPE1,SPE2)
+C
+      IMPLICIT NONE
+C
+      DOUBLE PRECISION :: DIST,VAL1,VAL2,HUBA,HUBB,VALUE1(10),
+     * VALUE2(10),DAMPXHE,SPE1,SPE2,DISTI
+
+      LOGICAL :: DAMPXH
+C
+      DOUBLE PRECISION, PARAMETER :: ZERO=0.0D+00,ONE=1.0D+00,
+     * HALF=5.0D-01
+      DOUBLE PRECISION, PARAMETER :: HUBTOL=1.0D-04
+C
+      DOUBLE PRECISION :: TAUA,TAUB,EXPA,EXPB,DIST2,DIST3,
+     * DSAB_DR,DSBA_DR,DFAB_DA,DFBA_DA,DFAB_DB,DFBA_DB,FAB,FBA,HUBMEAN,
+     * HUBMEANEXP,HUBMEANEXP1,EXPH,SAB,SBA,DH_DU
+      DOUBLE PRECISION H/8HH       /
+C
+      IF (DIST.LE.1.0D-08) THEN
+        VAL1 = HALF
+        VAL2 = HALF
+        RETURN
+      END IF
+C
+      VAL1 = ZERO
+      VAL2 = ZERO
+      TAUA = VALUE1(1)
+      TAUB = VALUE1(2)
+      EXPA = EXP(-TAUA*DIST)
+      EXPH = ONE
+      DH_DU = ZERO
+      IF (DAMPXH) THEN
+        IF (ABS(HUBA-HUBB).LE.HUBTOL) THEN
+          !! DS^g/Da
+          DIST2 = DIST**2
+          DIST3 = DIST2*DIST
+          DSAB_DR = EXPA*(VALUE1(3)+VALUE1(4)*DIST
+     *      + VALUE1(5)*DIST2+VALUE1(6)*DIST3)
+          IF (SPE1.EQ.H.OR.SPE2.EQ.H) THEN
+            HUBMEAN = HALF*(HUBA+HUBB)
+            HUBMEANEXP1 = HUBMEAN**(DAMPXHE-ONE)
+            HUBMEANEXP = HUBMEANEXP1*HUBMEAN
+            EXPH = EXP(-(HUBMEAN**DAMPXHE)*DIST2)
+            SAB = EXPA * (DISTI + VALUE1(7) +
+     `        VALUE1(8)*DIST + VALUE1(9)*DIST2)
+            DH_DU = -DIST2*DAMPXHE*HUBMEANEXP1*EXPH*HALF
+          END IF
+          VAL1 = -(DSAB_DR*EXPH*3.2D+00+SAB*DH_DU)
+          VAL2 = VAL1
+        ELSE
+          EXPB = EXP(-TAUB*DIST)
+          !! DS^f/Da
+          DFAB_DA = VALUE1(3)+VALUE1(4)*DISTI
+          FAB = VALUE1(5)+VALUE1(6)*DISTI
+          DFBA_DA = VALUE1(7)+VALUE1(8)*DISTI
+          FBA = VALUE1(9)+VALUE1(10)*DISTI
+          DFAB_DB = VALUE2(7)+VALUE2(8)*DISTI
+          DFBA_DB = VALUE2(3)+VALUE2(4)*DISTI
+          DSAB_DR = EXPA*(DFAB_DA-DIST*FAB)+EXPB*DFBA_DA
+          DSBA_DR = EXPB*(DFBA_DB-DIST*FBA)+EXPA*DFAB_DB
+          IF (SPE1.EQ.H.OR.SPE2.EQ.H) THEN
+            DIST2 = DIST**2
+            HUBMEAN = HALF*(HUBA+HUBB)
+            HUBMEANEXP1 = HUBMEAN**(DAMPXHE-ONE)
+            HUBMEANEXP = HUBMEANEXP1*HUBMEAN
+            EXPH = EXP(-HUBMEANEXP*DIST2)
+            SAB = EXPA*FAB + EXPB*FBA
+            SBA = SAB
+            DH_DU = -DIST2*DAMPXHE*HUBMEANEXP1*EXPH*HALF
+          END IF
+          VAL1 = -(DSAB_DR*EXPH*3.2D+00+SAB*DH_DU)
+          VAL2 = -(DSBA_DR*EXPH*3.2D+00+SBA*DH_DU)
+        END IF
+      ELSE !! WITHOUS H DAMPING
+        IF (ABS(HUBA-HUBB).LE.HUBTOL) THEN
+          !! DS^g/Da
+          DIST2 = DIST**2
+          DIST3 = DIST2*DIST
+          DSAB_DR = EXPA*(VALUE1(3)+VALUE1(4)*DIST
+     *      + VALUE1(5)*DIST2+VALUE1(6)*DIST3)
+          VAL1 = -DSAB_DR*3.2D+00
+          VAL2 = VAL1
+        ELSE
+          EXPB = EXP(-TAUB*DIST)
+          !! DS^f/Da
+          DFAB_DA = VALUE1(3)+VALUE1(4)*DISTI
+          FAB = VALUE1(5)+VALUE1(6)*DISTI
+          DFBA_DA = VALUE1(7)+VALUE1(8)*DISTI
+          FBA = VALUE1(9)+VALUE1(10)*DISTI
+          DFAB_DB = VALUE2(7)+VALUE2(8)*DISTI
+          DFBA_DB = VALUE2(3)+VALUE2(4)*DISTI
+          DSAB_DR = EXPA*(DFAB_DA-DIST*FAB)+EXPB*DFBA_DA
+          DSBA_DR = EXPB*(DFBA_DB-DIST*FBA)+EXPA*DFAB_DB
+          VAL1 = -DSAB_DR*3.2D+00
+          VAL2 = -DSBA_DR*3.2D+00
+        END IF
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_GAM3
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_SHIFT_ATOSH
+C>
+C>    @brief Convert atom-resolved to shell-resolved
+C>
+C>    @details Convert atom-resolved to shell-resolved.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param INPUT Atom-resolved values
+C>    @param NAT Number of atoms
+C>    @param NSHELL Number of shells
+C>    @param NSPE Number of species
+C>    @param ISPE Index of species
+C>    @param MAXANG Maximum angular momentum of each species
+C>           --- OUTPUT ---
+C>    @param OUTPUT Shell-resolved values
+C>
+C
+      SUBROUTINE DFTB_SHIFT_ATOSH(INPUT,OUTPUT,NAT,NSHELL,NSPE,ISPE,
+     *  MAXANG)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: NAT,NSHELL,NSPE
+      DOUBLE PRECISION, INTENT(IN) :: INPUT(NAT)
+      DOUBLE PRECISION, INTENT(INOUT) :: OUTPUT(NSHELL)
+      INTEGER, INTENT(IN) :: ISPE(NAT),MAXANG(NSPE)
+C
+      INTEGER :: I,J,ISH
+      DOUBLE PRECISION :: TMP
+C
+      ISH = 0
+      DO I = 1, NAT
+        TMP = INPUT(I)
+        DO J = 1, MAXANG(ISPE(I))
+          ISH = ISH + 1
+          OUTPUT(ISH) = TMP
+        END DO
+      END DO
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_SHIFT_ATOSH
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_SHIFT_SHTOA
+C>
+C>    @brief Convert shell-resolved to atom-resolved
+C>
+C>    @details Convert shell-resolved to atom-resolved.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param INPUT Shell-resolved values
+C>    @param NAT Number of atoms
+C>    @param NSHELL Number of shells
+C>    @param NSPE Number of species
+C>    @param ISPE Index of species
+C>    @param MAXANG Maximum angular momentum of each species
+C>           --- OUTPUT ---
+C>    @param OUTPUT Atom-resolved values
+C>
+C
+      SUBROUTINE DFTB_SHIFT_SHTOA(INPUT,OUTPUT,NAT,NSHELL,NSPE,ISPE,
+     *  MAXANG)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: NAT,NSHELL,NSPE
+      DOUBLE PRECISION, INTENT(IN) :: INPUT(NSHELL)
+      DOUBLE PRECISION, INTENT(INOUT) :: OUTPUT(NAT)
+      INTEGER, INTENT(IN) :: ISPE(NAT),MAXANG(NSPE)
+C
+      INTEGER :: I,J,ISH
+      DOUBLE PRECISION :: TMP
+      DOUBLE PRECISION, PARAMETER :: ZERO=0.0D+00
+C
+      ISH = 0
+      DO I = 1, NAT
+        TMP = ZERO
+        DO J = 1, MAXANG(ISPE(I))
+          ISH = ISH + 1
+          TMP = TMP + INPUT(ISH)
+        END DO
+        OUTPUT(I) = TMP
+      END DO
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_SHIFT_SHTOA
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_NCCMAT
+C>
+C>    @brief Calculate charge-independent quantity
+C>
+C>    @details Calculate non-charge consistent (NCC) DFTB quantity.
+C>             This subroutine constructs Hamiltonian and overlap
+C>             matrix and Q matrix.  If FMO-DFTB, calculates ESP
+C>             contribution (DFTB_ESP), too.
+C>             This is mostly a copy of ONEEI subroutine.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>    @date   Feb, 2016 - Yoshio Nishimoto
+C>    - Added FMO-DFTB/PCM, allowed symmetry
+C>
+C
+      SUBROUTINE DFTB_NCCMAT
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      INTEGER,PARAMETER :: MXATM=2000, MXSPE=10, MXAO=8192
+      INTEGER,PARAMETER :: MXGTOT=20000, MXSH=5000
+
+      DOUBLE PRECISION, PARAMETER :: ZERO=0.0D+00
+
+      LOGICAL SOME,DBUG,GOPARR,DSKWRK,MASWRK,EFLDL,
+     *        DOESP,DOESP0,DOESP1,DOESP2,DOHOP,DOHOP2,ADDESP,
+     *        DOPCM,DOVLMO,DOEFP,DOAFO,DOAFO1,MFRZ!,DOREP
+      LOGICAL DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB,OUTPCM,DOECP2
+      dimension idamdt(3)
+C
+      COMMON /DFTB  / DFTBFL,SCC,SRSCC,DFTB3,DAMPXH,LRDFTB
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /EFLDC / EVEC(3),EFLDL
+C     COMMON /EFPBUF/ POLCHG(10),NBUFMO,LBUFF(MXAO),LBF,NAPOL,IAPOL(10)
+      COMMON /FMCOM / X(1)
+      COMMON /FMODIM/ MAXBND,MAXKND,MAXCBS,MAXCAO,MAXVEC,MAXL1,MAXNAT,
+     *                MAXABD,MAXBAS,MAXBBD,MAXLMO,MAXSLO,MAXABD2,maxrij
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      COMMON /FMOOPT/ ESPSCA(9),RESPAP(2),RESPPC(2),RESDIM,RESTRI(4),
+     *                RCORSD,RESPCT,CONVFG,CNVDMP,COROFF,RFLMO(4),
+     *                ORSHFT,ORSHFT2,CNVAFO,ASCREEN(4),IXESP,MXITFG,
+     *                NGUESS,NBSSE,MODORB,MODPAR,IRSTSTP,IRSTLAY,NPRFMO,
+     *                NFMOPAL,MODPRP,MAXL1C,IPIEDA,MODGRD,MODESP,IVMUL,
+     *                MODLMO,NOPDEN,MOFOCK,MODFD,modfmm,ncentm,ndualb
+      common /fmopnt/ lichfg,lmulfg,lidmrec,lfrgnam,llayfrg,lindat,
+     *                lnCBS,lfmozan,lfmoc,lfmomas,lizbas,liaglob,libdgh,
+     *                liabdfg,ljabdfg,lnCAO,lidxCAO,liaprjo,ljaprjo,
+     *                lCoreAO,lOccCor,lshiftb,liodfmo,lfmoda,lfmodb,
+     *                lfmoespa,lfmoespb,llocfmo,lscffrg,lfmoscf,lrij,
+     *                lpopmul,lpopmat,lialoc,lindbd,liatfrg,lindfrg,
+     *                lindgfrg,lnatfrg,lnat0frg,lianfrg,lzanfrg,lcfrg,
+     *                llibish,llibnsh,llibng,lindatg,lfmobuf(3),lfmode,
+     *                lnumfrg,lloctat,liaoglob,lloadm,lfmoge,ldgrid,
+     *                liodcfmo,ljob2grp,lfmopg,lemocdr,luntxyz,luntrot,
+     *                lstonep,lmapsu,lfrgmul,lclmo,lialmo,lindlmo,
+     *                latclmo,llmobdf,lfgflmo,lnfglmo,llfglmo,lpfglmo,
+     *                LPOPDMAT,lidmpnt,liddpnt,livmpnt,liactfg,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_mm,lmaxl30
+      COMMON /FMORUN/ ESPSCF,E0SCF(2),EMP2S,IDAFMO,ICURFG,JCURFG,KCURFG,
+     *                ICURLAY,ICURUNT,NAT1E,NCURSH,NGAU,ICURPOP,IFMOSTP,
+     *                MONCOR,NEEDR,MODRST,NORBPROJ,NUNESP,ISKIPESP,
+     *                IESDPPC,IDOPROP,MP2RUN,ICURIT,IDMFMO,IDDFMO,
+     *                IDDCUR,NDDLEFT,IVMFMO,nzmtfmo,ifmobas,itmfmo(2)
+C     COMMON /FRGINF/ NMPTS(MXFRG),NMTTPT,IEFC,IEFD,IEFQ,IEFO,
+C    *                NPPTS(MXFRG),NPTTPT,IEFP,
+C    *                NRPTS(MXFRG),NRTTPT,IREP,ICHGP,NFRG,
+C    *                NDPPTS(MXDPPT),NDPTTPT,IEFDP,LSTMPTS(MXFRG),
+C    *                NBSFN(MXFRG),NMXMO(MXFRG)
+      COMMON /FMODTB/ LGAMMA,LZREF,LISPE,LSHIFTG,LSHIFTCT,
+     *                LGAMMAD,MODESD,MODGAMMA,LDCTMP,LGAMMA3,LGAMMA3D,
+     *                LNBOND,LCTMUL
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /MFRPAR/ MFRZ,NUMFRZ,NORFRZ,IFRZ(MXAO)
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PCMDIM/ MXSP,MXTS,MEMPCM1,MEMPCM2,NTS
+      COMMON /PCMPNT/ LXYZRE,LSSFE,LLIST,LALPCM,LRINPCM,LINAPCM,LINFPCM,
+     *                LINIPCM,LMEPCM,LAXYZCT,LXYZCT2,LNVERT,LQSN,LQSE,
+     *                LQFS,LQIND,LISPHE,LVAD,LQOR,LVECMUL,LAIPRJ,LFIPRJ,
+     *                LPEL,LPCMCDR,LDAI,LIDDAI,LQSND,LQSED,LEPSPCM
+      common /ppcpnt/ lddijpot,lzppcpot,lvipot,lgrdtest
+C     COMMON /RELWFN/ RMETHOD,QRQMT,CLIG,CLIG2,QRTOL,IQRORD,MODQR,NESOC,
+C    *                NRATOM,NUMU,NQMTR,NQRDAF,MORDA,NDARELB
+C     COMMON /RUNLAB/ TITLE(10),A(MXATM),B(MXATM),BFLAB(MXAO)
+      COMMON /RUNOPT/ RUNTYP,EXETYP,NEVALS,NGLEVL,NHLEVL
+      COMMON /SIMDAT/ NACC,NREJ,IGOMIN,NRPA,IBWM,NACCT,NREJT,NRPAT,
+     *                NPRTGO,IDPUNC,IGOFLG
+      COMMON /SOOPT / NOSO
+      COMMON /SYMBLK/ NIRRED,NSALC,NSALC2,NSALC3,NSAFMO
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+      COMMON /ZRFPAR/ GZRF,FIND(3),GNUCF,EBORN,DIELEC,IZRF,ICALC
+C
+      DATA DEBUG/8HDEBUG   /,DBUGME/8HINT1    /
+      DATA CHECK/8HCHECK   /
+      DATA RMC/8HMCSCF   /,RNONE/8HNONE    /
+C memo : RMETHOD -> relativistic correction
+
+C
+C     ---- ALLOCATE MEMORY -----
+C     TAKEN FROM ONEEI SUBROUTINE IN int1.src
+C
+      SOME = MASWRK  .AND.  .NOT.(NPRINT.EQ.-5 .OR. NPRINT.EQ.-2183)
+      DBUG = MASWRK  .AND.
+     *       ((NPRINT.EQ.3.OR.NPRINT.EQ.5) .OR. EXETYP.EQ.DEBUG
+     *                                     .OR. EXETYP.EQ.DBUGME)
+C
+      CALL SETLESP(DOESP,DOESP0,DOESP1,DOESP2,DOHOP,DOHOP2,DOPCM,ADDESP,
+     *             DOVLMO,DOEFP,DOECP2)
+      DOAFO=MFRZ.AND.NFG.NE.0.AND.IAND(MODLMO,4).EQ.0
+      DOAFO1=.NOT.DOAFO.AND.RFLMO(1).NE.0
+C
+C     NOSO.NE.1 NEEDED TO DO QMTSYM,SYMDIA,SYMMOS
+C     ESPECIALLY FOR TD-DFTB AND FMO-DFTB/AFO
+C
+      IF (NIRRED.EQ.1.OR.NFG.NE.0) THEN
+        NOSO = 1
+      END IF
+C
+      IF(SOME) WRITE (IW,9000)
+      IF(SOME) CALL TSECND(T0)
+C
+      L0 = 0
+      L1 = NUM           !! NUMBER OF ATOMIC ORBITALS
+      L2 = (L1*L1+L1)/2  !! DIMENSION OF LOWER TRIANGLE
+      L3 = L1*L1         !! NORB*NORB
+C
+      CALL VALFM(LOADFM)
+      CALL GOTFM(NGOTMX)
+      LH   = LOADFM + 1       !!
+      LS   = LH     + L2      !! HAMILTONIAN
+      LT   = LS     + L2      !! OVERLAP
+      LV   = LT     + L2      !! KINETIC INTEGRAL => 0
+      LQ   = LV     + L3      !! WORK DIRECTRY IN QMTSYM
+      LWRK = LQ     + L3      !! FOR TRANSFORMATION MATRIX
+      LE   = LWRK   + L2      !! USED IN FMOHOP
+      LSCR = LE     + L1      !! TEMPORARY IN QMTSYM
+      LIWRK= LSCR   + L1*8    !! TEMPORARY IN QMTSYM
+      LAST = LIWRK  + L1      !! TEMPORARY IN QMTSYM
+C     LRI  = LIWRK  + L1      !! TEMPORARY IN QMTSYM
+C     LHP  = LRI    + L3      !! TEMPORARY IN QMTSYM
+C     LRI2 = LHP    + L2      !! HOP CONTRIBUTION OF HAMILTONICN
+C     LAST = LRI2   + NAT*NAT !! 1/R matrix
+
+      IF(DOHOP) THEN
+         LSS=LAST
+         LDD=LSS+L1*L1
+         LROTLCAO=LDD+(MAXCBS*MAXCBS+MAXCBS)/2
+         last=LROTLCAO+MAXCBS*MAXCAO
+      END IF
+C
+      NEED = LAST-LOADFM-1
+      CALL GETFM(NEED)
+C
+      CALL VCLR(X(LH),1,L2)
+      CALL VCLR(X(LS),1,L2)
+C
+C     ----- SUM UP PARTIAL CONTRIBUTIONS IF PARALLEL -----
+C     canno use currently
+C
+C     IF (GOPARR) THEN
+C       CALL DDI_GSUMF(910,X(LH),L2)
+C       CALL DDI_GSUMF(911,X(LS),L2)
+C     END IF
+C
+C     ----- NOW, CONSTRUCT NCC-HAMILTONIAN AND OVERLAP
+C
+      IF (MASWRK.AND.SOME) WRITE (IW,*) " NUMBER OF ATOMIC ORBITALS:",L1
+      CALL DFTB_HAM_OVER(1,NAT,X(LH),X(LS),.TRUE.,.TRUE.)
+C
+C     ----- OPTIONAL DEBUG PRINTOUT -----
+C
+      IF (MASWRK.AND.DBUG) THEN
+        WRITE (IW,*) "OVERLAP MATRIX"
+        CALL PRTRIL(X(LS),L1)
+        WRITE (IW,*) "NCC HAMILTONIAN"
+        CALL PRTRIL(X(LH),L1)
+      END IF
+C
+C     ----- ZERO-FILL FOR KINETIC INTEGRAL ----
+C
+      CALL VCLR(X(LT),1,L2)
+C
+C     ----- SAVE H AND S MATRICES ON THE DAF -----
+C
+      IF (NFG.GT.0 .AND. SCC) CALL DAWRIT(IDAF,IODA,X(LH),L2,564,0)
+      CALL DAWRIT(IDAF,IODA,X(LH),L2,11,0)
+      CALL DAWRIT(IDAF,IODA,X(LS),L2,12,0)
+      CALL DAWRIT(IDAF,IODA,X(LT),L2,13,0)
+C
+C     ----- SAVE INITIAL GUESS AND EIGENVALUES OR ORBITALS, BUT ZERO VALUE-----
+C
+C     IF (IODA(15).EQ.-1) CALL DAWRIT(IDAF,IODA,X(LQ),L3,15,0)
+      CALL VCLR(X(LQ),1,L3)
+C     IF (IODA(15).EQ.-1.AND.NFG.NE.0)
+C    *   CALL DAWRIT(IDAF,IODA,X(LQ),L3,15,0)
+C     WRITE (IW,*) "INITIALIZATION IN nccmat.src IS TURNED OFF"
+c     CALL DAWRIT(IDAF,IODA,X(LQ),L2,16,0)
+      CALL DAWRIT(IDAF,IODA,X(LQ),L1,17,0)
+C
+C     ----- SAVE Q ON THE DAF, BUT HAS NONE -----
+C       THIS IS CALLED SYMMETRY ADAPTED Q MATRIX
+C
+C     CALL QMATRX(X(LS),X(LQ),X(LE),X(LSCR),X(LIWRK),L0,L1,L1,
+C    & .FALSE.)
+      CALL QMTSYM(X(LS),X(LV),X(LQ),X(LE),X(LSCR),X(LIWRK),
+     *            L0,L1,L2,L3,DBUG)
+      CALL DAWRIT(IDAF,IODA,X(LQ),L3,44,0)
+      CALL DAWRIT(IDAF,IODA,X(LQ),L3,45,0)
+      IF (DBUG) THEN
+        WRITE (IW,*) "TRANSFORMATION MATRIX"
+        CALL PRSQ(X(LQ),L1,L1,L1)
+      END IF
+C
+      IF (SOME) THEN
+        CALL TSECND(T1)
+        TCPU = T1 - T0
+        T0 = T1
+        WRITE(IW,9010) TCPU
+      END IF
+C
+C     ----- DIPOLE INTEGRALS, AT COORDINATE ORIGIN -----
+C     THE REASONING BEHIND DOING DIPOLE INTEGRALS FOR MCSCF IS IN CASE
+C     SOMEONE DOES STATE-AVERAGED MCSCF ON DIFFERENT ENERGIES SO THAT
+C     THE PROPERTY CODE SKIPS OUT, BUT WHERE ONE MIGHT WANT TO DO A
+C     BOYS LOCALIZATION THAT REQUIRES THESE INTEGRALS.  IT IS HARD TO
+C     TEST FOR THIS SOMEWHAT ODD CONDITION, SO JUST DO THE INTEGRALS.
+C
+      IF(EFLDL  .OR.  IZRF.EQ.1  .OR.  SCFTYP.EQ.RMC) THEN
+         CALL DAREAD(IDAF,IODA,X(LS),L2,12,0)
+         CALL DFTB_DIPINT(IND,ZERO,ZERO,ZERO,X(LS),DBUG)
+         IF(SOME) THEN
+            CALL TSECND(T1)
+            TCPU = T1 - T0
+            T0 = T1
+            WRITE(IW,9030) TCPU
+         END IF
+      END IF
+C
+C     ----- CALCULATE CENTER OF MASS WITH FRAGMENTS ----
+C
+!     IF(NFRG.GT.0) CALL EFCM
+C
+C     ----- EFFECTIVE FRAGMENT INTEGRALS -----
+C           CHARGE-CHARGE INTEGRALS
+C           CHARGE-DIPOLE INTEGRALS
+C           CHARGE-QUADRUPOLE INTEGRALS
+C           CHARGE-OCTUPOLE INTEGRALS
+C           CHARGE-POLARIZABLE POINTS INTEGRALS
+C           CHARGE-REPULSIVE POTENTIAL INTEGRALS
+C
+      IF(EXETYP.EQ.CHECK) GO TO 800
+C     IF(SKIPEFP) GOTO 700
+C
+C     IF (DOEFP) THEN
+c     call stopwa(6,0)
+C
+C     IF (NFRG.GT.0) THEN
+C        CALL VCLR(X(LH),1,L2)
+C        CALL DAWRIT(IDAF,IODA,X(LH),L2,89,0)
+C     END IF
+C     IF(NBUFMO.GT.0)THEN
+C       CALL DAREAD(IDAF,IODA,X(LH),L2,11,0)
+C       CALL DAWRIT(IDAF,IODA,X(LH),L2,319,0)
+C       CALL VCLR(X(LH),1,L2)
+C     END IF
+C     IF(DOESP2.AND.IVMUL.GT.1) CALL SETVSKIP(X(LNATFRG),X(LUNTXYZ),
+C    *                                        X(LINDVMUL))
+C     IF(IEFC.EQ.1) CALL EFCINT(X(LWRK),X(LH))
+C     IF(IEFD.EQ.1.OR.DOESP2.AND.IVMUL.GT.1) CALL EFDINT(X(LWRK),X(LH),
+C    *                X(LUNTXYZ),X(LVMUL),LDAV,X(LINDVMUL),X(LFMOESPB))
+C     IF(IEFQ.EQ.1.OR.DOESP2.AND.IVMUL.GT.2) CALL EFQINT(X(LWRK),X(LH),
+C    *                X(LUNTXYZ),X(LVMUL),LDAV,X(LINDVMUL),X(LFMOESPB))
+C     IF(IEFO.EQ.1.OR.DOESP2.AND.IVMUL.GT.3) CALL EFOINT(X(LWRK),X(LH),
+C    *                X(LUNTXYZ),X(LVMUL),LDAV,X(LINDVMUL),X(LFMOESPB))
+C     IF(IEFP.EQ.1) CALL POLINT(X(LWRK),X(LS),X(LT),L2)
+C     IF(IEFP.EQ.1) THEN
+C       IF (IEFPFMO.EQ.2) THEN
+C         CALL DRCTPOLWRP(L1,L2,X(LH),X(LWRK),X(LS),X(LT))
+C       ELSE
+C         CALL POLINT(X(LWRK),X(LS),X(LT),L2)
+C       END IF
+C     END IF
+C
+C     IF(IREP.EQ.1) CALL REPINT(X(LWRK),X(LH),DOREP)
+C     IF(IEFF.GT.0  .AND.  SOME) THEN
+C        CALL TSECND(T1)
+C        TCPU = T1 - T0
+C        T0 = T1
+C        WRITE(IW,9040) TCPU
+C     END IF
+c     call stopwa(6,1)
+C     END IF
+C 700 CONTINUE
+C
+C     FRAGMENT MOLECULAR ORBITAL METHOD:
+C     HO PROJECTOR AND ELECTROSTATIC POTENTIAL (ESP).
+C     (SOME HIDDEN ARGUMENTS SHOULD BE SET SOMEWHERE BEFORE).
+C
+      call stopwa(7,0)
+      outpcm=iand(nprfmo,3).eq.0
+      IF(DOPCM) THEN
+        CALL PCMPOT(X(LH),X(LWRK),NTS,X(LQSE),X(LAXYZCT),L2,0,outpcm)
+        call stopwa(7,1)
+        !! LWRK = Vmn (PCM contribution)
+        !! LH   = Hmn^0 + Vmn
+        CALL DAWRIT(IDAF,IODA,X(LWRK),L2,565,0) !! Vmn
+      END IF
+      call viclr(idamdt,1,3)
+      IF(DOHOP) CALL FMOHOP(L1,L2,X(LH),X(LS),X(LSS),X(LQ),X(LDD),
+     *            X(LSCR),X(LT),X(LWRK),X(LIABDFG),X(LJABDFG),X(LIDXCAO)
+     *            ,X(LIAGLOB),X(LNCBS),X(LNCAO),X(LIAPRJO),X(LJAPRJO),
+     *             X(LSHIFTB),X(LCOREAO),X(LFMOC),X(LROTLCAO),
+     *             X(LLOCFMO),NSHELL,KATOM,KTYPE,KLOC,KMIN,.TRUE.,
+     *             .FALSE.,rnone,idamdt)
+      IF(DOHOP2) CALL FMOHOPQO(L1,L2,X(LH),X(LS),X(LFMODA),X(LFMOBUF(1))
+     *                       ,X(LLAYFRG),X(LSCFFRG),X(LNUMFRG)
+     *                       ,X(LIODFMO),X(LIDMREC),X(LLOADM))
+      CALL DAREAD(IDAF,IODA,X(LH),L2,11,0) !! LH = Hmn^0 + Pmn
+      !! this is used to calculate NCC energy.
+      CALL DAWRIT(IDAF,IODA,X(LH),L2,564,0) !! Hmn^0 + Pmn
+      call stopwa(8,0)
+c     IF(DOESP)CALL FMOESP(L1,L2,X(LH),X(LLAYFRG),X(LSCFFRG),X(LIDMREC))
+c     IF(DOESP) call vclr(x(lfmoespa),1,l2)  !! it must be skipped for non-ESP calculation
+      if(doesp) then
+         if(scc) then
+           CALL DAREAD(IDAF,IODA,X(LS),L2,12,0)
+           lpopmati=lpopmat+(maxnat*nfg)*(icurpop-1)
+           call dcopy(l2,x(lh),1,x(lfmoespa),1)
+           call dscal(l2,-1.0D+00,x(lfmoespa),1)
+CD         call DFTB_ESP(x(llayfrg),X(LIAGLOB),X(LNATFRG),X(LINDFRG),
+           NN = 1
+           NN2 = NATFMO
+           IF (IAND(MODGAMMA,2).NE.0) THEN
+             NN = NN + 1
+             NN2 = NN2 + NBDFG
+           END IF
+           call DFTB_ESP(X(LIAGLOB),X(LNATFRG),X(LINDFRG),
+     *                  X(LIATFRG),x(lpopmati),X(LS),X(LH),X(LISPE),
+     *                  X(LFMOC),X(LGAMMA3),X(LINDAT),X(LIALOC),NN,NN2)
+           call daxpy(l2,1.0D+00,x(lh),1,x(lfmoespa),1)
+           call dcopy(l2,x(lfmoespa),1,x(lfmoespb),1)
+           !! TENTATIVELY HERE SOMEHOW DICTIONARY 11 IS DESTOIED AND CANNOT PERFORM NORMAL CALCULATIONS
+           CALL DAWRIT(IDAF,IODA,X(LH),L2,11,0)
+         else
+           call vclr(x(lfmoespa),1,l2)
+        endif
+      endif
+      call stopwa(8,1)
+c
+c     variational FMO; contribution to Fock
+c
+      if (doesp.and.iand(modesp,512).ne.0.and.ifmostp.ge.2) then
+        IOLDPOP = 3 - ICURPOP
+        LPOTCUR = LVIPOT+(ICURPOP-1)*MAXNAT*NFG
+        LPOTOLD = LPOTCUR
+        IF (IFMOSTP.GE.4) LPOTOLD = LVIPOT+(IOLDPOP-1)*MAXNAT*NFG
+        CALL dltcnt2esp(L2,X(LIAGLOB),X(LIALOC),X(LFMOESPA),X(LWRK),
+     *                  X(LH),X(LPOTCUR),X(LPOTOLD),X(LS))
+      end if
+      IF(ADDESP) THEN
+C       CALL DAREAD(IDAF,IODA,X(LH),L2,11,0)
+C       CALL DAXPY(L2,ONE,X(LFMOESPA),1,X(LH),1)
+C       CALL DAWRIT(IDAF,IODA,X(LH),L2,11,0)
+      ELSE IF(NFG.NE.0.AND..NOT.DOESP.AND..NOT.DOESP1.AND..NOT.DOESP0)
+     *  THEN
+        CALL VCLR(X(LFMOESPA),1,L2)
+      ENDIF
+C
+C     IF DOING FMO, QUIT NOW
+C
+      IF(NFG.NE.0.AND.DOAFO.AND..NOT.DOAFO1) THEN
+        CALL DAREAD(IDAF,IODA,X(LS),L2,12,0)
+        CALL QMTSYM(X(LS),X(LV),X(LQ),X(LE),X(LSCR),X(LIWRK),
+     *              L0,L1,L2,L3,.FALSE.)
+        CALL FMOORBS(X(LV),X(LS),X(LE),X(LQ),X(LSCR),X(LIWRK),
+     *               L0,L1,L2,L3,skipor)
+      END IF
+C
+C     ----- DONE WITH INTEGRALS -----
+C
+  800 CONTINUE
+
+C AAD WRITE STATIC INTEGRALS TO A PROTECTED AREA FOR EFP.
+      CALL DAWRIT(IDAF,IODA,X(LH),L2,87,0)
+      CALL RETFM(NEED)
+C
+C     PRINT TIMING INFO --- AVOID DURING MONTE CARLO, FMO, ...
+C
+      IF(MASWRK .AND. NPRTGO.NE.2  .AND.  NPRINT.NE.-2183 .AND.
+     * (NFG.EQ.0.OR.(IFMOSTP.NE.6.AND.NPRINT.NE.-5))) THEN
+         WRITE(IW,9090)
+         CALL TIMIT(1)
+      END IF
+      RETURN
+C
+ 9000 FORMAT(/10X,30(1H*)/10X,'CONSTRUCT NCC-DFTB HAMILTONIAN'
+     &       /10X,30(1H*))
+ 9010 FORMAT(1X,'TIME TO DO NCC-DFTB HAMILTONIAN=',F10.2)
+ 9030 FORMAT(1X,'TIME TO DO   DIPOLE INTEGRALS=',F10.2)
+ 9090 FORMAT(1X,'...... END OF NCC-DFTB PREPARATION ......')
+
+      END SUBROUTINE DFTB_NCCMAT
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_HAM_OVER
+C>
+C>    @brief Calculate Hamiltonian and overlap matrix
+C>
+C>    @details Calculate Hamiltonian and overlap matrix elements.
+C>             This calculates only zeroth order values.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>    @param NSTART,NLAST lower and upper limit for atom index
+C>    @param H,S Hamiltonian and overlap matrices
+C>    @param THAM Whether Hamiltonian is calculated.
+C>    @param TOVER Whether overlap is calculated.
+C>
+C
+      SUBROUTINE DFTB_HAM_OVER(NSTART,NLAST,H,S,THAM,TOVER)
+C
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MXATM=2000, MXSPE=10
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      DOUBLE PRECISION :: ETEMP,DFTBDP,DAMPXHE,HUBDER,ZREF,SPNCST,SPE
+      INTEGER :: NSPE,MAXANG,ISPE,IND,IDFTBD
+      COMMON /DFTBSK/ SKDIM(MXSPE,MXSPE),SKSPIN(MXSPE),QREFL(3,MXSPE),
+     *                HUBBL(3,MXSPE),QREF(MXSPE),HUBB(MXSPE),SKCUT2,
+     *                NEEDSK,LSKHTAB(MXSPE,MXSPE),LSKSTAB(MXSPE,MXSPE),
+     *                LSKGRID(MXSPE,MXSPE),LSKSELF(MXSPE)
+      DOUBLE PRECISION SKDIM,SKSPIN,QREFL,HUBBL,QREF,HUBB,SKCUT2
+      INTEGER NEEDSK,LSKHTAB,LSKSTAB,LSKGRID,LSKSELF
+      COMMON /FMCOM / X(1)
+      DOUBLE PRECISION X
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      INTEGER :: NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,IAN
+      DOUBLE PRECISION :: ZAN,C
+C
+      INTEGER, INTENT(IN) :: NSTART,NLAST
+      DOUBLE PRECISION,INTENT(OUT) :: H(*),S(*)
+      LOGICAL,INTENT(IN) :: THAM,TOVER
+C
+      INTEGER :: I,J,K,L,M,N,NSEQ
+      DOUBLE PRECISION :: VEC(3),AU(9,9),BU(9,9)
+      LOGICAL :: SKP
+C
+      DO I = NSTART, NLAST
+        DO J = NSTART, I
+          VEC(1) = C(1,J) - C(1,I)
+          VEC(2) = C(2,J) - C(2,I)
+          VEC(3) = C(3,J) - C(3,I)
+          CALL VCLR(AU,1,81)
+          CALL VCLR(BU,1,81)
+          !! USE NUMERICAL DERIVATIVE CODE
+C         CALL DFTB_SKODE(ISPE(I),ISPE(J),MAXANG(ISPE(I)),
+C    &      MAXANG(ISPE(J)),VEC(1:3),SKGRID(ISPE(I),ISPE(J)),
+C    &      SKGRID(ISPE(J),ISPE(I)),SKDIM(ISPE(I),ISPE(J)),
+C    &      SKDIM(ISPE(J),ISPE(I)),
+C    &      SKHTAB(1:10,1:MXTAB,ISPE(I),ISPE(J)),
+C    &      SKHTAB(1:10,1:MXTAB,ISPE(J),ISPE(I)),
+C    &      SKSTAB(1:10,1:MXTAB,ISPE(I),ISPE(J)),
+C    &      SKSTAB(1:10,1:MXTAB,ISPE(J),ISPE(I)),
+C    &      SKSELF(1:3,ISPE(I)),SKCUT2,AU(1:9,1:9),BU(1:9,1:9),
+C    *      THAM,TOVER)
+          CALL DFTB_SKODEA(I.EQ.J,ISPE(I),ISPE(J),0,0,0,MAXANG(ISPE(I)),
+     *      MAXANG(ISPE(J)),VEC,
+     *      X(LSKGRID(ISPE(I),ISPE(J))),X(LSKGRID(ISPE(J),ISPE(I))),
+     *      SKDIM(ISPE(I),ISPE(J)),SKDIM(ISPE(J),ISPE(I)),
+     *      X(LSKHTAB(ISPE(I),ISPE(J))),X(LSKHTAB(ISPE(J),ISPE(I))),
+     *      X(LSKSTAB(ISPE(I),ISPE(J))),X(LSKSTAB(ISPE(J),ISPE(I))),
+     *      X(LSKSELF(ISPE(I))),SKCUT2,AU,BU,
+     *      THAM,TOVER,SKP)
+          IF (SKP) CYCLE
+          IF (I.EQ.J) THEN
+            DO K = 1, IND(J+1) - IND(J)
+              N = IND(J)+K-IND(NSTART)
+              NSEQ = N*(N+1)/2
+              IF (THAM)  H(NSEQ) = AU(K,K)
+              IF (TOVER) S(NSEQ) = BU(K,K)
+            END DO
+          ELSE
+            DO K = 1, IND(J+1) - IND(J)
+              N = IND(J)+K-IND(NSTART)
+              DO L = 1, IND(I+1) - IND(I)
+                M = IND(I)+L-IND(NSTART)
+                CALL DFTB_CNVSQ(M,N,NSEQ)
+                IF (THAM)  H(NSEQ) = AU(L,K)
+                IF (TOVER) S(NSEQ) = BU(L,K)
+              END DO
+            END DO
+          END IF
+        END DO
+      END DO
+c     call prtril(S,num)
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_HAM_OVER
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DIPINT
+C>
+C>    @brief Calculate dipole integrals for DFTB
+C>
+C>    @details Calculate dipole integrals for DFTB in an approximate
+C>             way. See the reference shown below.
+C>             This is a copy of DIPINT subroutine.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Sep, 2014- Subroutine written
+C>
+C>    @param IND Index of atomic orbitals
+C>    @param XC,YC,ZC Origin?
+C>    @param S Overlap matrix
+C>    @param DBUG Debug?
+C
+      SUBROUTINE DFTB_DIPINT(IND,XC,YC,ZC,S,DBUG)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      INTEGER IND(*)
+      DOUBLE PRECISION S(*)
+      LOGICAL DBUG
+C
+      PARAMETER (MXATM=2000)
+C
+      COMMON /FMCOM / X(1)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /XYZPRP/ XP,YP,ZP,
+     *                DIPMX,DIPMY,DIPMZ,
+     *                QXX,QYY,QZZ,QXY,QXZ,QYZ,
+     *                QMXX,QMYY,QMZZ,QMXY,QMXZ,QMYZ,
+     *                OXXX,OXXY,OXXZ,OXYY,OYYY,OYYZ,
+     *                OXZZ,OYZZ,OZZZ,OXYZ,
+     *                OMXXX,OMXXY,OMXXZ,OMXYY,OMYYY,
+     *                OMYYZ,OMXZZ,OMYZZ,OMZZZ,OMXYZ
+C
+C     ----- CALCULATE DIPOLE INTEGRALS -----
+C     AT REQUESTED ORIGIN, AND SAVE ON THE DAF FILE.
+C
+      XP = XC
+      YP = YC
+      ZP = ZC
+C
+C     SEE THE REFERENCE FOR THE CALCULATION OF DIPOLE INTEGRALS AT DFTB
+C     - Barone, V; Carnimeo, I.; Scalmani, G.
+C       J. Chem. Theory Comput. 2013, 9, 2052-2071.
+C     CALCULATION OF DIPOLE INTEGRALS FOLLOWS EQ.(34) IN THE REF.
+C
+      L1 = NUM
+      L2 = (L1*L1+L1)/2
+C
+      CALL VALFM (LOADFM)
+      LX   = LOADFM + 1
+      LY   = LX     + L2
+      LZ   = LY     + L2
+      LAST = LZ     + L2
+      NEED = LAST - LOADFM - 1
+      CALL GETFM(NEED)
+C
+      HALF = 0.5D+00
+      DO KI = 1, 3
+        IF(KI.EQ.1) THEN
+          LXYZ = LX
+          TMP = XP
+        ELSE IF(KI.EQ.2) THEN
+          LXYZ = LY
+          TMP = YP
+        ELSE IF(KI.EQ.3) THEN
+          LXYZ = LZ
+          TMP = ZP
+        END IF
+        DO NM = 1, NAT
+          CMXYZ = C(KI,NM)-TMP
+          DO M = 1, IND(NM+1)-IND(NM)
+            MU = IND(NM)+M
+            DO NN = 1, NM
+              CNXYZ = C(KI,NN)-TMP
+              DO N = 1, IND(NN+1)-IND(NN)
+                NU = IND(NN)+N
+                CALL DFTB_CNVSQ(MU,NU,NSEQ)
+                X(LXYZ+NSEQ-1) = HALF*S(NSEQ)*(CMXYZ+CNXYZ)
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+C
+C         SAVE TO DISK, POSSIBLE PRINTOUT
+C
+      CALL DAWRIT(IDAF,IODA,X(LX),L2,95,0)
+      CALL DAWRIT(IDAF,IODA,X(LY),L2,96,0)
+      CALL DAWRIT(IDAF,IODA,X(LZ),L2,97,0)
+C
+      IF(DBUG) THEN
+         WRITE(IW,*) 'DIPOLE ORIGIN=',XC,YC,ZC
+         WRITE(IW,*) 'X DIPOLE INTEGRALS'
+         CALL PRTRIL(X(LX),L1)
+         WRITE(IW,*) 'Y DIPOLE INTEGRALS'
+         CALL PRTRIL(X(LY),L1)
+         WRITE(IW,*) 'Z DIPOLE INTEGRALS'
+         CALL PRTRIL(X(LZ),L1)
+      END IF
+C
+      CALL RETFM(NEED)
+      RETURN
+      END
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_INIT_CS
+C>
+C>    @brief   Initial guess for DFTB
+C>
+C>    @details Read initial charges/spins for DFTB from $DFTBGS
+C>
+C>    @author Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param ZREF    Nuclear charges of a given atom
+C>    @param QREFL   Nuclear charges of a given species+shell
+C>    @param NAT     Number of atoms
+C>    @param NSHELL  Number of shells
+C>    @param NSPE    Number of species
+C>    @param ISPE    Index of species
+C>    @param IND     Index of atomic orbitals
+C>    @param MAXANG  Maximum angular momentum of each species
+C>    @param SRSCC   SRSCC or not
+C>    @param UHF     UHF or not
+C>           --- OUTPUT ---
+C>    @param CHAMULA Atom-resolve Mulliken charges
+C>    @param CHAMULA Shell-resolve Mulliken charges
+C>    @param CHASPIN Shell-resolve spin
+C>    @param INGUESS Initial guess is read or not
+C>
+C
+      SUBROUTINE DFTB_INIT_CS(CHAMULA,CHAMULS,CHASPIN,ZREF,QREFL,NAT,
+     *  NSHELL,NSPE,ISPE,IND,MAXANG,INGUESS,SRSCC,UHF)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: NAT,NSHELL,NSPE,ISPE(NAT),IND(*),
+     *  MAXANG(NSPE)
+      DOUBLE PRECISION, INTENT(OUT) :: CHAMULA(NAT),CHAMULS(NSHELL),
+     *  CHASPIN(NSHELL)
+      DOUBLE PRECISION, INTENT(IN) :: ZREF(NAT),QREFL(3,*)
+      LOGICAL, INTENT(INOUT) :: INGUESS
+      LOGICAL, INTENT(IN) :: SRSCC,UHF
+C
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      INTEGER :: IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA
+      COMMON /FMCOM / X(1)
+      DOUBLE PRECISION :: X
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      INTEGER :: ME,MASTER,NPROC,IBTYP,IPTIM
+      LOGICAL :: GOPARR,DSKWRK,MASWRK
+C
+      INTEGER,PARAMETER      :: NNAM = 4
+      CHARACTER(8),PARAMETER :: CHDFTB = "DFTBGS  "
+      CHARACTER(8)           :: QNAM(NNAM)
+C
+      DOUBLE PRECISION, PARAMETER :: ZERO=0.0D+00,ONE=1.0D+00
+      DOUBLE PRECISION :: TMP,CHRG,SPIN
+      INTEGER                :: KQNAM(NNAM),JRET,IEOF,LOADFM,LATCHRG,
+     *  LATSPIN,LSHCHRG,LSHSPIN,LAST,NEED,I,ISH,J
+      LOGICAL :: TATCHRG,TATSPIN,TSHCHRG,TSHSPIN
+C
+      CALL VALFM(LOADFM)
+      LATCHRG = LOADFM + 1
+      LATSPIN = LATCHRG  + NAT
+      LSHCHRG = LATSPIN  + NAT
+      LSHSPIN = LSHCHRG  + NSHELL
+      LAST    = LSHSPIN  + NSHELL
+      NEED  = LAST - LOADFM - 1
+      CALL GETFM(NEED)
+      CALL VCLR(X(LATCHRG),1,NAT)
+      CALL VCLR(X(LATSPIN),1,NAT)
+      CALL VCLR(X(LSHCHRG),1,NSHELL)
+      CALL VCLR(X(LSHSPIN),1,NSHELL)
+
+      QNAM( 1) = "ATCHRG  "
+      QNAM( 2) = "ATSPIN  "
+      QNAM( 3) = "SHCHRG  "
+      QNAM( 4) = "SHSPIN  "
+C
+      KQNAM( 1) = 3 + NAT*10
+      KQNAM( 2) = 3 + NAT*10
+      KQNAM( 3) = 3 + NSHELL*10
+      KQNAM( 4) = 3 + NSHELL*10
+C
+      CALL SEQREW(IR)
+      CALL FNDGRP(IR,' $DFTBGS',IEOF)
+      JRET = 0
+      CALL NAMEIO(IR,JRET,CHDFTB,NNAM,QNAM,KQNAM,
+     &     X(LATCHRG),X(LATSPIN),X(LSHCHRG),X(LSHSPIN),0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0,0,
+     &     0,0,0,0)
+      IF (JRET.NE.0) THEN
+        CALL RETFM(NEED)
+        RETURN
+      END IF
+      IF (GOPARR) THEN
+        CALL DDI_BCAST(2354,'F',X(LATCHRG),2*NAT+2*NSHELL,MASTER)
+      END IF
+C
+      TATCHRG = .FALSE.
+      DO I = 1, NAT
+        IF (X(LATCHRG+I-1).NE.ZERO) THEN
+          TATCHRG = .TRUE.
+          EXIT
+        END IF
+      END DO
+C
+      IF (UHF) THEN
+        TATSPIN = .FALSE.
+        DO I = 1, NAT
+          IF (X(LATSPIN+I-1).NE.ZERO) THEN
+            TATSPIN = .TRUE.
+            EXIT
+          END IF
+        END DO
+      END IF
+C
+      TSHCHRG = .FALSE.
+      TSHSPIN = .FALSE.
+      IF (SRSCC) THEN
+        DO I = 1, NSHELL
+          IF (X(LSHCHRG+I-1).NE.ZERO) THEN
+            TSHCHRG = .TRUE.
+            EXIT
+          END IF
+        END DO
+      END IF
+      IF (UHF) THEN
+        DO I = 1, NSHELL
+          IF (X(LSHSPIN+I-1).NE.ZERO) THEN
+            TSHSPIN = .TRUE.
+            EXIT
+          END IF
+        END DO
+      END IF
+      IF (.NOT.TATCHRG.AND..NOT.TATSPIN.AND..NOT.TSHCHRG.AND.
+     *    .NOT.TSHSPIN) THEN
+       CALL RETFM(NEED)
+       RETURN
+      END IF
+C
+      INGUESS = .TRUE.
+      IF (MASWRK) THEN
+        IF (TATCHRG)
+     *    WRITE (IW,*) "    DFTB_INIT_CS FOUND  ATOM-RESOLVED CHARGE"
+        IF (TSHCHRG)
+     *    WRITE (IW,*) "    DFTB_INIT_CS FOUND SHELL-RESOLVED CHARGE"
+        IF (TATSPIN)
+     *    WRITE (IW,*) "    DFTB_INIT_CS FOUND  ATOM-RESOLVED SPIN"
+        IF (TSHSPIN)
+     *    WRITE (IW,*) "    DFTB_INIT_CS FOUND SHELL-RESOLVED SPIN"
+      END IF
+C
+C     PUT REFERENCE NUCLEAR CHARGES
+C
+      CALL DCOPY(NAT,ZREF,1,CHAMULA,1)
+      IF (SRSCC) THEN
+        ISH = 0
+        DO I = 1, NAT
+          DO J = 1, MAXANG(ISPE(I))
+            ISH = ISH + 1
+            CHAMULS(ISH) = QREFL(J,ISPE(I))
+          END DO
+        END DO
+      END IF
+      IF (UHF) CALL VCLR(CHASPIN,1,NSHELL)
+      IF (TATCHRG) CALL DSCAL(NAT,-ONE,X(LATCHRG),1)
+      IF (TSHCHRG) CALL DSCAL(NSHELL,-ONE,X(LSHCHRG),1)
+C
+C     PROJECT ATOM-RESOLVED --> SHELL-RESOLVED
+C     IF .NOT.SRSCC, THEN PROJECT SHELL-RESOLVED --> ATOM-RESOLVED LATER
+C
+      IF (SRSCC.AND.TATCHRG) THEN
+        ISH = 0
+        DO I = 1, NAT
+          CHRG = X(LATCHRG+I-1)
+          IF (CHRG.EQ.ZERO) THEN
+            ISH = ISH + MAXANG(ISPE(I))
+            CYCLE
+          END IF
+          IF (MASWRK.AND.TSHCHRG)
+     *      WRITE (IW,'("  OVERWRITING SHELL-RESOLVED CHARGE ON ATOM",
+     *        I4," WITH",F12.8)') I,CHRG
+          IF (MAXANG(ISPE(I)).EQ.2) CHRG = CHRG*0.25D+00
+          IF (MAXANG(ISPE(I)).EQ.3) CHRG = CHRG*0.111111111111111D+00
+          DO J = 1, MAXANG(ISPE(I))
+            ISH = ISH + 1
+            IF (J.EQ.1) TMP = CHRG
+            IF (J.EQ.2) TMP = CHRG * 3.0D+00
+            IF (J.EQ.3) TMP = CHRG * 5.0D+00
+            X(LSHCHRG+ISH-1) = TMP
+          END DO
+        END DO
+      END IF
+C
+C     THEN PROJECT SHELL-RESOLVED --> ATOM-RESOLVED
+C
+      IF (.NOT.SRSCC.AND.TSHCHRG) THEN
+        ISH = 0
+        DO I = 1, NAT
+          TMP = ZERO
+          DO J = 1, MAXANG(ISPE(I))
+            ISH = ISH + 1
+            TMP = TMP + X(LSHCHRG+ISH-1)
+          END DO
+          X(LATCHRG+I-1) = TMP
+        END DO
+      END IF
+C
+C     FINALLY, ADD TO OUTPUT CHARGE ARRAY
+C
+      IF (SRSCC) THEN
+        CALL VADD(X(LSHCHRG),1,CHAMULS,1,CHAMULS,1,NSHELL)
+      ELSE
+        CALL VADD(X(LATCHRG),1,CHAMULA,1,CHAMULA,1,NAT)
+      END IF
+C
+C     NOW, SPIN.
+C     SPIN POPULATION SHOULD BE TREATED WITH SHELL-RESOLVED AS MUCH AS
+C     POSSIBLE.
+C     ANYWAY, FIRST ATOM-RESOLVED --> SHELL-RESOLVED
+C     IF ATOM-RESOLVED SPIN EXISTS, OVERWRITE SHELL-RESOLVED SPIN
+C
+      IF (UHF) THEN
+        IF (TATSPIN) THEN !! .AND..NOT.TSHSPIN) THEN
+          ISH = 0
+          DO I = 1, NAT
+            SPIN = X(LATSPIN+I-1)
+            IF (SPIN.EQ.ZERO) THEN
+              ISH = ISH + MAXANG(ISPE(I))
+              CYCLE
+            END IF
+            IF (MASWRK.AND.TSHSPIN)
+     *      WRITE (IW,'("  OVERWRITING SHELL-RESOLVED  SPIN  ON ATOM",
+     *          I4," WITH",F12.8)') I,SPIN
+            IF (MAXANG(ISPE(I)).EQ.2) SPIN = SPIN*0.25D+00
+            IF (MAXANG(ISPE(I)).EQ.3) SPIN = SPIN*0.111111111111111D+00
+            DO J = 1, MAXANG(ISPE(I))
+              ISH = ISH + 1
+              IF (J.EQ.1) TMP = SPIN
+              IF (J.EQ.2) TMP = SPIN * 3.0D+00
+              IF (J.EQ.3) TMP = SPIN * 5.0D+00
+              X(LSHSPIN+ISH-1) = TMP
+            END DO
+          END DO
+        END IF
+        CALL VADD(X(LSHSPIN),1,CHASPIN,1,CHASPIN,1,NSHELL)
+      END IF
+C
+      CALL RETFM(NEED)
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_INIT_CS
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DAMP_MULLIKEN
+C>
+C>    @brief   Initial guess for DFTB
+C>
+C>    @details Write charges/spins into $DFTBGS
+C>
+C>    @author Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param CHAMULA Atom-resolve Mulliken charges
+C>    @param CHAMULA Shell-resolve Mulliken charges
+C>    @param ATSPIN  Atom-resolve spin
+C>    @param SHSPIN  Shell-resolve spin
+C>    @param NAT     Number of atoms
+C>    @param NSHELL  Number of shells
+C>    @param IP      7
+C>    @param SRSCC   SRSCC or not
+C>    @param UHF     UHF or not
+C>
+C
+      SUBROUTINE DFTB_DAMP_MULLIKEN(CHAMULA,CHAMULS,ATSPIN,SHSPIN,
+     *  NAT,NSHELL,IP,SRSCC,UHF)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: NAT,NSHELL,IP
+      DOUBLE PRECISION, INTENT(IN) :: CHAMULA(NAT),CHAMULS(NSHELL),
+     *  ATSPIN(NAT),SHSPIN(NSHELL)
+      LOGICAL, INTENT(IN) :: SRSCC,UHF
+C
+      CHARACTER(13) :: CHARA13
+C
+      WRITE (IP,'(" $DFTBGS")')
+C
+C     DAMP ATOM-RESOLVED CHARGES
+C
+      CHARA13 =  '   ATCHRG(1)='
+      CALL DFTB_DAMP_MULLIKEN2(NAT,IP,-CHAMULA,CHARA13)
+C
+C     DAMP SHELL-RESOLVED CHARGES
+C
+      IF (SRSCC) THEN
+        CHARA13 =  '   SHCHRG(1)='
+        CALL DFTB_DAMP_MULLIKEN2(NSHELL,IP,-CHAMULS,CHARA13)
+      END IF
+C
+C     DAMP SHELL-RESOLVED SPIN POPULATION
+C
+      IF (UHF) THEN
+        CHARA13 =  '   ATSPIN(1)='
+        CALL DFTB_DAMP_MULLIKEN2(NAT,IP,ATSPIN,CHARA13)
+        CHARA13 =  '   SHSPIN(1)='
+        CALL DFTB_DAMP_MULLIKEN2(NSHELL,IP,SHSPIN,CHARA13)
+      END IF
+C
+      WRITE (IP,'(" $END")')
+C
+      END SUBROUTINE DFTB_DAMP_MULLIKEN
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DAMP_MULLIKEN2
+C>
+C>    @brief   Initial guess for DFTB
+C>
+C>    @details Write charges/spins into $DFTBGS
+C>
+C>    @author Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NDIM    Number of elements to be written
+C>    @param IP      7
+C>    @param VALUE   Actual value to write
+C>    @param CHA     Character of ...
+C>
+C
+      SUBROUTINE DFTB_DAMP_MULLIKEN2(NDIM,IP,VALUE,CHA)
+C
+      IMPLICIT NONE
+C
+      INTEGER, INTENT(IN) :: NDIM,IP
+      DOUBLE PRECISION, INTENT(IN) :: VALUE(NDIM)
+      CHARACTER(13), INTENT(IN) :: CHA
+C
+      INTEGER :: I,J,K,NN,MM
+      CHARACTER(13) :: C13
+C
+      NN = NDIM/5
+      MM = MOD(NDIM,5)
+      C13 = CHA
+      K = 0
+      DO I = 1, NN
+        IF (I.EQ.1) THEN
+          WRITE (IP,'(A13,5(F12.8,","))') C13,(VALUE(K+J),J=1,5)
+          C13 = '             '
+        ELSE IF (I.EQ.NN.AND.MM.EQ.0) THEN
+          WRITE (IP,'(A13,4(F12.8,","),F12.8)') C13,(VALUE(K+J),J=1,5)
+        ELSE
+          WRITE (IP,'(A13,5(F12.8,","))') C13,(VALUE(K+J),J=1,5)
+        END IF
+        K = K + 5
+      END DO
+      IF (MM.EQ.1) THEN
+        WRITE (IP,'(A13,F12.8)') C13,(VALUE(K+1),J=1,1)
+      ELSE IF (MM.EQ.2) THEN
+        WRITE (IP,'(A13,1(F12.8,","),F12.8)') C13,(VALUE(K+J),J=1,MM)
+      ELSE IF (MM.EQ.3) THEN
+        WRITE (IP,'(A13,2(F12.8,","),F12.8)') C13,(VALUE(K+J),J=1,MM)
+      ELSE IF (MM.EQ.4) THEN
+        WRITE (IP,'(A13,3(F12.8,","),F12.8)') C13,(VALUE(K+J),J=1,MM)
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_DAMP_MULLIKEN2
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DAMP_MULLIKEN2
+C>
+C>    @brief   DFTB/PCM?
+C>
+C>    @details Prepare appropriate ZAN for DFTB in PCM calculations
+C>
+C>    @author Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param MODE    See below
+C>    @param NAT     Number of atoms
+C>           --- OUTPUT ---
+C>    @param ZAN1    Temporary array
+C>    @param ZAN2    To be used in actual calculation
+C>
+C
+      SUBROUTINE DFTB_GET_ZAN(MODE,NAT,ZAN1,ZAN2)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      PARAMETER (MXATM=2000,MXSPE=10)
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+C
+      DIMENSION ZAN1(NAT),ZAN2(NAT)
+C
+      IF (MODE.EQ.0) THEN
+        CALL DCOPY(NAT,ZAN2,1,ZAN1,1)
+        CALL DCOPY(NAT,ZREF,1,ZAN2,1)
+      ELSE IF (MODE.EQ.1) THEN
+        CALL DCOPY(NAT,ZAN1,1,ZAN2,1)
+      ELSE
+        CALL ABRT
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_GET_ZAN
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_PRCALC
+C>
+C>    @brief   PRCALC
+C>
+C>    @details Do PRCALC for DFTB in an approximate way.
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param PRNAME  What should be done
+C>    @param L2      NUM*NUM+NUM/2
+C>           --- OUTPUT ---
+C>    @param XVAL    Results
+C>
+C
+      SUBROUTINE DFTB_PRCALC(PRNAME,XVAL,L2)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION XVAL(L2,*)
+C
+      PARAMETER (MXATM=2000,MXSPE=10)
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /ELPROP/ ELDLOC,ELMLOC,ELPLOC,ELFLOC,
+     *                IEDEN,IEMOM,IEPOT,IEFLD,MODENS,
+     *                IEDOUT,IEMOUT,IEPOUT,IEFOUT,
+     *                IEDINT,IEMINT,IEPINT,IEFINT
+      COMMON /FMCOM / X(1)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /XYZPRP/ XP,YP,ZP,
+     *                DIPMX,DIPMY,DIPMZ,
+     *                QXX,QYY,QZZ,QXY,QXZ,QYZ,
+     *                QMXX,QMYY,QMZZ,QMXY,QMXZ,QMYZ,
+     *                OXXX,OXXY,OXXZ,OXYY,OYYY,OYYZ,
+     *                OXZZ,OYZZ,OZZZ,OXYZ,
+     *                OMXXX,OMXXY,OMXXZ,OMXYY,OMYYY,
+     *                OMYYZ,OMXZZ,OMYZZ,OMZZZ,OMXYZ
+C
+      DATA ELDEN  /8HELDEN   /,
+     *     ELFLD  /8HELFLD   /,
+     *     ELMOM  /8HELMOM   /
+      INTEGER IND2(3)
+C
+      IF (PRNAME.EQ.ELDEN) THEN
+        CALL VALFM (LOADFM)
+        LWRK = LOADFM + 1
+        LAST = LWRK   + NUM
+        NEED = LAST - LOADFM - 1
+        CALL GETFM(NEED)
+      ELSE
+        CALL VALFM (LOADFM)
+        LS   = LOADFM + 1
+        LAST = LS     + L2
+        NEED = LAST - LOADFM - 1
+        CALL GETFM(NEED)
+        CALL DAREAD(IDAF,IODA,X(LS),L2,12,0)
+      END IF
+C
+      HALF = 0.5D+00
+      IPCOUNT = ME - 1
+      IF (PRNAME.EQ.ELDEN) THEN
+        IND2(1) = 1
+        IND2(2) = 2
+        IND2(3) = 5
+        DO NM = 1, NAT
+C         IF(GOPARR) THEN
+C           IPCOUNT = IPCOUNT + 1
+C           IF(MOD(IPCOUNT,NPROC).NE.0) CYCLE
+C         END IF
+          XM = XP-C(1,NM)
+          YM = YP-C(2,NM)
+          ZM = ZP-C(3,NM)
+          DIST = SQRT(XM*XM+YM*YM+ZM*ZM)
+          IF (DIST.EQ.0.0D+00) THEN
+            DISTI = 0.0D+00 !! correct? or cycle?
+          ELSE
+            DISTI = 1.0D+00/DIST
+          END IF
+          XM = XM*DISTI
+          YM = YM*DISTI
+          ZM = ZM*DISTI
+          DO MANG = 1, MAXANG(ISPE(NM))
+            CALL DFTB_ORB_CALC(DIST,ISPE(NM),MANG,RM0)
+            MSTART = IND2(MANG)
+            DO M = MSTART, IND(NM+1)-IND(NM)
+              RM = DFTB_ORB_SPH(RM0,M,XM,YM,ZM)
+              MU = IND(NM)+M
+              X(LWRK+MU-1) = RM
+            END DO
+          END DO
+        END DO
+        IF (MODENS.LT.0) THEN
+C         ORBITAL
+          CALL DCOPY(NUM,X(LWRK),1,XVAL,1)
+        ELSE
+C         DENSITY
+          NSEQ = 0
+          DO MU = 1, NUM
+            DO NU = 1, MU
+              NSEQ = NSEQ + 1
+              XVAL(NSEQ,1) = X(LWRK+MU-1)*X(LWRK+NU-1)
+            END DO
+          END DO
+        END IF
+        IF (GOPARR) CALL DSCAL(L2,1.0D+00/NPROC,XVAL,1)
+      ELSE IF (PRNAME.EQ.ELFLD) THEN
+        DO KI = 1, 3
+          IF(KI.EQ.1) THEN
+            TMP = XP
+          ELSE IF(KI.EQ.2) THEN
+            TMP = YP
+          ELSE IF(KI.EQ.3) THEN
+            TMP = ZP
+          END IF 
+          DO NM = 1, NAT
+            IF(GOPARR) THEN
+              IPCOUNT = IPCOUNT + 1
+              IF(MOD(IPCOUNT,NPROC).NE.0) CYCLE
+            END IF
+            DISTM = SQRT((C(1,NM)-XP)*(C(1,NM)-XP)
+     *                 + (C(2,NM)-YP)*(C(2,NM)-YP)
+     *                 + (C(3,NM)-ZP)*(C(3,NM)-ZP))
+            VECM = C(KI,NM)-TMP
+            DISTM = VECM/(DISTM*DISTM*DISTM)
+            DO NN = 1, NM
+              DISTN = SQRT((C(1,NN)-XP)*(C(1,NN)-XP)
+     *                   + (C(2,NN)-YP)*(C(2,NN)-YP)
+     *                   + (C(3,NN)-ZP)*(C(3,NN)-ZP))
+              VECN = C(KI,NN)-TMP
+              DISTN = VECN/(DISTN*DISTN*DISTN)
+              DO M = 1, IND(NM+1)-IND(NM)
+                MU = IND(NM)+M
+                DO N = 1, IND(NN+1)-IND(NN)
+                  NU = IND(NN)+N
+                  CALL DFTB_CNVSQ(MU,NU,NSEQ)
+                  XVAL(NSEQ,KI) = HALF*X(LS+NSEQ-1)*(DISTM+DISTN)
+                END DO
+              END DO
+            END DO
+          END DO
+        END DO
+      ELSE IF (PRNAME.EQ.ELMOM) THEN
+        DO KI = 1, 3
+          IF(KI.EQ.1) THEN
+            TMP = XP
+          ELSE IF(KI.EQ.2) THEN
+            TMP = YP
+          ELSE IF(KI.EQ.3) THEN
+            TMP = ZP
+          END IF 
+          DO NM = 1, NAT
+            IF(GOPARR) THEN
+              IPCOUNT = IPCOUNT + 1
+              IF(MOD(IPCOUNT,NPROC).NE.0) CYCLE
+            END IF
+            CMXYZ = C(KI,NM)-TMP
+            DO M = 1, IND(NM+1)-IND(NM)
+              MU = IND(NM)+M
+              DO NN = 1, NM
+                CNXYZ = C(KI,NN)-TMP
+                DO N = 1, IND(NN+1)-IND(NN)
+                  NU = IND(NN)+N
+                  CALL DFTB_CNVSQ(MU,NU,NSEQ)
+                  XVAL(NSEQ,KI) = HALF*X(LS+NSEQ-1)*(CMXYZ+CNXYZ)
+                END DO
+              END DO
+            END DO
+          END DO
+        END DO
+      END IF
+C
+      CALL RETFM(NEED)
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_PRCALC
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_EPCALC
+C>
+C>    @brief   EPCALC
+C>
+C>    @details Do EPCALC for DFTB in an approximate way.
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param XYZ     Coordinates of ... tesserae?
+C>    @param DENS    Density matrix
+C>    @param NP      Number of tesserae?
+C>    @param L1      Number of atomic orbitals
+C>    @param L2      (L1*L1+L1)/2
+C>    @param NSHELL  Number of shells
+C>           --- OUTPUT ---
+C>    @param VALUE   Results
+C>
+C
+      SUBROUTINE DFTB_EPCALC(XYZ,VALUE,DENS,NP,L1,L2,NSHELL)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION XYZ(3,NP),VALUE(NP),DENS(L2)
+C
+      PARAMETER (MXATM=2000,MXSPE=10,MXPTPT=100)
+C
+      LOGICAL TRIPLET,SG1T,TAMMD,TPA,ALPHKWD,BETAKWD
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /FMCOM / X(1)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /INFOTD/ CNVTOL,PFREQ(2),
+     *                JANST,NRADT,NTHET,NPHIT,NLEBT,
+     *                NSTAT,NTRIAL,MAXVEC,NTHST,IRECTD,ITDFG,ITDPRP,
+     *                TRIPLET,SG1T,NONEQR,TAMMD,TPA,ALPHKWD,BETAKWD
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /POINTS/ NPOINT,IPUNIT,XPOINT(MXPTPT),YPOINT(MXPTPT),
+     *                ZPOINT(MXPTPT)
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+      DATA RNONE/8HNONE    /
+C
+      IF (TDDFTYP.NE.RNONE.AND.ITDFG.EQ.1) THEN
+        CALL VALFM(LOADFM)
+        LMUL  = LOADFM + 1
+        LMULS = LMUL   + L1
+        LMULA = LMULS  + NSHELL
+        LS    = LMULA  + NAT
+        LAST  = LS     + L2
+        NEED  = LAST - LOADFM - 1
+        CALL GETFM(NEED)
+        CALL DAREAD(IDAF,IODA,X(LS),L2,12,0)
+        CALL DFTB_MULLIKEN(L1,L2,DENS,X(LS),X(LMUL))
+        CALL DFTB_MULSA(X(LMUL),X(LMULS),X(LMULA),NUM,NSHELL,NAT)
+      ELSE
+        CALL VALFM (LOADFM)
+        LMULA= LOADFM + 1
+        LAST = LMULA  + NAT
+        NEED = LAST - LOADFM - 1
+        CALL GETFM(NEED)
+        CALL DAREAD(IDAF,IODA,X(LMULA),NAT,556,0)
+      END IF
+      IF (NP.NE.NPOINT) THEN
+        DO I = 1, NAT
+          X(LMULA+I-1) = X(LMULA+I-1) - ZREF(I)
+        END DO
+      END IF
+C
+      CALL VCLR(VALUE,1,NP)
+C
+      DO IPT = 1, NP
+        XPP = XYZ(1,IPT)
+        YPP = XYZ(2,IPT)
+        ZPP = XYZ(3,IPT)
+        DO NM = 1, NAT
+          DIST = SQRT((C(1,NM)-XPP)*(C(1,NM)-XPP)
+     *              + (C(2,NM)-YPP)*(C(2,NM)-YPP)
+     *              + (C(3,NM)-ZPP)*(C(3,NM)-ZPP))
+          IF (DIST.LE.1.0D-08) CYCLE
+          VALUE(IPT) = VALUE(IPT) + X(LMULA+NM-1)/DIST
+        END DO
+      END DO
+C
+      CALL RETFM(NEED)
+C
+      RETURN
+C
+      END
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_FELECQ
+C>
+C>    @brief   FELECQ
+C>
+C>    @details Calculate field derivative for DFTB?
+C>             < \mu | (r-R_l)^{-1} | \nu >
+C>               = 1/2 dS_{\mu \nu}/da ( 1/R_{\mu l} + 1/R_{\nu l})
+C>               - 1/2 Smn ( \vec{r}/R_{\mu l}^3 + \vec{r}/R_{\nu l}^3)
+C>             This subroutine calculates only d(1/r)/da (second) term.
+C>             dS/da (first) term should be calculated in DFTB_GRAD, using
+C>             SHIFT arrays.
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Xxx, 201X- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param DM      Density matrix
+C>    @param QS      ASCs
+C>    @param L2      (L1*L1+L1)/2
+C>    @param NSHELL  Number of shells
+C>    @param XCTS    X coordinates of tesserae
+C>    @param YCTS    Y coordinates of tesserae
+C>    @param ZCTS    Z coordinates of tesserae
+C>           --- OUTPUT ---
+C>    @param FEQ     Results
+C>
+C
+      SUBROUTINE DFTB_FELECQ(DM,QS,FEQ,L2,NSHELL,XCTS,YCTS,ZCTS)
+C
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C
+      DIMENSION DM(L2),QS(NTS),FEQ(3,NAT,NTS),XCTS(*),YCTS(*),ZCTS(*)
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      PARAMETER (MXATM=2000)
+C
+      COMMON /FMCOM / X(1)
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /MLTFMO/ Q_MUL,IMLTFMO,ISWPFD,ISWNEW1
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /PCMDIM/ MXSP,MXTS,MEMPCM1,MEMPCM2,NTS
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+      DATA RNONE/8HNONE    /
+C
+      L1 = NUM
+C
+      IF (TDDFTYP.NE.RNONE.OR.ISWPFD.EQ.1) THEN
+        CALL VALFM(LOADFM)
+        LMUL  = LOADFM + 1
+        LMULS = LMUL   + L1
+        LMULA = LMULS  + NSHELL
+        LS    = LMULA  + NAT
+        LAST  = LS     + L2
+        NEED  = LAST - LOADFM - 1
+        CALL GETFM(NEED)
+        IF (ISWPFD.EQ.1) THEN
+          CALL VCLR(X(LS),1,L2)
+          CALL DFTB_HAM_OVER(1,NAT,X(LS),X(LS),.FALSE.,.TRUE.)
+        ELSE
+          CALL DAREAD(IDAF,IODA,X(LS),L2,12,0)
+        END IF
+        CALL DFTB_MULLIKEN(L1,L2,DM,X(LS),X(LMUL))
+        CALL DFTB_MULSA(X(LMUL),X(LMULS),X(LMULA),NUM,NSHELL,NAT)
+      ELSE
+        CALL VALFM (LOADFM)
+        LMULA = LOADFM + 1
+        LAST  = LMULA  + NAT
+        NEED  = LAST - LOADFM - 1
+        CALL GETFM(NEED)
+        CALL DAREAD(IDAF,IODA,X(LMULA),NAT,556,0)
+      END IF
+C
+      IF (GOPARR) THEN
+        CALL VCLR(FEQ,1,3*NAT*NTS)
+        IPCOUNT = ME - 1
+        DO IAT = 1, NAT
+          IF (GOPARR) THEN
+            IPCOUNT = IPCOUNT + 1
+            IF (MOD(IPCOUNT,NPROC).NE.0) CYCLE
+          END IF
+          CX = C(1,IAT)
+          CY = C(2,IAT)
+          CZ = C(3,IAT)
+          DO IPT = 1, NTS
+            XP = XCTS(IPT)
+            YP = YCTS(IPT)
+            ZP = ZCTS(IPT)
+            DIST = SQRT((CX-XP)*(CX-XP)+(CY-YP)*(CY-YP)+(CZ-ZP)*(CZ-ZP))
+            DISTI = 1.0D+00/DIST
+            DISTI3 = DISTI*DISTI*DISTI
+            FEQ(1,IAT,IPT) = X(LMULA+IAT-1)*QS(IPT)*(CX-XP)*DISTI3
+            FEQ(2,IAT,IPT) = X(LMULA+IAT-1)*QS(IPT)*(CY-YP)*DISTI3
+            FEQ(3,IAT,IPT) = X(LMULA+IAT-1)*QS(IPT)*(CZ-ZP)*DISTI3
+          END DO
+        END DO
+        CALL DDI_GSUMF(2450,FEQ,3*NAT*NTS)
+        CALL RETFM(NEED)
+        RETURN
+      END IF
+C
+      DO IPT = 1, NTS
+        XP = XCTS(IPT)
+        YP = YCTS(IPT)
+        ZP = ZCTS(IPT)
+        DO IAT = 1, NAT
+          CX = C(1,IAT)
+          CY = C(2,IAT)
+          CZ = C(3,IAT)
+          DIST = SQRT((CX-XP)*(CX-XP)+(CY-YP)*(CY-YP)+(CZ-ZP)*(CZ-ZP))
+          DISTI = 1.0D+00/DIST
+          DISTI3 = DISTI*DISTI*DISTI
+          FEQ(1,IAT,IPT) = X(LMULA+IAT-1)*QS(IPT)*(CX-XP)*DISTI3
+          FEQ(2,IAT,IPT) = X(LMULA+IAT-1)*QS(IPT)*(CY-YP)*DISTI3
+          FEQ(3,IAT,IPT) = X(LMULA+IAT-1)*QS(IPT)*(CZ-ZP)*DISTI3
+        END DO
+      END DO
+C
+      CALL RETFM(NEED)
+C
+      RETURN
+C
+      END
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_ORB
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Read Slater-type orbitals used in DFTB calculations.
+C>             They are used in generating cube files
+C>
+C>    @author Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C
+      SUBROUTINE DFTB_ORB
+C
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MXATM=2000, MXSPE=10
+      INTEGER,PARAMETER :: MAXEXP=5
+C
+      COMMON /DFTBAO/ EXPON(3*MXSPE*MAXEXP),COEFF(3*MAXEXP*3*MXSPE),
+     *                NEXP(3*MXSPE),INDSH(MXSPE+1)
+      DOUBLE PRECISION :: EXPON,COEFF
+      INTEGER :: NEXP,INDSH
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      DOUBLE PRECISION :: ETEMP,DFTBDP,DAMPXHE,HUBDER,ZREF,SPNCST,SPE
+      INTEGER :: NSPE,MAXANG,ISPE,IND,IDFTBD
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      INTEGER :: IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      INTEGER :: ME,MASTER,NPROC,IBTYP,IPTIM
+      LOGICAL :: GOPARR,DSKWRK,MASWRK
+C
+      INTEGER :: I,NSHELL,JRET,NSEQ,NCOEFF,IANG,IEXP,NPOW,
+     *  INDEXP,IEOF,NLEN,NCL
+      DOUBLE PRECISION DUM
+      LOGICAL EQFOUND
+      CHARACTER(1) :: C1
+      CHARACTER(80) :: LINE
+C
+      INTEGER,PARAMETER      :: NNAM = 4
+      CHARACTER(8),PARAMETER :: CHDFTB = "DFTBAO  "
+      CHARACTER(8)           :: QNAM(NNAM)
+      INTEGER                :: KQNAM(NNAM)
+C
+      CALL SEQREW(IR)
+      CALL FNDGRP(IR,' $DFTBAO',IEOF)
+      !! RETURN IF $DFTBAO DOES NOT EXIST
+      IF (IEOF.EQ.1) RETURN
+C
+      NPOW = 3 !! fixed?
+C     nexp has to be read
+C     CALL VCLR(OCCORB,1,3*MXSPE)
+C     CALL VCLR(CUTOFF,1,3*MXSPE)
+      CALL VCLR(COEFF,1,3*MAXEXP*3*MXSPE)
+      CALL VICLR(NEXP,1,3*MXSPE)
+      NSHELL = 0
+      DO I = 1, NSPE
+        NSHELL = NSHELL + MAXANG(I)
+      END DO
+      IF (NSHELL.GT.3*MXSPE) THEN
+        IF (MASWRK) THEN
+          WRITE (IW,*) "NSHELL.GT.3*MXSPE: INCREASE MXSPE"
+        END IF
+        CALL ABRT
+      END IF
+C
+C     CONSTRUCT SHELL INDEX FOR EACH SPECIES
+C
+      INDSH(1) = 0
+      DO I = 1, NSPE
+        INDSH(I+1) = INDSH(I) + MAXANG(I)
+      END DO
+C
+C     ----- CHECK HOW INPUT SECTION IS WRITTEN -----
+C
+      CALL SEQREW(IR)
+      EQFOUND = .FALSE.
+      DO
+        READ (IR,'(A80)',END=100) LINE
+        NLEN = LEN_TRIM(LINE)
+        CALL UPRCAS(LINE,NLEN)
+C       write (*,'(a9)') line(1:9)
+        IF (LINE(1:9).EQ.' $DFTBAO ') THEN
+          DO NCL = 10, NLEN
+            IF (LINE(NCL:NCL).EQ.'!') EXIT
+            IF (LINE(NCL:NCL+3).EQ.'$END') GO TO 100
+            IF (LINE(NCL:NCL).EQ.'=') THEN
+              EQFOUND = .TRUE.
+              GO TO 100
+            END IF
+          END DO
+C
+          DO
+            READ (IR,'(A80)',END=100) LINE
+            NLEN = LEN_TRIM(LINE)
+            CALL UPRCAS(LINE,NLEN)
+            DO NCL = 1, NLEN
+              IF (LINE(NCL:NCL).EQ.'!') EXIT
+              IF (LINE(NCL:NCL+3).EQ.'$END') GO TO 100
+              IF (LINE(NCL:NCL).EQ.'=') THEN
+                EQFOUND = .TRUE.
+                GO TO 100
+              END IF
+            END DO
+          END DO
+        END IF
+      END DO
+  100 CONTINUE
+      CALL DDI_BCAST(2354,'F',EQFOUND,1,MASTER)
+C
+      IF (EQFOUND) THEN
+C       READ FROM INPUT CARDS
+        QNAM( 1) = "NEXP    "
+        QNAM( 2) = "NPOW    "
+        QNAM( 3) = "COEFF   "
+        QNAM( 4) = "EXPON   "
+        KQNAM( 1) = 1 + NSHELL*10
+        KQNAM( 2) = 1 + NSHELL*10
+        KQNAM( 3) = 3 + 3*MAXEXP*3*MXSPE*10
+        KQNAM( 4) = 3 + MAXEXP*3*MXSPE*10
+C
+        JRET = 0
+        NPOW = -1
+        CALL NAMEIO(IR,JRET,CHDFTB,NNAM,QNAM,KQNAM,
+     &       NEXP,NPOW,COEFF,EXPON,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0,0,
+     &       0,0,0,0)
+C       IF (JRET.NE.0) THEN
+C         RETURN
+C       END IF
+        IF (JRET.EQ.2) THEN
+          IF (MASWRK) WRITE (IW,'(" TYPING ERROR IN $DFTBAO INPUT")')
+          CALL ABRT
+        END IF
+C
+        IF (NPOW.EQ.-1) NPOW = 3
+        IF (NPOW.NE.3) THEN
+          IF (MASWRK) WRITE (IW,*) "NPOT MUST BE 3"
+          CALL ABRT
+        END IF
+        DO I = 1, NSHELL
+          IF (NEXP(I).LE.0) THEN
+           IF (MASWRK) WRITE (IW,*) "NEXP(I) IS LESS THAN ZERO, I = ", I
+            CALL ABRT
+          END IF
+        END DO
+        IF (NEXP(NSHELL+1).NE.0) THEN
+         IF (MASWRK) WRITE (IW,*) "NEXP(I) IS GIVEN TOO MANY ARGUMENTS?"
+          CALL ABRT
+        END IF
+      ELSE
+C       READ FROM WFC FILES
+        CALL DFTB_READ_SKWFC(2,DUM)
+        RETURN
+      END IF
+C
+C     SHOW EXPONENTS AND COEFFICIENTS
+C
+      IF (MASWRK) THEN
+        NSEQ = 0
+        INDEXP = 0
+        NCOEFF = 0
+        WRITE (IW,*)
+        DO I = 1, NSPE
+          WRITE (IW,'(" SPECIES(",I2,") : ",A8," --- MAXANG =",I2)')
+     *      I,SPE(I),MAXANG(I)
+          DO IANG = 1, MAXANG(I)
+            NSEQ = NSEQ + 1
+            IF (IANG.EQ.1) THEN
+              C1 = "S"
+            ELSE IF (IANG.EQ.2) THEN
+              C1 = "P"
+            ELSE IF (IANG.EQ.3) THEN
+              C1 = "D"
+            END IF
+            WRITE (IW,'("   FOR ",A1," SHELL: ",
+     *        "NUMBER OF EXPONENTS = ",I8)') C1,NEXP(NSEQ)
+            DO IEXP = 1, NEXP(NSEQ)
+              NCOEFF = NCOEFF + 1
+              INDEXP = INDEXP + 1
+             WRITE (IW,'("   EXP.(", I2,"): ",F20.10," / ",3F20.10)') 
+     *               IEXP,EXPON(INDEXP),COEFF(NCOEFF),COEFF(NCOEFF+1),
+     *               COEFF(NCOEFF+2)
+              NCOEFF = NCOEFF + 2
+            END DO
+          END DO
+          WRITE (IW,*)
+        END DO
+      END IF
+      CALL DFTB_ORB_SORT(NSHELL,NEXP,NPOW,NSPE,MAXANG,EXPON,COEFF)
+C
+      IF (GOPARR) THEN
+        CALL DDI_BCAST(2354,'F',EXPON,3*MXSPE*MAXEXP,MASTER)
+        CALL DDI_BCAST(2355,'F',COEFF,9*MXSPE*MAXEXP,MASTER)
+        CALL DDI_BCAST(2356,'I',NEXP ,3*MXSPE       ,MASTER)
+        CALL DDI_BCAST(2357,'I',INDSH,  MXSPE+1     ,MASTER)
+      END IF
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_ORB
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_ORB_SORT
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Sort exponents and coefficients in an appropriate order.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NSHELL  Number of shells
+C>    @param NEXP    Number of exponents for a given shell
+C>    @param NPOW    Number of power series (must be 3)
+C>    @parma NSPE    Number of spcies
+C>    @param MAXANG  Maximum angular momentum for a given species
+C>           --- IN/OUTPUT ---
+C>    @param EXPON   Exponents of Slater functions
+C>    @param COEFF   Coefficients of Slater functions
+C>
+C
+      SUBROUTINE DFTB_ORB_SORT(NSHELL,NEXP,NPOW,NSPE,MAXANG,EXPON,
+     *                         COEFF)
+C
+      IMPLICIT NONE
+C
+      INTEGER,PARAMETER :: MAXEXP=5,MXSPE=10
+C
+      INTEGER :: NSHELL,NEXP(NSHELL),NPOW,NSPE,MAXANG(*)
+      DOUBLE PRECISION :: EXPON(MAXEXP,*),COEFF(3,MAXEXP,*)
+C
+      COMMON /FMCOM / X(1)
+      DOUBLE PRECISION :: X
+C
+      INTEGER :: MXVAL,MXVAL2,LOADFM,LWRK,LWRK2,LAST,NEED,NSEQ,ISHELL,
+     *           ISPE,IANG,IEXP,IND
+C
+      MXVAL = MAXEXP*3*3*MXSPE
+      MXVAL2= MAXEXP*3*MXSPE
+      CALL VALFM(LOADFM)
+      LWRK  = LOADFM + 1
+      LWRK2 = LWRK   + MXVAL
+      LAST  = LWRK2  + MXVAL2
+      NEED  = LAST-LOADFM-1
+      CALL GETFM(NEED)
+C
+      CALL DCOPY(MXVAL,COEFF,1,X(LWRK),1)
+      CALL DCOPY(MXVAL2,EXPON,1,X(LWRK2),1)
+      CALL VCLR(COEFF,1,MXVAL)
+      CALL VCLR(EXPON,1,MXVAL2)
+C
+      NSEQ = 1
+      ISHELL = 0
+      IND = 1
+      DO ISPE = 1, NSPE
+        DO IANG = 1, MAXANG(ISPE)
+          ISHELL = ISHELL + 1
+          CALL DCOPY(NEXP(ISHELL),X(LWRK2+IND-1),1,EXPON(1,ISHELL),1)
+          IND = IND + NEXP(ISHELL)
+          DO IEXP = 1, NEXP(ISHELL)
+            CALL DCOPY(NPOW,X(LWRK+NSEQ-1),1,COEFF(1,IEXP,ISHELL),1)
+            NSEQ = NSEQ + NPOW
+C           write (*,*) expon(iexp,ishell),coeff(1,iexp,ishell),
+C    *                  coeff(2,iexp,ishell),coeff(3,iexp,ishell)
+          END DO
+        END DO
+      END DO
+C
+      CALL RETFM(NEED)
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_ORB_SORT
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_ORB_CALC
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Calculate the probability of atomic orbitals?
+C>
+C>    @author Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param DIST Distance between an atom and an grid
+C>    @param ISPE Index of species
+C>    @param IANG Index of angular momentum
+C>           --- OUTPUT ---
+C>    @param VAL  Probability (?) of atomic orbital on the grid
+C>
+C
+      SUBROUTINE DFTB_ORB_CALC(DIST,ISPE,IANG,VAL)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      INTEGER,PARAMETER :: MAXEXP=5,MXSPE=10
+C
+      COMMON /DFTBAO/ EXPON(MAXEXP,3*MXSPE),COEFF(3,MAXEXP,3*MXSPE),
+     *                NEXP(3*MXSPE),INDSH(MXSPE+1)
+C
+      DOUBLE PRECISION :: EXPMAT(MAXEXP),RMAT(3)
+C
+      ISHELL = INDSH(ISPE)+IANG
+      DO IEXP = 1, NEXP(ISHELL)
+        EXPMAT(IEXP) = EXP(-EXPON(IEXP,ISHELL)*DIST)
+      END DO
+      IF (IANG.EQ.1) THEN
+        RMAT(1) = 1.0D+00
+        RMAT(2) = DIST
+        RMAT(3) = RMAT(2)*DIST
+      ELSE IF (IANG.EQ.2) THEN
+        RMAT(1) = DIST
+        RMAT(2) = RMAT(1)*DIST
+        RMAT(3) = RMAT(2)*DIST
+      ELSE IF (IANG.EQ.3) THEN
+        RMAT(1) = DIST*DIST
+        RMAT(2) = RMAT(1)*DIST
+        RMAT(3) = RMAT(2)*DIST
+      END IF
+C
+      VAL = 0.0D+00
+      DO IEXP = 1, NEXP(ISHELL)
+C       TMP = 0.0D+00
+C       DO IPOW = 1, 3
+C         TMP = TMP + COEFF(IPOW,IEXP,ISHELL)*RMAT(IPOW)
+C       END DO
+        !! THIS IS VALID ONLY FOR NPOW=3
+        TMP = COEFF(1,IEXP,ISHELL)*RMAT(1)
+     *      + COEFF(2,IEXP,ISHELL)*RMAT(2)
+     *      + COEFF(3,IEXP,ISHELL)*RMAT(3)
+        VAL = VAL + TMP*EXPMAT(IEXP)
+      END DO
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_ORB_CALC
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_ORB_SPH
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Linear combination of spherical harmonics?
+C>             http://en.wikipedia.org/wiki/Table_of_spherical_harmonics
+C>
+C>    @author Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param VAL0 Probability (?) in Cartesian coordinate
+C>    @param IND  Index of spherical harmonics (see below)
+C>    @param XX   (Xa-Xb)/R (Unit vector of distance along X)
+C>    @parma YY   (Ya-Yb)/R
+C>    @param ZZ   (Za-Zb)/R
+C>           --- OUTPUT ---
+C>    @param DFTB_ORB_SPH Probability (?) in spherical harmonics?
+C>
+C
+      DOUBLE PRECISION FUNCTION DFTB_ORB_SPH(VAL0,IND,XX,YY,ZZ)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      IF (IND.EQ.1) THEN !! s=Y_{0,0}
+C       \frac{1}{\sqrt{4\pi}}
+        DFTB_ORB_SPH = VAL0*0.2820947918D+00
+      ELSE IF (IND.EQ.2) THEN !! px=(Y_{1,-1}-Y_{1,1})/sqrt{2}
+C       \sqrt{\frac{3}{8\pi}}*x/r
+        DFTB_ORB_SPH = VAL0*0.4886025119D+00*XX
+      ELSE IF (IND.EQ.3) THEN !! py=(iY_{1,-1}-iY_{1,1})/sqrt{2}
+        DFTB_ORB_SPH = VAL0*0.4886025119D+00*YY
+      ELSE IF (IND.EQ.4) THEN !! pz=Y_{1,0}
+        DFTB_ORB_SPH = VAL0*0.4886025119D+00*ZZ
+      ELSE IF (IND.EQ.5) THEN !! dxy=(iY_{2,-2}-iY_{2,2})/sqrt{2}
+C       \sqrt{\frac{15}{4\pi}}*x/r
+        DFTB_ORB_SPH = VAL0*1.092548431D+00*XX*YY
+      ELSE IF (IND.EQ.6) THEN !! dyz=(iY_{2,-1}+iY_{2,1})/sqrt{2}
+        DFTB_ORB_SPH = VAL0*1.092548431D+00*YY*ZZ
+      ELSE IF (IND.EQ.7) THEN !! dzx=(Y_{2,-1}-Y_{2,1})/sqrt{2}
+        DFTB_ORB_SPH = VAL0*1.092548431D+00*ZZ*XX
+      ELSE IF (IND.EQ.8) THEN !! dx2-y2=(Y_{2,-2}+Y_{2,2})/sqrt{2}
+C       \sqrt{\frac{15}{16\pi}}*x/r
+        DFTB_ORB_SPH = VAL0*0.5462743153D+00*(XX*XX-YY*YY)
+      ELSE IF (IND.EQ.9) THEN !! dz2 (d_3z2-r2) = Y_{2,0}
+C       \sqrt{\frac{5}{16\pi}}*x/r
+        DFTB_ORB_SPH =
+     *    VAL0*0.3153915653D+00*(3.0D+00*ZZ*ZZ-1.0D+00)
+      END IF
+C
+      RETURN
+C
+      END FUNCTION DFTB_ORB_SPH
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_READ_WFC
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Read wfc files used in the waveplot program
+C>
+C>    @author Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param MODE   1: Read SK files, 2: Read wfc files
+C>    @param SKPATH Paths of wfc/Slater-Koster files (locally used)
+C>
+C
+      SUBROUTINE DFTB_READ_SKWFC(MODE,SKPATH)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      INTEGER,PARAMETER :: MXATM=2000,MXSPE=10,MAXEXP=5
+C
+      LOGICAL :: GOPARR,DSKWRK,MASWRK
+C
+      COMMON /DFTBAO/ EXPON(MAXEXP,3*MXSPE),COEFF(3,MAXEXP,3*MXSPE),
+     *                NEXP(3*MXSPE),INDSH(MXSPE+1)
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+C
+      CHARACTER(150) SKPATH(MXSPE,MXSPE)
+C
+      CHARACTER(150) :: LINE,LINE2,BLK,PATH(NSPE)
+      CHARACTER(1) C1
+C
+      CALL SEQREW(IR)
+      IF (.NOT.MASWRK) GO TO 120
+C
+      ILOOP = 1
+      NFOUND = 0
+      BLK='                                        '//
+     *    '                                        '//
+     *    '                                        '//
+     *    '                              '
+      IF (MODE.EQ.1) THEN
+        DO I = 1, MXSPE
+          DO J = 1, MXSPE
+            SKPATH(J,I) = BLK
+          END DO
+        END DO
+      ELSE IF (MODE.EQ.2) THEN
+        DO I = 1, NSPE
+          PATH(I) = BLK
+        END DO
+      END IF
+C
+      DO
+        LINE2(1:150) = BLK(1:150)
+        READ (IR,'(A150)',END=100) LINE2
+        CALL UPRCAS(LINE2,9)
+C
+        IF (MODE.EQ.1.AND.LINE2(1:9).EQ.' $DFTBSK '
+     *  .OR.MODE.EQ.2.AND.LINE2(1:9).EQ.' $DFTBAO ') THEN
+          NLEN0= LEN_TRIM(LINE2)
+          NLEN = LEN_TRIM(ADJUSTL(LINE2(9:150)))
+          NST  = NLEN0 - NLEN
+          LINE(1:150) = BLK(1:150)
+          LINE(1:NLEN0-NST) = LINE2(NST+1:NLEN0)
+          NST = 1
+          IF (NLEN.EQ.0) NST = 151
+C
+          DO
+            IF (NST.EQ.151) THEN
+              READ (IR,'(A150)',END=110) LINE
+              NLEN = LEN_TRIM(LINE)
+              NLT = NLEN
+              CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,0)
+            END IF
+            IF (NLEN.EQ.0.OR.LINE(1:1).EQ.'!') THEN
+              NST = 151
+              CYCLE
+            END IF
+            DO
+              DO NCL = NST, NLEN
+                IF (LINE(NCL:NCL).EQ.' ') EXIT
+                IF (LINE(NCL:NCL).EQ.'!') THEN
+                  NLEN = NCL-1
+                  EXIT
+                END IF
+              END DO
+              NLT = NCL-1
+              IF (NLEN.EQ.0) THEN
+                NST = 151
+                EXIT
+              END IF
+              !! JUST CHECK WHETHER IT ENDS
+              LINE2(1:4) = LINE(NST:NST+3)
+              CALL UPRCAS(LINE2,4)
+              IF (LINE2(1:4).EQ.'$END') GO TO 120
+              IF (LINE2(1:1).EQ.'$') THEN
+                WRITE (IW,*)
+                IF (MODE.EQ.1)
+     *          WRITE (IW,'(" $END IS MISSING FOR $DFTBSK?")')
+                IF (MODE.EQ.2)
+     *          WRITE (IW,'(" $END IS MISSING FOR $DFTBAO?")')
+                WRITE (IW,'(" IGNORE THIS PROBLEM...")')
+                WRITE (IW,*)
+                GO TO 120
+              END IF
+C
+              IF (MODE.EQ.1) THEN !! FOR READING SK FILES
+                IF (ILOOP.EQ.1.OR.ILOOP.EQ.2) THEN !! READ SPECIES
+                  TMP = 0.0D+00
+                  READ (LINE(NST:NLT),'(A)') TMP
+                  CALL UPRCAS(TMP,8)
+                  DO I = 1, NSPE
+                    IF (SPE(I).EQ.TMP) THEN
+                      IF (ILOOP.EQ.1) ISPESAV = I
+                      IF (ILOOP.EQ.2) JSPESAV = I
+                      ILOOP = ILOOP + 1
+                      EXIT
+                    END IF
+                  END DO
+                  !! IF PATH IS DUPLICATED
+                  !! IF THE SPECIES IS NOT FOUND
+                  IF (I.EQ.NSPE+1) ILOOP = 1
+                ELSE IF (ILOOP.EQ.3) THEN !! READ PATH
+                  IF (LEN_TRIM(SKPATH(ISPESAV,JSPESAV)).GT.0) THEN
+                    WRITE (IW,'(/X,"SLATER-KOSTER FILE FOR ",
+     *                A4,"- ",A4," PAIR IS SPECIFIED TWICE?")')
+     *                SPE(ISPESAV),SPE(JSPESAV)
+                    WRITE (IW,'(X,"UNABLE TO CONTINUE..."//)')
+                    CALL ABRT
+                  END IF
+                  NFOUND = NFOUND + 1
+                  LINE2 = BLK
+                  CALL DFTB_READ_WFC6(LINE,NST,NLT,NLEN)
+                  LINE2(1:NLT-NST+1) = LINE(NST:NLT)
+                  SKPATH(ISPESAV,JSPESAV) = TRIM(ADJUSTL(LINE2))
+                  ILOOP = 1
+                END IF
+              ELSE IF (MODE.EQ.2) THEN !! FOR READING WFC FILES
+                IF (ILOOP.EQ.1) THEN !! READ SPECIES
+                  TMP = 0.0D+00
+                  READ (LINE(NST:NLT),'(A)') TMP
+                  CALL UPRCAS(TMP,8)
+                  DO I = 1, NSPE
+                    IF (SPE(I).EQ.TMP) THEN
+                      ILOOP = 2
+                      ISPESAV = I
+                      EXIT
+                    END IF
+                  END DO
+                ELSE IF (ILOOP.EQ.2) THEN !! READ PATH
+                  IF (LEN_TRIM(PATH(ISPESAV)).GT.0) THEN
+                    WRITE (IW,'(/X,"WFC FILE FOR ",
+     *                A4," IS SPECIFIED TWICE?")') SPE(ISPESAV)
+                    WRITE (IW,'(X,"UNABLE TO CONTINUE..."//)')
+                    CALL ABRT
+                  END IF
+                  NFOUND = NFOUND + 1
+                  LINE2 = BLK
+                  CALL DFTB_READ_WFC6(LINE,NST,NLT,NLEN)
+                  LINE2(1:NLT-NST+1) = LINE(NST:NLT)
+                  PATH(ISPESAV) = TRIM(ADJUSTL(LINE2))
+                  ILOOP = 1
+                END IF
+              END IF
+C
+              IF (NLT.EQ.NLEN) THEN
+                NST = 151
+                EXIT
+              END IF
+              CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,1)
+            END DO
+          END DO
+        END IF
+      END DO
+C
+  100 CONTINUE !! END OF FILE
+      RETURN
+C
+  110 CONTINUE
+      IF (MASWRK) THEN
+        WRITE (IW,'(/" END OF FILE WITHOUT CLOSING $DFTBAO?")')
+        WRITE (IW,'(" IGNORE THIS PROBLEM...")')
+      END IF
+      RETURN
+C
+  120 CONTINUE
+C
+      IF (MODE.EQ.1) RETURN
+C
+      IF (MASWRK) THEN
+        WRITE (IW,'(/," I/O INFORMATION FOR WFC FILES")')
+        DO I = 1, NSPE
+          WRITE (IW,'(X,A8,": READ FROM ",A)')
+     *      SPE(I),TRIM(PATH(I))
+        END DO
+        WRITE (IW,*)
+        CALL DFTB_READ_WFC2(PATH)
+C
+        NSEQ = 0
+        DO I = 1, NSPE
+          WRITE (IW,'(" SPECIES(",I2,") : ",A8," --- MAXANG =",I2)')
+     *      I,SPE(I),MAXANG(I)
+          DO IANG = 1, MAXANG(I)
+            NSEQ = NSEQ + 1
+            IF (IANG.EQ.1) C1 = "S"
+            IF (IANG.EQ.2) C1 = "P"
+            IF (IANG.EQ.3) C1 = "D"
+            WRITE (IW,'("   FOR ",A1," SHELL: ",
+     *        "NUMBER OF EXPONENTS = ",I8)') C1,NEXP(NSEQ)
+            DO IEXP = 1, NEXP(NSEQ)
+             WRITE (IW,'("     EXP.(", I2,"): ",F7.3," / ",3F16.10)') 
+     *               IEXP,EXPON(IEXP,NSEQ),COEFF(1,IEXP,NSEQ),
+     *               COEFF(2,IEXP,NSEQ),COEFF(3,IEXP,NSEQ)
+            END DO
+          END DO
+          WRITE (IW,*)
+        END DO
+      END IF
+C
+      IF (GOPARR) THEN
+        CALL DDI_BCAST(2354,'F',EXPON,3*MXSPE*MAXEXP,MASTER)
+        CALL DDI_BCAST(2355,'F',COEFF,9*MXSPE*MAXEXP,MASTER)
+        CALL DDI_BCAST(2356,'I',NEXP ,3*MXSPE       ,MASTER)
+      END IF
+C
+      IF (NFOUND.NE.NSPE) THEN
+        IF (MASWRK) THEN
+          WRITE (IW,'(/" ***** WARNING *****")')
+          WRITE (IW,'(" NOT ENOUGH WFC INFORMATION")')
+          WRITE (IW,'(" THE SYSTEM CONTAINS ",I2," SPECIES, BUT ",
+     *               I2," FILES ARE FOUND")') NSPE,NFOUND
+          WRITE (IW,'(" LET ME CONTINUE..."/)')
+        END IF
+C       CALL ABRT
+      END IF
+C
+      END SUBROUTINE DFTB_READ_SKWFC
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_READ_WFC2
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Read wfc files used in the waveplot program
+C>             Note that the number of columns in each line must be 
+C>             less equal 80. In addition, the file format of wfc must
+C>             not be modified. In particular, 'Coefficients' must be
+C>             latter than 'Exponents'.
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param PATH Paths of wfc files
+C>
+C
+      SUBROUTINE DFTB_READ_WFC2(PATH)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      LOGICAL :: GOPARR,DSKWRK,MASWRK,CHECK(3)
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+C
+      INTEGER,PARAMETER :: MXATM=2000,MXSPE=10,MAXEXP=5
+C
+      COMMON /DFTBAO/ EXPON(MAXEXP,3*MXSPE),COEFF(3,MAXEXP,3*MXSPE),
+     *                NEXP(3*MXSPE),INDSH(MXSPE+1)
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+C
+      CHARACTER(150) PATH(NSPE),BLK,LINETMP
+      CHARACTER(1) C1
+C
+      BLK='                                        '//
+     *    '                                        '//
+     *    '                                        '//
+     *    '                              '
+      NFTDFTB=21
+      ISHELL0 = 0
+      DO I = 1, NSPE
+        IF (LEN_TRIM(PATH(I)).EQ.0) THEN
+          DO IANG = 1, MAXANG(I)
+            ISHELL = ISHELL0 + IANG
+            NEXP(ISHELL) = 0
+          END DO
+          ISHELL0 = ISHELL0 + MAXANG(I)
+          CYCLE
+        END IF
+        OPEN (NFTDFTB,FILE=ADJUSTL(TRIM(PATH(I))),STATUS='UNKNOWN',
+     *        ERR=100)
+        REWIND NFTDFTB
+C
+        LEVEL = 0
+        LINETMP = BLK
+        CALL DFTB_READ_WFC3(NFTDFTB,LEVEL,LINETMP,SPE(I),8)
+        CHECK(1) = .FALSE.
+        CHECK(2) = .FALSE.
+        CHECK(3) = .FALSE.
+        DO IANG = 1, MAXANG(I)
+          CALL DFTB_READ_WFC3(NFTDFTB,LEVEL,LINETMP,'Orbital',7)
+          CALL DFTB_READ_WFC3(NFTDFTB,LEVEL,LINETMP,
+     *                        'AngularMomentum',15)
+          idum=1
+          CALL DFTB_READ_WFC5(NFTDFTB,LEVEL,LINETMP,0,IDUM,NANG,DUM)
+          IF (IANG.EQ.NANG+1) THEN !! APPROPRIATE ANGULAR MOMENTUM
+            ISHELL = ISHELL0 + IANG
+            CHECK(IANG) = .TRUE.
+            NEXP(ISHELL) = 0
+            CALL DFTB_READ_WFC3(NFTDFTB,LEVEL,LINETMP,'Exponents',9)
+            CALL DFTB_READ_WFC5(NFTDFTB,LEVEL,LINETMP,1,NEXP(ISHELL),
+     *                          IDUM,EXPON(1,ISHELL))
+            CALL DFTB_READ_WFC3(NFTDFTB,LEVEL,LINETMP,'Coefficients',
+     *                          12)
+            IDUM=NEXP(ISHELL)*3
+            CALL DFTB_READ_WFC5(NFTDFTB,LEVEL,LINETMP,1,IDUM,
+     *                          IDUM,COEFF(1,1,ISHELL))
+          END IF
+        END DO
+C
+        DO IANG = 1, MAXANG(I)
+          IF (.NOT.CHECK(IANG)) THEN
+            IF (MASWRK) THEN
+              IF (IANG.EQ.1) C1 = 'S'
+              IF (IANG.EQ.2) C1 = 'P'
+              IF (IANG.EQ.3) C1 = 'D'
+              WRITE (IW,'(/" PARAMETERS ARE MISSING? FOR ",A1,
+     *          " ORBITAL OF SPECIES ",A8,"?"/)') C1,SPE(I)
+            END IF
+          END IF
+        END DO
+        ISHELL0 = ISHELL0 + MAXANG(I)
+        CLOSE (NFTDFTB)
+      END DO
+C
+      RETURN
+C
+  100 CONTINUE
+      IF (MASWRK) WRITE (IW,*) "ERROR IN OPENING THE FOLLOWING FILE:"
+      IF (MASWRK) WRITE (IW,'(A)') ADJUSTL(TRIM(PATH(I)))
+      IF (MASWRK) WRITE (IW,*) "SUBROUTINE IN DFTB_READ_WFC2"
+      CALL ABRT
+C
+C 200 CONTINUE
+C     IF (MASWRK) WRITE (IW,*) "UNEXPECTED END OF FILE"
+C     IF (MASWRK) WRITE (IW,*) "SUBROUTINE IN DFTB_READ_WFC2"
+C     IF (MASWRK) WRITE (IW,*) "READING THE FOLLOWING FILE:"
+C     IF (MASWRK) WRITE (IW,'(A)') ADJUSTL(TRIM(PATH(I)))
+C     CALL ABRT
+C
+      END SUBROUTINE DFTB_READ_WFC2
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_READ_WFC3
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Find a specified characters
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NFTDFTB 21
+C>    @param CHARA   Characters to be found
+C>    @param LENGTH  Length of CHARA
+C>    @param LEVEL   Count the number of curly brackets
+C>           --- OUTPUT ---
+C>    @param LINETMP The remaining line after CHARA
+C>
+C
+      SUBROUTINE DFTB_READ_WFC3(NFTDFTB,LEVEL,LINETMP,CHARA,LENGTH)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      LOGICAL :: GOPARR,DSKWRK,MASWRK
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+C
+      CHARACTER(150) CHARA,CHARA2,LINETMP,LINE,BLK,TMP
+C
+C     REMOVE BLANK FIRST
+C
+      BLK='                                        '//
+     *    '                                        '//
+     *    '                                        '//
+     *    '                              '
+      CHARA2(1:LENGTH) = CHARA(1:LENGTH)
+      CALL UPRCAS(CHARA2,LENGTH)
+      NST=0
+      NLT=0
+      IF (LEN_TRIM(ADJUSTL(LINETMP)).NE.0) THEN
+        LINE = LINETMP
+        NLEN = LEN_TRIM(LINE)
+        CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,0)
+      ELSE
+        READ (NFTDFTB,'(A80)',END=200) LINE
+          NLEN = LEN_TRIM(LINE)
+          CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,0)
+      END IF
+C
+      IC=0
+      DO !! LINE LOOP
+        IF (IC.NE.0) THEN
+          READ (NFTDFTB,'(A150)',END=200) LINE
+          NLEN = LEN_TRIM(LINE)
+          CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,0)
+        END IF
+        IC=IC+1
+        IF (NLEN.EQ.0) CYCLE
+        DO !! COLUMN LOOP
+          DO NCL = NST, NLEN
+            IF (LINE(NCL:NCL).EQ.'{') LEVEL = LEVEL + 1
+            IF (LINE(NCL:NCL).EQ.'}') LEVEL = LEVEL - 1
+            IF (LINE(NCL:NCL).EQ.' '.OR.
+     *          LINE(NCL:NCL).EQ.'=') EXIT
+          END DO
+          NLT = NCL-1
+          IF (NLT.LT.NST) THEN
+            NST = NST + 1
+            CYCLE
+          END IF
+          !! JUST CHECK WHETHER IT ENDS
+          TMP=BLK
+          READ (LINE(NST:NLT),'(A)') TMP
+          NLENTMP = NLT-NST+1
+          CALL UPRCAS(TMP,NLENTMP)
+          IF (TMP(1:LENGTH).EQ.CHARA2(1:LENGTH)) GO TO 100
+          IF (NCL.EQ.NLEN+1) EXIT
+C
+          CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,1)
+        END DO
+      END DO
+C
+  100 CONTINUE
+      CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,1)
+      LINETMP = LINE
+      RETURN
+C
+  200 CONTINUE
+      IF (MASWRK) WRITE (IW,*) "UNEXPECTED END OF FILE"
+      IF (MASWRK) WRITE (IW,*) "SUBROUTINE IN DFTB_READ_WFC3"
+      IF (MASWRK) WRITE (IW,'(" LOOKING FOR ",A)') CHARA(1:LENGTH)
+      CALL ABRT
+C
+      END SUBROUTINE DFTB_READ_WFC3
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_READ_WFC4
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Remove spaces from LINE
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NLT  Index of the last character to be removed
+C>    @param MODE 1: Remove NST to NLT characters, 0: do not do that
+C>           --- OUTPUT ---
+C>    @param LINE The remaining line after CHARA
+C>    @param NST  Index of the first character (1)
+C>    @param NLEN Length of LINE on exit
+C>
+C
+      SUBROUTINE DFTB_READ_WFC4(LINE,NST,NLT,NLEN,MODE)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      CHARACTER(150) LINE,LINE2,BLK
+C
+      BLK='                                        '//
+     *    '                                        '//
+     *    '                                        '//
+     *    '                              '
+      LINE2(1:150) = BLK(1:150)
+      LINE2(1:NLEN) = LINE(1:NLEN)
+      IF (MODE.EQ.1) THEN
+        DO J = NST, NLT
+          LINE2(J:J) = ' '
+        END DO
+      END IF
+      NLEN0= LEN_TRIM(LINE2)
+      NLEN = LEN_TRIM(ADJUSTL(LINE2))
+      NST  = NLEN0 - NLEN
+      LINE(1:150) = BLK(1:150)
+      LINE(1:NLEN0-NST) = LINE2(NST+1:NLEN0)
+      NST = 1
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_READ_WFC4
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_READ_WFC5
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Get values from the wfc files opened currently
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NFTDFTB 21
+C>    @param LEVEL   Count the number of curly brackets
+C>    @param MODE    0: Values to be obtained are integer, 1: real
+C>    @param NN      Number of values to be obtained. If 0 on entry,
+C>                   NN will be the number to have obtained on exit.
+C>           --- OUTPUT ---
+C>    @param LINETMP The remaining line after CHARA
+C>    @param IVAL    Values on exit for NN=0
+C>    @param  VAL    Values on exit for NN=1
+C>
+C
+      SUBROUTINE DFTB_READ_WFC5(NFTDFTB,LEVEL,LINETMP,MODE,NN,IVAL,VAL)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      LOGICAL :: GOPARR,DSKWRK,MASWRK
+C
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+C
+      CHARACTER(150) LINETMP,LINE
+      INTEGER IVAL(*)
+      DOUBLE PRECISION VAL(*)
+      LOGICAL EQUAL
+C
+C     LEVEL0 = LEVEL
+      EQUAL = .FALSE.
+      IF (LEN_TRIM(ADJUSTL(LINETMP)).EQ.0) THEN
+        READ (NFTDFTB,'(A150)',END=200) LINE
+      ELSE
+        LINE = LINETMP
+      END IF
+      NLEN = LEN_TRIM(LINE)
+      NLT = NLEN
+      CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,0)
+C
+      IC=0
+      NVAL = 1
+      DO !! LINE LOOP
+        IF (IC.NE.0) THEN
+          READ (NFTDFTB,'(A150)',END=200) LINE
+          NLEN = LEN_TRIM(LINE)
+          CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,0)
+        END IF
+        IC=IC+1
+        IF (NLEN.EQ.0) CYCLE
+        DO !! COLUMN LOOP
+          DO NCL = NST, NLEN
+            IF (LINE(NCL:NCL).EQ.'{') LEVEL = LEVEL + 1
+            IF (LINE(NCL:NCL).EQ.'}') LEVEL = LEVEL - 1
+            IF (LINE(NCL:NCL).EQ.' '.OR.
+     *          LINE(NCL:NCL).EQ.'='.OR.
+     *          LINE(NCL:NCL).EQ.'{'.OR.
+     *          LINE(NCL:NCL).EQ.'}') EXIT
+          END DO
+          NLT = NCL-1
+          IF (LINE(NCL:NCL).EQ.'='.OR.LINE(NCL:NCL).EQ.'{') EQUAL=.TRUE.
+          IF (EQUAL.AND.LINE(NCL:NCL).EQ.'}') THEN
+            GO TO 100
+          END IF
+          IF (NLT.LT.NST) THEN
+            IF (NCL.GE.NLEN+1) EXIT
+            NST = NST + 1
+            CYCLE
+          END IF
+          IF (EQUAL.AND.LINE(NCL:NCL).NE.'{') THEN
+            IF (MODE.EQ.0) THEN
+              READ (LINE(NST:NLT),'(I10)') IVAL(NVAL)
+            ELSE
+              READ (LINE(NST:NLT),  *  ) VAL(NVAL)
+            END IF
+            IF (NN.NE.0.AND.NVAL.EQ.NN) GO TO 100 
+            NVAL = NVAL + 1
+          END IF
+          IF (NCL.EQ.NLEN+1) EXIT
+C
+          CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,1)
+        END DO
+      END DO
+C
+  100 CONTINUE
+      CALL DFTB_READ_WFC4(LINE,NST,NLT,NLEN,1)
+      IF (NN.EQ.0) NN = NVAL-1
+C     IF (NN.EQ.0.AND.LEVEL0.NE.LEVEL) THEN
+C       IF (MASWRK) WRITE (IW,*) "LEVEL MISMATCH"
+C       CALL ABRT
+C     END IF
+      RETURN
+C
+  200 CONTINUE
+      IF (MASWRK) WRITE (IW,*) "UNEXPECTED END OF FILE"
+      IF (MASWRK) WRITE (IW,*) "SUBROUTINE IN DFTB_READ_WFC5"
+      CALL ABRT
+C
+      END SUBROUTINE DFTB_READ_WFC5
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_READ_WFC6
+C>
+C>    @brief   Plot orbital/density with DFTB
+C>
+C>    @details Remove the first and last quotes, if they exist
+C>
+C>    @author  Yoshio Nishimoto
+C>    - Jan, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param NLT  Index of the last character to be removed
+C>           --- OUTPUT ---
+C>    @param LINE The remaining line after CHARA
+C>    @param NST  Index of the first character (1)
+C>    @param NLEN Length of LINE on exit
+C>
+C
+      SUBROUTINE DFTB_READ_WFC6(LINE,NST,NLT,NLEN)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      CHARACTER(150) LINE,LINE2,BLK
+C
+      BLK='                                        '//
+     *    '                                        '//
+     *    '                                        '//
+     *    '                              '
+      LINE2(1:150) = BLK(1:150)
+      LINE2(1:NLEN) = LINE(1:NLEN)
+      IF (LINE2(NST:NST).EQ.'"' .OR. LINE2(NST:NST).EQ."'")
+     *    LINE2(NST:NST) = ' '
+      IF (LINE2(NLT:NLT).EQ.'"' .OR. LINE2(NLT:NLT).EQ."'")
+     *    LINE2(NLT:NLT) = ' '
+      NLEN0= LEN_TRIM(LINE2)
+      NLEN = LEN_TRIM(ADJUSTL(LINE2))
+      NST  = NLEN0 - NLEN
+      LINE(1:150) = BLK(1:150)
+      LINE(1:NLEN0-NST) = LINE2(NST+1:NLEN0)
+      NST = 1
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_READ_WFC6
+C
+C-----------------------------------------------------------------------
+C*MODULE DFTBLB    *DECK DFTB_DFTD
+C>
+C>    @brief Grimme's dispersion correction for FMO-DFTB
+C>
+C>    @details Because the number of electrons at neutral for DFTB is
+C>             different from other QM methods, it has to be modified
+C>             appropriately.  Here, number of electrons are taken from
+C>             QREF array.
+C>
+C>    @author Yoshio Nishimoto
+C>    - Feb, 2016- Subroutine written
+C>
+C>           --- INPUT ---
+C>    @param IAT  Index of I-th atoms
+C>    @param JAT  Index of J-th atoms
+C>    @param KAT  Index of K-th atoms
+C>           --- OUTPUT ---
+C>    @param IIAN Atomic number of I-th atom
+C>    @param JIAN Atomic number of J-th atom
+C>    @param KIAN Atomic number of K-th atom
+C>
+C
+      SUBROUTINE DFTB_DFTD(IIAN,JIAN,KIAN,IAT,JAT,KAT)
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+C
+      INTEGER,PARAMETER :: MXATM=2000,MXSPE=10
+C
+      COMMON /DFTBPR/ ETEMP,DFTBDP(MXSPE*14),DAMPXHE,HUBDER(MXSPE),
+     *                ZREF(MXATM),SPNCST(6,MXSPE),SPE(MXATM),NSPE,
+     *                MAXANG(MXATM),ISPE(MXATM),IND(MXATM+1),IDFTBD
+      COMMON /DFTBSK/ SKDIM(MXSPE,MXSPE),SKSPIN(MXSPE),QREFL(3,MXSPE),
+     *                HUBBL(3,MXSPE),QREF(MXSPE),HUBB(MXSPE),SKCUT2,
+     *                NEEDSK,LSKHTAB(MXSPE,MXSPE),LSKSTAB(MXSPE,MXSPE),
+     *                LSKGRID(MXSPE,MXSPE),LSKSELF(MXSPE)
+C
+      INTEGER, INTENT(IN)  :: IAT,JAT,KAT
+      INTEGER, INTENT(OUT) :: IIAN,JIAN,KIAN
+C
+      IIAN = INT(QREF(ISPE(IAT))+1.0D-02)
+      JIAN = INT(QREF(ISPE(JAT))+1.0D-02)
+      IF (KAT.NE.0) KIAN = INT(QREF(ISPE(KAT))+1.0D-02)
+C
+      RETURN
+C
+      END SUBROUTINE DFTB_DFTD

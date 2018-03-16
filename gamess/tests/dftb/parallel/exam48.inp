@@ -1,0 +1,33 @@
+!   EXAM48.
+!   Geometry optimization of a pseudo-octahedral Be6 cluster
+!   with DFTB2-D3(BJ).
+!  
+!   Final energy is -2.7272489283 (Hartree) after 25 steps
+!   Maximum and RMS gradient are shown to be zero.
+!
+ $CONTRL RUNTYP=OPTIMIZE NPRINT=-5 $END
+ $STATPT NSTEP=200 OPTTOL=1.0D-09 HSSEND=.TRUE. HESS=CALC $END
+ $SYSTEM MWORDS=40 $END
+ $SCF CONV=1.0D-12 $END
+ $BASIS GBASIS=DFTB $END
+ $DFT IDCVER=4 $END
+ $DFTB NDFTB=2 DISP=DFT $END
+!
+!   Modify the location of parameters in $DFTBSK before running!
+!
+ $DFTBSK
+   Be Be /usr/local/dftb/parameters/Be-Be.spl
+ $END
+ $DATA
+ Be6
+ C1 
+ BE          4.0   1.0554337329   1.0554337329   0.1600000000
+ BE          4.0   1.0554337329  -1.0554337329  -0.0300000000
+ BE          4.0  -1.0554337329   1.0554337329   0.0300000000
+ BE          4.0  -1.0554337329  -1.0554337329  -0.1600000000
+ BE          4.0   0.0900000000   0.1400000000   1.4926087121
+ BE          4.0   0.0900000000  -0.1400000000  -1.4926087121
+ $END
+
+! TRAVIS-CI SMALL
+

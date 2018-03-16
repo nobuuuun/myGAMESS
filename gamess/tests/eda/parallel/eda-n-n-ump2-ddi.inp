@@ -1,0 +1,39 @@
+!   energy decomposition analysis...N/N in a bonded N2 molecule
+!
+! -------------
+! OWN BASIS SET                                       HARTREE  KCAL/MOL
+! -------------
+! ELECTROSTATIC E.ERGY                  ES=         -0.524426   -329.08
+! EXCHANGE E.ERGY                       EX=         -0.755290   -473.95
+! REPULSION E.ERGY                     REP=          2.041149   1280.84
+! POLARIZATION E.ERGY                  POL=         -0.932999   -585.47
+! MP2 DISPERSION E.ERGY               DISP=         -0.165510   -103.86
+! TOTAL INTERACTION E.ERGY HF OR DFT     E=         -0.171567   -107.66
+! TOTAL INTERACTION E.ERGY MP2           E=         -0.337077   -211.52
+!
+!
+! -------------------------------------
+! IN SUPER MOL (FOR SPECIAL COMPARISON)               HARTREE  KCAL/MOL
+! -------------------------------------
+! ELECTROSTATIC E.ERGY                  ES=         -4.939882  -3099.83
+! EXCHANGE E.ERGY                       EX=         -0.258440   -162.17
+! TOTAL INTERACTION E.ERGY HF OR DFT     E=         -5.198322  -3262.00
+!
+!   this run takes 2 seconds on 2.66 GHz Cloverton (3 Nov 2009)
+!
+ $CONTRL SCFTYP=UHF RUNTYP=eda ICHARG=0 mplevl=2 ispher=1 $end
+ $SYSTEM MWORDS=8 memddi=10 timlim=2 $END
+ $LMOEDA MATOM(1)=1 1 MCHARG(1)=0 0 MMULT(1)=4  -4 $END
+ $BASIS  GBASIS=ccd $END
+ $SCF    DIIS=.T. SOSCF=.F. DIRSCF=.T. FDIFF=.F. $END
+ $mp2    code=ddi ospt=ump $end
+ $DATA
+N2...near a normal bond distance
+C1
+N          7.0   0.0000000000   0.0000000000   0.0
+N          7.0   0.0000000000   0.0000000000   1.1
+ $END
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

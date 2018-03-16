@@ -1,0 +1,38 @@
+!  Jeff Gaur's test of the IP active triples program, for azide ion, N3-
+!  Ionization is to a 2-pi-g ground state N3.
+!  There are 75 AOs, 69 MOs
+!
+!  FINAL E= -163.3014204472, CCSD= -163.8312226255, EOM guess=  .1361039056,
+!  taking 13 ROHF iters, 17 CCSD iters, and 9 triples iterations.
+!
+!          ---- SUMMARY OF IP-EOMCCSDt CALCULATIONS ----
+!          SPIN      IONIZATION           TOTAL
+!   SYMM   MULT      ENERGY (H)         ENERGY (H)     ITERATIONS
+!    B3G    2        .0803551789     -163.7508674466   CONVERGED
+!
+!  This run takes 125 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!  results esssentially unchanged since 2010, except for a guess change
+!
+ $CONTRL RUNTYP=ENERGY SCFTYP=RHF CCTYP=IP-EOM3A ICHARG=-1 ISPHER=1 $END
+ $SYSTEM MWORDS=50 $END
+ $GUESS  GUESS=HUCKEL NORB=20 $END
+ $BASIS  GBASIS=ACCD $END
+ $CCINP  $END
+ $EOMINP MINIT=1 NOACT=6 NUACT=14 ! these 2 affect active doubles MINIT=1 guess
+         MULT=-1 NACT=2           ! this one is the active triples counter
+         NSTATE(1)=0,0,0,0,0,0,1,0 IROOT(1)=7,1  $END
+ $DATA
+IP for azide ion...Rnn=1.1850000 DZP/IP-EOM-CCSDt{2}
+DNH 2
+
+N   7.0   0.00000000    0.0000000    1.1880000
+N   7.0   0.00000000    0.0000000    0.0000000
+ $END
+
+
+
+
+
+
+! TRAVIS-CI SMALL
+

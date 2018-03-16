@@ -1,0 +1,55 @@
+{
+  "parse_header" : "LIBCCHEM",
+  "parse_group" : [
+   {
+     "regex_string" : "^               E\\(0\\)=.*$",
+     "parse_name"   : "E(0)       ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^               E\\(1\\)=.*$",
+     "parse_name"   : "E(1)       ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^               E\\(2\\)=.*$",
+     "parse_name"   : "E(2)       ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^             E\\(MP2\\)=.*$",
+     "parse_name"   : "E(MP2)     ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^            E\\(ZAPT\\)=.*$",
+     "parse_name"   : "E(ZAPT)    ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^          E\\(RHF\\)     =.*$",
+     "parse_name"   : "E(RHF)     ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^          E\\(MP2\\)     =.*$",
+     "parse_name"   : "E(MP2)     ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^          E\\(CCSD\\)    =.*$",
+     "parse_name"   : "E(CCSD)    ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^          E\\(CCSD[T]\\) =.*$",
+     "parse_name"   : "E(CCSD[T]) ",
+     "parse_required" : false
+   },
+   {
+     "regex_string" : "^          E\\(CCSD\\(T\\)\\) =.*$",
+     "parse_name"   : "E(CCSD(T)) ",
+     "parse_required" : false
+   }
+  ]
+}

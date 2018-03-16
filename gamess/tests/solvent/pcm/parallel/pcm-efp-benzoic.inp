@@ -1,0 +1,99 @@
+!   benzoic acid + two EFP waters + PCM background
+!   The 6-31G(d) basis has 147 AOs on the acid, 32 occupied MOs
+!
+!   using the new FIXPVA default tesselation,
+!     EFP+PCM, FINAL E= -418.3709934214, 13 iters, RMS grad= 0.000289899
+!   answers basically unchanged since at least 2009
+!   This run takes 65 seconds on 2.66 GHz Cloverton (28 Sep 2015)
+!
+!   ------------- variants of this test run like below:
+!   this data was collected with the GEPOL-AS tesselation (mthall equal 2)
+!     gas phase,      E= -418.3243242164,     grad= 0.006947271, t= 58
+!     with EFP,       E= -418.3553999559,     grad= 0.001288891, t= 62
+!     with     PCM,   E= -418.3355134669,     grad= 0.003915022, t= 70
+!     with EFP+PCM,   E= -418.3709934214,     grad= 0.000289897, t= 80
+!   these timings are from 2.66 GHz Cloverton in November 2008
+!
+!   geometry optimization in internal coordinates is mostly monotonic,
+!      nserch=0:   E= -418.3709934214, r.m.s.= 0.0002896
+!      nserch=91:  E= -418.3710553061, r.m.s.= 0.0000032
+!   but pt. 87 has E= -418.3710553311, r.m.s.= 0.0000114
+!   and pt. 36 has E= -418.3710622753, r.m.s.= 0.0001131
+!
+!   using ntsall=240 results in
+!      nserch=0:   E= -418.3715972972, r.m.s.= 0.0001841
+!      nserch=81:  E= -418.3716036093, r.m.s.= 0.0000020
+!   but pt. 70 has E= -418.3716042951, r.m.s.= 0.0000427
+!
+!
+ $contrl scftyp=rhf runtyp=gradient molplt=.t. nzvar=39 $end
+ $system mwords=10 $end
+ $statpt opttol=1d-5 nstep=100 $end
+ $zmat   dlc=.t. auto=.t. $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $scf    dirscf=.true. $end
+ $guess  guess=huckel $end
+
+ $pcm    solvnt=water $end
+
+!    note, the optimization was done before FIXPVA PCM code,
+!          and before the EFP/PCM improved gradient changes.
+ $data
+benzoic acid + two EFP waters + PCM...geom is 2 H2O EFP + PCM optimized
+C1
+C           6.0   0.9790980353   1.0522770413   0.1681644113
+C           6.0  -0.3897174391   1.2517483766   0.1868779660
+C           6.0  -1.2470400367   0.1723664399   0.0236413879
+C           6.0  -0.7366122398  -1.1046637740  -0.1578438862
+C           6.0   0.6333408675  -1.3061786859  -0.1767044082
+C           6.0   1.4960199250  -0.2266999204  -0.0135441281
+H           1.0   1.6499718628   1.8803027013   0.2933610585
+H           1.0  -0.7864370519   2.2404478722   0.3273486432
+H           1.0  -2.3108938024   0.3265315341   0.0379278847
+H           1.0  -1.4019317831  -1.9389728609  -0.2841741848
+H           1.0   1.0274969660  -2.2937731881  -0.3169916968
+C           6.0   2.9730844663  -0.3998861862  -0.0282585756
+O           8.0   3.7447100285   0.5107165510   0.1095047003
+O           8.0   3.3600780990  -1.6417209506  -0.2055912487
+H           1.0   4.3224441024  -1.7086276832  -0.2068379757
+ $end
+ $efrag
+iscrelec=0 iscrpol=0 iscrdisp=0
+FRAGNAME=H2ORHF
+ZO1               6.1259519408  -2.0121801113  -0.2248131750
+ZH2               6.4387780264  -2.5082928019  -0.9643336226
+ZH3               6.5744619728  -1.1819534582  -0.2458110262
+FRAGNAME=H2ORHF
+ZO1               6.6651069724   0.7770754526  -0.1185155371
+ZH2               7.1048830240   1.1813443303   0.6122663407
+ZH3               5.7397726984   0.9035939549   0.0179689090
+ $end
+
+the FIXPVA optimized geometry is
+ C           6.0   0.9796600685   1.0507290759   0.1734397508
+ C           6.0  -0.3887510632   1.2513137945   0.1929126571
+ C           6.0  -1.2463767905   0.1731800476   0.0239201146
+ C           6.0  -0.7372184661  -1.1033190367  -0.1641580433
+ C           6.0   0.6323948444  -1.3063375992  -0.1820256108
+ C           6.0   1.4952310042  -0.2278963030  -0.0144878644
+ H           1.0   1.6538503609   1.8756063339   0.3016792402
+ H           1.0  -0.7843667335   2.2400166909   0.3381423555
+ H           1.0  -2.3103657438   0.3278025289   0.0383296901
+ H           1.0  -1.4045142656  -1.9355894381  -0.2942792521
+ H           1.0   1.0260353642  -2.2937401444  -0.3260518441
+ C           6.0   2.9719613395  -0.3997419225  -0.0288058800
+ O           8.0   3.7428803789   0.5126295591   0.0984325321
+ O           8.0   3.3625736166  -1.6432231692  -0.1932479063
+ H           1.0   4.3245966328  -1.7023807599  -0.2090524588
+and
+ FRAGNAME=H2ORHF
+ ZO1               6.1439623026  -1.9679248418  -0.2918835094
+ ZH2               6.4695547506  -2.2440375311  -1.1336850268
+ ZH3               6.5741558719  -1.1527375492  -0.0887047090
+ FRAGNAME=H2ORHF
+ ZO1               6.6342474269   0.7304792998   0.4777369659
+ ZH2               6.8888469979   0.8851719012   1.3733527940
+ ZH3               5.6987124417   0.8488881261   0.4373377645
+
+! TRAVIS-CI SMALL
+

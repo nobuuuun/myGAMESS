@@ -1,0 +1,67 @@
+!  N2 excited states by TD-DFT.
+!  Supplementation of aug-cc-pVDZ by s(0.01), p(0.02), and d(0.04)
+!  is done to be sure we cover Rydberg character.
+!  This job has 70 AOs and 64 MOs.
+!
+!  experimental data (singlet states only) from Huber/Herzberg
+!      D-inf-h            D4h         D2h labels, from Herzberg's Table 59
+!  X-1-sigma-g-plus     = A1g       = Ag        =      0 cm-1 = 0    eV
+!  a'-1-sigma-u-minus   = A1u       = Au        = 68,153      = 8.45
+!  a-1-pi-g             = Eg        = B2g + B3g = 69,283      = 8.59
+!  w-1-delta-u          = B1u + B2u = Au + B1u  = 72,097      = 8.94
+!
+!          Running in D2h prints
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!  0  AG        -109.4907954102    0.000
+!  1  B3G       -109.1502535844    9.267     0.0000  0.0000  0.0000    0.000
+!  2  B2G       -109.1502535686    9.267     0.0000  0.0000  0.0000    0.000
+!  3  AU        -109.1472733759    9.348     0.0000  0.0000  0.0000    0.000
+!  4  AU        -109.1323070901    9.755     0.0000  0.0000  0.0000    0.000
+!  5  B1U       -109.1323070019    9.755     0.0000  0.0000  0.0000    0.000
+!  6  AG        -109.0839966798   11.070     0.0000  0.0000  0.0000    0.000
+!
+!  From these labels, we can deduce that states 1+2 are the a state,
+!  that state 3 is the a' state, and states 4+5 are the w state.
+!  Energies are overestimated by 0.8 eV or so, and there is a 
+!  reversal of the two (admittedly very close) a and a' states.
+!  The labels match the textbook exercise.
+!
+!  This run takes 16 seconds on a 2.66 GHz Cloverton ( 3 Apr 2015)
+!  results have not changed substantially since 2009
+!
+!          Running in D4h prints   (old answers, before grid changes)
+!  STATE             ENERGY     EXCITATION      TRANSITION DIPOLE    OSCILLATOR
+!  0  A1G       -109.4907907730     .000
+!  1  EG        -109.1503072235    9.265      .0000   .0000   .0000     .000
+!  2  EG        -109.1503072235    9.265      .0000   .0000   .0000     .000
+!  3  A1U       -109.1472669945    9.348      .0000   .0000   .0000     .000
+!  4  A1U       -109.1323802536    9.753      .0000   .0000   .0000     .000
+!  5  A1U       -109.1323802430    9.753      .0000   .0000   .0000     .000
+!  6  A1G       -109.0801045241   11.175      .0000   .0000   .0000     .000
+!  We can see that states 1+2 as well as state 3 are labeled correctly.
+!  However, states 4+5 are wrong.  It is impossible for any degenerate
+!  state to resolve to the same symbol twice, and the correct answer for
+!  a delta-u state is B1u + B2u.
+!
+! 
+ $contrl scftyp=rhf dfttyp=b3lyp tddft=excite
+         runtyp=energy ispher=1 $end
+ $system mwords=6 $end
+ $dft    nrad=96 nleb=302 $end
+ $tddft  nrad=24 nleb=194 nstate=6 $end 
+ $guess  guess=huckel $end
+ $DATA
+N2 closed shell TDDFT test case...ground state's exp. Re used
+Dnh 2
+
+N           7.0   0.0000000000   0.0000000000  1.09768/2
+   accd
+   s 1 ; 1 0.01 1.0
+   p 1 ; 1 0.02 1.0
+   d 1 ; 1 0.04 1.0
+
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

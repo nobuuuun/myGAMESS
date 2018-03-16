@@ -1,0 +1,69 @@
+!  virial scaling test case dating from around 1991:
+!  M.Lehd and F.Jensen, J.Comput.Chem. 12, 1089-1096(1991)
+!
+!  Note that the built-in 3-21G* basis uses the 6-31G*
+!  exponent of 0.65 for sulfur.  Thus results differ
+!  a bit from those given in Table 5 of the reference.
+!
+!  the geometry optimization is followed by additional improvement
+!  of the exponent scaling ratio:
+!     NSERCH:   0  E=     -548.8452827156  R.M.S.=  0.0035574
+!     NSERCH:   1  E=     -548.8517739359  R.M.S.=  0.0016511
+!           ...snipped...
+!     NSERCH:  10  E=     -548.8526778201  R.M.S.=  0.0000108
+!        GEOMETRY CONVERGED, BUT VIRIAL ERROR IS STILL TOO LARGE
+!        CLEANING UP VIRIAL FOR FIXED GEOMETRY
+!     NSERCH:  10  E=     -548.8526778202  R.M.S.=  0.0000108
+!  resulting in: TOTAL SCALING SO FAR  1.00755850 and very accurate
+!  fullfillment of the virial theorem,
+!        VIRIAL RATIO (V/T) =       2.0000001779
+!
+!  This run takes 5 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!  results haven't changed since at least 2005.
+!
+!           unscaled         scaled
+!   rSO      1.4900985        1.4888424
+!   rCS      1.7907379        1.7915241
+!  aCSO    107.7669         107.8633
+! wCSOC    103.2655         103.2707
+!   E   -548.8466609842  -548.8526778446
+! scaling    1.0            1.00755850
+!
+ $contrl scftyp=rhf runtyp=optimize coord=zmt nzvar=24 $end
+ $system mwords=1 $end
+ $basis  gbasis=n21 ngauss=3 ndfunc=1 $end
+ $scf    vtscal=.true. $end
+ $statpt opttol=0.00005 $end
+ $guess  guess=huckel $end
+ $data
+DMSO test case
+Cs
+
+O
+S 1 rSO
+C 2 rCS  1 aCSO
+C 2 rCS  1 aCSO  3 wCSOC
+H 3 rCHa 2 aCHSa 1 wHCSOa
+H 3 rCHb 2 aCHSb 1 wHCSOb
+H 3 rCHc 2 aCHSc 1 wHCSOc
+H 4 rCHa 2 aCHSa 1 -wHCSOa
+H 4 rCHb 2 aCHSb 1 -wHCSOb
+H 4 rCHc 2 aCHSc 1 -wHCSOc
+
+rSO=1.4907
+rCS=1.7934
+aCSO=108.3
+wCSOC=-103.9
+rCHa=1.0833
+rCHb=1.0817
+rCHc=1.0823
+aCHSa=108.2
+aCHSb=109.8
+aCHSc=111.5
+wHCSOa=-58.9
+wHCSOb=60.5
+wHCSOc=179.0
+ $end
+
+! TRAVIS-CI SMALL
+

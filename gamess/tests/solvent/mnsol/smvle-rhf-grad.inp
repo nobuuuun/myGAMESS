@@ -1,0 +1,26 @@
+!   water in water...SMVLE/SVP numerical gradient
+!
+!   FINAL E= -76.0299677177, 12 iters, RMS grad= 0.022910631
+!   with TOTAL SMVLE FREE ENERGY, GSMVLE =  -76.02798105.
+!
+!   this run takes 351 seconds on 2.66 GHz Cloverton (22 Oct 2015)
+!        answers almost invariant since 2010
+!
+ $CONTRL SCFTYP=RHF RUNTYP=GRADIENT NUMGRD=.T. $END
+ $SYSTEM MWORDS=5 $END
+ $BASIS  GBASIS=N31 NGAUSS=6 NDFUNC=1 DIFFSP=.TRUE. $END
+
+ $SVP    NVLPL=5 DIELST=78.5 RHOISO=0.001 NPTLEB=1202 SMVLE=.T. $END
+
+ $DATA
+SMVLE/HF/6-31+G(d) numerical gradients for H2O in water               
+C1
+OXYG1           8.0         0.000000   0.125690  0.000000
+HYDR2           1.0         0.759053  -0.502759  0.000000
+HYDR3           1.0        -0.759053  -0.502758  0.000000
+ $END
+
+
+
+! TRAVIS-CI SMALL
+! 

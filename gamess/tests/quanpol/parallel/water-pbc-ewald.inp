@@ -1,0 +1,16 @@
+!   non-polarizable, rigid, water 504 (TIP5P-Ew) pure MM MD simulation
+!   with spherical Ewald summation
+!
+!   TOTAL     ENERGY =     -4100.5310874792  KCAL/MOL
+!   TOTAL     ENERGY =     -4100.5196741856  KCAL/MOL
+!
+ $CONTRL RUNTYP=MD COORD=FRAGONLY $END
+ $SYSTEM TIMLIM=9 MWORDS=40 $END
+ $QUANPO
+         DT=1.0D-15 TEMP0=298.15 NSTEP=10 JOUT=10 
+         NFFTYP=0 IADDWAT=1 ITYPWAT=504 IRATTLE=10 
+         XBOX=25  YBOX=25  ZBOX=25 SWRA=10 SWRB=12 IEWALD=2
+ $END
+
+! TRAVIS-CI SMALL
+

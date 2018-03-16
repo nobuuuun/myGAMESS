@@ -1,0 +1,43 @@
+!    charge penetration screening test case...CH2Cl2...75 AOs
+!
+!    The Stone analysis uses numerical integration, so the
+!    screening region can be bigger (e.g. VDWSCL 0.7 to 1.0)
+!    Bond midpoints are included in the multipole screening.
+!
+!    SINGLE EXPONENTIAL USED AS DAMPING FUNCTION:
+!      C= 5.8906  Cl=1.7415  H=1.6714;  C-Cl=2.1361  C-H=2.5727
+!    SINGLE GAUSSIAN USED AS DAMPING FUNCTION:
+!      C= 10.0    Cl=0.7166  H=0.9538;  C-Cl=0.6864  C-H=1.4443
+!
+!    This run takes 69 seconds on 2.66 GHz Cloverton ( 6 Oct 2015)
+!    answers hardly changed since September 2008
+!
+ $contrl units=bohr runtyp=makefp scftyp=rhf $end
+ $system mwords=7 $end
+ $basis  gbasis=n31 ngauss=6 npfunc=1 ndfunc=1 diffsp=.t. $end
+
+ $makefp frag=ch2cl2 screen=.true. $end
+ $damp   iscchg=0 $end
+ $dampgs
+Cl3=Cl2
+H5=H4
+bo31=bo21
+bo51=bo41
+ $end
+ $stone
+bigexp=4.0
+ $end
+ $pdc vdwscl=0.7 $end
+
+ $data
+Dichloromethane...Jan's geometry
+C1
+C1    6.0     3.3574284277   -.3412495247    .0000000000
+Cl2  17.0     2.4061480457   2.8628147162    .0000000000
+Cl3  17.0     6.6795375574   -.7080592634   -.0018899019
+H4    1.0     2.6223525333  -1.2200530922  -1.6767141740
+H5    1.0     2.6243255989  -1.2194672929   1.6778845300
+ $END
+
+! TRAVIS-CI SMALL
+

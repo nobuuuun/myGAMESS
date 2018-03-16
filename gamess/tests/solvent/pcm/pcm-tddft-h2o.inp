@@ -1,0 +1,32 @@
+!    water in water...PCM + TD-DFT gradient test (from Hui and Yali Wang)
+!
+!   STATE      ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+!             HARTREE          EV         X       Y       Z     STRENGTH
+!   0  A   -76.4015297370     .000
+!   1  A   -76.1022664040    8.143     -.0324  -.5429   .5680     .123
+!    0.9532 ELECTRONS IN SECONDARY TDDFT NATURAL ORBITALS.
+!    RMS gradient= 0.046414594
+!    electrostatic energy interaction with PCM= -11.42 KCAL/MOL
+!
+!   This run takes 17 seconds on 2.66 GHz Cloverton (9 Nov 2010)
+!   results unchanged since 2010
+!
+ $contrl scftyp=rhf dfttyp=b3lyp tddft=excite runtyp=gradient $end
+ $system mwords=2 $end
+ $basis  gbasis=N31 ngauss=6 diffsp=.T. ndfunc=1 $end
+ $scf    diis=.f. soscf=.t. dirscf=.t. $end
+ $tddft  nstate=1 mult=1 iroot=1 nrad=96 nleb=302 $end
+
+ $pcm    solvnt=water $end
+ $pcmcav radii=SUAHF $end
+
+ $data
+B3LYP water in water
+C1
+O     8.0     4.58078527     2.24981141    -0.77029562
+H     1.0     4.20494509     2.89729071    -0.17291246
+H     1.0     5.53590107     2.32537556    -0.64347303
+ $end
+
+! TRAVIS-CI SMALL
+

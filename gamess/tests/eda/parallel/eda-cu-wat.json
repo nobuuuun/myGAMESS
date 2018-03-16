@@ -1,0 +1,101 @@
+{
+  "name": "eda-cu-wat.log",
+  "validation": [
+    {
+      "header": "SELF-CONSISTENT FIELD ENERGY",
+      "name": "FINAL SCF ENERGY",
+      "value": "-1705.8877338567",
+      "type": "float",
+      "precision": 10,
+      "tolerance": 5e-08
+    },
+    {
+      "header": "SPIN",
+      "name": "S-SQUARED",
+      "value": "0.751",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "CMOEDA",
+      "name": "ES ENERGY OWN - CMOEDA",
+      "value": "-0.159684",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "EX ENERGY OWN - CMOEDA",
+      "value": "-0.032211",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "REP ENERGY OWN - CMOEDA",
+      "value": "0.089457",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "POL ENERGY OWN - CMOEDA",
+      "value": "-0.087795",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (HF/DFT) OWN - CMOEDA",
+      "value": "-0.190232",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "ES ENERGY ALL - CMOEDA",
+      "value": "-1630.331509",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "EX ENERGY ALL - CMOEDA",
+      "value": "-0.057412",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "REP ENERGY ALL - CMOEDA",
+      "value": "0.155497",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "POL ENERGY ALL - CMOEDA",
+      "value": "-0.053733",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    },
+    {
+      "header": "CMOEDA",
+      "name": "TOT. INTR. ENERGY (HF/DFT) ALL - CMOEDA",
+      "value": "-1630.287157",
+      "type": "float",
+      "precision": 6,
+      "tolerance": 0.0005
+    }
+  ]
+}

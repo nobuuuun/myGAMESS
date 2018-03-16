@@ -1,0 +1,123 @@
+! MODULE grd2_consts
+!>    @author  Vladimir Mironov
+!
+!>    @brief   Constants and formats that are used
+!>             throughout 2-electron gradient code
+!
+!     REVISION HISTORY:
+!>    @date _Jan, 2017_ Initial release
+!
+MODULE grd2_consts
+
+    USE prec, ONLY: fp
+
+    IMPLICIT NONE
+
+    REAL(KIND=fp), PARAMETER :: &
+        rln10=2.30258_fp, &
+        ten=10.0_fp, one=1.0_fp, &
+        tenm9=1.0e-09_fp, tenm11=1.0e-11_fp, &
+        tenm20=1.0e-20_fp, pt5=0.5_fp, tenm12=1.0e-12_fp, &
+
+        sqrt3  = 1.73205080756888d+00, &
+        sqrt5  = 2.23606797749979d+00, &
+        sqrt7  = 2.64575131106459d+00, &
+        sqrt53 = sqrt5/sqrt3
+
+    INTEGER, PARAMETER :: &
+        lenshl(5) = (/1,4,10,20,35/), &
+        lenvec=255
+
+
+    CHARACTER(LEN=*), PARAMETER :: &
+
+!       --- JKDER ---
+        fmt_jkder_9995 = '(&
+            &1X,"UMP2 MEMORY ALLOCATION FOR 2E- GRADIENT INTEGRALS."/&
+            &1X,"THERE ARE",I5," ALPHA OCCUPIED MO-S AND",I5,&
+            &" BETA OCCUPIED MO-S"/&
+            &1X,"MINIMUM MEMORY =",I15,&
+            &" (ONE OCCUPIED MO/DERIVATIVE INTEGRAL PASS)"/&
+            &1X,"MAXIMUM MEMORY =",I15,&
+            &" (ALL OCCUPIED MO-S IN A SINGLE PASS)"/&
+            &1X,"   MEMORY USED =",I15,", WITH ",I5,&
+            &" DERIVATIVE PASSES,",I5," MO-S/PASS"&
+        &)', &
+
+        fmt_jkder_9996 = '(&
+            &1X,"INCREASE MEMORY ",I15, &
+            &" WORDS TO REDUCE PASS COUNT BY ONE."&
+        &)', &
+
+        fmt_jkder_9997 = '(&
+            &/" NOT ENOUGH MEMORY FOR -2DM- CONTRIBUTION"/ &
+            &" INCREASE MEMORY SIZE BY AT LEAST ",I10," WORDS"&
+        &)', &
+
+        fmt_jkder_9998 = '(&
+            &1X,"MP2 MEMORY ALLOCATION FOR 2E- GRADIENT INTEGRALS.  (", &
+            &I5," OCCUPIED MO-S)"/ &
+            &1X,"MINIMUM MEMORY =",I15, &
+            &" (ONE OCCUPIED MO/DERIVATIVE INTEGRAL PASS)"/ &
+            &1X,"MAXIMUM MEMORY =",I15, &
+            &" (ALL OCCUPIED MO-S IN A SINGLE PASS)"/ &
+            &1X,"   MEMORY USED =",I15,", WITH ",I5, &
+            &" DERIVATIVE PASSES,",I5," MO-S/PASS"&
+        &)', &
+
+        fmt_jkder_screen_info = '(&
+            &1X,"THE COARSE/FINE SCHWARZ SCREENINGS SKIPPED ",I12,"/", &
+            &I12," BLOCKS."/ &
+            &1X,"THE NUMBER OF GRADIENT INTEGRAL BLOCKS COMPUTED WAS",I10&
+        &)', &
+
+        fmt_jkder_end = '(&
+            &1X,"...... END OF 2-ELECTRON GRADIENT ......"&
+        &)', &
+
+        fmt_jkder_errang = '(&
+            &1X,"ALAS, GRADIENT INTEGRALS PROGRAMMED FOR SPDFG ONLY"&
+        &)', &
+
+!       --- JKDMEM ---
+        fmt_jkdmem_errang = '(&
+           &/1X,"GRADIENTS ARE LIMITED TO G AND LOWER FUNCTIONS."/&
+        &)', &
+
+        fmt_jkdmem_lowmem = '(&
+           &/1X,"NOT ENOUGH MEMORY FOR THE TWO-ELECTRON GRADIENT"/&
+           &1X,"YOU WILL NEED AT LEAST ",I10," WORDS."&
+        &)', &
+
+        fmt_jkdmem_memstat = '(&
+           &1X,"USING ",I10," WORDS FOR 2E- DERIVATIVE",&
+           &" INTEGRAL CONTRIBUTIONS."&
+        &)', &
+
+        fmt_jkdmem_outptr = '( &
+           &" IWFN  ",I8," IXCH  ",I8," INIJG ",I8," IGINT ",I8," IFINT ",I8,&
+           &" ISINT ",I8," IIJKLG",I8,/,&
+           &" IDAB  ",I8," ICHRG ",I8," IXY   ",I8," IXZ   ",I8," IYZ   ",I8,&
+           &" IX    ",I8," IY    ",I8," IZ    ",I8,/,&
+           &" ISJ   ",I8," ISK   ",I8," ISL   ",I8,&
+           &" IGIJKL",I8," IGNKL ",I8," IGNM  ",I8,/,&
+           &" IDIJ  ",I8," IDKL  ",I8," IB00  ",I8," IB01  ",I8," IB10  ",I8,&
+           &" IFI   ",I8," IFJ   ",I8," IFK   ",I8," IFL   ",I8,/,&
+           &" ISII  ",I8," ISJJ  ",I8," ISKK  ",I8," ISLL  ",I8,&
+           &" ISIJ  ",I8," ISIK  ",I8," ISIL  ",I8," ISJK  ",I8,/&
+           &" ISJL  ",I8," ISKL  ",I8,/,&
+           &" IDIJSI",I8," IDIJSJ",I8," IDKLSK",I8," IDKLSL",I8,/,&
+           &" IABV  ",I8," ICV   ",I8," IRW   ",I8&
+        &)', &
+
+        fmt_jkdmem_poplemem = '(&
+           &" SPECIAL -SP- ROUTINES USED.",&
+           &" IWFN,IXCH,INEED,MAXFM = ",4I8&
+        &)', &
+
+        fmt_jkdmem_minmem = '(&
+           &/," THE MINIMUM MEMORY REQUIRED FOR THIS RUN IS ",I10,&
+           &" WORDS."&
+        &)'
+
+END MODULE grd2_consts

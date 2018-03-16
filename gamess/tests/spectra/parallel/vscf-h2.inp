@@ -1,0 +1,195 @@
+!   H2, using a basis from Mike's thesis, (10s,3p,1d)/[5s,3p,1d].
+!   For 2 electrons, full CI is equivalent to RHF + CI-SD, and
+!   as GAMESS knows it has gradients for the latter, it will run
+!   the preliminary geometry optimization and numerical hessian.
+!
+!   The FCI energy of H2 is -1.1730312040, at R=0.7408715
+!   The ROHF energy of H is -0.4999951120, so the FCI De= 4.71 eV.
+!   The FCI harmonic frequency is 4416.22 wavenumbers
+!
+!   This run is set to use 32 points on the 1D PES, to get w= 4176.51
+!
+!   This run takes 7 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!   results unchanged since 2008
+!
+!   -----------------------------------------------------------------
+!   Compare to W.Kolos and L.Wolniewicz,
+!      J.Chem.Phys. 41, 3663-73 and 3674-78 (1964)
+!      E=-1.1744746 at R=0.74143 A, De=4.748 eV
+!   Huber and Herzberg experimental data is:
+!      R=0.74144 A, D0=4.4781 eV, ZPE= 2179.3 cm-1
+!      we=4401.21, wexe=121.34, weye=0.813
+!   J.V.Foltz, D.H.Rank, T.A.Wiggins  J.Mol.Spectrosc. 21, 203-16(1966)
+!      give frequencies as w10= 4,161.181, w20= 8,087.00, w30= 11,782.35
+!   I.Dabrowski  Can.J.Phys. 62, 1639-1664(1984) gives all levels,
+!            v quanta   levels      levels means       G0(v)
+!            0 4401.21     0.00     quanta means delta-G0(v+1/2)
+!            1 4161.14  4161.14 
+!            2 3925.79  8086.93 
+!            3 3695.43 11782.36 
+!            4 3467.95 15250.31 
+!            5 3241.61 18491.92 
+!            6 3013.86 21505.78 
+!            7 2782.13 24287.91 
+!            8 2543.25 26831.16 
+!            9 2292.93 29124.09 
+!           10 2026.38 31150.47 
+!           11 1736.66 32887.13 
+!           12 1415.07 34302.20 
+!           13 1049.16 35351.36 
+!           14  622.02 35973.38 
+!
+!     32 point results are w1= 4,176.51,  w2= 8,151.18, w3= 12,132.38
+!   The FCI harmonic ZPE is 2208.11, from half the harmonic frequency,
+!   whereas the VSCF ZPE is 2185.68, from the energy of the v=0 level.
+!
+!   For ngrid=8, 16, 32, VSCF fundamental= 4120.25, 4174.97, 4176.51
+!
+ $contrl scftyp=rhf cityp=guga runtyp=vscf $end
+ $system mwords=2 $end
+ $guess  guess=huckel $end
+ $cidrt  mxnint=100000 group=c1 nfzc=0 ndoc=1 nval=39 iexcit=2 $end
+ $vscf   ngrid=32 iexc=1 readv=.false. $end
+ $data
+H2 molecule...basis set from my thesis...(10s,3p,1d)/[5s,3p,1d]
+Dnh 4
+
+H 1.0  0.0 0.0 0.3704357507
+  s 10
+     1      .07482946 1.95156267E-01
+     2      .19371702 4.53965418E-01
+     3      .50149074 3.05762078E-01
+     4     1.29824919 1.26532678E-01
+     5     3.36088154 4.32010073E-02
+     6     8.70058290 1.39530055E-02
+     7    22.52389501 4.13000009E-03
+     8    58.30940893 1.46823856E-03
+     9   150.95023164 2.52253630E-04
+    10   390.77694067 2.32656775E-04
+  s 1 ; 1   .07482946 1.0
+  s 1 ; 1   .19371702 1.0
+  s 1 ; 1   .50149074 1.0
+  s 1 ; 1  1.29824919 1.0
+  p 1 ; 1  0.3 1.0
+  p 1 ; 1  1.2 1.0
+  p 1 ; 1  5.4 1.0
+  d 1 ; 1 1.96 1.0
+
+ $end
+ $HESS
+ENERGY IS       -1.1730312040 E(NUC) IS        0.7142631998
+ 1  1 9.19487816E-06 0.00000000E+00 1.58978738E-06-9.19487816E-06 0.00000000E+00
+ 1  2-1.58978743E-06
+ 2  1 0.00000000E+00 9.14865176E-06 1.63486568E-06 0.00000000E+00-9.14865176E-06
+ 2  2-1.63486565E-06
+ 3  1 1.58978738E-06 1.63486568E-06 3.71919049E-01 1.58978743E-06 1.63486565E-06
+ 3  2-3.71919049E-01
+ 4  1-9.19487816E-06 0.00000000E+00 1.58978743E-06 9.19487816E-06 0.00000000E+00
+ 4  2-1.58978738E-06
+ 5  1 0.00000000E+00-9.14865176E-06 1.63486565E-06 0.00000000E+00 9.14865176E-06
+ 5  2-1.63486568E-06
+ 6  1-1.58978743E-06-1.63486565E-06-3.71919049E-01-1.58978738E-06-1.63486568E-06
+ 6  2 3.71919049E-01
+ $END
+ $VIBSCF PETYP= DIRECT
+   E0=       -1.1730312047   DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   1
+   DIAGV=         .0521967570 DIPOLE=    -.00000001    -.00000001    -.00000001
+MODE=   6
+ GRID=   2
+   DIAGV=         .0476715039 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   3
+   DIAGV=         .0431513471 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   4
+   DIAGV=         .0386569158 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   5
+   DIAGV=         .0342117550 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   6
+   DIAGV=         .0298427970 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   7
+   DIAGV=         .0255809038 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   8
+   DIAGV=         .0214614926 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=   9
+   DIAGV=         .0175252608 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  10
+   DIAGV=         .0138190378 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  11
+   DIAGV=         .0103967989 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  12
+   DIAGV=         .0073208837 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  13
+   DIAGV=         .0046634693 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  14
+   DIAGV=         .0025083591 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  15
+   DIAGV=         .0009531593 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  16
+   DIAGV=         .0001119363 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  17
+   DIAGV=         .0001184764 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  18
+   DIAGV=         .0011303126 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  19
+   DIAGV=         .0033337380 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  20
+   DIAGV=         .0069500975 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  21
+   DIAGV=         .0122437274 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  22
+   DIAGV=         .0195320165 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  23
+   DIAGV=         .0291982513 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  24
+   DIAGV=         .0417081931 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  25
+   DIAGV=         .0576317132 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  26
+   DIAGV=         .0776713585 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  27
+   DIAGV=         .1027005946 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  28
+   DIAGV=         .1338158490 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  29
+   DIAGV=         .1724085824 DIPOLE=     .00000000     .00000000     .00000000
+MODE=   6
+ GRID=  30
+   DIAGV=         .2202669167 DIPOLE=     .00000000     .00000000     .00000003
+MODE=   6
+ GRID=  31
+   DIAGV=         .2797219327 DIPOLE=     .00000000     .00000001     .00000000
+MODE=   6
+ GRID=  32
+   DIAGV=         .3538636210 DIPOLE=     .00000000     .00000000     .00000000
+ $END
+
+! TRAVIS-CI SMALL
+

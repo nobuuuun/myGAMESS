@@ -1,0 +1,85 @@
+{
+  "name": "ir-soc.log",
+  "validation": [
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -5",
+      "value": "-17826.657777111",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -4",
+      "value": "-17826.657777081",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -3",
+      "value": "-17826.654736307",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -2",
+      "value": "-17826.654736271",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES",
+      "name": "ENERGY : STATE -1",
+      "value": "-17826.654736269",
+      "type": "float",
+      "precision": 9,
+      "tolerance": 5e-07
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -5",
+      "value": "41752.833",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -4",
+      "value": "41850.685",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -3",
+      "value": "41850.685",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -2",
+      "value": "41850.691",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    },
+    {
+      "header": "STATE ENERGIES - SPIN-ORBIT COUPLING",
+      "name": "SPIN-ORBIT COUPLING ENERGY : STATE -1",
+      "value": "41850.691",
+      "type": "float",
+      "precision": 3,
+      "tolerance": 0.5
+    }
+  ]
+}

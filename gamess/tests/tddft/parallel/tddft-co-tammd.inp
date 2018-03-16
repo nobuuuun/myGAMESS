@@ -1,0 +1,30 @@
+!    Tamm/Dancoff gradient test, from Federico, in 2010.
+!
+!     FINAL R-PBE0 E= -113.1873774650, 17 iters
+!  STATE        ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+!              HARTREE          EV         X       Y       Z     STRENGTH
+!  0  A1   -113.1873774650     .000
+!  1  E    -112.8754647808    8.488      .6902   .2027   .0000     .108
+!  2  E    -112.8754647808    8.488     -.2027   .6902   .0000     .108
+!  3  A1   -112.8414016402    9.414      .0000   .0000   .0000     .000
+!    state 1 has RMS gradient= 0.084169928
+!
+!   this run takes 7 seconds using 2.66 GHz Cloverton ( 3 Apr 2015)
+!   results have not changed since 2010.
+! 
+ $contrl scftyp=rhf dfttyp=pbe0 tddft=excite runtyp=gradient $end
+ $system timlim=10 mwords=7 $end
+ $tddft  nstate=3 mult=1 iroot=1 tammd=.t. $end
+ $guess  guess=huckel $end
+ $basis  gbasis=N31 ngauss=6 diffsp=.T. ndfunc=1 $end
+ $data
+CO...excitation to the three lowest singlet states
+Cnv 4
+
+C    6.0   0.0   0.0   0.0
+O    8.0   0.0   0.0   1.1497297
+ $end 
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

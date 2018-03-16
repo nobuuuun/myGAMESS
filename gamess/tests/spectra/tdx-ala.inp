@@ -1,0 +1,131 @@
+!   alanine 6-31G(d), with 104 AOs, extended TDHF properties.
+!   This run produces dynamic ZVPA results, by producing
+!   the nuclear derivatives of frequency dependent alpha and beta
+!   polarizabilities, along each normal mode of vibration.
+!   Your reading lesson is
+!      O.Quinet, B.Champagne, B.Kirtman  J.Comput.Chem. 22, 1920(2001)
+!      O.Quinet, B.Kirtman, B.Champagne  J.Chem.Phys. 118, 505(2003)
+!      O.Quinet, B.Champagne, B.Kirtman  J.Mol.Struct(Theochem) 633, 199(2003)
+!
+!   Results from here and there in the very lengthy log file are
+!     FINAL E= -321.8679409838, 12 iterations
+!     harmonic FREQ= 56.85, 242.93, 254.56, ... 3731.20, 3811.05, 4051.16
+!
+!   Raman Intensity at omega =    .040000
+!   ----------------------------------------------------------------
+!     Freq  |Mult|  Intensity     (%)  |l-depol ratio|n-depol ratio
+!   ----------------------------------------------------------------
+!       56.8|  1.|          .43 (   .4)|      .748250|      .855999
+!      242.9|  1.|          .21 (   .2)|      .722385|      .838819
+!      254.6|  1.|         2.38 (  2.2)|      .749954|      .857113
+!     3731.2|  1.|        82.15 ( 76.8)|      .125011|      .222239
+!     3811.0|  1.|        56.82 ( 53.2)|      .716869|      .835089
+!     4051.2|  1.|        89.51 ( 83.7)|      .309706|      .472940
+!   ----------------------------------------------------------------
+! 
+!   Beta derivatives [in au]( -0.060000;  0.040000,  0.020000)
+!        mode    1(  56.8 cm^-1)
+!                   x                y                z
+!       xx.         0.021835        -0.012381        -0.009945
+!       xy.        -0.012367         0.013818...
+!
+!   Hyper Raman Intensity at omega =    .040000
+!      Intensity expressed in [Ang.^6 AMU^-1 StatVolt^-2]
+!   ----------------------------------------------------------------
+!     Freq  |Mult|  Intensity     (%)  |n-depol ratio|p-depol ratio
+!   ----------------------------------------------------------------
+!       56.8|  1.|        15.71 (   .3)|      .711739|      .552480
+!      242.9|  1.|       204.52 (  3.9)|      .796164|      .661356
+!      254.6|  1.|       146.90 (  2.8)|      .593370|      .421838
+!       ...snipped...
+!     3731.2|  1.|      1408.40 ( 26.8)|      .539711|      .369592
+!     3811.0|  1.|      1231.24 ( 23.4)|      .451675|      .291719
+!     4051.2|  1.|      5264.96 (100.0)|      .370057|      .227037
+!   ----------------------------------------------------------------
+!
+!    Polarizability s.cond order derivatives [in au]( -0.040000;  0.040000)
+!        dQ(   1)(w=  56.8 cm^-1)
+!                   x                y                z
+!        x.         0.000046         0.000004         0.000012
+!        y.         0.000004         0.000101        -0.000015
+!        z.         0.000012        -0.000015         0.000118
+!
+!    Gamma tensor [in au](  0.000000; -0.060000,  0.040000,  0.020000)
+!      xxxx      2558.392374  yyyy       969.374645  zzzz       760.364939
+!      xxyy       571.631027  yyxx       572.324955  zzxx        81.682028
+!      xxzz        81.454563  yyzz       287.693295  zzyy       287.584209
+!      xyxy       574.540120  yxyx       573.493016  zxzx        83.136329
+!      xzxz        83.468930  yzyz       287.892707  zyzy       288.057198
+!      xyyx       576.280850  yxxy       574.179360  zxxz        84.006039
+!      xzzx        84.661163  yzzy       288.016162  zyyz       288.346373
+!
+!      First Hyperpolarizability s.cond order derivatives
+!               [in au]( -0.060000;  0.040000,  0.020000)
+!      param.   1:dx(  1)dx(  1)
+!                   x                y                z
+!       xx.         0.776319        13.464907         6.638108
+!       xy.        13.408969       -15.336547...
+!
+!            projection onto modes:
+!      First Hyperpolarizability s.cond order derivatives
+!           [in au]( -0.060000;  0.040000,  0.020000)
+!        dQ(   1)(w=  56.8 cm^-1)dQ(   1)(w=  56.8 cm^-1)
+!                   x                y                z
+!       xx.         0.000013        -0.000045        -0.000042
+!       xy.        -0.000045        -0.000008         0.000028
+!       xz.        -0.000042         0.000028        -0.000063
+!                ...snipped...
+!
+!        dQ(  33)(w=4051.2 cm^-1)dQ(  33)(w=4051.2 cm^-1)
+!                   x                y                z
+!       xx.         0.123846         0.014074        -0.012914
+!       xy.         0.014114         0.003785        -0.000328
+!       xz.        -0.012888        -0.000322        -0.000452
+!       yx.         0.014181         0.003811        -0.000345
+!       yy.         0.003826         0.001244         0.000060
+!       yz.        -0.000350         0.000061         0.000037
+!       zx.        -0.012842        -0.000330        -0.000387
+!       zy.        -0.000340         0.000062         0.000043
+!       zz.        -0.000348         0.000046         0.000765
+!      x   :        0.076355  B(i)=(B(i,j,j)+B(j,i,j)+B(j,j,i))/5
+!      y   :        0.009245
+!      z   :       -0.007233
+!      BAR :       -0.050154  BAR=B(i)*MU(i)/|MU|
+! 
+!   This run took 15,456 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!
+ $contrl scftyp=rhf runtyp=tdhfx coord=zmt nzvar=33 $end
+ $system mwords=140 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+ $guess  guess=huckel $end
+ $tdhfx
+   FREQ2
+   DADX 0.04
+   DADX_NI 0.04
+   DBDX 0.04 0.02
+   DBDX_NI 0.04 0.02
+   RAMAN 0.04
+   HRAMAN 0.04
+   D2ADX2_NI 0.04
+   D2BDX2_NI 0.04 0.02
+ $end
+ $data
+alanine...2nd simplest amino acid...at RHF/6-31G(d) geometry
+C1
+O   
+C      1   1.1885504
+C      2   1.5219650  1   125.2335205
+O      2   1.3306365  3   112.3823939  1  -179.6032083  0
+H      4    .9525063  2   108.3129867  3   179.0016724  0
+N      3   1.4440998  2   113.0063540  1   -11.8213789  0
+H      6   1.0019387  3   110.6115974  2   -59.7134134  0
+H      6   1.0025818  3   109.9770069  2    57.0552496  0
+H      3   1.0847593  2   106.7453312  4    49.4273966  0
+C      3   1.5317986  2   109.9275386  4   -67.8848231  0
+H     10   1.0822854  3   108.9622200  2   178.5956687  0
+H     10   1.0827490  3   111.4550947  2    58.0276933  0
+H     10   1.0863894  3   110.6121207  2   -62.6648132  0
+ $end
+
+! TRAVIS-CI LARGE
+

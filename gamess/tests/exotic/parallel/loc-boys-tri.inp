@@ -1,0 +1,45 @@
+!   hexatriene...three conjugated but localizable pi bonds.
+!   6-311G(3df,2p) basis has 318 AOs, 282 MOs, 19 core
+!
+!   Boys and Edmiston/Ruedenberg localization yield "banana" bonds,
+!   while Pipek/Mezey yields signa/pi bonds (this is commonplace
+!   for these three procedures).  Standard test runs a Boys-like
+!   algorithm, implemented by Jacobi rotations on a different
+!   localization sum formula than Boys had suggested.
+!
+!   FINAL E= -231.8863168109 in 12 iters, but the point of test is:
+!       BOYS loc sums: initial= 0.000000 final= 2021.668410 Debye**2, 41 iters
+!   RUEDNBRG loc sums: initial= 4.601980 final=   10.849209 Hartree, 517 pairs
+!        POP loc sums: initial= 2.251960 final=    9.423823, 40 iters.
+!
+!   This run takes 69 seconds on 2.66 GHz Cloverton (30 Apr 2015)
+!          Boys/ER/pop localization step needs 0/73/0 secs
+!
+ $contrl scftyp=rhf runtyp=energy local=boys ispher=1 nzvar=36 $end
+ $system mwords=5 $end
+ $guess  guess=huckel $end
+ $basis  gbasis=n311 ngauss=6 ndfunc=3 nffunc=1 npfunc=2 $end
+ $zmat   izmat(1)=1,9,5,  1,5,1,  1,1,2,  1,2,6,  1,6,10,
+           1,9,13, 1,9,11, 1,5,7, 1,1,3, 1,2,4, 1,6,8, 1,10,12, 1,10,14 
+           2,9,5,1,  2,5,1,2,  2,1,2,6,  2,2,6,10,
+           2,13,9,5,  2,11,9,5,  2,7,5,1,  2,3,1,2,
+           2,4,2,1,  2,8,6,2,  2,12,10,6,  2,14,10,6,
+           3,9,5,1,2,  3,5,1,2,6,  3,1,2,6,10,
+           3,13,9,5,1,  3,11,9,5,1,  3,7,5,1,2,  3,3,1,2,6,
+           3,4,1,2,5,  3,8,6,2,1,  3,12,10,6,2,  3,14,10,6,2  $end
+ $data
+all trans hexatriene...RHF/6-311G(3df,2p) geometry
+Cnh 2
+
+CARBON      6.0    .0160550308    .6620495360    .0000000000
+HYDROGEN    1.0   -.9088685175   1.2143761439    .0000000000
+CARBON      6.0   1.2469966006   1.4481056985    .0000000000
+HYDROGEN    1.0   2.1697651157    .8933065541    .0000000000
+CARBON      6.0   1.2832058660   2.7666474087    .0000000000
+HYDROGEN    1.0    .3839590113   3.3560351433    .0000000000
+HYDROGEN    1.0   2.2131685980   3.3023456558    .0000000000
+ $end
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

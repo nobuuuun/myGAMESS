@@ -1,0 +1,70 @@
+{
+  "parse_header" : "FMO",
+  "parse_group" : [
+   {
+     "regex_string" : "^ Total energy of the molecule: Euncorr\\(2\\)=.*$",
+     "parse_name"   : "TOTAL ENERGY OF MOLECULE - FMO",
+     "parse_recipe" : "lastinstance_firstindex"
+   },
+   {
+     "regex_string" : "^ Energy gradient \\(hartree/bohr\\), no BSSE: G\\(1\\).*$",
+     "parse_name"   : "E. GRAD. G(1) (X) - FMO",
+     "parse_value_index" : 0,
+     "parse_precision" : 9,
+     "parse_line_offset" : 3,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "ATOM"
+   },
+   {
+     "regex_string" : "^ Energy gradient \\(hartree/bohr\\), no BSSE: G\\(1\\).*$",
+     "parse_name"   : "E. GRAD. G(1) (Y) - FMO",
+     "parse_value_index" : 1,
+     "parse_precision" : 9,
+     "parse_line_offset" : 3,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "ATOM"
+   },
+   {
+     "regex_string" : "^ Energy gradient \\(hartree/bohr\\), no BSSE: G\\(1\\).*$",
+     "parse_name"   : "E. GRAD. G(1) (Z) - FMO",
+     "parse_value_index" : 2,
+     "parse_precision" : 9,
+     "parse_line_offset" : 3,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "ATOM"
+   },
+   {
+     "regex_string" : "^ Energy gradient \\(hartree/bohr\\), no BSSE: G\\(2\\).*$",
+     "parse_name"   : "E. GRAD. G(2) (X) - FMO",
+     "parse_value_index" : 0,
+     "parse_precision" : 9,
+     "parse_line_offset" : 3,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "ATOM"
+   },
+   {
+     "regex_string" : "^ Energy gradient \\(hartree/bohr\\), no BSSE: G\\(2\\).*$",
+     "parse_name"   : "E. GRAD. G(2) (Y) - FMO",
+     "parse_value_index" : 1,
+     "parse_precision" : 9,
+     "parse_line_offset" : 3,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "ATOM"
+   },
+   {
+     "regex_string" : "^ Energy gradient \\(hartree/bohr\\), no BSSE: G\\(2\\).*$",
+     "parse_name"   : "E. GRAD. G(2) (Z) - FMO",
+     "parse_value_index" : 2,
+     "parse_precision" : 9,
+     "parse_line_offset" : 3,
+     "parse_multiple_lines" : 5,
+     "parse_multiple_label" : "ATOM"
+   },
+   {
+     "regex_string" : "^ Dipole moment D\\(xyz\\),DA\\(2\\)=.*$",
+     "parse_name"   : "DIPOLE MOMENT D(XYZ) - FMO",
+     "parse_value_index" : 3,
+     "parse_precision" : 7
+   }
+  ]
+}

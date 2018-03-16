@@ -1,0 +1,110 @@
+!   PF3...cc-pVTZ basis...CCSD w/o triples.
+!   150 AOs, 129 MOs, 21 occupied (8 are frozen core)
+!
+!                     SUMMARY OF RESULTS
+!     REFERENCE ENERGY:     -639.3033240499
+!       MBPT(2) ENERGY:     -640.1985802655   CORR.E=  -0.8952562156
+!       CCSD    ENERGY:     -640.2033784244
+!
+!   this run takes 449 seconds on 2.66 GHz Cloverton ( 6 Apr 2015)
+!
+!   ------------------------------------------------------------------
+!   Sean found a bug in linux gfortran library with this test case,
+!   note that the Linux energy below was odd man out.
+!   The resolution to this problem was updating Fedora 7's gfortran's
+!   run time on our Dell nodes to match the slightly newer version
+!   on Dynamo, where the run was OK.  
+!   The fix in libgfortran.so is believed to be for direct access I/O.
+!
+!  all machines get SCF energy= -639.3033240499
+!    correct CCSD corr. energy is -0.9000543745
+!       =====>     CCSD ENERGY: -640.1993311638  (Redhat, gfortran, MKL)
+!                  CCSD ENERGY: -640.2033784244  (SUSE, ifort, MKL)
+!                  CCSD ENERGY: -640.2033784244  (Redhat, xlf, ESSL)
+!                  CCSD ENERGY: -640.2033784244  (Solaris, f90, sunperf)
+!                  CCSD ENERGY: -640.2033784244  (HP-UX, f90, veclib)
+!  all machines get MBPT(2) E=  -640.1985802655, and numbers of integrals
+!  of each type (etc. ) look OK, but file size is a difference (below)
+!
+!  The gfortran run is bad in all versions I have tried,
+!         GAMESS VERSION = 24 MAR 2007 (R6) - #108
+!         GAMESS VERSION = 11 APR 2008 (R1) - #110
+!         GAMESS VERSION = 12 JAN 2009 (R5) - #120
+!         GAMESS VERSION = 25 MAR 2010 (R3) - #123 (latest)
+!  with the first of these being the oldest binary that I have
+!  on this machine.  The RedHat Fedora 7, gfortran, MKL versions 
+!  are identical as I have never changed the Dell system software.
+!
+ $contrl scftyp=rhf cctyp=ccsd runtyp=energy ispher=1 $end
+ $system mwords=380 memddi=40 $end
+!            problem does not manifest itself for CCD basis set.
+ $basis  gbasis=cct $end
+ $guess  guess=huckel $end
+ $scf    dirscf=.true. $end
+ $data                                                                          
+PF3...input given to me w/o C3v symmetry...CCSD iterations are bad???
+C1
+P          15.0   0.0000002452   0.0017766832   0.5096236079
+F           9.0   0.0000002700   1.3740757143  -0.2665911847
+F           9.0   1.1872866695  -0.6879258940  -0.2677215198
+F           9.0  -1.1872871846  -0.6879265036  -0.2677217038
+ $end
+
+integral transformation data from the Sun run:
+----- FROZEN CORE ENERGY =      -682.8135695291
+     26844884 NON-ZERO TRANSFORMED 2E- INTEGRALS WERE SORTED INTO FILE 72:
+         4161 [IJ|KL] TYPE,      126074 [AJ|KL] TYPE,
+       530184 [AB|IJ] TYPE,      970749 [IA|BJ] TYPE,
+      8132921 [AB|CI] TYPE,    17080795 [AB|CD] TYPE.
+there are no warnings about individual direct access records over 2 GBytes,
+although in total file 72's is 2,862,065,664 bytes on Sun,
+                               2,862,065,664 bytes on IBM,
+                               2,862,065,664 bytes on HP-UX,
+                               2,862,065,664 bytes on Linux/ifort
+                               2,851,999,200 bytes on Linux/gfortran
+
+Sun64 run prints CCSD iterations as
+ ITER:  1   CCSD    CORR. ENERGY:  -0.8779379215   CONV.: -1.0034E-02
+ ITER:  2   CCSD    CORR. ENERGY:  -0.8916942114   CONV.: -5.4051E-03
+ ITER:  3   CCSD    CORR. ENERGY:  -0.8922845479   CONV.: -2.0745E-03
+ ITER:  4   CCSD    CORR. ENERGY:  -0.8928668799   CONV.: -1.6432E-02
+ ITER:  5   CCSD    CORR. ENERGY:  -0.8928937818   CONV.: -1.6372E-02
+ ITER:  6   CCSD    CORR. ENERGY:  -0.8936022203   CONV.: -1.4892E-02
+ ITER:  7   CCSD    CORR. ENERGY:  -0.8959946088   CONV.: -9.3428E-03
+ ITER:  8   CCSD    CORR. ENERGY:  -0.8998931647   CONV.: -5.4185E-04
+ ITER:  9   CCSD    CORR. ENERGY:  -0.9000384804   CONV.: -6.1593E-05
+ ITER: 10   CCSD    CORR. ENERGY:  -0.9000547986   CONV.: -2.9609E-05
+ ITER: 11   CCSD    CORR. ENERGY:  -0.9000538632   CONV.: -6.8774E-06
+ ITER: 12   CCSD    CORR. ENERGY:  -0.9000546325   CONV.:  4.0609E-06
+ ITER: 13   CCSD    CORR. ENERGY:  -0.9000543984   CONV.: -1.0452E-06
+ ITER: 14   CCSD    CORR. ENERGY:  -0.9000543507   CONV.: -2.1216E-07
+ ITER: 15   CCSD    CORR. ENERGY:  -0.9000543700   CONV.: -1.0572E-07
+ ITER: 16   CCSD    CORR. ENERGY:  -0.9000543682   CONV.: -7.6122E-08
+ ITER: 17   CCSD    CORR. ENERGY:  -0.9000543745   CONV.: -7.6122E-08
+
+The linux/gfortran run matches both numbers in the first iteration,
+but only the energy in the 2nd iteration.
+ ITER:  1   CCSD    CORR. ENERGY:  -0.8779379215   CONV.: -1.0034E-02
+ ITER:  2   CCSD    CORR. ENERGY:  -0.8916942114   CONV.: -5.9407E-02
+ ITER:  3   CCSD    CORR. ENERGY:  -0.8920466578   CONV.: -5.8046E-02
+ ITER:  4   CCSD    CORR. ENERGY:  -0.8941495844   CONV.: -4.8804E-02
+ ITER:  5   CCSD    CORR. ENERGY:  -0.8954130452   CONV.: -4.7576E-02
+ ITER:  6   CCSD    CORR. ENERGY:  -0.9045983716   CONV.: -3.1486E-02
+ ITER:  7   CCSD    CORR. ENERGY:  -0.9090532284   CONV.:  2.0788E-02
+ ITER:  8   CCSD    CORR. ENERGY:  -0.9066144929   CONV.:  1.6909E-02
+ ITER:  9   CCSD    CORR. ENERGY:  -0.8968005793   CONV.:  3.4653E-03
+ ITER: 10   CCSD    CORR. ENERGY:  -0.8962659420   CONV.:  1.4774E-03
+ ITER: 11   CCSD    CORR. ENERGY:  -0.8960295480   CONV.:  3.0924E-04
+ ITER: 12   CCSD    CORR. ENERGY:  -0.8960098537   CONV.:  1.2480E-04
+ ITER: 13   CCSD    CORR. ENERGY:  -0.8960070663   CONV.:  3.7479E-05
+ ITER: 14   CCSD    CORR. ENERGY:  -0.8960069827   CONV.: -1.5344E-05
+ ITER: 15   CCSD    CORR. ENERGY:  -0.8960070523   CONV.: -7.2103E-06
+ ITER: 16   CCSD    CORR. ENERGY:  -0.8960070328   CONV.: -3.0318E-06
+ ITER: 17   CCSD    CORR. ENERGY:  -0.8960070741   CONV.: -1.2630E-06
+ ITER: 18   CCSD    CORR. ENERGY:  -0.8960070966   CONV.: -4.9204E-07
+ ITER: 19   CCSD    CORR. ENERGY:  -0.8960071050   CONV.: -1.6448E-07
+ ITER: 20   CCSD    CORR. ENERGY:  -0.8960071121   CONV.: -6.3554E-08
+ ITER: 21   CCSD    CORR. ENERGY:  -0.8960071140   CONV.: -6.3554E-08
+
+! TRAVIS-CI MEDIUM
+

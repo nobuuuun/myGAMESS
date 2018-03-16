@@ -1,0 +1,40 @@
+!    para-nitro-aniline excited states
+!
+!    ground state's FINAL E= -491.8744227053, 21 iters
+!    STATE        ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+!                HARTREE          EV         X       Y       Z     STRENGTH
+!    0  A'   -491.8744227053    0.000
+!    1  A''  -491.7155717900    4.323     0.0000  0.0000  0.0000    0.000
+!    2  A'   -491.6979285732    4.803    -0.0299  1.7938  0.0000    0.379
+!    3  A''  -491.6878059115    5.078     0.0000  0.0000  0.2057    0.005
+!    lambda diagnostics= 0.433, 0.612, 0.566
+!    excited state root 1 has RMS= 0.048076540
+!    dipoles for state 0 and 1 are 6.570341 and 4.582842, respectively.
+!
+!    This run takes 954 seconds on 2.66 GHz Cloverton (22 Jul 2014)
+!    DFT= 132, TD-DFT= 349, response= 236, grid grad= 182, 2e- grad=55
+!        (results unchanged since 2011)
+!
+ $CONTRL SCFTYP=RHF DFTTYP=camB3LYP RUNTYP=gradient TDDFT=EXCITE $END
+ $system mwords=8 $end
+ $BASIS  GBASIS=n31 ngauss=6 ndfunc=1 $end
+ $SCF    DIRSCF=.true. $end
+ $TDDFT  NSTATE=3 IROOT=1 MULT=1 $end
+ $data
+para-nitro-aniline...RHF/6-31G(d) geometry
+Cs
+
+O    8.0   0.0227232753  -2.6256345838   1.0573528191
+N    7.0   0.0167066259  -2.0663559371   0.0000000000
+C    6.0   0.0019156297  -0.6210574079   0.0000000000
+H    1.0  -0.0001967762  -0.4837887726   2.1271188243
+C    6.0  -0.0045508810   0.0626177290   1.2056049456
+C    6.0  -0.0150265732   1.4385760975   1.2052189059
+H    1.0  -0.0260356374   1.9728107328   2.1381928874
+C    6.0  -0.0196724739   2.1485746294   0.0000000000
+N    7.0  -0.0736335253   3.5237691275   0.0000000000
+H    1.0   0.2281272435   3.9829469111   0.8304137512
+ $end
+
+! TRAVIS-CI MEDIUM
+

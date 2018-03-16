@@ -1,0 +1,341 @@
+C*MODULE CASINO  *DECK CASINOFILE
+C> @brief      Print a CASINO compatible WFN file
+C>
+C> @author     Albert DeFusco
+C>             March 2014
+C>
+C> @details    Using information in common blocks avialbe at
+C>             the conclusion of WFN, this subroutine formats
+C>             INFOA, basis set and orbital data for use in CASINO
+C>             as a Trial Wavefunction. Note, this will only work
+C>             when using spherical basis functions.
+C>             It uses whatever orbitals are found in DAF15 at the
+C>             end of WFN.
+C>
+C> @date March 2014 - Albert DeFusco
+C>  - Subroutine created; works for d functions and single
+C>    determinant methods
+C> @date June 2014  - Albert DeFusco
+C>  - Pseudoatoms are expected to have a nuclear charge of Z+200
+C>
+      subroutine casinofile
+C
+C From Mike Towler:
+c Constant numerical factors in the real solid harmonics e.g. the '3' in the 3xy
+c d function, or '15' in the (15x^3-45^xy2) f function, may be premultiplied into
+c the orbital coefficients so that CASINO doesn't have to e.g. multiply by 3
+c every time it evaluates that particular d function. In practice the CASINO
+c orbital evaluators do this only for d functions, but *not for f and g* (this
+c may or may not be changed in the future if it can be done in a
+c backwards-consistent way)
+C
+      implicit double precision (a-h,o-z)
+      double precision,dimension(:,:),allocatable::eigenvec,spherical
+      logical casino
+      integer pos,spos
+      common /csnfile/ casino,nft121
+      LOGICAL GOPARR,DSKWRK,MASWRK
+C
+      PARAMETER (MXATM=2000, MXSH=5000, MXGTOT=20000,mxrt=100)
+C
+      CHARACTER*8 unrestricted
+C
+      COMMON /INFOA / NAT,ICH,MUL,NUM,NQMT,NE,NA,NB,
+     *                ZAN(MXATM),C(3,MXATM),IAN(MXATM)
+      COMMON /IOFILE/ IR,IW,IP,IJK,IJKT,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      COMMON /WFNOPT/ SCFTYP,VBTYP,DFTYPE,TDDFTYP,CITYP,CCTYP,
+     *                MPLEVL,MPCTYP
+C
+      DATA UHF,ROHF/8HUHF     ,8HROHF    /
+C
+      COMMON /NSHEL / EX(MXGTOT),CS(MXGTOT),CP(MXGTOT),CD(MXGTOT),
+     *                CF(MXGTOT),CG(MXGTOT),CH(MXGTOT),CI(MXGTOT),
+     *                KSTART(MXSH),KATOM(MXSH),KTYPE(MXSH),KNG(MXSH),
+     *                KLOC(MXSH),KMIN(MXSH),KMAX(MXSH),NSHELL
+
+      COMMON /ENRGYS/ ENUCR,EELCT,ETOT,SZ,SZZ,ECORE,ESCF,EERD,E1,E2,
+     *                VEN,VEE,EPOT,EKIN,ESTATE(MXRT),STATN,EDFT(2),EDISP
+
+      COMMON /BASSPH/ QMATOL,NSPHER
+      COMMON /ECP2  / CLP(400),ZLP(400),NLP(400),KFRST(MXATM,6),
+     *                KLAST(MXATM,6),LMAX(MXATM),LPSKIP(MXATM),
+     *                IZCORE(MXATM)
+C
+      nft121=121
+      CALL SEQOPN(NFT121,'CASINO','UNKNOWN',.FALSE.,'FORMATTED')
+C
+      if(nspher.lt.1) then
+         if (maswrk) write(6,129)
+         call abrt
+      endif
+C
+      unrestricted='.false.'
+      if(scftyp.eq.uhf .or. scftyp.eq.rohf) unrestricted='.true.'
+C
+C       initial data
+        if(maswrk) write(nft121,100)
+        if(maswrk) write(nft121,101) scftyp
+        if(maswrk) write(nft121,102) dftype
+        if(maswrk) write(nft121,103)
+        if(maswrk) write(nft121,104) unrestricted
+        if(maswrk) write(nft121,105) enucr/nat
+        if(maswrk) write(nft121,106) ne
+        if(maswrk) write(nft121,*)
+C       geometry
+        if(maswrk) write(nft121,107) nat
+        if(maswrk) write(nft121,108)
+        do i=1,nat
+          if(maswrk) write(nft121,109) C(1:3,i)
+        enddo
+        if(maswrk) write(nft121,110)
+        do i=1,nat
+          if(maswrk) write(nft121,111,advance='no') ian(i)
+        enddo
+        if(maswrk) write(nft121,*)
+        if(maswrk) write(nft121,112)
+        iwrap=0
+        do i=1,nat
+          if(iwrap.eq.4) then
+            write(nft121,*)
+            iwrap=0
+          endif
+          zi=zan(i)
+C         pseudoatoms are identified as z+200.
+C         LMAX is used because hydrogens can be pseudoatoms
+C         but izcore is still 0.
+          if(lmax(i) .ne. 0) zi=zi+200.d0
+          if(maswrk) write(nft121,113,advance='no') zi
+          iwrap=iwrap+1
+        enddo
+        if(maswrk) write(nft121,*)
+        if(maswrk) write(nft121,*)
+C       basis set
+        if(maswrk) write(nft121,114)
+        if(maswrk) write(nft121,115) nat
+        if(maswrk) write(nft121,116) nshell
+C       counting primitive functions
+        nprim = 0
+        ihityp=0
+        numd=0
+        do ii=1,nshell
+         i1 = kstart(ii)
+         i2 = i1+kng(ii)-1
+         nbfs = kmax(ii) - kmin(ii) + 1
+         if (nbfs.eq.1)  ityp = 1 ! s
+C        if (nbfs.eq.4)  ityp = 2 ! sp
+         if (nbfs.eq.3)  ityp = 2 ! p
+         if (nbfs.eq.6)  then
+           ityp = 3 ! d (cartesian)
+           numd=numd+1
+         endif
+         if (nbfs.eq.10) ityp = 4 ! f (cartesian)
+         if (nbfs.eq.15) ityp = 5 ! g (cartesian)
+         if (ityp.ge.ihityp) then
+           ihityp=ityp
+         endif
+         do ig = i1,i2
+            nprim = nprim+1
+         enddo
+        enddo
+        nspr=num-numd
+        if(maswrk) write(nft121,117) nqmt
+        if(maswrk) write(nft121,118) nprim
+        if(maswrk) write(nft121,119) ihityp
+C       print shell types
+        if(maswrk) write(nft121,120)
+        iwrap=0
+        do ii=1,nshell
+         i1 = kstart(ii)
+         i2 = i1+kng(ii)-1
+         nbfs = kmax(ii) - kmin(ii) + 1
+         if (nbfs.eq.1)  ityp = 1 ! s
+         if (nbfs.eq.4)  ityp = 2 ! sp
+         if (nbfs.eq.3)  ityp = 3 ! p
+         if (nbfs.eq.6)  ityp = 4 ! d (cartesian)
+         if (nbfs.eq.10) ityp = 5 ! f (cartesian)
+         if (nbfs.eq.15) ityp = 6 ! g (cartesian)
+         iwrap=iwrap+1
+         if(maswrk) write(nft121,'(i10)',advance='no') ityp
+         if(iwrap.eq.8) then
+           if(maswrk) write(nft121,*)
+           iwrap=0
+         endif
+        enddo
+        if(maswrk) write(nft121,*)
+C       print number of primitives
+        if(maswrk) write(nft121,121)
+        iwrap=0
+        do ii=1,nshell
+         i1 = kstart(ii)
+         i2 = i1+kng(ii)-1
+         nbfs = kmax(ii) - kmin(ii) + 1
+         nprimS=0
+         do ig=i1,i2
+           nprimS=nprimS+1
+         enddo
+         iwrap=iwrap+1
+         if(maswrk) write(nft121,'(i10)',advance='no') nprimS
+         if(iwrap.eq.8) then
+           if(maswrk) write(nft121,*)
+           iwrap=0
+         endif
+        enddo
+        if(maswrk) write(nft121,*)
+C       first shell per atom
+        if(maswrk) write(nft121,122)
+        lastat=0
+        iwrap=0
+        do ii=1,nshell
+         i1 = kstart(ii)
+         i2 = i1+kng(ii)-1
+         iat = katom(ii)
+         if(lastat.ne.iat) then
+           iwrap=iwrap+1
+           if(maswrk) write(nft121,'(i10)',advance='no') ii
+           if(iwrap.eq.8) then
+             if(maswrk) write(nft121,*)
+             iwrap=0
+           endif
+         endif
+         lastat=iat
+        enddo
+        if(maswrk) write(nft121,'(i10)') nshell+1
+        if(maswrk) write(nft121,123)
+        if(maswrk) write(nft121,'(1p,4e20.13)') ex(1:nprim)
+        if(maswrk) write(nft121,124)
+        iwrap=0
+        do ii=1,nshell
+         i1 = kstart(ii)
+         i2 = i1+kng(ii)-1
+         nbfs = kmax(ii) - kmin(ii) + 1
+         if (nbfs.eq.1)  ityp = 1 ! s
+         if (nbfs.eq.3)  ityp = 2 ! p
+         if (nbfs.eq.6)  ityp = 3 ! d (cartesian)
+         if (nbfs.eq.10) ityp = 4 ! f (cartesian)
+         if (nbfs.eq.15) ityp = 5 ! g (cartesian)
+         if (nbfs.eq.4)  ityp = 6 ! sp
+         do ig = i1,i2
+           iwrap=iwrap+1
+           if(ityp.eq.1) c1=cs(ig)
+           if(ityp.eq.2) c1=cp(ig)
+           if(ityp.eq.3) c1=cd(ig)
+           if(ityp.eq.4) c1=cf(ig)
+           if(ityp.eq.5) c1=cg(ig)
+           if(ityp.eq.6) c1=cs(ig)
+           if(ityp.eq.6) c2=cp(ig)
+           if(ityp.lt.6) then
+          if(maswrk) write(nft121,'(1p,e20.13)',advance='no') c1
+           endif
+           if(ityp.eq.6) then
+          if(maswrk) write(nft121,'(1p,2e20.13)',advance='no') c1,c2
+            endif
+           if(iwrap.eq.4) then
+             iwrap=0
+             if(maswrk) write(nft121,*)
+           endif
+         enddo
+        enddo
+        if(maswrk) write(nft121,*)
+        if(maswrk) write(nft121,125)
+        do ii=1,nshell
+         iat=katom(ii)
+         if(maswrk) write(nft121,'(1p,3e20.13)') c(1:3,iat)
+        enddo
+        if(maswrk) write(nft121,*)
+C
+C       multideterminant (coming soon)
+        if(maswrk) write(nft121,126)
+        if(maswrk) write(nft121,*)
+C
+C       orbitals
+        if(maswrk) write(nft121,127)
+        l1 = num
+C
+        allocate(eigenvec(l1,l1),spherical(nspr,nqmt))
+        call daread(idaf,ioda,eigenvec,l1*l1,15,0)
+C
+C       convert orbitals to spherical functions
+        iwrap=0
+        pos=1
+        spos=1
+        do ii=1,nshell
+         i1 = kstart(ii)
+         i2 = i1+kng(ii)-1
+         nbfs = kmax(ii) - kmin(ii) + 1
+         if(nbfs.lt.6) then
+           spherical(spos:spos+nbfs-1,1:nqmt) =
+     *     eigenvec(pos:pos+nbfs-1,1:nqmt)
+           pos=pos+nbfs
+           spos=spos+nbfs
+         else if(nbfs.eq.6) then
+           do j=1,nqmt
+             xx=eigenvec(pos,j)
+             yy=eigenvec(pos+1,j)
+             zz=eigenvec(pos+2,j)
+             xy=eigenvec(pos+3,j)
+             xz=eigenvec(pos+4,j)
+             yz=eigenvec(pos+5,j)
+C
+             yy1=0.5d0*1.d0/sqrt(3.d0)*(xx-yy)
+             zz1=1.d0/(sqrt(3.d0)*2.d0) * (1.d0/3.d0) * (2.d0*zz-xx-yy)
+C
+             spherical(spos,j)   = zz1
+             spherical(spos+1,j) = xz
+             spherical(spos+2,j) = yz
+             spherical(spos+3,j) = yy1
+             spherical(spos+4,j) = xy
+           enddo
+           pos=pos+nbfs
+           spos=spos+nbfs-1
+C f functions and beyond are not currently supported
+         else
+            if(maswrk) write(6,128)
+            call abrt
+         endif
+        enddo
+C
+        if(maswrk) write(nft121,'(1p,4e20.13)') spherical(:,:)
+        if(maswrk) write(nft121,*)
+        if(maswrk) write(nft121,*)
+C
+  100 format('TITLE',/,/,'BASIC INFO',/,'------------',/,
+     x       'Generated by:',/,'GAMESS')
+  101 format('Method:',/,A8)
+  102 format('DFT functional:',/,A8)
+  103 format('Periodicity',/,'0')
+  104 format('Spin unrestricted:',/,a8)
+  105 format('Nuclear repulsion energy (au/atom):',/,f20.10)
+  106 format('Number of electrons',/,i8)
+  107 format('GEOMETRY',/,'-------',/,
+     x       'Number of atoms:',/,i8)
+  108 format('Atomic positions (au)')
+  109 format(1p,3e20.13)
+  110 format('Atomic numbers for each atom')
+  111 format(i10)
+  112 format('Valence charges for each atom')
+  113 format(1p,e20.13)
+  114 format('BASIS SET',/,'---------')
+  115 format('Number of Gaussian centres',/,i8)
+  116 format('Number of shells',/,i8)
+  117 format('Number of basis functions (AO)',/,i8)
+  118 format('Number of Gaussian primitives',/,i8)
+  119 format('Highest shell angular momentum',
+     x       ' (s/p/d/f/g...  1/2/3/4/5...)',/,i8)
+  120 format('Code for shell types (s/sp/p/d : 1/2/3/4)')
+  121 format('Number of primitive Gaussians in each shell')
+  122 format('Sequence number of first shell on each centre')
+  123 format('Exponents of Gaussian primitives')
+  124 format('Correctly normalised contraction coefficients')
+  125 format('Position of each shell (au)')
+  126 format('MULTIDETERMINANT INFORMATION',/,
+     x       '----------------------------',/,
+     x       'GS')
+  127 format('ORBITAL COEFFICIENTS',/,
+     x       '-----------------------')
+  128 format(/,'ERROR: F FUNCTIONS ARE NOT SUPPORTED BY',
+     x          ' THE CASINO WFN WRITER')
+  129 format(/,'ERROR: THE CASINO WFN WRITER ONLY WORKS',
+     x          ' WITH SPHERICAL BASIS FUNCTIONS')
+C
+      end

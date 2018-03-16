@@ -1,0 +1,82 @@
+!  An unsymmetrical isomer of glycine, namely Jan's GLY12 isomer.
+!  Test of properties at the CCSD level (the whole nine yards).
+!  There are 100 AOs, 5 frozen core, and 15 correlated MO's.
+!
+!  We are using ACES2's coordinate orientation, to help compare to it.
+!  This run will not match the ACES test exactly, for GAMESS produces
+!  the expectation value density, and ACES a relaxed density for CCSD.
+!  The dipole can be checked by running ACES for EOM-CCSD and asking
+!  for the expectation density, but that ACES run does not appear to
+!  pay attention to the PROP=FIRST_ORDER that selects many properties.
+!
+!   FINAL E= -282.8324072998, 13 iters.
+!  E(CCSD) = -283.6643843160, 20 iters, T1 diagnostic= 0.01446178
+!  lambda vector takes 7 iters, LA2= -0.05986 (for 13**2 -> 16**2).
+!  there are 29.49 e- in principal NOs, 0.51 excited to s.condary NOs.
+!
+!  CCSD level properties include:
+!                    dipole: 1.491789    1.422222    1.464336
+!                quadrupole:  zz component -3.094391
+!                  octupole: xyz component  1.583749
+!  at Nitrogen (the 5th atom),
+!          electron density: 191.258598
+!   electrostatic potential: -18.357860
+!            electric field:  -0.000174  -0.015400  -0.076978
+!   electric field gradient: yz component 0.455776
+!
+!  This run takes 297 seconds on a 2.66 GHz Cloverton ( 3 Apr 2015)
+!  This run takes about 2.2 GBytes of disk space.
+!  numerical results unchanged since Feb 2006
+!
+!  ------------------------------------------------------------------
+!  with the relaxed density, ACES gets
+!   dipole= X = .6058450768   Y = .5641442301   Z = .5820669634 (a.u.)
+!   yz field gradient= -.4568667562, potential= -18.3558544734
+!
+ $contrl scftyp=rhf cctyp=ccsd runtyp=energy coord=zmt nzvar=24 $end
+ $system mwords=50 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 npfunc=1 $end
+ $guess  guess=huckel $end
+
+!   and this is how we ask for all nine yards...
+ $ccinp  ccprp=.true. $end
+ $ELMOM  IEMOM=3 $END
+ $ELDENS IEDEN=1 $END
+ $ELPOT  IEPOT=1 $END
+ $ELFLDG IEFLD=2 $END
+
+There is a Z-matrix below, but read ACES' exact orientation, in a.u.
+
+ $contrl coord=unique nzvar=0 units=bohr $end
+ $data
+glycine...H2N-CH2-COOH...Jan's GLY12 isomer...AM1 structure...ACES pr.axis
+C1
+O 8    -2.877091949897   -1.507375565672    -.398996049903
+C 6     -.999392972049    -.222326510867     .093940021615
+C 6     1.633098051399   -1.126399113321     .723677865007
+O 8    -1.316707936360    2.330484008081     .195537896270
+N 7     3.588772131647     .190046035276    -.635572324857
+H 1     1.738434758147   -3.192291478262     .201142047999
+H 1     1.805107822402    -.972547254301    2.850386782716
+H 1     3.367427816470    2.065392438845    -.521139962778
+H 1     5.288732713155    -.301105855518     .028508872837
+H 1    -3.050135067115    2.755707159769    -.234244183166
+ $end
+
+ $data
+glycine...H2N-CH2-COOH...Jan's GLY12 isomer...AM1 structure
+C1
+O   
+C      1   1.2319822
+C      2   1.5101430  1   128.0142577
+O      2   1.3623465  3   114.7794523  1   177.0939479  0
+N      3   1.4400283  2   113.5446714  1   133.2493647  0
+H      3   1.1290280  2   107.3526869  1    13.8346450  0
+H      3   1.1320125  2   105.7101923  1  -101.2753236  0
+H      5   1.0011122  3   111.4230671  2    49.4751488  0
+H      5   1.0001450  3   110.1930118  2   171.8378280  0
+H      4    .9714831  2   109.6830183  3   179.9117008  0
+ $end
+
+! TRAVIS-CI MEDIUM
+

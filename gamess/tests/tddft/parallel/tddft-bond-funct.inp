@@ -1,0 +1,73 @@
+!  test of DFT grid for bond functions.
+!
+!  We add a bond function for the heck of it, note that sparkles and
+!  bond functions are given zero Bragg/Slater radii (i.e. no grid).
+!  Philosophy is that at bond center, we already have Becke fuzziness
+!  merging two grids, so another grid wouldn't help much.
+!  And anyway, what radius would we pick for that center?
+!
+!   DFT level, with BF:
+!                         SUMMARY OF TDDFT RESULTS                              
+!  STATE             ENERGY     EXCITATION  TRANSITION DIPOLE, A.U.  OSCILLATOR
+!  0 ->             HARTREE          EV         X       Y       Z     STRENGTH
+!  0  A1        -113.2889161135    0.000
+!  1  E         -113.0222271797    7.257     0.4264  0.3013  0.0000    0.0485
+!  2  E         -113.0222271797    7.257    -0.3013  0.4264  0.0000    0.0485
+!  3  A1        -113.0063338771    7.689     0.0000  0.0000  0.0000    0.0000
+!
+!   This test takes 2 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!
+!  ---------------------------------------------------------------------------
+!   SCF level, with BF: -112.7037031664, w/o: -112.7019789108, diff= 0.001724
+!   DFT level, with BF: -113.2889161135, w/o: -113.2861753787, diff= 0.002741
+!
+!   SCF level, with BF:
+!  0  A1        -112.7037031664    0.000
+!  1  A1        -112.4477651414    6.964     0.0000  0.0000  0.0000    0.000
+!  2  E         -112.4330885809    7.364     0.2353 -0.4523  0.0000    0.047
+!  3  E         -112.4330885809    7.364     0.4523  0.2353  0.0000    0.047
+!   SCF level, w/o BF:
+!  0  A1        -112.7019789108    0.000
+!  1  A1        -112.4462971366    6.957     0.0000  0.0000  0.0000    0.000
+!  2  E         -112.4317505388    7.353    -0.4838 -0.1703  0.0000    0.047
+!  3  E         -112.4317505388    7.353     0.1703 -0.4838  0.0000    0.047
+!   DFT level, with BF:        [EXPECTED RESULTS]
+!  0  A1        -113.2889161135    0.000
+!  1  E         -113.0222271797    7.257     0.4264  0.3013  0.0000    0.048
+!  2  E         -113.0222271797    7.257    -0.3013  0.4264  0.0000    0.048
+!  3  A1        -113.0063338771    7.689     0.0000  0.0000  0.0000    0.000
+!   DFT level, w/o BF:
+!  0  A1        -113.2861753787    0.000
+!  1  E         -113.0196720479    7.252     0.5019  0.1589  0.0000    0.049
+!  2  E         -113.0196720479    7.252     0.1589 -0.5019  0.0000    0.049
+!  3  A1        -113.0034920957    7.692     0.0000  0.0000  0.0000    0.000
+!
+ $contrl scftyp=rhf dfttyp=blyp tddft=excite runtyp=energy $end
+ $system timlim=40 mwords=7 $end
+ $dft    nrad=96 nthe=12 nphi=24 $end
+ $tddft  nrad=24 nthe=8  nphi=16 nstate=3 mult=1 iroot=1 $end
+ $guess  guess=huckel $end
+---$basis  gbasis=N31 ngauss=6 diffsp=.t. ndfunc=1 $end
+ $data
+CO...excitation to the three lowest singlet states
+Cnv 4
+
+C    6.0   0.0   0.0   0.0
+  n31 6
+  l 1 ; 1 0.0438 1.0 1.0
+  d 1 ; 1 0.80 1.0
+
+O    8.0   0.0   0.0   1.2542088
+  n31 6
+  l 1 ; 1 0.0845 1.0 1.0
+  d 1 ; 1 0.80 1.0
+
+X    0.0   0.0   0.0  1.2542088/2
+  s 1 ; 1 0.30 1.0
+  p 1 ; 1 0.20 1.0
+
+ $end 
+
+! TRAVIS-CI SMALL
+
+! TRAVIS-CI SKIP

@@ -1,0 +1,93 @@
+!   This computation is on the triplet state of a biradical,
+!   H2Si2O2, using the geometry of the singlet biradical.
+!   The 6-31G(d) problem size is small, just 72 AOs and 72 MOs, of which
+!   core=12, valence=12 alpha and 10 beta, virtual=48 alpha and 50 beta.
+!
+!   Molecule is from
+!      M.W.Schmidt, K.A.Nguyen, M.S.Gordon, J.A.Montgomery,
+!      J.Am.Chem.Soc.  113, 5998-6001(1991).
+!   This example was used in Table 11 of
+!      M.Wloch, J.R.Gour, P.Piecuch
+!      J.Phys.Chem.A 111, 11359-82(2007)
+!   to illustrate CCSD is orbital invariant, unless some orbitals
+!   are removed from the calculation as "frozen cores", but that
+!   CR-CCL's triples do indeed depend on the canonicalization.
+!
+!   The geometry in this test is the TCSCF singlet ground state,
+!   which is a near perfect biradical, C1= 0.708575, C2= -0.705635
+!   singlet= -728.7681499744 at its optimal geometry, so triplet's
+!   FINAL E= -728.7692583095 would be a bit more lower if optimized.
+!
+!   the correlated energy results are
+!     CCSD                       E=     -729.2805759018
+!     CR-CC(2,3),A OR CCSD(2)_T  E=     -729.2934500445
+!     CR-CC(2,3) OR CR-CCSD(T)_L E=     -729.2954146313
+!   and these are the results you will see from the standard input file.
+!
+!   Total run time is 183 seconds on 2.66 GHz Cloverton ( 3 Apr 2015)
+!   results have not changed since May 2007
+!   --------------------------------------------------------------------
+!   Still using 12 frozen cores, but changing to Guest/Saunders'
+!   canonicalization changes the results very slightly, to
+!     CCSD                       E=     -729.2805698440
+!     CR-CC(2,3) OR CR-CCSD(T)_L E=     -729.2954258828
+!   because we freeze off 12 slightly different orbitals.
+!
+!   Using no frozen cores, and two different canonicalizations,
+!   does give invariant results for the CCSD, but not triples,
+!     CCSD                       E=     -729.3073278874  (Roothaan)
+!     CCSD                       E=     -729.3073278878  (Guest/Saunders)
+!     CR-CC(2,3) OR CR-CCSD(T)_L E=     -729.3227325741  (Roothaan)
+!     CR-CC(2,3) OR CR-CCSD(T)_L E=     -729.3227502622  (Guest/Saunders)
+!   The amplitudes are different, of course, for different orbitals.
+!
+!   resources required:
+!        memory needed by pass 1  :      2382132 words
+!        memory needed by pass 2  :      5201604 words
+!        memory needed by pass 3-7:      3761604 words
+!        memory needed by ccsd    :      7841423 words
+!        memory needed by onehbar :      5374576 words
+!        memory needed by twohbar :      8788388 words
+!        memory needed by openleft:      5762276 words                  methods
+!        memory needed by mm(2,3) :     13660180 words, code=high memory  (1)
+!        memory needed by mm(2,3) :      7336104 words, code=high disk    (2)
+!        memory needed by mm(2,3) :      9160180 words, code=high I/O     (3)
+!
+!   startup, SCF, transformation =   4 s.econds
+!   integral preparations        =   2
+!   open shell CCSD              = 180
+!   H-bar elements               =  26
+!   left eigenstate iterations   =  86
+!   MM(2,3) triples computation  = 108, 120, 238 (method 1,2,3), so
+!
+!   Use of method 1/2/3 for the CC(2,3) step requires 14/9/10 Mwords.
+!
+ $contrl scftyp=rohf mult=3 cctyp=cr-ccl nzvar=12 $end
+ $system mwords=9 $end
+ $zmat   izmat(1)=1,1,2,  1,1,3,  1,1,4,  1,2,3,  1,2,4,  3,4,1,2,3,
+                  1,1,5,  1,2,6,  2,5,1,2,  2,6,2,1,  3,6,2,1,4,
+                  3,5,1,2,3 $end
+ $ccinp  ncore=12 iopmet=0 $end
+ $guess  guess=huckel norb=72 $end
+ $basis  gbasis=n31 ngauss=6 ndfunc=1 $end
+
+!               input for TCSCF description of the singlet state
+--- $scf    nco=22 nseto=0 npair=1 cicoef(1)=0.90,-0.20 $end
+
+!               by default, this test runs Roothaan canonicalization!
+!               next would do Guest/Saunders canonicalization for the ROHF
+--- $scf    couple=.true. alpha(1)=0.5,0.5,0.5  beta(1)=0.5,0.5,0.5 $end
+!               next would do Davidson canonicalization for the ROHF
+--- $scf    couple=.true. alpha(1)=0.5, 1.0, 1.0  beta(1)=0.5, 0.0, 0.0 $end
+
+ $data
+TCSCF geometry of Si2O2H2...used in corresponding triplet state
+Cnv 2
+
+SILICON    14.0   1.2068010643   0.0000000000  -0.0173723587
+OXYGEN      8.0   0.0000000000   1.1722030788  -0.0066411809
+HYDROGEN    1.0   2.0196267999   0.0000000000  -1.2587152251
+ $end
+
+! TRAVIS-CI MEDIUM
+

@@ -1,0 +1,29 @@
+!
+! The test case computes the excited-to-excited transition dipole moments and 
+! oscillator strengths of the HF molecule with TPSS/6-311G(p)++. Below are some
+! of the expected results:
+!
+! TRANSITION        EXCITATION            TRANSITION DIPOLE, A.U.     OSCILLATOR
+!                       EV              X       Y       Z       DIP    STRENGTH
+!  1  ->  9           6.022          0.0000  0.0000 -1.3848   1.3848    0.2829
+!  1  -> 10           6.022          0.0000  0.0000  0.0000   0.0000    0.0000
+!  2  ->  9           6.022          0.0000  0.0000  0.0000   0.0000    0.0000
+!  2  -> 10           6.022          0.0000  0.0000  1.3848   1.3848    0.2829
+! 17  -> 18           1.878          0.0000  0.0000 -1.5564   1.5564    0.1114
+!
+! (See the comment in hf1.inp on how to interpret the oscillator strengths of
+! degenerate transitions.)
+!
+ $contrl units=angs dfttyp=tpss tddft=excite units=bohr $end
+ $tddft mult=1 nstate=20 $end
+ $basis gbasis=n311 ngauss=6 ndfunc=0 npfunc=1 diffs=.t. diffsp=.t. $end
+ $data
+  
+c1
+       H     1     0.0  0.0  0.7    
+       F     9     0.0  0.0 -0.7  
+ $end
+
+! TRAVIS-CI SMALL
+
+ !TRAVIS-CI SKIP

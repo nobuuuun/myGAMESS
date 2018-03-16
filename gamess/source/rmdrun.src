@@ -1,0 +1,515 @@
+! 25 Apr 15 - SRP - Created source file for FMO/RMD multistate method
+!***********************************************************************
+!*MODULE RMDDRVR   *DECK RMDDRVR
+!>
+!>     @brief energy and forces for MS-RMD MD
+!>
+!>     @details Calculate energy and forces for one step during MD.
+!>
+!>     @author Spencer R. Pruitt
+!>
+!> @date : March 29, 2015 - Spencer R. Pruitt
+!>         Created subroutine
+!>
+!> @param C : coordinates
+!>
+!> @param NAT : number of atoms
+!>
+!> @param ian : atomic number
+!>
+!> @param nfg :  number of fragments
+!>
+!> @param e : energy
+!>
+!> @param eg :  gradient
+!>
+!***********************************************************************
+      SUBROUTINE RMDDRVR(C,NAT,IAN,NFG,E,EG)
+
+      USE RMDDAT
+
+      IMPLICIT NONE
+
+      logical :: MYJOB
+      logical :: GOPARR, DSKWRK, MASWRK
+      logical :: ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+
+      integer, parameter :: MXATM=2000
+      integer, parameter :: STATE_CAP=14
+      integer, parameter :: DDI_WORLD=0, DDI_GROUP=1, 
+     $                      DDI_SUPERWORLD=-1, DDI_SUBGROUP=4
+      double precision, parameter :: ZERO=0.0d+00
+
+      integer :: MAX_STATES
+      integer :: ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     $           MEUNIV,NPUNIV,IBTYP,IPTIM,NSUBGR,NPROC,MASTER,ME
+      integer :: NAT,NFG,IAN(MXATM)
+      integer :: IR,IW,IP,IS,IPK,IDAF,NAV,IODA
+      integer :: I,J,K,IJ
+      integer :: IST, JST
+      integer :: MINE,LGROUP
+      integer :: NAT_SPACE,NFG_SPACE
+      integer :: ISCHM(30)
+      integer, allocatable :: IRMDST(:)
+      integer, allocatable :: IRMDSTF(:)
+      integer, allocatable :: TMPDAT(:)
+      integer, allocatable :: TMPCHG(:)
+      integer, allocatable :: TMPIAN(:)
+
+      double precision :: C(3*MXATM),E,EG(*)
+      double precision, allocatable :: TMP1(:)
+      double precision, allocatable :: TMP2(:)
+      double precision, allocatable :: E_NEW(:)
+      double precision, allocatable :: G_NEW(:)
+      double precision, allocatable :: RMD_G(:)
+      double precision, allocatable :: RMD_E(:)
+
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,npglob,nnglob,JBTYP,
+     $                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     $                MeUniv,NPUniv
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+
+      LOGICAL FIRST
+      DATA FIRST /.TRUE./
+      SAVE FIRST
+
+      if(.not.allocated(IRMDST))  allocate(IRMDST(1))
+      if(.not.allocated(IRMDSTF))  allocate(IRMDSTF(1))
+      if(.not.allocated(TMPDAT))  allocate(TMPDAT(30*NAT))
+      if(.not.allocated(TMPCHG))  allocate(TMPCHG(30*NFG))
+      if(.not.allocated(TMPIAN))  allocate(TMPIAN(NAT))
+
+      if(.not.allocated(TMP1))  allocate(TMP1(1))
+      if(.not.allocated(TMP2))  allocate(TMP2(3*NAT))
+      if(.not.allocated(E_NEW)) allocate(E_NEW(1))
+      if(.not.allocated(G_NEW)) allocate(G_NEW(3*NAT))
+      if(.not.allocated(RMD_G)) allocate(RMD_G(3*30*NAT))
+      if(.not.allocated(RMD_E)) allocate(RMD_E(30))
+
+      NAT_SPACE = STATE_CAP*NAT
+      NFG_SPACE = STATE_CAP*NFG
+
+      IF(FIRST) THEN
+         IRMDSTEP = 1
+         FIRST=.FALSE.
+      ELSE
+         IRMDSTEP = IRMDSTEP + 1
+      ENDIF
+
+      IRMDST(1) = 1
+      IRMDSTF(1)= 1
+      ISCHM(:)  = 0
+      TMPDAT(:) = 0
+      TMPCHG(:) = 0
+      TMPIAN(:) = 0
+
+      TMP1(:)  = ZERO
+      TMP2(:)  = ZERO
+      E_NEW    = ZERO
+      G_NEW(:) = ZERO
+      RMD_E(:) = ZERO
+      RMD_G(:) = ZERO
+
+      DO I=1,NAT_SPACE
+         TMPDAT(I) = IRMDDAT(I)
+      ENDDO
+
+      DO I=1,NFG_SPACE
+         TMPCHG(I) = IRMDCHG(I)
+      ENDDO
+
+      DO I=1,NAT
+         TMPIAN(I) = IAN(I)
+      ENDDO
+
+!      CALL DDI_BCAST(9989,'F',C,3*NAT,MASTER)
+
+      IF(MASWRK) WRITE(IW,2000)
+
+      IF(NHOPS.EQ.1) MAX_STATES=5
+      IF(NHOPS.EQ.2) MAX_STATES=10
+      IF(NHOPS.EQ.3) MAX_STATES=12
+      IF(NHOPS.EQ.4) MAX_STATES=14
+      IF(NHOPS.GT.4) THEN
+         WRITE(IW,2250)
+         CALL FLSHBF(6)
+         CALL ABRT
+      ENDIF
+
+      CALL STATE_SEARCH(IRMDST(1),NFG,NHOPS,MAX_STATES,
+     $                  TMPDAT,TMPCHG,C,TMPIAN,NAT)
+
+
+      !IRMDST(1) MUST BE EQUAL TO THE NUMBER OF 
+      !GDDI GROUPS (NGROUPS) IF USING ML-GDDI
+      IF(IRMDST(1).NE.NGROUPS.AND.MLGDDI) THEN
+         WRITE(IW,2300)
+         CALL FLSHBF(6)
+         CALL ABRT
+      ENDIF
+
+      !STORE IRMDDAT AND IRMDCHG IN RMDDAT MODULE
+      DO I=1,NAT_SPACE
+         IRMDDAT(I) = TMPDAT(I)
+      ENDDO
+
+      DO I=1,NFG_SPACE
+         IRMDCHG(I) = TMPCHG(I)
+      ENDDO
+
+      !IRMDSTF IS FINAL NUMBER OF STATES TO BE INCLUDED WHEN
+      !BUILDING COMPOSITE ENERGY AND GRADIENT
+      !I.E. SOME STATES FOUND ABOVE MAY BE DROPPED DUE TO
+      !FMO NOT CONVERGING MONOMER SCF.
+      IRMDSTF=IRMDST(1)
+
+      !CREATE DISTRIBUTED ARRAYS FOR ENERGIES AND
+      !AND GRADIENTS OF EACH STATE
+      CALL DDI_CREATE(1,IRMDST(1),RMD_D_E)
+      CALL DDI_CREATE(3*NAT,IRMDST(1),RMD_D_G)
+
+      IF (MLGDDI) THEN
+         MINE = -1
+         MYJOB=.FALSE.
+         CALL GDDI_SCOPE(DDI_GROUP)
+      ENDIF
+
+      DO IJ = 1,IRMDST(1)
+         ISCHM(IJ) = IJ
+      ENDDO
+
+      !LOOP BACKWARDS SO MORE DIFFICULT TO CONVERGE FRAGMENTATION
+      !STATES START FIRST (SIMPLE LOAD BALANCING)
+      DO 250 IST=IRMDST(1),1,-1
+         IF(MLGDDI) THEN
+            MINE = MINE + 1
+            LGROUP=MOD(MINE,NGROUPS)
+            MYJOB=LGROUP.EQ.MYGROUP
+            IF (.NOT.MYJOB) GOTO 250
+         ENDIF
+
+         JST = IST
+
+         IF(MYJOB) WRITE(IW,2500) IST
+         IF(MLGDDI)CALL GDDI_SCOPE(DDI_SUBGROUP)
+
+         !EACH INSTANCE OF FMOX NEEDS TO ALLOCATE FAST MEMORY
+         !FOR MODPAR(512+1024) IN THE CORRECT SCOPE
+         CALL RMDFM_GET
+
+         CALL FMOX(ISCHM(JST))
+
+         IF(MLGDDI)CALL GDDI_SCOPE(DDI_SUPERWORLD)
+
+ 250  CONTINUE
+
+      IF(MLGDDI)CALL GDDI_SCOPE(DDI_WORLD)
+
+      CALL DDI_SYNC(9500)
+
+      !RETRIEVE ENERGIES AND GRADIENTS FROM DISTRIBUTED ARRAYS
+      IJ=0
+      DO I = 1,IRMDST(1)
+         CALL DDI_GET(RMD_D_E,1,1,I,I,TMP1)
+         CALL DDI_GET(RMD_D_G,1,3*NAT,I,I,TMP2)
+
+C         CALL DDI_BCAST(9990,'F',RMD_E,30,MASTER)
+C         CALL DDI_BCAST(9991,'F',RMD_G,3*30*NAT,MASTER)
+      
+         IF(TMP1(1).EQ.ZERO) THEN !DETERMINE HOW MANY STATES WERE DROPPED
+            IRMDSTF(1) = IRMDSTF(1) - 1
+            IF(MASWRK) WRITE(IW,9000) I
+         ELSE
+            IJ=IJ+1
+            RMD_E(IJ) = TMP1(1)
+            IF(MASWRK) WRITE(IW,9001) I, RMD_E(IJ)
+            DO J=1,NAT
+               K=J*2
+               RMD_G((K+J-2)+NAT*3*(IJ-1)) = TMP2(K+J-2)
+               RMD_G((K+J-1)+NAT*3*(IJ-1)) = TMP2(K+J-1)
+               RMD_G((J*3)+NAT*3*(IJ-1)) = TMP2(J*3)
+            ENDDO
+         ENDIF
+      ENDDO
+
+C      CALL DDI_BCAST(9990,'F',RMD_E,30,MASTER)
+C      CALL DDI_BCAST(9991,'F',RMD_G,3*30*NAT,MASTER)
+
+      IF(MASWRK) WRITE(IW,9002) IRMDSTF(1)
+
+      CALL DDI_DESTROY(RMD_D_G)
+      CALL DDI_DESTROY(RMD_D_E)
+
+      CALL DDI_BCAST(9990,'I',IRMDSTF(1),1,MASTER)
+
+      IF(IRMDSTF(1).EQ.0) THEN
+         WRITE(IW,9003) IRMDSTF(1)
+         CALL ABRT
+      ENDIF
+
+      !CALL MS-RMD CODE TO GENERATE COMPOSITE ENERGY AND GRADIENT
+      IF(IRMDSTF(1).GT.1) THEN
+         CALL RMD_BUILD(IRMDSTF(1),C,NAT,TMPIAN,RMD_E,
+     *                  RMD_G,E_NEW,G_NEW)
+
+
+      !UPDATE E AND EG WITH NEW MS-RMD ENERGIES AND GRADIENTS
+         E=E_NEW(1)
+ 
+         WRITE(IW,9004) E
+
+         DO I=1,3*NAT
+            EG(I)=G_NEW(I)
+         ENDDO
+
+      ELSE
+
+         E = RMD_E(1)
+
+         WRITE(IW,9004) E
+
+         DO I =1,3*NAT
+            EG(I)=RMD_G(I)
+         ENDDO
+
+      ENDIF
+
+      deallocate(IRMDST)
+      deallocate(IRMDSTF)
+      deallocate(TMPDAT)
+      deallocate(TMPCHG)
+      deallocate(TMPIAN)
+      deallocate(TMP1)
+      deallocate(TMP2)
+      deallocate(E_NEW)
+      deallocate(G_NEW)
+      deallocate(RMD_G)
+      deallocate(RMD_E)
+
+      RETURN
+ 2000 FORMAT(2X,' '/
+     *       2X,20(1H-),/,
+     *       2X,'Generating states...'/,
+     *       2X,20(1H-),
+     *       2X,' ')
+ 2250 FORMAT(2X,' '/
+     *       2X,20(1H-),/,
+     *       2X,'NHOPS CANNOT BE LARGER THAN 4'/,
+     *       2X,'EXITING....'/,
+     *       2X,20(1H-),
+     *       2X,' ')
+ 2300 FORMAT(2X,' '/
+     *       2X,20(1H-),/,
+     *       2X,'# OF STATES MUST EQUAL # OF GDDI GROUPS'/,
+     *       2X,'EXITING....'/,
+     *       2X,20(1H-),
+     *       2X,' ')
+ 2500 FORMAT(2X,' '/
+     *       2X,30(1H-),/,
+     *       2X,'FMO calculation on state #',I2,/
+     *       2X,30(1H-)/
+     *       2X,' '/)
+ 9000 FORMAT(2X,' '/
+     *       2X,29(1H-),/,
+     *       2X,'State #',I2,' dropped from RMD'/
+     *       2X,29(1H-))
+ 9001 FORMAT(2X,' '/
+     *       2X,47(1H-),/,
+     *       2X,'Energy for state #',I2,' =',F25.10,/
+     *       2X,47(1H-))
+ 9002 FORMAT(2X,' '/
+     *       2X,28(1H-),/,
+     *       2X,'Final number of states is ',I2,/
+     *       2X,28(1H-))
+ 9003 FORMAT(2X,' '/
+     *       2X,47(1H-),/,
+     *       2X,'NO STATES LEFT! CALLING ABORT!',I2,/
+     *       2X,47(1H-))
+ 9004 FORMAT(2X,' '/
+     *       2X,47(1H-),/,
+     *       2X,'Final Composite Energy =',F25.10,/
+     *       2X,47(1H-))
+
+      END
+!***********************************************************************
+!*MODULE RMDDRVR   *DECK MLGDDI_CLEAN
+!>
+!>     @brief Get fast memory for FMO MS-RMD calculations
+!>
+!>     @details Allocation must be done in the same scope as
+!>              FMOX is called
+!>
+!>     @author Spencer R. Pruitt
+!>
+!> @param irmdfmo : flag for RMD
+!>
+!> @param mastid : master ID
+!>
+!*********************************************************************** 
+      subroutine mlgddi_clean(irmdfmo,mastid)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      logical GOPARR,DSKWRK,MASWRK,isgddi,parout,INITGDDI,wasgddi,MLGDDI
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,npglob,nnglob,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      COMMON /IOFILE/ IR,IW,IP,IS,IPK,IDAF,NAV,IODA(950)
+      COMMON /OUTPUT/ NPRINT,ITOL,ICUT,NORMF,NORMP,NOPK
+      COMMON /PAR   / ME,MASTER,NPROC,IBTYP,IPTIM,GOPARR,DSKWRK,MASWRK
+      dimension mastid(*)
+
+      call timit(1)
+
+      call gddi_init(ngroups,-1,nprint.ne.-5,4)
+      call gddi_mastid(mastid)
+
+      if(maswrk.and..not.parout) then
+      !SEQOPN will NOT open files if they are already opened.
+        CALL SEQOPN(IR,'INPUT', 'OLD',.TRUE., 'FORMATTED')
+        CALL SEQOPN(IW,'OUTPUT','UNKNOWN',.FALSE., 'FORMATTED')
+        CALL SEQOPN(IP,'PUNCH', 'NEW',.FALSE.,'FORMATTED')
+      endif
+
+      call timit(1)
+
+      return
+      end
+!***********************************************************************
+!*MODULE RMDDRVR   *DECK RMDFM_GET
+!>
+!>     @brief Get fast memory for FMO MS-RMD calculations
+!>
+!>     @details Allocation must be done in the same scope as
+!>              FMOX is called
+!>
+!>     @author Spencer R. Pruitt
+!>
+!***********************************************************************
+      SUBROUTINE RMDFM_GET
+
+      USE RMDDAT
+
+      IMPLICIT NONE
+
+      integer :: NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY,IXESP,MXITFG
+      integer :: NGUESS,NBSSE,MODORB,MODPAR,IRSTSTP,IRSTLAY,NPRFMO
+      integer :: NFMOPAL,MODPRP,MAXL1C,IPIEDA,MODGRD,MODESP,IVMUL
+      integer :: MODLMO,NOPDEN,MOFOCK,MODFD,modfmm,ncentm,ndualb
+      integer :: MDWPBC,NIMGCELL,IMGLVL,IPBCFST
+      integer :: LTRVEC,LFMOGCTR,LFMOCTMP,LINDATMD,LWRKDSAV,LINDXIU
+      integer :: LICHFG,LMULFG,LIDMREC,LFRGNAM,LLAYFRG,LINDAT
+      integer :: LNCBS,LFMOZAN,LFMOC,LFMOMAS,LIZBAS,LIAGLOB,LIBDGH
+      integer :: LIABDFG,LJABDFG,LNCAO,LIDXCAO,LIAPRJO,LJAPRJO
+      integer :: LCOREAO,LOCCCOR,LSHIFTB,LIODFMO,LFMODA,LFMODB
+      integer :: LFMOESPA,LFMOESPB,LLOCFMO,LSCFFRG,LFMOSCF,LRIJ
+      integer :: LPOPMUL,LPOPMAT,LIALOC,LINDBD,LIATFRG,LINDFRG
+      integer :: LINDGFRG,LNATFRG,LNAT0FRG,LIANFRG,LZANFRG,LCFRG
+      integer :: LLIBISH,LLIBNSH,LLIBNG,LINDATG,LFMOBUF,LFMODE
+      integer :: LNUMFRG,LLOCTAT,LIAOGLOB,LLOADM,LFMOGE,LDGRID
+      integer :: LIODCFMO,LJOB2GRP,LFMOPG,LEMOCDR,LUNTXYZ,LUNTROT
+      integer :: LSTONEP,LMAPSU,LFRGMUL,LCLMO,LIALMO,LINDLMO
+      integer :: LATCLMO,LLMOBDF,LFGFLMO,LNFGLMO,LLFGLMO,LPFGLMO
+      integer :: LPOPDMAT,LIDMPNT,LIDDPNT,LIVMPNT,LIACTFG,lcrfrg
+      integer :: lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_m,LMAXL30
+      integer :: IDFZVEC,LIPTZVEC,LIPTLG
+      integer :: NWDVAR,MAXFM,MAXSM,LIMFM,LIMSM
+
+      integer :: ISCOPE,NGROUPS,MYGROUP,MEGLOB,NPGLOB,NNGLOB,JBTYP,
+     $           MEUNIV,NPUNIV,IBTYP,IPTIM,NSUBGR,NPROC,MASTER,ME
+
+      integer :: LAST,LOADFM,LDUMMY,NDPNT,NDAR30
+
+      double precision :: ESPSCA,RESPAP,RESPPC,RESDIM,RESTRI
+      double precision :: RCORSD,RESPCT,CONVFG,CNVDMP,COROFF,RFLMO
+      double precision :: ORSHFT,ORSHFT2,CNVAFO,ASCREEN,FMOBOX
+
+      logical :: ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI
+
+      logical :: LSCZVFLG
+
+      COMMON /FMOINF/ NFG,NLAYER,NATFMO,NBDFG,NAOTYP,NBODY
+      COMMON /FMOOPT/ ESPSCA(9),RESPAP(2),RESPPC(2),RESDIM,RESTRI(4),
+     *                RCORSD,RESPCT,CONVFG,CNVDMP,COROFF,RFLMO(4),
+     *                ORSHFT,ORSHFT2,CNVAFO,ASCREEN(4),IXESP,MXITFG,
+     *                NGUESS,NBSSE,MODORB,MODPAR,IRSTSTP,IRSTLAY,NPRFMO,
+     *                NFMOPAL,MODPRP,MAXL1C,IPIEDA,MODGRD,MODESP,IVMUL,
+     *                MODLMO,NOPDEN,MOFOCK,MODFD,modfmm,ncentm,ndualb
+      COMMON /FMOPMD/ FMOBOX(3),MDWPBC,NIMGCELL,IMGLVL,
+     *                LTRVEC,LFMOGCTR,LFMOCTMP,LINDATMD,LWRKDSAV,LINDXIU
+     *               ,IPBCFST
+      COMMON /FMOPNT/ LICHFG,LMULFG,LIDMREC,LFRGNAM,LLAYFRG,LINDAT,
+     *                LNCBS,LFMOZAN,LFMOC,LFMOMAS,LIZBAS,LIAGLOB,LIBDGH,
+     *                LIABDFG,LJABDFG,LNCAO,LIDXCAO,LIAPRJO,LJAPRJO,
+     *                LCOREAO,LOCCCOR,LSHIFTB,LIODFMO,LFMODA,LFMODB,
+     *                LFMOESPA,LFMOESPB,LLOCFMO,LSCFFRG,LFMOSCF,LRIJ,
+     *                LPOPMUL,LPOPMAT,LIALOC,LINDBD,LIATFRG,LINDFRG,
+     *                LINDGFRG,LNATFRG,LNAT0FRG,LIANFRG,LZANFRG,LCFRG,
+     *                LLIBISH,LLIBNSH,LLIBNG,LINDATG,LFMOBUF(3),LFMODE,
+     *                LNUMFRG,LLOCTAT,LIAOGLOB,LLOADM,LFMOGE,LDGRID,
+     *                LIODCFMO,LJOB2GRP,LFMOPG,LEMOCDR,LUNTXYZ,LUNTROT,
+     *                LSTONEP,LMAPSU,LFRGMUL,LCLMO,LIALMO,LINDLMO,
+     *                LATCLMO,LLMOBDF,LFGFLMO,LNFGLMO,LLFGLMO,LPFGLMO,
+     *                LPOPDMAT,LIDMPNT,LIDDPNT,LIVMPNT,LIACTFG,lcrfrg,
+     *                lzlmfrgv,lYlmfrgv,lndtfrg,lf_mm,lg_m,LMAXL30
+      COMMON /GDDI/   ISCOPE,NGROUPS,MYGROUP,MEGLOB,npglob,nnglob,JBTYP,
+     *                ISGDDI,PAROUT,INITGDDI,wasgddi,MLGDDI,NSUBGR,
+     *                MeUniv,NPUniv
+      COMMON /SCZVEC/ IDFZVEC,LIPTZVEC,LIPTLG
+      COMMON /MACHIN/ NWDVAR,MAXFM,MAXSM,LIMFM,LIMSM
+
+      IF(IRMDSTEP.GT.1) RETURN
+
+      NDAR30=0
+
+      IF(IAND(MODPAR,512+1024).NE.0) NDAR30=1+NFG*2*2
+
+      LSCZVFLG = IAND(MODGRD,32).NE.0.AND.IAND(MODPAR,512+1024).NE.0
+
+      IF (LSCZVFLG) THEN
+         CALL VALFM(LOADFM)
+         LIPTZVEC = LOADFM + 1
+         LIPTLG   = LIPTZVEC + 2*NFG/NWDVAR + 1
+         LAST     = LIPTLG   +   NFG/NWDVAR + 2
+         NDRMD = LAST-LOADFM-1
+         CALL GETFM(NDRMD)
+      END IF
+
+      RETURN
+      END
+!***********************************************************************
+!*MODULE RMDDRVR   *DECK RMDFM_RET
+!>
+!>     @brief Return fast memory for FMO MS-RMD calculations
+!>
+!>     @details Return must be done after we are all done
+!>
+!>     @author Spencer R. Pruitt
+!>
+!> @param LSCZVFLG : flag for SCZV
+!>
+!***********************************************************************
+      SUBROUTINE RMDFM_RET(LSCZVFLG)
+
+      USE RMDDAT   
+
+      IMPLICIT NONE
+      LOGICAL LSCZVFLG
+      integer, parameter :: DDI_WORLD=0, DDI_GROUP=1, 
+     $                      DDI_SUPERWORLD=-1, DDI_SUBGROUP=4
+
+      CALL RETFM(NDRMD)
+      
+      CALL GDDI_SCOPE(DDI_GROUP)
+      CALL GDDI_SCOPE(DDI_SUBGROUP)
+
+      IF (LSCZVFLG) then
+         write(6,*)' calling retzvec' 
+         CALL RETZVEC
+      endif
+      CALL RETDD
+
+      CALL GDDI_SCOPE(DDI_SUPERWORLD)
+      CALL GDDI_SCOPE(DDI_WORLD)
+
+      RETURN
+      END

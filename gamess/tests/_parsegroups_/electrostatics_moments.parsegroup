@@ -1,0 +1,93 @@
+{
+  "parse_header" : "ELECTROSTATICS",
+  "parse_group" : [
+   {
+     "regex_string" : "^(\\s*)OXXX(\\s*)OXXY(\\s*)OXXZ(\\s*)OXYY(\\s*)OYYY(\\s*)OYYZ.*$",
+     "parse_name"   : "MOMENTS OXXX - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXXX(\\s*)OXXY(\\s*)OXXZ(\\s*)OXYY(\\s*)OYYY(\\s*)OYYZ.*$",
+     "parse_name"   : "MOMENTS OXXY - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXXX(\\s*)OXXY(\\s*)OXXZ(\\s*)OXYY(\\s*)OYYY(\\s*)OYYZ.*$",
+     "parse_name"   : "MOMENTS OXXZ - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 2,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXXX(\\s*)OXXY(\\s*)OXXZ(\\s*)OXYY(\\s*)OYYY(\\s*)OYYZ.*$",
+     "parse_name"   : "MOMENTS OXYY - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 3,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXXX(\\s*)OXXY(\\s*)OXXZ(\\s*)OXYY(\\s*)OYYY(\\s*)OYYZ.*$",
+     "parse_name"   : "MOMENTS OXXZ - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 4,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXXX(\\s*)OXXY(\\s*)OXXZ(\\s*)OXYY(\\s*)OYYY(\\s*)OYYZ.*$",
+     "parse_name"   : "MOMENTS OYYZ - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 5,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1
+   },
+   {
+     "regex_string" : "^(\\s*)OXZZ(\\s*)OYZZ(\\s*)OZZZ(\\s*)OXYZ.*$",
+     "parse_name"   : "MOMENTS OXZZ - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 0,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXZZ(\\s*)OYZZ(\\s*)OZZZ(\\s*)OXYZ.*$",
+     "parse_name"   : "MOMENTS OYZZ - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 1,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXZZ(\\s*)OYZZ(\\s*)OZZZ(\\s*)OXYZ.*$",
+     "parse_name"   : "MOMENTS OZZZ - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 2,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1,
+     "parse_required" : true
+   },
+   {
+     "regex_string" : "^(\\s*)OXZZ(\\s*)OYZZ(\\s*)OZZZ(\\s*)OXYZ.*$",
+     "parse_name"   : "MOMENTS OXYZ - LAST POINT",
+     "parse_precision" : 6,
+     "parse_value_index" : 3,
+     "parse_line_offset" : 1,
+     "parse_instance" : -1
+   }
+  ]
+}

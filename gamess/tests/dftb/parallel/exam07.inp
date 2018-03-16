@@ -1,0 +1,51 @@
+!   DFTB EXAM02.
+!   This is a sample input of geometry optimization for a
+!   Be4H8 cluster with DFTB2/C-PCM.
+!
+!   The optimization converges after 55 iterations:
+!
+!   Final energy = -5.0798256214
+!   Max Grad.    =  0.0000005
+!   RMS Grad.    =  0.0000002
+!
+!   Electrostatic interaction =  -3.31 kcal/mol
+!   Pierotti caviation energy =  16.13 kcal/mol
+!   Dispersion free energy    = -14.59 kcal/mol
+!   Repulsion free energy     =   2.67 kcal/mol
+!
+ $CONTRL RUNTYP=OPTIMIZE NPRINT=-5 $END
+ $PCM SOLVNT=WATER ICAV=1 IDISP=1 $END
+ $PCMCAV RADII=VDWEFP $END
+ $STATPT NSTEP=200 OPTTOL=1.0D-06 $END
+ $SYSTEM MWORDS=40 $END
+ $SCF CONV=1.0D-09 $END
+ $BASIS GBASIS=DFTB $END
+ $DFTB NDFTB=2 $END
+!
+!   Please modify the location of parameters appropriately
+!
+ $DFTBSK
+   Be Be /usr/local/dftb/parameters/Be-Be.spl
+   Be H  /usr/local/dftb/parameters/Be-H.spl
+   H  Be /usr/local/dftb/parameters/H-Be.spl
+   H  H  /usr/local/dftb/parameters/H-H.spl
+ $END
+ $DATA
+ Be4H8
+ C1 
+ BE          4.0   0.0527524464   0.0000001565   0.0005128380
+ BE          4.0   2.0374673839  -0.0000000727  -0.0005165646
+ BE          4.0   4.0155753262  -0.0000005686   0.0001397033
+ BE          4.0   6.0003213808  -0.0000011158  -0.0004305479
+ H           1.0  -1.2697111116   0.0000002688   0.0003150976
+ H           1.0   7.3227975817   0.0000021349   0.0003583763
+ H           1.0   1.0523231998   1.1018850828  -0.0001825147
+ H           1.0   1.0523229731  -1.1018849751  -0.0001821323
+ H           1.0   3.0261963727   0.0000006865   1.1018438360
+ H           1.0   3.0268082781   0.0000002324  -1.1021792719
+ H           1.0   5.0008024687   1.1018900455   0.0001597168
+ H           1.0   5.0008018861  -1.1018916367   0.0001602771
+ $END
+
+! TRAVIS-CI SMALL
+
